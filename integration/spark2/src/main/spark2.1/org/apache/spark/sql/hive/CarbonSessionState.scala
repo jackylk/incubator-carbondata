@@ -63,7 +63,8 @@ class CarbonHiveSessionCatalog(
     functionResourceLoader: FunctionResourceLoader,
     functionRegistry: FunctionRegistry,
     conf: SQLConf,
-    hadoopConf: Configuration)
+    hadoopConf: Configuration,
+  parser: ParserInterface)
   extends HiveSessionCatalog(
     externalCatalog,
     globalTempViewManager,
@@ -293,7 +294,8 @@ class CarbonSessionState(sparkSession: SparkSession) extends HiveSessionState(sp
       functionResourceLoader,
       functionRegistry,
       conf,
-      newHadoopConf())
+      newHadoopConf(),
+    sqlParser)
   }
 }
 
