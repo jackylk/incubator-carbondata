@@ -18,21 +18,19 @@
 package org.apache.spark.sql.parser
 
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.parser.CarbonSpark2SqlParser
 import org.apache.spark.sql.ShowIndexesCommand
-import org.apache.spark.sql.command.{CreateIndexTable, DropIndex, SecondaryIndex}
+import org.apache.spark.sql.command.{CreateIndexTable, DropIndex, RegisterIndexTableCommand, SecondaryIndex}
 
 import org.apache.carbondata.spark.util.CommonUtil
-
-
 /**
- *
+ * sql parse for secondary index related commands
  */
 class CarbonInternalSpark2SqlParser extends CarbonSpark2SqlParser {
 
   protected val INDEX = carbonInternalKeyWord("INDEX")
   protected val INDEXES = carbonInternalKeyWord("INDEXES")
   override protected val ON = carbonInternalKeyWord("ON")
+  protected val REGISTER = carbonKeyWord("REGISTER")
 
   override def parse(input: String): LogicalPlan = {
     synchronized {
@@ -48,6 +46,9 @@ class CarbonInternalSpark2SqlParser extends CarbonSpark2SqlParser {
             x
           case x: DropIndex =>
             x.dropIndexSql = input
+            x
+          case x: RegisterIndexTableCommand =>
+            x.registerSql = input
             x
           case _ => super.parse(input)
         }
@@ -70,7 +71,7 @@ class CarbonInternalSpark2SqlParser extends CarbonSpark2SqlParser {
   protected lazy val internalStartCommand: Parser[LogicalPlan] = indexCommands | start
 
   protected lazy val indexCommands: Parser[LogicalPlan] =
-    showIndexes | createIndexTable | dropIndexTable
+    showIndexes | createIndexTable | dropIndexTable | registerIndexes
 
   protected lazy val createIndexTable: Parser[LogicalPlan] =
     CREATE ~> INDEX ~> ident ~ (ON ~> TABLE ~> (ident <~ ".").? ~ ident) ~
@@ -116,5 +117,14 @@ class CarbonInternalSpark2SqlParser extends CarbonSpark2SqlParser {
     opt(";") ^^ {
       case tableName ~ databaseName =>
         ShowIndexesCommand(databaseName, tableName.toLowerCase)
+    }
+
+  protected lazy val registerIndexes: Parser[LogicalPlan] =
+    REGISTER ~> INDEX ~> TABLE ~> ident ~ (ON ~> (ident <~ ".").? ~ ident) <~ opt(";") ^^ {
+      case indexTable ~ table =>
+        val (dbName, tableName) = table match {
+          case databaseName ~ tableName => (databaseName, tableName.toLowerCase())
+        }
+        RegisterIndexTableCommand(dbName, indexTable, tableName)
     }
 }

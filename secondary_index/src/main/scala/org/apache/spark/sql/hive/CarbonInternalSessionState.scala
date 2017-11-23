@@ -287,6 +287,13 @@ object CarbonInternalSessionState {
         .addListener(classOf[UpdateTablePreEvent], new UpdateTablePreEventListener)
       operationListenerBus
         .addListener(classOf[DeleteFromTablePreEvent], new DeleteFromTablePreEventListener)
+      // refresh table listner
+      operationListenerBus
+        .addListener(classOf[RefreshTablePreExecutionEvent],
+          new ACLRefreshTableEventListener.ACLPreRefreshTableEventListener)
+      operationListenerBus
+        .addListener(classOf[RefreshTablePostExecutionEvent],
+          new ACLRefreshTableEventListener.ACLPostRefreshTableEventListener)
       initialized = true
     }
   }

@@ -46,10 +46,11 @@ object TestQueryExecutor {
   private val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
 
   val projectPath = new File(this.getClass.getResource("/").getPath + "../../..")
-    .getCanonicalPath
+    .getCanonicalPath.replaceAll("\\\\", "/")
   LOGGER.info(s"project path: $projectPath")
   val integrationPath = s"$projectPath/integration"
   val metastoredb = s"$integrationPath/spark-common/target"
+  val location = s"$integrationPath/spark-common/target/dbpath"
   val masterUrl = {
     val property = System.getProperty("spark.master.url")
     if (property == null) {

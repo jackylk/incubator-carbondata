@@ -32,13 +32,13 @@ import org.apache.carbondata.spark.exception.MalformedCarbonCommandException
 class InternalDDLStrategy(sparkSession: SparkSession) extends SparkStrategy {
   override def apply(plan: LogicalPlan): Seq[SparkPlan] = {
     plan match {
-      case CreateIndexTable(indexModel, tableProperties, createIndexSql) =>
+      case CreateIndexTable(indexModel, tableProperties, createIndexSql, isCreateSIndex) =>
         val isCarbonTable = CarbonEnv.getInstance(sparkSession).carbonMetastore
           .tableExists(TableIdentifier(indexModel.tableName, indexModel.databaseName))(
             sparkSession)
         if (isCarbonTable) {
-          ExecutedCommandExec(CreateIndexTable(indexModel, tableProperties, createIndexSql)) ::
-          Nil
+          ExecutedCommandExec(CreateIndexTable(indexModel, tableProperties, createIndexSql,
+            isCreateSIndex)) :: Nil
         } else {
           sys.error("Operation not allowed or Missing privileges : " + createIndexSql)
         }
@@ -83,6 +83,9 @@ class InternalDDLStrategy(sparkSession: SparkSession) extends SparkStrategy {
             sys.error("Operation not allowed or Missing privileges : " + dropIndexSql)
           }
         }
+      case RegisterIndexTableCommand(dbName, indexTableName, parentTable, registerSql) =>
+        ExecutedCommandExec(RegisterIndexTableCommand(dbName, indexTableName,
+          parentTable, registerSql)) :: Nil
       case _ => Nil
     }
   }

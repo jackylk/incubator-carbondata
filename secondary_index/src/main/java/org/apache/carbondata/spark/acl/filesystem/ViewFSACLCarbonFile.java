@@ -275,7 +275,7 @@ public class ViewFSACLCarbonFile extends ViewFSCarbonFile {
       Path path = new Path(directoryPath);
       FileSystem fs = path.getFileSystem(FileFactory.getConfiguration());
       if (fs.exists(path)) {
-        fs.setOwner(path, username, group);
+        // fs.setOwner(path, username, group);
         fs.setPermission(path, permission);
       }
     } catch (IOException e) {

@@ -34,6 +34,7 @@ import org.apache.spark.sql.hive.acl.{HiveACLInterface, ObjectType, PrivObject, 
 import org.apache.spark.sql.hive.execution.command.CarbonDropDatabaseCommand
 import org.apache.spark.util.CarbonInternalScalaUtil
 
+import org.apache.carbondata.core.metadata.schema.table.TableInfo
 
 private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
     hCatalog: SessionCatalog,
@@ -44,15 +45,19 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
 
     if (ACLFileUtils.isSecureModeEnabled) {
       plan match {
-        case c@CarbonCreateTableCommand(cm: TableModel, _, _, _) =>
+        case c@CarbonCreateTableCommand(tableInfo: TableInfo, _, _, _) =>
+          var databaseOpt : Option[String] = None
+          if(tableInfo.getDatabaseName != null) {
+            databaseOpt = Some(tableInfo.getDatabaseName)
+          }
           doCheckPrivilege(c, Set(new PrivObject(
             ObjectType.DATABASE,
-            CarbonEnv.getDatabaseName(cm.databaseNameOp)(sparkSession),
+            CarbonEnv.getDatabaseName(databaseOpt)(sparkSession),
             null,
             null,
             Set(PrivType.CREATE_NOGRANT))))
 
-        case c@CreateIndexTable(indexModel, _, _) =>
+        case c@CreateIndexTable(indexModel, _, _, _) =>
           doCheckPrivilege(c, Set(new PrivObject(
             ObjectType.TABLE,
             CarbonEnv.getDatabaseName(indexModel.databaseName)(sparkSession),

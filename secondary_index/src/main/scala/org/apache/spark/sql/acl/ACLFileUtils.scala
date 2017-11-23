@@ -75,6 +75,29 @@ object ACLFileUtils {
     oriPathArr
   }
 
+  /**
+   * returns the snap shot of single file or directory
+   *
+   * @param sqlContext
+   * @param path
+   * @param delimiter
+   * @return
+   */
+  def takeNonRecursiveSnapshot(sqlContext: SQLContext,
+    path: Path, delimiter: String = "#~#"): ArrayBuffer[String] = {
+    val loginUser = CarbonUserGroupInformation.getInstance.getLoginUser
+    val currentUser = CarbonUserGroupInformation.getInstance.getCurrentUser
+    val pathArray = new ArrayBuffer[String]()
+    Utils.proxyOperate(loginUser, currentUser,
+      s"Use login user ${loginUser.getShortUserName} as a proxy user as we need " +
+        s"permission to operate the given path", true) {
+      val hdfs: FileSystem = path.getFileSystem(sqlContext.sparkContext.hadoopConfiguration)
+      val fileStatus = hdfs.getFileStatus(path)
+      addFilePathToPathList(fileStatus.getPath, pathArray, loginUser.getShortUserName,
+        delimiter, fileStatus)
+    }
+    pathArray
+  }
 
   def changeOwnerRecursivelyAfterOperation(sqlContext: SQLContext,
       oriPathArr: ArrayBuffer[String], curPathArr: ArrayBuffer[String], delimiter: String = "#~#") {
@@ -190,7 +213,7 @@ object ACLFileUtils {
    * @param fileStatus
    * @return
    */
-  private def addFilePathToPathList(path: Path,
+   private def addFilePathToPathList(path: Path,
       pathArr: ArrayBuffer[String],
       owner: String,
       delimiter: String,
