@@ -92,7 +92,7 @@ class TestSecondaryIndexWithIUD extends QueryTest with BeforeAndAfterAll {
     sql(
       "create table source (c1 string,c2 int,c3 string,c5 string) STORED BY 'org.apache" +
       ".carbondata.format'")
-    sql(s"""LOAD DATA LOCAL INPATH '$pluginResourcesPath/IUD/dest.csv' INTO table source""")
+    sql(s"""LOAD DATA LOCAL INPATH '$resourcesPath/IUD/dest.csv' INTO table source""")
     sql("drop index if exists index_source1 on source")
     sql("create index index_source1 on table source (c5) AS 'org.apache.carbondata.format'")
     // delete (5-1)=4 rows

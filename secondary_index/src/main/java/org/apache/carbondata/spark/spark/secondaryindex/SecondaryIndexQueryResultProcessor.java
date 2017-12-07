@@ -194,8 +194,12 @@ public class SecondaryIndexQueryResultProcessor {
       }
     } finally {
       // clear temp files and folders created during secondary index creation
+      String databaseName = carbonLoadModel.getDatabaseName();
+      String tempLocationKey = CarbonDataProcessorUtil
+          .getTempStoreLocationKey(databaseName, indexTableName, carbonLoadModel.getSegmentId(),
+              carbonLoadModel.getTaskNo(), false, false);
       TableProcessingOperations
-          .deleteLocalDataLoadFolderLocation(carbonLoadModel, false, false, indexTableName);
+          .deleteLocalDataLoadFolderLocation(tempLocationKey, indexTableName);
     }
   }
 

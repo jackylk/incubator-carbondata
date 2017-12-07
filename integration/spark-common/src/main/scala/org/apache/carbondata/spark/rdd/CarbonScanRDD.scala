@@ -51,6 +51,7 @@ import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier
 import org.apache.carbondata.core.metadata.schema.table.TableInfo
 import org.apache.carbondata.core.scan.expression.Expression
 import org.apache.carbondata.core.scan.expression.conditional.ImplicitExpression
+import org.apache.carbondata.core.scan.expression.logical.AndExpression
 import org.apache.carbondata.core.scan.filter.FilterUtil
 import org.apache.carbondata.core.scan.model.QueryModel
 import org.apache.carbondata.core.stats.{QueryStatistic, QueryStatisticsConstants}
@@ -97,6 +98,8 @@ class CarbonScanRDD[T: ClassTag](
 
   private val bucketedTable = tableInfo.getFactTable.getBucketingInfo
 
+  private var segmentsToAccess: Array[String] = _
+
   @transient val LOGGER = LogServiceFactory.getLogService(this.getClass.getName)
 
   override def internalGetPartitions: Array[Partition] = {
@@ -124,6 +127,12 @@ class CarbonScanRDD[T: ClassTag](
       }
       // initialise query_id for job
       job.getConfiguration.set("query.id", queryId)
+    if (null != segmentsToAccess) {
+      CarbonTableInputFormat
+        .setSegmentsToAccess(job.getConfiguration, segmentsToAccess.toList.asJava)
+      // As we have already set input segments that we got from main table no need to validate.
+      CarbonTableInputFormat.setValidateSegmentsToAccess(job.getConfiguration, false)
+    }
 
       // get splits
       getSplitsStartTime = System.currentTimeMillis()
@@ -215,6 +224,10 @@ class CarbonScanRDD[T: ClassTag](
         }
       }
     }
+  }
+
+  def setSegmentsToAccess(segments: Array[String]): Unit = {
+    segmentsToAccess = segments
   }
 
   private def distributeColumnarSplits(splits: List[InputSplit]): mutable.Buffer[Partition] = {
@@ -795,5 +808,13 @@ class CarbonScanRDD[T: ClassTag](
   // TODO find the better way set it.
   def setDirectScanSupport(isDirectScan: Boolean): Unit = {
     directFill = isDirectScan
+  }
+
+  def setFilterExpression(expressionVal: Expression): Unit = {
+    if (null == filterExpression) {
+      filterExpression = expressionVal
+    } else {
+      filterExpression = new AndExpression(filterExpression, expressionVal)
+    }
   }
 }

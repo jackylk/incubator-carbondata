@@ -36,9 +36,7 @@ public class DFSACLFileHolderImpl extends DFSFileHolderImpl {
   }
 
   public FSDataInputStream updateCache(final String filePath) {
-    // TODO: Make fileNameAndStreamCache protected
-    /*FSDataInputStream fileChannel = fileNameAndStreamCache.get(filePath);*/
-    FSDataInputStream fileChannel = null;
+    FSDataInputStream fileChannel = fileNameAndStreamCache.get(filePath);
     if (null == fileChannel) {
       try {
         return PrivilegedFileOperation.execute(new PrivilegedExceptionAction<FSDataInputStream>() {

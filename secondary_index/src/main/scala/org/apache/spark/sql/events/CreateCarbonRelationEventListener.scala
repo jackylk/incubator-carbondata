@@ -18,8 +18,9 @@
 package org.apache.spark.sql.events
 
 import org.apache.spark.internal.Logging
+import org.apache.spark.sql.hive.CarbonInternalMetastore
 
-import org.apache.carbondata.events.{Event, OperationContext, OperationEventListener}
+import org.apache.carbondata.events.{CreateCarbonRelationPostEvent, Event, OperationContext, OperationEventListener}
 
 
 /**
@@ -32,13 +33,13 @@ class CreateCarbonRelationEventListener extends OperationEventListener with Logg
    * @param event
    */
   override def onEvent(event: Event, operationContext: OperationContext): Unit = {
-    /*event match {
+    event match {
       case createCarbonRelationPostEvent: CreateCarbonRelationPostEvent =>
         val carbonTable = createCarbonRelationPostEvent.carbonTable
         val databaseName = createCarbonRelationPostEvent.carbonTable.getDatabaseName
         val tableName = createCarbonRelationPostEvent.carbonTable.getTableName
         val sparkSession = createCarbonRelationPostEvent.sparkSession
         CarbonInternalMetastore.refreshIndexInfo(databaseName, tableName, carbonTable)(sparkSession)
-    }*/
+    }
   }
 }

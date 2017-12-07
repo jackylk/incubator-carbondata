@@ -120,7 +120,7 @@ object CarbonInternalMetastore {
           indexCarbonTable,
           storePath,
           null,
-          removeEntryFromParentTable = false
+          removeEntryFromParentTable = true
         )(sparkSession)
       } catch {
         case e: Exception =>
@@ -135,39 +135,36 @@ object CarbonInternalMetastore {
     // When Index information is not loaded in main table, then it will fetch
     // index info from hivemetastore and set it in the carbon table.
     if (null != carbonTable) {
-      val indexesMap = CarbonInternalScalaUtil.getIndexesMap(carbonTable)
-      if (indexesMap == null || indexesMap.isEmpty) {
-        val indexTableMap = new ConcurrentHashMap[String, java.util.List[String]]
-        try {
-          val (isIndexTable, parentTableName, indexInfo, parentTablePath, parentTableId) =
-            indexInfoFromHive(dbName, tableName)(sparkSession)
-          if (isIndexTable.equals("true")) {
-            val indexMeta = new IndexMetadata(indexTableMap,
+      val indexTableMap = new ConcurrentHashMap[String, java.util.List[String]]
+      try {
+        val (isIndexTable, parentTableName, indexInfo, parentTablePath, parentTableId) =
+          indexInfoFromHive(dbName, tableName)(sparkSession)
+        if (isIndexTable.equals("true")) {
+          val indexMeta = new IndexMetadata(indexTableMap,
+            parentTableName,
+            true,
+            parentTablePath,
+            parentTableId)
+          setDictionaryPathInCarbonTable(carbonTable, indexMeta)
+          carbonTable.getTableInfo.getFactTable.getTableProperties
+            .put(carbonTable.getCarbonTableIdentifier.getTableId, indexMeta.serialize)
+        } else {
+          IndexTableUtil.fromGson(indexInfo)
+            .foreach { indexTableInfo =>
+              indexTableMap
+                .put(indexTableInfo.getTableName, indexTableInfo.getIndexCols)
+            }
+          val indexMetadata = new IndexMetadata(indexTableMap,
               parentTableName,
-              true,
-              parentTablePath,
-              parentTableId)
-            setDictionaryPathInCarbonTable(carbonTable, indexMeta)
-            carbonTable.getTableInfo.getFactTable.getTableProperties
-              .put(carbonTable.getCarbonTableIdentifier.getTableId, indexMeta.serialize)
-          } else {
-            IndexTableUtil.fromGson(indexInfo)
-              .foreach { indexTableInfo =>
-                indexTableMap
-                  .put(indexTableInfo.getTableName, indexTableInfo.getIndexCols)
-              }
-            val indexMetadata = new IndexMetadata(indexTableMap,
-                parentTableName,
-                isIndexTable.toBoolean,
-                parentTablePath, parentTableId)
-            carbonTable.getTableInfo.getFactTable.getTableProperties
-              .put(carbonTable.getCarbonTableIdentifier.getTableId, indexMetadata.serialize)
-          }
-        } catch {
-          case e: Exception =>
-            // In case of creating a table, hivetable will not be available.
-            LOGGER.error(e, e.getMessage)
+              isIndexTable.toBoolean,
+              parentTablePath, parentTableId)
+          carbonTable.getTableInfo.getFactTable.getTableProperties
+            .put(carbonTable.getCarbonTableIdentifier.getTableId, indexMetadata.serialize)
         }
+      } catch {
+        case e: Exception =>
+          // In case of creating a table, hivetable will not be available.
+          LOGGER.error(e, e.getMessage)
       }
     }
   }

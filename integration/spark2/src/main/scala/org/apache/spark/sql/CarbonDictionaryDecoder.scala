@@ -29,7 +29,7 @@ import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodegenContext, ExprCode, ExpressionCanonicalizer}
 import org.apache.spark.sql.catalyst.plans.physical.Partitioning
 import org.apache.spark.sql.execution.{CodegenSupport, SparkPlan, UnaryExecNode}
-import org.apache.spark.sql.optimizer.CarbonDecoderRelation
+import org.apache.spark.sql.optimizer.{CarbonDecoderRelation, CarbonFilters}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.util.{SparkSQLUtil, SparkTypeConverter}
 import org.apache.spark.util.SerializableConfiguration
@@ -45,7 +45,7 @@ import org.apache.carbondata.core.metadata.schema.table.column.CarbonDimension
 import org.apache.carbondata.core.scan.executor.util.QueryUtil
 import org.apache.carbondata.core.util.{DataTypeUtil, ThreadLocalSessionInfo}
 import org.apache.carbondata.spark.CarbonAliasDecoderRelation
-import org.apache.carbondata.spark.rdd.CarbonRDDWithTableInfo
+import org.apache.carbondata.spark.rdd.{CarbonRDDWithTableInfo, CarbonScanRDD, SerializableConfiguration}
 
 /**
  * It decodes the data.
@@ -506,6 +506,18 @@ class CarbonDecoderRDD(
   extends CarbonRDDWithTableInfo[InternalRow](relations.head.carbonRelation.sparkSession,
     prev,
     serializedTableInfo) {
+
+  def setFilterExpression(extraPreds: Seq[Expression]): Unit = {
+    if (prev.isInstanceOf[CarbonScanRDD]) {
+      if (extraPreds.nonEmpty) {
+        val expressionVal = CarbonFilters
+          .transformExpression(CarbonFilters.preProcessExpressions(extraPreds).head)
+        if (null != expressionVal) {
+          prev.asInstanceOf[CarbonScanRDD].setFilterExpression(expressionVal)
+        }
+      }
+    }
+  }
 
   def canBeDecoded(attr: Attribute): Boolean = {
     profile match {

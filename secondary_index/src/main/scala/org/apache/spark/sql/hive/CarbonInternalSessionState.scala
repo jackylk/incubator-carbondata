@@ -259,9 +259,9 @@ object CarbonInternalSessionState {
       operationListenerBus
         .addListener(classOf[LookupRelationPostEvent], new SIRefreshEventListener)
       // TODO: get create relation event
-      /*operationListenerBus
+      operationListenerBus
         .addListener(classOf[CreateCarbonRelationPostEvent], new
-        CreateCarbonRelationEventListener)*/
+        CreateCarbonRelationEventListener)
       operationListenerBus
         .addListener(classOf[DropTablePreEvent], new SIDropEventListener)
       operationListenerBus

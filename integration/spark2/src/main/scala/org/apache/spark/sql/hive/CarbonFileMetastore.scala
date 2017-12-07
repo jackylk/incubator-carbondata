@@ -50,7 +50,7 @@ import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
 import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.core.writer.ThriftWriter
-import org.apache.carbondata.events.{LookupRelationPostEvent, OperationContext, OperationListenerBus}
+import org.apache.carbondata.events.{CreateCarbonRelationPostEvent, LookupRelationPostEvent, OperationContext, OperationListenerBus}
 import org.apache.carbondata.format.{SchemaEvolutionEntry, TableInfo}
 import org.apache.carbondata.spark.util.CarbonSparkUtil
 
@@ -116,7 +116,7 @@ class CarbonFileMetastore extends CarbonMetaStore {
     val database = absIdentifier.getCarbonTableIdentifier.getDatabaseName
     val tableName = absIdentifier.getCarbonTableIdentifier.getTableName
     val tables = getTableFromMetadataCache(database, tableName)
-    tables match {
+    val relation = tables match {
       case Some(t) =>
         CarbonRelation(database, tableName, CarbonSparkUtil.createSparkMeta(t), t)
       case None =>
@@ -129,6 +129,13 @@ class CarbonFileMetastore extends CarbonMetaStore {
             throw new NoSuchTableException(database, tableName)
         }
     }
+    // fire post event after lookup relation
+    val operationContext = new OperationContext
+    val createCarbonRelationPostEvent: CreateCarbonRelationPostEvent =
+      CreateCarbonRelationPostEvent(
+        sparkSession, relation.metaData.carbonTable)
+    OperationListenerBus.getInstance.fireEvent(createCarbonRelationPostEvent, operationContext)
+    relation
   }
 
   /**

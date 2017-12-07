@@ -34,7 +34,7 @@ public class DFSFileReaderImpl implements FileReader {
   /**
    * cache to hold filename and its stream
    */
-  private Map<String, FSDataInputStream> fileNameAndStreamCache;
+  protected Map<String, FSDataInputStream> fileNameAndStreamCache;
 
   private boolean readPageByPage;
 

@@ -293,6 +293,7 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
         } else {
           new IndexMetadata(false)
         }
+        parentIndexMetadata.addIndexTableInfo(indexTableName, indexTableCols)
         carbonTable.getTableInfo.getFactTable.getTableProperties
           .put(carbonTable.getCarbonTableIdentifier.getTableId, parentIndexMetadata.serialize)
 

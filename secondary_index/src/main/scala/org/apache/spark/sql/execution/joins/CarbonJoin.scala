@@ -29,6 +29,7 @@ import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.deploy.SparkHadoopUtil
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.CarbonDecoderRDD
 import org.apache.spark.sql.catalyst.expressions.{And, Attribute, BindReferences, BoundReference, Expression, In, Literal, UnsafeRow}
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodegenContext, ExprCode, GenerateUnsafeProjection}
 import org.apache.spark.sql.catalyst.plans._
@@ -36,6 +37,7 @@ import org.apache.spark.sql.catalyst.plans.physical.{BroadcastDistribution, Dist
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.exchange.{BroadcastExchangeExec, ReusedExchangeExec}
 import org.apache.spark.sql.execution.metric.SQLMetrics
+import org.apache.spark.sql.optimizer.CarbonFilters
 import org.apache.spark.sql.types.{LongType, TimestampType}
 import org.apache.spark.unsafe.types.UTF8String
 
@@ -44,9 +46,6 @@ import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.hadoop.api.CarbonTableInputFormatExtended
 import org.apache.carbondata.spark.core.CarbonInternalCommonConstants
 import org.apache.carbondata.spark.rdd.CarbonScanRDD
-import org.apache.spark.sql.CarbonDecoderRDD
-import org.apache.spark.sql.optimizer.CarbonFilters
-
 
 case class BroadCastFilterPushJoin(
     leftKeys: Seq[Expression],
@@ -573,7 +572,7 @@ case class BroadCastSIFilterPushJoin(
     }
     if (partitions.nonEmpty && secondaryIndexRDD.isDefined &&
         secondaryIndexRDD.get.isInstanceOf[CarbonScanRDD]) {
-      /*secondaryIndexRDD.get.asInstanceOf[CarbonScanRDD].setSegmentsToAccess(partitions)*/
+      secondaryIndexRDD.get.asInstanceOf[CarbonScanRDD].setSegmentsToAccess(partitions)
     }
     val input: Array[InternalRow] = buildPlan.execute.map(_.copy()).collect()
     val inputCopy: Array[InternalRow] = input.clone()
@@ -736,7 +735,7 @@ object BroadCastFilterPushJoin {
 
   private def addPushdownToCarbonRDD(rdd: RDD[InternalRow],
       expressions: Seq[Expression]): Unit = {
-    /*if (rdd.isInstanceOf[CarbonDecoderRDD]) {
+    if (rdd.isInstanceOf[CarbonDecoderRDD]) {
       rdd.asInstanceOf[CarbonDecoderRDD].setFilterExpression(expressions)
     } else if (rdd.isInstanceOf[CarbonScanRDD]) {
       if (expressions.nonEmpty) {
@@ -746,7 +745,7 @@ object BroadCastFilterPushJoin {
           rdd.asInstanceOf[CarbonScanRDD].setFilterExpression(expressionVal)
         }
       }
-    }*/
+    }
   }
 
   private def addPushdownFilters(keys: Seq[Expression],
