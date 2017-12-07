@@ -147,6 +147,7 @@ object CarbonInternalMetastore {
               true,
               parentTablePath,
               parentTableId)
+            setDictionaryPathInCarbonTable(carbonTable, indexMeta)
             carbonTable.getTableInfo.getFactTable.getTableProperties
               .put(carbonTable.getCarbonTableIdentifier.getTableId, indexMeta.serialize)
           } else {
@@ -169,6 +170,28 @@ object CarbonInternalMetastore {
         }
       }
     }
+  }
+
+  /**
+   * set dictionary location in carbon table
+   *
+   * @param carbonTable
+   * @param indexMetadata
+   */
+  private def setDictionaryPathInCarbonTable(carbonTable: CarbonTable,
+      indexMetadata: IndexMetadata): Unit = {
+    val indexTablePath = CarbonStorePath.getCarbonTablePath(carbonTable.getAbsoluteTableIdentifier)
+    val newTablePath: String = CarbonUtil
+      .getNewTablePath(indexTablePath, indexMetadata.getParentTableName)
+    val parentTableAbsoluteTableIdentifier = AbsoluteTableIdentifier
+      .from(newTablePath,
+        carbonTable.getDatabaseName,
+        indexMetadata.getParentTableName,
+        indexMetadata.getParentTableId)
+    val parentCarbonTablePath = CarbonStorePath
+      .getCarbonTablePath(parentTableAbsoluteTableIdentifier)
+    carbonTable.getTableInfo.getFactTable.getTableProperties
+      .put(CarbonCommonConstants.DICTIONARY_PATH, parentCarbonTablePath.getMetadataDirectoryPath)
   }
 
   private def indexInfoFromHive(databaseName: String, tableName: String)

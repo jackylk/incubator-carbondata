@@ -21,27 +21,27 @@ import scala.Array.canBuildFrom
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.mapred.JobConf
+import org.apache.hadoop.mapreduce.Job
 import org.apache.spark.TaskContext
 import org.apache.spark.broadcast.Broadcast
+import org.apache.spark.deploy.SparkHadoopUtil
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.CarbonDecoderRDD
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.expressions.{And, Attribute, BindReferences, BoundReference,
-Expression, In, Literal, UnsafeRow}
-import org.apache.spark.sql.catalyst.expressions.codegen.{CodegenContext, ExprCode,
-GenerateUnsafeProjection}
+import org.apache.spark.sql.catalyst.expressions.{And, Attribute, BindReferences, BoundReference, Expression, In, Literal, UnsafeRow}
+import org.apache.spark.sql.catalyst.expressions.codegen.{CodegenContext, ExprCode, GenerateUnsafeProjection}
 import org.apache.spark.sql.catalyst.plans._
-import org.apache.spark.sql.catalyst.plans.physical.{BroadcastDistribution, Distribution,
-UnspecifiedDistribution}
+import org.apache.spark.sql.catalyst.plans.physical.{BroadcastDistribution, Distribution, UnspecifiedDistribution}
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.exchange.{BroadcastExchangeExec, ReusedExchangeExec}
 import org.apache.spark.sql.execution.metric.SQLMetrics
-import org.apache.spark.sql.optimizer.CarbonFilters
 import org.apache.spark.sql.types.{LongType, TimestampType}
 import org.apache.spark.unsafe.types.UTF8String
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.util.CarbonProperties
+import org.apache.carbondata.hadoop.api.CarbonTableInputFormatExtended
 import org.apache.carbondata.spark.core.CarbonInternalCommonConstants
 import org.apache.carbondata.spark.rdd.CarbonScanRDD
 import org.apache.spark.sql.CarbonDecoderRDD
@@ -571,6 +571,10 @@ case class BroadCastSIFilterPushJoin(
       case rowData: RowDataSourceScanExec =>
         rowData.rdd
     }
+    if (partitions.nonEmpty && secondaryIndexRDD.isDefined &&
+        secondaryIndexRDD.get.isInstanceOf[CarbonScanRDD]) {
+      /*secondaryIndexRDD.get.asInstanceOf[CarbonScanRDD].setSegmentsToAccess(partitions)*/
+    }
     val input: Array[InternalRow] = buildPlan.execute.map(_.copy()).collect()
     val inputCopy: Array[InternalRow] = input.clone()
     (input, inputCopy)
@@ -590,12 +594,31 @@ case class BroadCastSIFilterPushJoin(
 
   lazy val partitions: Array[String] = if (mainTableRDD.isDefined &&
                                            mainTableRDD.get.isInstanceOf[CarbonScanRDD]) {
-    // TODO: getFiltered Segment implementation
-    /* mainTableRDD.get.asInstanceOf[CarbonScanRDD]
-      .getFilteredSegments */
-    Array.empty[String]
+    getFilteredSegments(mainTableRDD.get.asInstanceOf[CarbonScanRDD])
   } else {
     Array.empty[String]
+  }
+
+  /**
+   * This method is used to get the valid segments for the query based on the filter condition.
+   *
+   * @return Array of valid segments
+   */
+  def getFilteredSegments(carbonScanRdd: CarbonScanRDD): Array[String] = {
+    val LOGGER = LogServiceFactory.getLogService(BroadCastSIFilterPushJoin.getClass.getName)
+    val conf = new Configuration()
+    val jobConf = new JobConf(conf)
+    SparkHadoopUtil.get.addCredentials(jobConf)
+    val job = Job.getInstance(jobConf)
+    val format = carbonScanRdd.prepareInputFormatForDriver(job.getConfiguration)
+    val startTime = System.currentTimeMillis()
+    val segmentsToAccess: Array[String] = CarbonTableInputFormatExtended
+      .getFilteredSegments(job, format).asScala.toArray
+    LOGGER
+      .info("Time taken for getting the splits: " + (System.currentTimeMillis - startTime) +
+            " ,Total split: " + segmentsToAccess.length)
+    segmentsToAccess
+
   }
 
   override def output: Seq[Attribute] = carbonScan.output
