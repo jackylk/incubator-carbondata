@@ -22,13 +22,19 @@ import java.util
 import scala.collection.JavaConverters._
 
 import org.apache.spark.internal.Logging
-import org.apache.spark.util.Compactor
+import org.apache.spark.sql.CarbonEnv
+import org.apache.spark.sql.command.SecondaryIndex
+import org.apache.spark.sql.hive.CarbonRelation
+import org.apache.spark.util.{CarbonInternalScalaUtil, Compactor}
 
 import org.apache.carbondata.common.logging.{LogService, LogServiceFactory}
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.mutate.CarbonUpdateUtil
 import org.apache.carbondata.core.statusmanager.LoadMetadataDetails
 import org.apache.carbondata.events.{AlterTableCompactionPreStatusUpdateEvent, Event, OperationContext, OperationEventListener}
+import org.apache.carbondata.processing.merger.{CarbonDataMergerUtil, CompactionType}
+import org.apache.carbondata.spark.util.CommonUtil
+
 
 /**
  *
@@ -47,23 +53,56 @@ class AlterTableCompactionPostEventListener extends OperationEventListener with 
         LOGGER.audit("post load event-listener called")
         val carbonLoadModel = alterTableCompactionPostEvent.carbonLoadModel
         val sQLContext = alterTableCompactionPostEvent.sparkSession.sqlContext
-        val mergedLoadName = alterTableCompactionPostEvent.mergedLoadName
-        val loadMetadataDetails = new LoadMetadataDetails
-        loadMetadataDetails.setLoadName(mergedLoadName)
-        val loadsToMerge: util.List[LoadMetadataDetails] = List(loadMetadataDetails).asJava
-        val loadName = mergedLoadName
-          .substring(mergedLoadName.indexOf(CarbonCommonConstants.LOAD_FOLDER) +
-                     CarbonCommonConstants.LOAD_FOLDER.length)
-        val mergeLoadStartTime = CarbonUpdateUtil.readCurrentTime()
+        val compactionType: CompactionType = alterTableCompactionPostEvent.carbonMergerMapping
+          .campactionType
+        if (compactionType == CompactionType.SEGMENT_INDEX) {
+          val carbonMainTable = carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable
+          val indexTablesList = CarbonInternalScalaUtil.getIndexesMap(carbonMainTable).asScala
+          if (null != indexTablesList && indexTablesList.nonEmpty) {
+            indexTablesList.foreach { indexTableAndColumns =>
+              val secondaryIndex = SecondaryIndex(Some(carbonLoadModel.getDatabaseName),
+                carbonLoadModel.getTableName,
+                indexTableAndColumns._2.asScala.toList,
+                indexTableAndColumns._1)
+              val metastore = CarbonEnv.getInstance(sQLContext.sparkSession)
+                .carbonMetastore
+              val indexCarbonTable = metastore
+                .lookupRelation(Some(carbonLoadModel.getDatabaseName),
+                  secondaryIndex.indexTableName)(sQLContext
+                  .sparkSession).asInstanceOf[CarbonRelation].carbonTable
 
-        val segmentIdToLoadStartTimeMapping: scala.collection.mutable.Map[String, java.lang.Long] =
-          scala
-            .collection.mutable.Map((loadName, mergeLoadStartTime))
-        Compactor.createSecondaryIndexAfterCompaction(sQLContext,
-          carbonLoadModel,
-          List(loadName),
-          loadsToMerge,
-          segmentIdToLoadStartTimeMapping, true)
+              // Just launch job to merge index for all index tables
+              CommonUtil.mergeIndexFiles(
+                sQLContext.sparkContext,
+                CarbonDataMergerUtil.getValidSegmentList(
+                  indexCarbonTable.getAbsoluteTableIdentifier).asScala,
+                indexCarbonTable.getTablePath,
+                indexCarbonTable,
+                true)
+            }
+          }
+        } else {
+          val mergedLoadName = alterTableCompactionPostEvent.mergedLoadName
+          val loadMetadataDetails = new LoadMetadataDetails
+          loadMetadataDetails.setLoadName(mergedLoadName)
+          val loadsToMerge: util.List[LoadMetadataDetails] = List(loadMetadataDetails).asJava
+          val loadName = mergedLoadName
+            .substring(mergedLoadName.indexOf(CarbonCommonConstants.LOAD_FOLDER) +
+                       CarbonCommonConstants.LOAD_FOLDER.length)
+          val mergeLoadStartTime = CarbonUpdateUtil.readCurrentTime()
+
+          val segmentIdToLoadStartTimeMapping: scala.collection.mutable.Map[String, java.lang
+          .Long] =
+
+
+            scala
+              .collection.mutable.Map((loadName, mergeLoadStartTime))
+          Compactor.createSecondaryIndexAfterCompaction(sQLContext,
+            carbonLoadModel,
+            List(loadName),
+            loadsToMerge,
+            segmentIdToLoadStartTimeMapping, true)
+        }
       case _ =>
     }
   }
