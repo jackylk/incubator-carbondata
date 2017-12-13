@@ -18,8 +18,11 @@
 package org.apache.carbondata.spark.spark.util;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
@@ -29,17 +32,20 @@ import org.apache.carbondata.core.metadata.CarbonMetadata;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.statusmanager.LoadMetadataDetails;
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager;
+import org.apache.carbondata.core.util.CarbonProperties;
+import org.apache.carbondata.core.util.CarbonProperty;
 import org.apache.carbondata.core.util.CarbonUtil;
 import org.apache.carbondata.core.util.path.CarbonStorePath;
 import org.apache.carbondata.core.util.path.CarbonTablePath;
 import org.apache.carbondata.processing.util.DeleteLoadFolders;
+import org.apache.carbondata.spark.core.CarbonInternalCommonConstants;
 
 import org.apache.spark.util.CarbonInternalScalaUtil;
 
 /**
  *
  */
-public final class CarbonInternalJavaUtil {
+public final class CarbonPluginUtil {
   private static final LogService LOG =
       LogServiceFactory.getLogService(SegmentStatusManager.class.getName());
 
@@ -136,5 +142,20 @@ public final class CarbonInternalJavaUtil {
         }
       }
     }
+  }
+
+  /**
+   *
+   *
+   */
+  public static void registerIntenalProperty() throws IllegalAccessException {
+    Field[] declaredFields = CarbonInternalCommonConstants.class.getDeclaredFields();
+    Set<String> propertySet =  new HashSet<String>();
+    for (Field field : declaredFields) {
+      if (field.isAnnotationPresent(CarbonProperty.class)) {
+        propertySet.add(field.get(field.getName()).toString());
+      }
+    }
+    CarbonProperties.getInstance().addPropertyToPropertySet(propertySet);
   }
 }

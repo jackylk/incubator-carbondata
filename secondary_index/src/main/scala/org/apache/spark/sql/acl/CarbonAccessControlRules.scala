@@ -129,7 +129,7 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
             null,
             Set(PrivType.OWNER_PRIV))))
 
-        case c@CarbonShowLoadsCommand(dbNameOp, tableName, _) =>
+        case c@CarbonShowLoadsCommand(dbNameOp, tableName, _, _) =>
           doCheckPrivilege(c, Set(new PrivObject(
             ObjectType.TABLE,
             CarbonEnv.getDatabaseName(dbNameOp)(sparkSession),

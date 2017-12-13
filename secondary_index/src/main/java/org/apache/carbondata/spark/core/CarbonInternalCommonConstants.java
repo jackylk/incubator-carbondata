@@ -23,6 +23,7 @@ public final class CarbonInternalCommonConstants {
   /**
    * to enable SI lookup partial string
    */
+  @CarbonProperty
   public static final String ENABLE_SI_LOOKUP_PARTIALSTRING = "carbon.si.lookup.partialstring";
 
   /**

@@ -31,7 +31,7 @@ import org.apache.spark.sql.CarbonEndsWith
 import org.apache.spark.sql.CarbonExpressions.{MatchCast => Cast}
 import org.apache.spark.sql.carbondata.execution.datasources.CarbonSparkDataSourceUtil
 import org.apache.spark.sql.catalyst.TableIdentifier
-import org.apache.spark.sql.hive.CarbonSessionCatalog
+import org.apache.spark.sql.hive.{CarbonHiveMetadataUtil, CarbonSessionCatalog}
 import org.apache.spark.util.{CarbonReflectionUtils, SparkUtil}
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
@@ -328,6 +328,8 @@ object CarbonFilters {
 
   def transformExpression(expr: Expression): CarbonExpression = {
     expr match {
+      case plan if (CarbonHiveMetadataUtil.checkNIUDF(plan)) =>
+        transformExpression(CarbonHiveMetadataUtil.getNIChildren(plan))
       case Or(left, right)
         if (isCarbonSupportedDataTypes(left) && isCarbonSupportedDataTypes(right)) => new
           OrExpression(transformExpression(left), transformExpression(right))

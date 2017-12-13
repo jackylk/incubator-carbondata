@@ -1,15 +1,12 @@
-/*
 package org.apache.carbondata.spark.testsuite.secondaryindex
 
-import org.apache.carbondata.core.constants.{CarbonCommonConstants, CarbonLoadOptionConstants}
-import org.apache.carbondata.core.exception.InvalidConfigurationException
 import org.apache.spark.sql.{CarbonDatasourceHadoopRelation, DataFrame, Row}
 import org.apache.spark.sql.catalyst.planning.PhysicalOperation
 import org.apache.spark.sql.common.util.QueryTest
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.scalatest.BeforeAndAfterAll
 import org.apache.spark.sql.catalyst.expressions._
-import org.apache.spark.util.si.CarbonInternalScalaUtil
+import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.spark.core.CarbonInternalCommonConstants
 /**
@@ -230,7 +227,6 @@ class TestNIQueryWithSecondaryIndex extends QueryTest with BeforeAndAfterAll{
   }
 
   override def afterAll: Unit = {
-    //sql("drop table if exists seccust")
+    sql("drop table if exists seccust")
   }
 }
-*/

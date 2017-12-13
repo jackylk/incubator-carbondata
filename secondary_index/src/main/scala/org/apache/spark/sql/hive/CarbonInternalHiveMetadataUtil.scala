@@ -102,16 +102,4 @@ object CarbonInternalHiveMetadataUtil {
         hiveUDF.asInstanceOf[HiveSimpleUDF].children.head
     }
   }
-
-  def checkNIUDF(condition: Expression): Boolean = {
-    condition match {
-      case hiveUDF: HiveSimpleUDF if (hiveUDF.function.isInstanceOf[NonIndexUDFExpression]) => true
-      case _ => false
-    }
-  }
-
-}
-
-class NonIndexUDFExpression extends UDF {
-  def evaluate(input: Any): Boolean = true
 }

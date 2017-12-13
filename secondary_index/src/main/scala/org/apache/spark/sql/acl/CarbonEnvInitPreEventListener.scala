@@ -17,6 +17,8 @@
 
 package org.apache.spark.sql.acl
 
+import org.apache.spark.sql.execution.command.CreateFunctionCommand
+
 import org.apache.carbondata.events.{CarbonEnvInitPreEvent, Event, OperationContext, OperationEventListener}
 import org.apache.carbondata.spark.acl.{CarbonUserGroupInformation, ThreadLocalUsername}
 
@@ -40,5 +42,7 @@ class CarbonEnvInitPreEventListener extends OperationEventListener {
      Utils.initCarbonFoldersPermission(storePath, sparkSession)
      // register position ID UDF
      sparkSession.udf.register("getPositionId", () => "")
+    CreateFunctionCommand(None, "NI", "org.apache.spark.sql.hive.NonIndexUDFExpression",
+      Seq(), true).run(sparkSession)
   }
 }

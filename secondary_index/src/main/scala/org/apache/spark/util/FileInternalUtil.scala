@@ -32,7 +32,7 @@ import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.core.util.path.CarbonStorePath
 import org.apache.carbondata.spark.core.CarbonInternalCommonConstants
 import org.apache.carbondata.spark.spark.load.CarbonInternalLoaderUtil
-import org.apache.carbondata.spark.spark.util.CarbonInternalJavaUtil
+import org.apache.carbondata.spark.spark.util.CarbonPluginUtil
 
 
 /**
@@ -106,7 +106,7 @@ object FileInternalUtil {
       carbonStoreLocation: String,
       isForceDeletion: Boolean): Unit = {
     try {
-      CarbonInternalJavaUtil
+      CarbonPluginUtil
         .cleanUpIndexFiles(factTable,
           carbonStoreLocation,
           isForceDeletion)

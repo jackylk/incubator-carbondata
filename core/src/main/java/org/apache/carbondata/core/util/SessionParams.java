@@ -134,6 +134,7 @@ public class SessionParams implements Serializable, Cloneable {
     boolean isValid = false;
     switch (key) {
       case ENABLE_UNSAFE_SORT:
+      case "carbon.si.lookup.partialstring":
       case ENABLE_OFFHEAP_SORT:
       case CARBON_CUSTOM_BLOCK_DISTRIBUTION:
       case CARBON_OPTIONS_BAD_RECORDS_LOGGER_ENABLE:

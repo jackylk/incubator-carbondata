@@ -138,7 +138,7 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
           .getProperty(CarbonInternalCommonConstants.ENABLE_SI_LOOKUP_PARTIALSTRING, "true")
           .equalsIgnoreCase("true")
 
-        // When carbon.lookup.partialstring set to FALSE, if filter has startsWith then SI is
+        // When carbon.si.lookup.partialstring set to FALSE, if filter has startsWith then SI is
         // used eventhough combination of other filters like endsWith or Contains
         if (!isPartialStringEnabled) {
           isPartialStringEnabled = conditionsHasStartWith(copyFilter.condition,
@@ -215,7 +215,7 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
       case IsNotNull(child: AttributeReference) => Literal(true)
       // Like is possible only if user provides _ in between the string
       // _ in like means any single character wild card check.
-      case plan if (CarbonInternalHiveMetadataUtil.checkNIUDF(plan)) => Literal(true)
+      case plan if (CarbonHiveMetadataUtil.checkNIUDF(plan)) => Literal(true)
       case Like(left: AttributeReference, right: Literal) if (!isPartialStringEnabled) => Literal(
         true)
       case EndsWith(left: AttributeReference,
@@ -268,7 +268,7 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
       case Like(left: AttributeReference, right: Literal) if (!pushDownRequired) => true
       case EndsWith(left: AttributeReference, right: Literal) if (!pushDownRequired) => true
       case Contains(left: AttributeReference, right: Literal) if (!pushDownRequired) => true
-      case plan if (CarbonInternalHiveMetadataUtil.checkNIUDF(plan)) => true
+      case plan if (CarbonHiveMetadataUtil.checkNIUDF(plan)) => true
       case _ => false
     }
     if (donotPushToSI) {

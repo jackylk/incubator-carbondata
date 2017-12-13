@@ -16,8 +16,10 @@
  */
 package org.apache.spark.sql.hive
 
+import org.apache.hadoop.hive.ql.exec.UDF
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.TableIdentifier
+import org.apache.spark.sql.catalyst.expressions.Expression
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 
@@ -53,4 +55,24 @@ object CarbonHiveMetadataUtil {
     }
   }
 
+  def checkNIUDF(condition: Expression): Boolean = {
+    condition match {
+      case hiveUDF: HiveSimpleUDF if hiveUDF.function.isInstanceOf[NonIndexUDFExpression] => true
+      case _ => false
+    }
+  }
+
+  def getNIChildren(condition: Expression): Expression = {
+    condition.asInstanceOf[HiveSimpleUDF].children.head
+  }
 }
+
+  /**
+   * If data fetching from the secondary indexes degrade query performance, we can use NI (No
+   * Index) function on filters with in WHERE clause to skip SI
+   *
+   * Ex:- select column(s) from table_name where NI(column_name1 = value1)
+   */
+  class NonIndexUDFExpression extends UDF {
+    def evaluate(input: Any): Boolean = true
+  }
