@@ -44,21 +44,13 @@ class CarbonInternalSessionState(sparkSession: SparkSession)
   override lazy val sqlParser: ParserInterface = new CarbonInternalSparkSqlParser(conf,
     sparkSession)
 
-  experimentalMethods.extraStrategies = extraStrategies
-  // No need to use extra optimizations as customPreOptimizationRules takes care of this
-  // optimization
-  experimentalMethods.extraOptimizations = extraOptimizations
-
   override def extraStrategies: Seq[Strategy] = {
     super.extraStrategies ++
     Seq(new CarbonInternalLateDecodeStrategy, new InternalDDLStrategy(sparkSession))
   }
 
   override def extraOptimizations: Seq[Rule[LogicalPlan]] = {
-    Seq(new CarbonIUDRule,
-      new CarbonUDFTransformRule,
-      new CarbonSITransformationRule(sparkSession),
-      new CarbonLateDecodeRule)
+    Seq()
   }
 
   override lazy val otherPrepareRules: Seq[Rule[SparkPlan]] = {
@@ -92,6 +84,7 @@ class CarbonInternalSessionState(sparkSession: SparkSession)
       }
     }
 
+    // TODO shouldnot be there
     override def tailOptimizationBatches: Seq[Batch] = {
       super.tailOptimizationBatches ++
       customTailOptimizationRules.map { case (desc, iterTimes, rules) =>
@@ -99,6 +92,7 @@ class CarbonInternalSessionState(sparkSession: SparkSession)
       }
     }
 
+    // TODO shouldnot be there
     override def postHocOptimizationBatched: Seq[Batch] = {
       super.postHocOptimizationBatched ++
       customPostHocOptimizationRules.map { case (desc, iterTimes, rules) =>
@@ -132,9 +126,18 @@ object CarbonInternalSessionState {
       // register internal carbon property to propertySet
       CarbonPluginUtil.registerIntenalProperty()
 
+      val operationListenerBus = OperationListenerBus.getInstance()
+
+      // Listeners added for blocking features(insert overwrite, bucketing, partition, complex type)
+      operationListenerBus
+        .addListener(classOf[CreateTablePreExecutionEvent],
+          new BlockEventListener)
+      operationListenerBus
+        .addListener(classOf[LoadTablePreExecutionEvent],
+          new BlockEventListener)
+
       // ACL Listeners
       FileFactory.setFileTypeInerface(new ACLFileFactory())
-      val operationListenerBus = OperationListenerBus.getInstance()
       operationListenerBus
         .addListener(classOf[LoadTablePreExecutionEvent],
           new ACLLoadEventListener.ACLPreLoadEventListener)
