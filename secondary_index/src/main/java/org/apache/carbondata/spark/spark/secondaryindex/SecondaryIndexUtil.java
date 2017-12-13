@@ -22,14 +22,20 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.carbondata.common.logging.LogService;
+import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.block.TableBlockInfo;
 import org.apache.carbondata.core.datastore.block.TaskBlockInfo;
 import org.apache.carbondata.core.metadata.CarbonMetadata;
 import org.apache.carbondata.core.metadata.blocklet.DataFileFooter;
 import org.apache.carbondata.core.metadata.encoder.Encoding;
+import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonDimension;
+import org.apache.carbondata.core.statusmanager.LoadMetadataDetails;
+import org.apache.carbondata.core.statusmanager.SegmentStatusManager;
 import org.apache.carbondata.core.util.CarbonUtil;
+import org.apache.carbondata.core.util.path.CarbonStorePath;
 import org.apache.carbondata.core.util.path.CarbonTablePath;
 import org.apache.carbondata.spark.spark.secondaryindex.exception.SecondaryIndexException;
 
@@ -37,6 +43,9 @@ import org.apache.carbondata.spark.spark.secondaryindex.exception.SecondaryIndex
  * Utility Class for the Secondary Index creation flow
  */
 public class SecondaryIndexUtil {
+
+  private static final LogService LOG =
+      LogServiceFactory.getLogService(SecondaryIndexUtil.class.getName());
 
   /**
    * To create a mapping of task and block
@@ -181,5 +190,46 @@ public class SecondaryIndexUtil {
       indexToFactColMapping[sortedDims.indexOf(dims.get(i))] = i;
     }
     return indexToFactColMapping;
+  }
+
+  /**
+   * This method will update the deletion status for all the index tables
+   *
+   * @param parentCarbonTable
+   * @param indexTables
+   * @throws IOException
+   */
+  public static void updateTableStatusForIndexTables(CarbonTable parentCarbonTable,
+      List<CarbonTable> indexTables) throws IOException {
+
+    LoadMetadataDetails[] loadFolderDetailsArrayMainTable =
+        SegmentStatusManager.readLoadMetadata(parentCarbonTable.getMetaDataFilepath());
+    for (CarbonTable indexTable : indexTables) {
+      CarbonTablePath carbonTablePath = CarbonStorePath
+          .getCarbonTablePath(indexTable.getAbsoluteTableIdentifier().getTablePath(),
+              indexTable.getAbsoluteTableIdentifier().getCarbonTableIdentifier());
+      String tableStatusFilePath = carbonTablePath.getTableStatusFilePath();
+      if (!CarbonUtil.isFileExists(tableStatusFilePath)) {
+        LOG.info(
+            "Table status file does not exist for index table: " + indexTable.getTableUniqueName());
+        continue;
+      }
+      LoadMetadataDetails[] loadFolderDetailsArray =
+          SegmentStatusManager.readLoadMetadata(carbonTablePath.getMetadataDirectoryPath());
+      if (null != loadFolderDetailsArray && loadFolderDetailsArray.length > 0) {
+        List<String> invalidLoads = new ArrayList<>(CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);
+        try {
+          SegmentStatusManager.writeLoadDetailsIntoFile(carbonTablePath.getTableStatusFilePath(),
+              loadFolderDetailsArrayMainTable);
+          if (invalidLoads.size() > 0) {
+            LOG.audit("Delete segment by Id is successfull for $dbName.$tableName.");
+          } else {
+            LOG.error("Delete segment by Id is failed. Invalid ID is: " + invalidLoads.toString());
+          }
+        } catch (Exception ex) {
+          LOG.error(ex.getMessage());
+        }
+      }
+    }
   }
 }

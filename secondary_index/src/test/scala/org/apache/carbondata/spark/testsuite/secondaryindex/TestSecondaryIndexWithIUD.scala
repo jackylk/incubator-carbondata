@@ -23,6 +23,8 @@ import org.apache.spark.sql.Row
 import org.apache.spark.sql.common.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
 
+import org.apache.carbondata.core.statusmanager.SegmentStatus
+
 /**
  * test cases for IUD data retention on SI tables
  */
@@ -34,7 +36,7 @@ class TestSecondaryIndexWithIUD extends QueryTest with BeforeAndAfterAll {
     sql("drop table if exists test")
   }
 
-  /*test("test index with IUD delete all_rows") {
+  test("test index with IUD delete all_rows") {
 
     sql(
       "create table dest (c1 string,c2 int,c3 string,c5 string) STORED BY 'org.apache.carbondata" +
@@ -57,9 +59,9 @@ class TestSecondaryIndexWithIUD extends QueryTest with BeforeAndAfterAll {
     )
     sql("show segments for table index_dest1").show(false)
     assert(sql("show segments for table index_dest1").collect()(0).get(1).toString()
-             .equals(CarbonCommonConstants.MARKED_FOR_DELETE))
+             .equals(SegmentStatus.MARKED_FOR_DELETE.getMessage))
     assert(sql("show segments for table index_dest2").collect()(0).get(1).toString()
-             .equals(CarbonCommonConstants.MARKED_FOR_DELETE))
+             .equals(SegmentStatus.MARKED_FOR_DELETE.getMessage))
 
     // execute clean files
     sql("clean files for table dest")
@@ -67,11 +69,11 @@ class TestSecondaryIndexWithIUD extends QueryTest with BeforeAndAfterAll {
     sql("show segments for table index_dest2").show()
     val exception_index_dest1 = intercept[IndexOutOfBoundsException] {
       assert(sql("show segments for table index_dest1").collect()(0).get(1).toString()
-        .equals(CarbonCommonConstants.MARKED_FOR_DELETE))
+        .equals(SegmentStatus.MARKED_FOR_DELETE.getMessage))
     }
     val exception_index_dest2 = intercept[IndexOutOfBoundsException] {
       assert(sql("show segments for table index_dest2").collect()(0).get(1).toString()
-        .equals(CarbonCommonConstants.MARKED_FOR_DELETE))
+        .equals(SegmentStatus.MARKED_FOR_DELETE.getMessage))
     }
 
     //load again and check result
@@ -86,7 +88,7 @@ class TestSecondaryIndexWithIUD extends QueryTest with BeforeAndAfterAll {
     )
 
 
-  }*/
+  }
 
   test("test index with IUD delete all_rows-1") {
     sql(
@@ -120,8 +122,8 @@ class TestSecondaryIndexWithIUD extends QueryTest with BeforeAndAfterAll {
       )
     sql("clean files for table source")
     sql("show segments for table index_source2").show()
-    /*assert(sql("show segments for table index_source2").collect()(0).get(1).toString()
-      .equals(CarbonCommonConstants.STORE_LOADSTATUS_SUCCESS))*/
+    assert(sql("show segments for table index_source2").collect()(0).get(1).toString()
+      .equals(SegmentStatus.SUCCESS.getMessage))
   }
 
 /*  test("test index with IUD delete using Join") {

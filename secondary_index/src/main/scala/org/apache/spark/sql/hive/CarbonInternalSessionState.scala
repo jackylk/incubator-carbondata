@@ -286,7 +286,9 @@ object CarbonInternalSessionState {
       operationListenerBus
         .addListener(classOf[UpdateTablePreEvent], new UpdateTablePreEventListener)
       operationListenerBus
-        .addListener(classOf[DeleteFromTablePreEvent], new DeleteFromTablePreEventListener)
+        .addListener(classOf[DeleteFromTablePostEvent], new DeleteFromTableEventListener)
+      operationListenerBus
+        .addListener(classOf[DeleteFromTablePreEvent], new DeleteFromTableEventListener)
       // refresh table listner
       operationListenerBus
         .addListener(classOf[RefreshTablePreExecutionEvent],

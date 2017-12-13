@@ -17,21 +17,19 @@
 
 package org.apache.spark.sql.events
 
-import scala.collection.JavaConverters._
-
 import org.apache.spark.internal.Logging
-import org.apache.spark.sql.CarbonEnv
-import org.apache.spark.sql.hive.CarbonRelation
-import org.apache.spark.util.CarbonInternalScalaUtil
 import org.apache.spark.util.si.FileInternalUtil
 
-import org.apache.carbondata.events.{CleanFilesPostEvent, Event, OperationContext,
-OperationEventListener}
+import org.apache.carbondata.common.logging.{LogService, LogServiceFactory}
+import org.apache.carbondata.events.{CleanFilesPostEvent, Event, OperationContext, OperationEventListener}
 
 /**
  *
  */
 class CleanFilesPostEventListener extends OperationEventListener with Logging {
+
+  val LOGGER: LogService = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
+
   /**
    * Called on a specified event occurrence
    *
@@ -40,16 +38,10 @@ class CleanFilesPostEventListener extends OperationEventListener with Logging {
   override def onEvent(event: Event, operationContext: OperationContext): Unit = {
     event match {
       case cleanFilesPostEvent: CleanFilesPostEvent =>
+        LOGGER.audit("Clean files post event listener called")
         val carbonTable = cleanFilesPostEvent.carbonTable
         val sparkSession = cleanFilesPostEvent.sparkSession
-        CarbonInternalScalaUtil.getIndexesTables(carbonTable).asScala.foreach { tableName =>
-          val metastore = CarbonEnv.getInstance(sparkSession).carbonMetastore
-          val table = metastore
-            .lookupRelation(Some(carbonTable.getDatabaseName), tableName)(sparkSession)
-            .asInstanceOf[CarbonRelation].carbonTable
-
-          FileInternalUtil.cleanIndexFiles(table, table.getTablePath, true)
-        }
+        FileInternalUtil.cleanIndexFiles(carbonTable, carbonTable.getTablePath, true)
     }
   }
 }
