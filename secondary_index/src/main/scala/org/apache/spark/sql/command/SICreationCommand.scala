@@ -92,6 +92,17 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
         throw new ErrorMessage(s"Parent Table $databaseName.$tableName is not found")
       }
       locks = acquireLockForSecondaryIndexCreation(carbonTable.getAbsoluteTableIdentifier)
+      if (locks.isEmpty) {
+        sys
+          .error(s"Not able to acquire lock. Another Data Modification operation is already in " +
+                 s"progress for either ${
+                   carbonTable
+                     .getDatabaseName
+                 }. ${ carbonTable.getTableName } or ${
+                   carbonTable
+                     .getDatabaseName
+                 } or  ${ indexTableName }. Please try after some time")
+      }
       // get carbon table again to reflect any changes during lock acquire.
       carbonTable =
         CarbonEnv.getInstance(sparkSession).carbonMetastore
@@ -433,14 +444,11 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
       deleteSegmentLock.lockWithRetries()) {
       logInfo("Successfully able to get the table metadata file, compaction and delete segment " +
         "lock")
+      List(metadataLock, alterTableCompactionLock, deleteSegmentLock)
     }
     else {
-      sys
-        .error(
-          "Either data load, compaction or delete segment is in progress for the same table. " +
-            "Please try after some time")
+      List.empty
     }
-    List(metadataLock, alterTableCompactionLock, deleteSegmentLock)
   }
 
   def releaseLocks(locks: List[ICarbonLock]): Unit = {
