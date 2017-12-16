@@ -31,6 +31,7 @@ import org.apache.spark.util.CarbonInternalScalaUtil
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.cache.dictionary.ManageDictionaryAndBTree
 import org.apache.carbondata.core.constants.CarbonCommonConstants
+import org.apache.carbondata.core.datamap.DataMapStoreManager
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.metadata.{AbsoluteTableIdentifier, CarbonTableIdentifier}
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
@@ -80,6 +81,8 @@ object CarbonInternalMetastore {
           CarbonInternalHiveMetadataUtil
             .invalidateAndUpdateIndexInfo(indexTableIdentifier, indexInfo, parentCarbonTable)(
               sparkSession)
+          DataMapStoreManager.getInstance()
+            .clearDataMaps(indexCarbonTable.getAbsoluteTableIdentifier)
         }
       }
     } finally {
@@ -100,8 +103,9 @@ object CarbonInternalMetastore {
    * @param storePath
    * @param sparkSession
    */
-  def deleteIndexSilent(carbonTableIdentifier: TableIdentifier, storePath: String)
-    (sparkSession: SparkSession): Unit = {
+  def deleteIndexSilent(carbonTableIdentifier: TableIdentifier,
+      storePath: String,
+      parentCarbonTable: CarbonTable)(sparkSession: SparkSession): Unit = {
     val dbName = carbonTableIdentifier.database
     val indexTable = carbonTableIdentifier.table
     var indexCarbonTable: CarbonTable = null
@@ -119,7 +123,7 @@ object CarbonInternalMetastore {
         dropIndexTable(carbonTableIdentifier,
           indexCarbonTable,
           storePath,
-          null,
+          parentCarbonTable,
           removeEntryFromParentTable = true
         )(sparkSession)
       } catch {

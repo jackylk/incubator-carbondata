@@ -74,8 +74,9 @@ class SIDropEventListener extends OperationEventListener with Logging {
                   val indexTableIdentifier = TableIdentifier(tableName,
                     Some(parentCarbonTable.getDatabaseName))
                   CarbonInternalMetastore
-                    .deleteIndexSilent(indexTableIdentifier, carbonTable.getTablePath)(
-                      sparkSession)
+                    .deleteIndexSilent(indexTableIdentifier,
+                      carbonTable.getTablePath,
+                      parentCarbonTable)(sparkSession)
                   isValidDeletion = true
                 } catch {
                   case ex: Exception =>
