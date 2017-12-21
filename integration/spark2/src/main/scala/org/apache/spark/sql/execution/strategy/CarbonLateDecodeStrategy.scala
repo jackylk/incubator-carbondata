@@ -160,7 +160,7 @@ private[sql] class CarbonLateDecodeStrategy extends SparkStrategy {
    * @param scanBuilder
    * @return
    */
-  private def pruneFilterProject(
+   def pruneFilterProject(
       relation: LogicalRelation,
       projects: Seq[NamedExpression],
       filterPredicates: Seq[Expression],

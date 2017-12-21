@@ -66,7 +66,7 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
             Set(PrivType.OWNER_PRIV))))
 
         case c@CarbonLoadDataCommand(dbNameOp: Option[String],
-        tableName: String, _, _, _, _, _, _, _, _, _) =>
+        tableName: String, _, _, _, _, _, _, _, _, _, _) =>
           checkPrivilege(c, dbNameOp, tableName, PrivType.INSERT_NOGRANT)
         case c@InsertIntoCarbonTable(relation, _, _, _, _) =>
           checkPrivilege(c,

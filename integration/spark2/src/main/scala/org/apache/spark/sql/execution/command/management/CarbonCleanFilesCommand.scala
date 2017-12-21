@@ -24,6 +24,7 @@ import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.execution.command.{AtomicRunnableCommand, Checker, DataCommand}
 import org.apache.spark.sql.optimizer.CarbonFilters
+import org.apache.spark.util.SparkUtil
 import org.apache.spark.util.DataMapUtil
 
 import org.apache.carbondata.api.CarbonStore

@@ -34,7 +34,7 @@ class CarbonInternalSparkSqlParser(conf: SQLConf, sparkSession: SparkSession)
   extends CarbonSparkSqlParser(conf, sparkSession) {
 
   override val parser = new CarbonInternalSpark2SqlParser
-  override val astBuilder = new CarbonInternalSqlAstBuilder(conf, parser)
+  override val astBuilder = new CarbonInternalSqlAstBuilder(conf, parser, sparkSession)
 
   private val substitutor = new VariableSubstitution(conf)
 
@@ -65,8 +65,8 @@ class CarbonInternalSparkSqlParser(conf: SQLConf, sparkSession: SparkSession)
   }
 }
 
-class CarbonInternalSqlAstBuilder(conf: SQLConf, parser: CarbonInternalSpark2SqlParser)
-  extends CarbonSqlAstBuilder(conf, parser) {
+class CarbonInternalSqlAstBuilder(conf: SQLConf, parser: CarbonInternalSpark2SqlParser,
+    sparkSession: SparkSession) extends CarbonSqlAstBuilder(conf, parser, sparkSession) {
 
   override def visitCreateTable(ctx: CreateTableContext): LogicalPlan = {
     super.visitCreateTable(ctx)

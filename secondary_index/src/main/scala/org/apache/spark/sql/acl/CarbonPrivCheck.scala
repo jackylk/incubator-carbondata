@@ -75,7 +75,7 @@ private[sql] case class CarbonPrivCheck(sparkSession: SparkSession,
     if (ACLFileUtils.isSecureModeEnabled) {
       plan match {
         case c@ExecutedCommandExec(CarbonLoadDataCommand(dbNameOp: Option[String],
-        tableName: String, _, _, _, _, _, _, _, _, _)) =>
+        tableName: String, _, _, _, _, _, _, _, _, _, _)) =>
           doCheckPrivilege(c, Set(new PrivObject(
             ObjectType.TABLE,
             CarbonEnv.getDatabaseName(dbNameOp)(sparkSession),
@@ -85,7 +85,7 @@ private[sql] case class CarbonPrivCheck(sparkSession: SparkSession,
         case c@ExecutedCommandExec(CarbonInsertIntoCommand(relation:
           CarbonDatasourceHadoopRelation,
         child: LogicalPlan,
-        overwrite: Boolean)) =>
+        overwrite: Boolean, _)) =>
           doCheckPrivilege(c, Set(new PrivObject(
             ObjectType.TABLE,
             CarbonEnv.getDatabaseName(Some(relation.databaseName))(sparkSession),

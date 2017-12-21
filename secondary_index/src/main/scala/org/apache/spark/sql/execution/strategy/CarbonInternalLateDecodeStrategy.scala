@@ -61,8 +61,8 @@ private[sql] class CarbonInternalLateDecodeStrategy extends CarbonLateDecodeStra
               l,
               projects,
               filters,
-              (a, f, needDecoder) => toCatalystRDD(l, a, relation.buildScan(
-                a.map(_.name).toArray, f), needDecoder)))) :: Nil
+              (a, f, needDecoder, p) => toCatalystRDD(l, a, relation.buildScan(
+                a.map(_.name).toArray, f, p), needDecoder)))) :: Nil
         case ExtractEquiJoinKeys(Inner, leftKeys, rightKeys, condition,
         left, right)
           if (isCarbonPlan(left) &&
