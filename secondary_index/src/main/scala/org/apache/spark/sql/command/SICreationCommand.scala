@@ -66,8 +66,6 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
     indexModel.databaseName = Some(databaseName)
     val tableName = indexModel.tableName
     val storePath = CarbonProperties.getStorePath
-    CarbonEnv.getInstance(sparkSession).carbonMetastore.
-      checkSchemasModifiedTimeAndReloadTables()
     val dbLocation = CarbonEnv.getDatabaseLocation(databaseName, sparkSession)
     val indexTableName = indexModel.indexTableName
 
@@ -77,8 +75,8 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
     LOGGER.audit(
       s"Creating Index with Database name [$databaseName] and Index name [$indexTableName]")
     val catalog = CarbonEnv.getInstance(sparkSession).carbonMetastore
-    catalog.checkSchemasModifiedTimeAndReloadTables()
     val identifier = TableIdentifier(tableName, indexModel.databaseName)
+    catalog.checkSchemasModifiedTimeAndReloadTable(identifier)
     var carbonTable: CarbonTable = null
     var locks: List[ICarbonLock] = List()
     var oldIndexInfo = ""

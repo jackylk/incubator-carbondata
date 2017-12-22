@@ -59,7 +59,7 @@ private[sql] case class DropIndex(ifExistsSet: Boolean,
     var isValidDeletion = false
     val carbonLocks: scala.collection.mutable.ArrayBuffer[ICarbonLock] = ArrayBuffer[ICarbonLock]()
     try {
-      catalog.checkSchemasModifiedTimeAndReloadTables()
+      catalog.checkSchemasModifiedTimeAndReloadTable(TableIdentifier(tableName, Option(dbName)))
       val carbonTable: Option[CarbonTable] =
         catalog.getTableFromMetadataCache(dbName, tableName) match {
           case Some(carbonTable) => Some(carbonTable)

@@ -261,7 +261,7 @@ object CarbonInternalMetastore {
       // while drop we should refresh the schema modified time so that if any thing has changed
       // in the other beeline need to update.
       CarbonEnv.getInstance(sparkSession).carbonMetastore
-        .checkSchemasModifiedTimeAndReloadTables()
+        .checkSchemasModifiedTimeAndReloadTable(TableIdentifier(tableName, Option(dbName)))
       val file = FileFactory.getCarbonFile(metadataFilePath, fileType)
       CarbonUtil.deleteFoldersAndFilesSilent(file.getParentFile)
     }
