@@ -20,6 +20,8 @@ import scala.collection.mutable
 
 import org.antlr.v4.runtime.tree.TerminalNode
 import org.apache.spark.sql.{CarbonSession, SparkSession}
+import org.apache.spark.sql.catalyst.parser.ParserUtils.operationNotAllowed
+import org.apache.spark.sql.{CarbonSession, HideSensitiveInfo, SparkSession}
 import org.apache.spark.sql.catalyst.parser.{AbstractSqlParser, SqlBaseParser}
 import org.apache.spark.sql.catalyst.parser.SqlBaseParser._
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
@@ -71,7 +73,10 @@ class CarbonSparkSqlParser(conf: SQLConf, sparkSession: SparkSession) extends Ab
   }
 
   protected override def parse[T](command: String)(toResult: SqlBaseParser => T): T = {
-    super.parse(substitutor.substitute(command))(toResult)
+    val cmd = substitutor.substitute(command)
+    super.setHideInfoEnable(!conf.showCompleteSql &&
+                            new HideSensitiveInfo(conf.sensitiveSqlData).hasSensitiveData(cmd))
+    super.parse(cmd)(toResult)
   }
 }
 
