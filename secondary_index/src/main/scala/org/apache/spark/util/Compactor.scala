@@ -17,14 +17,12 @@
 
 package org.apache.spark.util
 
-import java.util
-
 import scala.collection.JavaConverters._
 
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.command.{SecondaryIndex, SecondaryIndexModel}
 
-import org.apache.carbondata.core.statusmanager.LoadMetadataDetails
+import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 import org.apache.carbondata.spark.rdd.SecondaryIndexCreator
 import org.apache.carbondata.spark.spark.load.CarbonInternalLoaderUtil
@@ -45,10 +43,10 @@ object Compactor {
   def createSecondaryIndexAfterCompaction(sqlContext: SQLContext,
       carbonLoadModel: CarbonLoadModel,
       validSegments: scala.List[String],
-      loadsToMerge: util.List[LoadMetadataDetails],
+      loadsToMerge: Array[String],
       segmentIdToLoadStartTimeMapping: scala.collection.mutable.Map[String, java.lang.Long],
-      forceAccessSegment: Boolean = false):
-  Unit = {
+      forceAccessSegment: Boolean = false): Unit = {
+    val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
     val carbonMainTable = carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable
     // get list from carbonTable.getIndexes method
     if (null == CarbonInternalScalaUtil.getIndexesMap(carbonMainTable)) {
@@ -67,15 +65,17 @@ object Compactor {
         validSegments,
         segmentIdToLoadStartTimeMapping)
       try {
-        val carbonTable = SecondaryIndexCreator
+        val indexCarbonTable = SecondaryIndexCreator
           .createSecondaryIndex(secondaryIndexModel, forceAccessSegment)
-        CarbonInternalLoaderUtil.updateLoadMetadataWithMergeStatus(loadsToMerge,
-          carbonTable.getMetaDataFilepath,
+        CarbonInternalLoaderUtil.updateLoadMetadataWithMergeStatus(
+          indexCarbonTable,
+          loadsToMerge,
           validSegments.head,
           carbonLoadModel,
           segmentIdToLoadStartTimeMapping.get(validSegments.head).get)
       } catch {
         case ex: Exception =>
+          LOGGER.error(ex, s"Compaction failed for SI table ${secondaryIndex.indexTableName}")
           throw ex
       }
     }

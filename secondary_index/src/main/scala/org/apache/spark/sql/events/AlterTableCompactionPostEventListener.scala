@@ -85,18 +85,15 @@ class AlterTableCompactionPostEventListener extends OperationEventListener with 
           val mergedLoadName = alterTableCompactionPostEvent.mergedLoadName
           val loadMetadataDetails = new LoadMetadataDetails
           loadMetadataDetails.setLoadName(mergedLoadName)
-          val loadsToMerge: util.List[LoadMetadataDetails] = List(loadMetadataDetails).asJava
+          val loadsToMerge: Array[String] = alterTableCompactionPostEvent.carbonMergerMapping
+            .validSegments
           val loadName = mergedLoadName
             .substring(mergedLoadName.indexOf(CarbonCommonConstants.LOAD_FOLDER) +
                        CarbonCommonConstants.LOAD_FOLDER.length)
           val mergeLoadStartTime = CarbonUpdateUtil.readCurrentTime()
 
           val segmentIdToLoadStartTimeMapping: scala.collection.mutable.Map[String, java.lang
-          .Long] =
-
-
-            scala
-              .collection.mutable.Map((loadName, mergeLoadStartTime))
+          .Long] = scala.collection.mutable.Map((loadName, mergeLoadStartTime))
           Compactor.createSecondaryIndexAfterCompaction(sQLContext,
             carbonLoadModel,
             List(loadName),

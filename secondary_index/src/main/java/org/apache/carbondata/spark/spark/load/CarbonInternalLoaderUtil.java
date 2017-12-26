@@ -210,16 +210,17 @@ public class CarbonInternalLoaderUtil {
   /**
    * method to update table status in case of IUD Update Delta Compaction.
    *
+   * @param indexCarbonTable
    * @param loadsToMerge
-   * @param metaDataFilepath
    * @param mergedLoadNumber
    * @param carbonLoadModel
    * @return
    */
-  public static boolean updateLoadMetadataWithMergeStatus(List<LoadMetadataDetails> loadsToMerge,
-      String metaDataFilepath, String mergedLoadNumber, CarbonLoadModel carbonLoadModel,
+  public static boolean updateLoadMetadataWithMergeStatus(CarbonTable indexCarbonTable,
+      String[] loadsToMerge, String mergedLoadNumber, CarbonLoadModel carbonLoadModel,
       long mergeLoadStartTime) throws IOException {
     boolean tableStatusUpdationStatus = false;
+    List<String> loadMergeList = new ArrayList<>(Arrays.asList(loadsToMerge));
     AbsoluteTableIdentifier absoluteTableIdentifier =
         carbonLoadModel.getCarbonDataLoadSchema().getCarbonTable().getAbsoluteTableIdentifier();
     SegmentStatusManager segmentStatusManager = new SegmentStatusManager(absoluteTableIdentifier);
@@ -230,12 +231,14 @@ public class CarbonInternalLoaderUtil {
       if (carbonLock.lockWithRetries()) {
         LOGGER.info("Acquired lock for the table " + carbonLoadModel.getDatabaseName() + "."
             + carbonLoadModel.getTableName() + " for table status updation ");
-        LoadMetadataDetails[] loadDetails = SegmentStatusManager.readLoadMetadata(metaDataFilepath);
+        LoadMetadataDetails[] loadDetails =
+            SegmentStatusManager.readLoadMetadata(indexCarbonTable.getMetaDataFilepath());
 
         long modificationOrDeletionTimeStamp = CarbonUpdateUtil.readCurrentTime();
         for (LoadMetadataDetails loadDetail : loadDetails) {
           // check if this segment is merged.
-          if (loadsToMerge.contains(loadDetail)) {
+          if (loadMergeList.contains(loadDetail.getLoadName()) || loadMergeList
+              .contains(loadDetail.getMergedLoadName())) {
             // if the compacted load is deleted after the start of the compaction process,
             // then need to discard the compaction process and treat it as failed compaction.
             if (loadDetail.getSegmentStatus() == SegmentStatus.MARKED_FOR_DELETE) {
@@ -266,27 +269,12 @@ public class CarbonInternalLoaderUtil {
 
         // put the merged folder entry
         updatedDetailsList.add(loadMetadataDetails);
-
-        try {
-          List<String> indexTables = CarbonInternalScalaUtil
-              .getIndexesTables(carbonLoadModel.getCarbonDataLoadSchema().getCarbonTable());
-          if (!indexTables.isEmpty()) {
-            for (String indexTableName : indexTables) {
-              CarbonTable indexTable = CarbonMetadata.getInstance().getCarbonTable(
-                  absoluteTableIdentifier.getCarbonTableIdentifier().getDatabaseName()
-                      + CarbonCommonConstants.UNDERSCORE + indexTableName);
-              CarbonTablePath indexTablePath = CarbonStorePath
-                  .getCarbonTablePath(indexTable.getTablePath(),
-                      indexTable.getCarbonTableIdentifier());
-              segmentStatusManager.writeLoadDetailsIntoFile(indexTablePath.getTableStatusFilePath(),
-                  updatedDetailsList.toArray(new LoadMetadataDetails[updatedDetailsList.size()]));
-            }
-          }
-          tableStatusUpdationStatus = true;
-        } catch (IOException e) {
-          LOGGER.error("Error while writing metadata");
-          tableStatusUpdationStatus = false;
-        }
+        CarbonTablePath indexTablePath = CarbonStorePath
+            .getCarbonTablePath(indexCarbonTable.getTablePath(),
+                indexCarbonTable.getCarbonTableIdentifier());
+        segmentStatusManager.writeLoadDetailsIntoFile(indexTablePath.getTableStatusFilePath(),
+            updatedDetailsList.toArray(new LoadMetadataDetails[updatedDetailsList.size()]));
+        tableStatusUpdationStatus = true;
       } else {
         LOGGER.error(
             "Could not able to obtain lock for table" + carbonLoadModel.getDatabaseName() + "."

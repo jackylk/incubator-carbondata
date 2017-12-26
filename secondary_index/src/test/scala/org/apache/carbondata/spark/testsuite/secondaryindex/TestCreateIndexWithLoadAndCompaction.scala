@@ -19,12 +19,14 @@
 
 package org.apache.carbondata.spark.testsuite.secondaryindex
 
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.{CarbonEnv, Row}
 import org.apache.spark.sql.common.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
-
 import org.apache.carbondata.core.constants.CarbonCommonConstants
+import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatus, SegmentStatusManager}
 import org.apache.carbondata.core.util.CarbonProperties
+import org.apache.spark.sql.hive.CarbonRelation
+import org.apache.spark.sql.test.Spark2TestQueryExecutor
 
 /**
  * test cases for testing creation of index table with load and compaction
@@ -214,6 +216,51 @@ class TestCreateIndexWithLoadAndCompaction extends QueryTest with BeforeAndAfter
       Seq(Row("25-989-741-2989"),Row("25-989-741-2989")))
     sql("drop table if exists seccust1")
   }*/
+
+  test("test SI with auto compaction and check that table status is changed to compacted") {
+    try {
+      CarbonProperties.getInstance()
+        .addProperty(CarbonCommonConstants.COMPACTION_SEGMENT_LEVEL_THRESHOLD, "2")
+      sql("DROP TABLE IF EXISTS si_compaction_test")
+      sql("DROP INDEX IF EXISTS alter_i1 on si_compaction_test")
+      // create table
+      sql(
+        "CREATE table si_compaction_test (empno int, empname String, designation String) STORED " +
+        "BY 'org.apache.carbondata.format'")
+      // create index
+      sql(
+        "create index alter_i1 on table si_compaction_test (designation) AS 'org.apache" +
+        ".carbondata.format'")
+      // insert data
+      sql("insert into si_compaction_test select 11,'arvind','lead'")
+      sql("insert into si_compaction_test select 12,'krithi','TA'")
+      // perform compaction operation
+      sql("alter table si_compaction_test compact 'minor'")
+
+      // get index table from relation
+      val indexCarbonTable = CarbonEnv.getInstance(Spark2TestQueryExecutor.spark).carbonMetastore
+        .lookupRelation(Option("default"), "alter_i1")(Spark2TestQueryExecutor.spark)
+        .asInstanceOf[CarbonRelation].carbonTable
+      // read load metadata details
+      val loadDetails: Array[LoadMetadataDetails] = SegmentStatusManager
+        .readLoadMetadata(indexCarbonTable.getMetaDataFilepath)
+      assert(loadDetails.length == 3)
+      // compacted status segment should only be 2
+      val compactedStatusSegments = loadDetails
+        .filter(detail => detail.getSegmentStatus == SegmentStatus.COMPACTED)
+      assert(compactedStatusSegments.size == 2)
+      val successStatusSegments = loadDetails
+        .filter(detail => detail.getSegmentStatus == SegmentStatus.SUCCESS)
+      // success status segment should only be 1
+      assert(successStatusSegments.size == 1)
+      sql("DROP INDEX IF EXISTS alter_i1 on si_compaction_test")
+      sql("DROP TABLE IF EXISTS si_compaction_test")
+    } finally {
+      CarbonProperties.getInstance()
+        .addProperty(CarbonCommonConstants.COMPACTION_SEGMENT_LEVEL_THRESHOLD,
+          CarbonCommonConstants.DEFAULT_SEGMENT_LEVEL_THRESHOLD)
+    }
+  }
 
   override def afterAll: Unit = {
     sql("drop table if exists index_test")
