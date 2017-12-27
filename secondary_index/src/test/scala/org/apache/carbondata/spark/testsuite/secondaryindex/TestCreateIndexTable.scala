@@ -470,6 +470,33 @@ class TestCreateIndexTable extends QueryTest with BeforeAndAfterAll {
     sql("drop table if exists table1")
   }
 
+  test("test creation of index table 2 times with same name, on error drop and create with same name again") {
+    sql("DROP TABLE IF EXISTS carbon_si_same_name_test")
+    sql("DROP INDEX IF EXISTS si_drop_i1 on carbon_si_same_name_test")
+    // create table
+    sql(
+      "CREATE table carbon_si_same_name_test (empno int, empname String, designation String) " +
+      "STORED BY 'org.apache.carbondata.format'")
+    // insert data
+    sql("insert into carbon_si_same_name_test select 11,'arvind','lead'")
+    sql("insert into carbon_si_same_name_test select 12,'krithi','TA'")
+    // create index
+    sql(
+      "create index si_drop_i1 on table carbon_si_same_name_test (designation) AS 'org.apache" +
+      ".carbondata.format'")
+    intercept[Exception] {
+      sql(
+        "create index si_drop_i1 on table carbon_si_same_name_test (designation) AS 'org.apache" +
+        ".carbondata.format'")
+    }
+    sql("DROP INDEX IF EXISTS si_drop_i1 on carbon_si_same_name_test")
+    sql(
+      "create index si_drop_i1 on table carbon_si_same_name_test (designation) AS 'org.apache" +
+      ".carbondata.format'")
+    checkAnswer(sql("select designation from si_drop_i1"),
+      sql("select designation from carbon_si_same_name_test"))
+  }
+
   object CarbonMetastore {
     import org.apache.carbondata.core.reader.ThriftReader
 

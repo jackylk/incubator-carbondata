@@ -35,15 +35,15 @@ import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier
 import org.apache.carbondata.core.metadata.datatype.{DataType, DataTypes}
 import org.apache.carbondata.core.metadata.encoder.Encoding
 import org.apache.carbondata.core.metadata.schema.{SchemaEvolution, SchemaEvolutionEntry}
-import org.apache.carbondata.core.metadata.schema.table.{CarbonTable, RelationIdentifier, TableInfo, TableSchema}
+import org.apache.carbondata.core.metadata.schema.table.{CarbonTable, TableInfo, TableSchema}
 import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema
 import org.apache.carbondata.core.service.CarbonCommonFactory
 import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
-import org.apache.carbondata.core.util.path.CarbonStorePath
 import org.apache.carbondata.events.{CreateTablePostExecutionEvent, CreateTablePreExecutionEvent, OperationContext, OperationListenerBus}
 import org.apache.carbondata.hadoop.util.SchemaReader
 import org.apache.carbondata.spark.core.metadata.IndexMetadata
 import org.apache.carbondata.spark.spark.indextable.{IndexTableInfo, IndexTableUtil}
+import org.apache.carbondata.spark.spark.secondaryindex.exception.IndexTableExistException
 
 class ErrorMessage(message: String) extends Exception(message) {
 }
@@ -91,9 +91,8 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
       }
       locks = acquireLockForSecondaryIndexCreation(carbonTable.getAbsoluteTableIdentifier)
       if (locks.isEmpty) {
-        sys
-          .error(s"Not able to acquire lock. Another Data Modification operation is already in " +
-                 s"progress for either ${
+        throw new ErrorMessage(s"Not able to acquire lock. Another Data Modification operation " +
+                 s"is already in progress for either ${
                    carbonTable
                      .getDatabaseName
                  }. ${ carbonTable.getTableName } or ${
@@ -314,6 +313,9 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
         // modified.mdt file is not touched then catalog cache will not be refreshed in the
         // other beeline session and SI on that column will not be dropped
         catalog.updateAndTouchSchemasUpdatedTime()
+        // clear parent table from meta store cache as it is also required to be
+        // refreshed when SI table is created
+        CarbonInternalMetastore.removeTableFromMetadataCache(databaseName, tableName)(sparkSession)
         val createTablePostExecutionEvent: CreateTablePostExecutionEvent =
           new CreateTablePostExecutionEvent(sparkSession, tableIdentifier)
         OperationListenerBus.getInstance.fireEvent(createTablePostExecutionEvent, operationContext)
@@ -321,7 +323,7 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
       LOGGER
         .audit(s"Index created with Database name [$databaseName] and Index name [$indexTableName]")
     } catch {
-      case err: ErrorMessage =>
+      case err@(_: ErrorMessage | _: IndexTableExistException) =>
         sys.error(err.getMessage)
       case e: Exception =>
         val identifier: TableIdentifier = TableIdentifier(indexTableName, Some(databaseName))

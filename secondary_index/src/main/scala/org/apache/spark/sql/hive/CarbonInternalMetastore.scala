@@ -65,6 +65,8 @@ object CarbonInternalMetastore {
       if (indexCarbonTable != null) {
         ManageDictionaryAndBTree.clearBTreeAndDictionaryLRUCache(indexCarbonTable)
         LOGGER.audit(s"Deleting index table $dbName.$tableName")
+        CarbonEnv.getInstance(sparkSession).carbonMetastore
+          .dropTable(indexCarbonTable.getAbsoluteTableIdentifier)(sparkSession)
         deleteTableDirectory(indexCarbonTable.getCarbonTableIdentifier, sparkSession)
         if (removeEntryFromParentTable && parentCarbonTable != null) {
           val parentTableName = parentCarbonTable.getTableName
@@ -81,6 +83,9 @@ object CarbonInternalMetastore {
           CarbonInternalHiveMetadataUtil
             .invalidateAndUpdateIndexInfo(indexTableIdentifier, indexInfo, parentCarbonTable)(
               sparkSession)
+          // clear parent table from meta store cache as it is also required to be
+          // refreshed when SI table is dropped
+          removeTableFromMetadataCache(dbName, parentTableName)(sparkSession)
           DataMapStoreManager.getInstance()
             .clearDataMaps(indexCarbonTable.getAbsoluteTableIdentifier)
         }
@@ -93,6 +98,11 @@ object CarbonInternalMetastore {
       sparkSession.sessionState.catalog.refreshTable(indexTableIdentifier)
       LOGGER.audit(s"Deleted index table $dbName.$tableName")
     }
+  }
+
+  def removeTableFromMetadataCache(dbName: String, tableName: String)
+    (sparkSession: SparkSession): Unit = {
+    CarbonEnv.getInstance(sparkSession).carbonMetastore.removeTableFromMetadata(dbName, tableName)
   }
 
   /**
