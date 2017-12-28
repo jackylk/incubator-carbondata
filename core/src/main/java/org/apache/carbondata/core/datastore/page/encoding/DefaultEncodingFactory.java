@@ -325,7 +325,14 @@ public class DefaultEncodingFactory extends EncodingFactory {
     //Here we should use the Max abs as max to getDatatype, let's say -1 and -10000000, -1 is max,
     //but we can't use -1 to getDatatype, we should use -10000000.
     double absMaxValue = Math.max(Math.abs(maxValue), Math.abs(minValue));
-    if (srcDataType == DataTypes.FLOAT && decimalCount == 0) {
+    // This modification is not required for the Open Source versions.
+    // To support compatibility with old Carbon Commercial version V100R002C50RC2B081,
+    // V100R002C50RC2SPC100B160 and UQuery Carbon version
+    // The older commercial version does not store the decimal count value in ValueEncoderMeta i.e.
+    // wrong encoder was selected for the legacy store.
+    if (decimalCount == 0 && srcDataType == DataTypes.DOUBLE) {
+      return new DirectCompressCodec(DataTypes.DOUBLE);
+    } else if (srcDataType == DataTypes.FLOAT && decimalCount == 0) {
       return getColumnPageCodec(stats, isComplexPrimitive, columnSpec, srcDataType, maxValue,
           minValue, decimalCount, absMaxValue);
     } else if (decimalCount == 0) {
