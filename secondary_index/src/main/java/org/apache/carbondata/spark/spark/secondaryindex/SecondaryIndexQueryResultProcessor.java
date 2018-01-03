@@ -482,6 +482,7 @@ public class SecondaryIndexQueryResultProcessor {
     CarbonFactDataHandlerModel carbonFactDataHandlerModel = CarbonFactDataHandlerModel
         .getCarbonFactDataHandlerModel(carbonLoadModel, indexTable, segmentProperties,
             indexTableName, tempStoreLocation);
+    carbonFactDataHandlerModel.setSchemaUpdatedTimeStamp(indexTable.getTableLastUpdatedTime());
     CarbonDataFileAttributes carbonDataFileAttributes =
         new CarbonDataFileAttributes(Integer.parseInt(carbonLoadModel.getTaskNo()),
             carbonLoadModel.getFactTimeStamp());

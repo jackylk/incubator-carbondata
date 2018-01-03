@@ -16,10 +16,9 @@
  */
 package org.apache.carbondata.spark.testsuite.secondaryindex
 
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.{AnalysisException, Row}
 import org.apache.spark.sql.common.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
-
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.util.CarbonProperties
 
@@ -44,6 +43,15 @@ class InsertIntoCarbonTableTestCase extends QueryTest with BeforeAndAfterAll {
          sql("select * from TCarbon where deviceColor='7Device Color'")
      )  
      CarbonProperties.getInstance().addProperty(CarbonCommonConstants.CARBON_TIMESTAMP_FORMAT, timeStampPropOrig)
+  }
+
+  test("insert overrite scenario") {
+      sql("drop table if exists test")
+      sql("create table test(id int,name string) stored by 'carbondata'")
+    // insert overwrite is not supported
+    val exception_map: Exception = intercept[AnalysisException] {
+      sql("insert overwrite table test select 1,'abc'")
+    }
   }
 
   override def afterAll {
