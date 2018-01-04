@@ -31,6 +31,7 @@ import org.apache.spark.sql.optimizer.{CarbonIUDRule, CarbonLateDecodeRule, Carb
 import org.apache.spark.sql.parser.CarbonInternalSparkSqlParser
 
 import org.apache.carbondata.core.datastore.impl.FileFactory
+import org.apache.carbondata.core.util.CarbonPluginProperties
 import org.apache.carbondata.events._
 import org.apache.carbondata.spark.acl.ACLFileFactory
 import org.apache.carbondata.spark.spark.util.CarbonPluginUtil
@@ -124,7 +125,7 @@ object CarbonInternalSessionState {
   def init: Unit = {
     if (!initialized) {
       // register internal carbon property to propertySet
-      CarbonPluginUtil.registerIntenalProperty()
+      CarbonPluginProperties.validateAndLoadDefaultInternalProperties()
 
       val operationListenerBus = OperationListenerBus.getInstance()
 

@@ -135,7 +135,8 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
         // change filter condition to apply on index table
 
         var isPartialStringEnabled = CarbonProperties.getInstance
-          .getProperty(CarbonInternalCommonConstants.ENABLE_SI_LOOKUP_PARTIALSTRING, "true")
+          .getProperty(CarbonInternalCommonConstants.ENABLE_SI_LOOKUP_PARTIALSTRING,
+            CarbonInternalCommonConstants.ENABLE_SI_LOOKUP_PARTIALSTRING_DEFAULT)
           .equalsIgnoreCase("true")
 
         // When carbon.si.lookup.partialstring set to FALSE, if filter has startsWith then SI is
@@ -209,7 +210,8 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
 
   private def removeIsNotNullAttribute(condition: Expression): Expression = {
     val isPartialStringEnabled = CarbonProperties.getInstance
-      .getProperty(CarbonInternalCommonConstants.ENABLE_SI_LOOKUP_PARTIALSTRING, "true")
+      .getProperty(CarbonInternalCommonConstants.ENABLE_SI_LOOKUP_PARTIALSTRING,
+        CarbonInternalCommonConstants.ENABLE_SI_LOOKUP_PARTIALSTRING_DEFAULT)
       .equalsIgnoreCase("true")
     condition transform {
       case IsNotNull(child: AttributeReference) => Literal(true)
