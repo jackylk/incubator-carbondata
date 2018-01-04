@@ -152,6 +152,8 @@ public class SecondaryIndexQueryResultProcessor {
 
   private SortIntermediateFileMerger intermediateFileMerger;
 
+  private SortParameters sortParameters;
+
   /**
    * @param carbonLoadModel
    * @param columnCardinality
@@ -424,9 +426,9 @@ public class SecondaryIndexQueryResultProcessor {
       noDictionaryCount++;
     }
     dimensionColumnCount = dimensions.size();
-    SortParameters parameters = createSortParameters();
-    intermediateFileMerger = new SortIntermediateFileMerger(parameters);
-    this.sortDataRows = new SortDataRows(parameters, intermediateFileMerger);
+    sortParameters = createSortParameters();
+    intermediateFileMerger = new SortIntermediateFileMerger(sortParameters);
+    this.sortDataRows = new SortDataRows(sortParameters, intermediateFileMerger);
     try {
       this.sortDataRows.initialize();
     } catch (CarbonSortKeyAndGroupByException e) {
@@ -468,9 +470,9 @@ public class SecondaryIndexQueryResultProcessor {
       System.arraycopy(noDictionaryColMapping, 0, noDictionarySortColumnMapping, 0,
           noDictionarySortColumnMapping.length);
     }
-    finalMerger = new SingleThreadFinalSortFilesMerger(sortTempFileLocation, indexTableName,
-        dimensionColumnCount, segmentProperties.getComplexDimensions().size(), measureCount,
-        noDictionaryCount, aggType, noDictionaryColMapping, noDictionarySortColumnMapping);
+    sortParameters.setNoDictionarySortColumn(noDictionarySortColumnMapping);
+    finalMerger =
+        new SingleThreadFinalSortFilesMerger(sortTempFileLocation, indexTableName, sortParameters);
   }
 
   /**
