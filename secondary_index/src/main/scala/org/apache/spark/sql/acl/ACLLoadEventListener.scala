@@ -21,7 +21,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
 import org.apache.hadoop.fs.Path
-import org.apache.spark.sql.{CarbonEnv, SQLContext}
+import org.apache.spark.sql.{CarbonEnv, SparkSession, SQLContext}
 import org.apache.spark.sql.hive.{CarbonRelation, CarbonSessionState}
 import org.apache.spark.sql.hive.acl.{ObjectType, PrivObject, PrivType}
 
@@ -32,8 +32,9 @@ import org.apache.carbondata.core.metadata.CarbonTableIdentifier
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
 import org.apache.carbondata.core.util.path.CarbonStorePath
-import org.apache.carbondata.events.{Event, LoadTablePostExecutionEvent, LoadTablePreExecutionEvent, OperationContext, OperationEventListener}
+import org.apache.carbondata.events.{Event, OperationContext, OperationEventListener}
 import org.apache.carbondata.processing.exception.DataLoadingException
+import org.apache.carbondata.processing.loading.events.LoadEvents.{LoadTablePostExecutionEvent, LoadTablePreExecutionEvent}
 import org.apache.carbondata.processing.util.CarbonQueryUtil
 import org.apache.carbondata.spark.acl.{CarbonUserGroupInformation, InternalCarbonConstant}
 
@@ -48,11 +49,11 @@ object ACLLoadEventListener {
     override def onEvent(event: Event,
         operationContext: OperationContext): Unit = {
       val loadTablePreExecutionEvent = event.asInstanceOf[LoadTablePreExecutionEvent]
-      val carbonLoadModel = loadTablePreExecutionEvent.carbonLoadModel
-      val sparkSession = loadTablePreExecutionEvent.sparkSession
-      val factPath = loadTablePreExecutionEvent.factPath
+      val carbonLoadModel = loadTablePreExecutionEvent.getCarbonLoadModel
+      val sparkSession = SparkSession.getActiveSession.get
+      val factPath = loadTablePreExecutionEvent.getFactPath
       val isDataFrameDefined = loadTablePreExecutionEvent.isDataFrameDefined
-      val optionsFinal = loadTablePreExecutionEvent.optionsFinal
+      val optionsFinal = loadTablePreExecutionEvent.getOptionsFinal
 
       if (!ACLFileUtils.isCarbonDataLoadGroupExist(sparkSession.sparkContext.hadoopConfiguration)) {
         val carbonDataLoadGroup = CarbonProperties.getInstance.
@@ -85,9 +86,9 @@ object ACLLoadEventListener {
         .lookupRelation(Option(dbName), carbonLoadModel.getTableName)(sparkSession)
         .asInstanceOf[CarbonRelation]
       val carbonTable = relation.carbonTable
-      val bad_records_logger_enable = optionsFinal.get("bad_records_logger_enable").get
-      val bad_records_action = optionsFinal.get("bad_records_action").get
-      var bad_record_path = optionsFinal.get("bad_record_path").get
+      val bad_records_logger_enable = optionsFinal.get("bad_records_logger_enable")
+      val bad_records_action = optionsFinal.get("bad_records_action")
+      var bad_record_path = optionsFinal.get("bad_record_path")
 
       // loadPre4
 
@@ -170,14 +171,14 @@ object ACLLoadEventListener {
     override def onEvent(event: Event,
         operationContext: OperationContext): Unit = {
       val loadTablePostExecutionEvent = event.asInstanceOf[LoadTablePostExecutionEvent]
-      val carbonLoadModel = loadTablePostExecutionEvent.carbonLoadModel
+      val carbonLoadModel = loadTablePostExecutionEvent.getCarbonLoadModel
       val folderPathsBeforeLoad = operationContext
         .getProperty(ACLLoadEventListener.folderListBeforeOperation)
         .asInstanceOf[List[Path]]
       val pathArrBeforeLoad = operationContext
         .getProperty(ACLLoadEventListener.pathArrBeforeOperation)
         .asInstanceOf[ArrayBuffer[String]]
-      val sparkSession = loadTablePostExecutionEvent.sparkSession
+      val sparkSession = SparkSession.getActiveSession.get
       val pathArrAfterLoad = ACLFileUtils
         .takeRecurTraverseSnapshot(sparkSession.sqlContext, folderPathsBeforeLoad)
 

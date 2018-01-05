@@ -20,6 +20,7 @@ package org.apache.spark.sql.events
 import scala.collection.JavaConverters._
 
 import org.apache.spark.internal.Logging
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.command.{SecondaryIndex, SecondaryIndexModel}
 import org.apache.spark.util.si.FileInternalUtil
 
@@ -28,6 +29,7 @@ import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.statusmanager.SegmentStatus
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.events._
+import org.apache.carbondata.processing.loading.events.LoadEvents.LoadTablePreStatusUpdateEvent
 import org.apache.carbondata.spark.core.metadata.IndexMetadata
 import org.apache.carbondata.spark.rdd.SecondaryIndexCreator
 
@@ -47,12 +49,12 @@ class SILoadEventListener extends OperationEventListener with Logging {
       case preStatusUpdateEvent: LoadTablePreStatusUpdateEvent =>
         LOGGER.audit("Load pre status update event-listener called")
         val loadTablePreStatusUpdateEvent = event.asInstanceOf[LoadTablePreStatusUpdateEvent]
-        val carbonLoadModel = loadTablePreStatusUpdateEvent.carbonLoadModel
+        val carbonLoadModel = loadTablePreStatusUpdateEvent.getCarbonLoadModel
         val carbonTable = carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable
         val indexMetadata = IndexMetadata
           .deserialize(carbonTable.getTableInfo.getFactTable.getTableProperties
             .get(carbonTable.getCarbonTableIdentifier.getTableId))
-        val sparkSession = loadTablePreStatusUpdateEvent.sparkSession
+        val sparkSession = SparkSession.getActiveSession.get
         if (null != indexMetadata) {
           val indexTables = indexMetadata.getIndexTables.asScala
           // if there are no index tables for a given fact table do not perform any action
@@ -66,9 +68,8 @@ class SILoadEventListener extends OperationEventListener with Logging {
                 val segmentIdToLoadStartTimeMapping: scala.collection.mutable.Map[String, java.lang
                 .Long] = scala.collection.mutable
                   .Map((carbonLoadModel.getSegmentId, carbonLoadModel.getFactTimeStamp))
-                val secondaryIndexModel = SecondaryIndexModel(loadTablePreStatusUpdateEvent
-                  .sparkSession
-                  .sqlContext,
+                val secondaryIndexModel = SecondaryIndexModel(
+                  sparkSession.sqlContext,
                   carbonLoadModel,
                   carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable,
                   secondaryIndex,

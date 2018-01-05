@@ -65,8 +65,7 @@ public final class CarbonPluginUtil {
         // Delete marked loads
         boolean isUpdationRequired = DeleteLoadFolders
             .deleteLoadFoldersFromFileSystem(indexTable.getAbsoluteTableIdentifier(),
-                isForceDeletion,
-                loadMetadataDetails);
+                isForceDeletion, loadMetadataDetails, indexTable.getMetaDataFilepath());
         if (isUpdationRequired) {
           SegmentStatusManager.writeLoadDetailsIntoFile(carbonTablePath.getTableStatusFilePath(),
               loadMetadataDetails);

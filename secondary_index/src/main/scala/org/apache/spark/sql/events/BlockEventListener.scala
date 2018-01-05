@@ -24,6 +24,7 @@ import org.apache.spark.sql.AnalysisException
 
 import org.apache.carbondata.events._
 import org.apache.carbondata.events.exception.PreEventException
+import org.apache.carbondata.processing.loading.events.LoadEvents.LoadTablePreExecutionEvent
 
 /**
  * This class is added to listen for create and load events to block Bucketing, Partition,
@@ -55,7 +56,7 @@ class BlockEventListener extends OperationEventListener with Logging {
         }
       case loadTablePreExecutionEvent: LoadTablePreExecutionEvent =>
         val isOverWrite = loadTablePreExecutionEvent.isOverWriteTable
-        val options = loadTablePreExecutionEvent.userProvidedOptions
+        val options = loadTablePreExecutionEvent.getUserProvidedOptions.asScala
         if (isOverWrite) {
           throw new PreEventException("Insert Overwrite is not supported", false)
         }

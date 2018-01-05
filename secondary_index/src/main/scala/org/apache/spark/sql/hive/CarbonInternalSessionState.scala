@@ -33,8 +33,8 @@ import org.apache.spark.sql.parser.CarbonInternalSparkSqlParser
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.util.CarbonPluginProperties
 import org.apache.carbondata.events._
+import org.apache.carbondata.processing.loading.events.LoadEvents.{LoadTableAbortExecutionEvent, LoadTablePostExecutionEvent, LoadTablePreExecutionEvent, LoadTablePreStatusUpdateEvent}
 import org.apache.carbondata.spark.acl.ACLFileFactory
-import org.apache.carbondata.spark.spark.util.CarbonPluginUtil
 
 /**
  *
