@@ -111,8 +111,12 @@ class CarbonHiveSessionCatalog(
    * @return
    */
   override def getClient(): org.apache.spark.sql.hive.client.HiveClient = {
-    sparkSession.asInstanceOf[CarbonSession].sharedState.externalCatalog
-      .asInstanceOf[HiveExternalCatalog].client
+    //    For Spark2.2 we need to use unified Spark thrift server instead of carbon thrift
+    //    server. CarbonSession is not available anymore so HiveClient is created directly
+    //    using sparkSession.sharedState which internally contains all required carbon rules,
+    //    optimizers pluged-in through SessionStateBuilder in spark-defaults.conf.
+    //    spark.sql.session.state.builder=org.apache.spark.sql.hive.CarbonSessionStateBuilder
+    sparkSession.sharedState.externalCatalog.asInstanceOf[HiveExternalCatalog].client
   }
 
   override def alterAddColumns(tableIdentifier: TableIdentifier,
