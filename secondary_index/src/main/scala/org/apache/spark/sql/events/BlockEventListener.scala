@@ -58,13 +58,13 @@ class BlockEventListener extends OperationEventListener with Logging {
         val isOverWrite = loadTablePreExecutionEvent.isOverWriteTable
         val options = loadTablePreExecutionEvent.getUserProvidedOptions.asScala
         if (isOverWrite) {
-          throw new PreEventException("Insert Overwrite is not supported", false)
+          throw PreEventException("Insert Overwrite is not supported", false)
         }
         if (options.nonEmpty &&
             options.exists(_._1.equalsIgnoreCase("COMPLEX_DELIMITER_LEVEL_1")) ||
             options.exists(_._1.equalsIgnoreCase("COMPLEX_DELIMITER_LEVEL_2"))) {
-          throw new AnalysisException(
-            "Invalid load Options, Complex DataTypes not supported")
+          throw PreEventException(
+            "Invalid load Options, Complex DataTypes not supported", false)
         }
     }
 

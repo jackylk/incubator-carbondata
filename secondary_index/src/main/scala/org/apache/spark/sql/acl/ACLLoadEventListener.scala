@@ -32,8 +32,8 @@ import org.apache.carbondata.core.metadata.CarbonTableIdentifier
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
 import org.apache.carbondata.core.util.path.CarbonStorePath
-import org.apache.carbondata.events.{Event, OperationContext, OperationEventListener}
-import org.apache.carbondata.processing.exception.DataLoadingException
+import org.apache.carbondata.events._
+import org.apache.carbondata.events.exception.PreEventException
 import org.apache.carbondata.processing.loading.events.LoadEvents.{LoadTablePostExecutionEvent, LoadTablePreExecutionEvent}
 import org.apache.carbondata.processing.util.CarbonQueryUtil
 import org.apache.carbondata.spark.acl.{CarbonUserGroupInformation, InternalCarbonConstant}
@@ -60,8 +60,8 @@ object ACLLoadEventListener {
           getProperty(InternalCarbonConstant.CARBON_DATALOAD_GROUP_NAME,
             InternalCarbonConstant.CARBON_DATALOAD_GROUP_NAME_DEFAULT)
         val currentUser = CarbonUserGroupInformation.getInstance.getCurrentUser.getShortUserName
-        sys
-          .error(s"CarbonDataLoad Group: $carbonDataLoadGroup is not set for the user $currentUser")
+        throw PreEventException(s"CarbonDataLoad Group: $carbonDataLoadGroup is not set for the " +
+                                s"user $currentUser", false)
       }
 
       // loadPre2
@@ -74,8 +74,8 @@ object ACLLoadEventListener {
           new PrivObject(ObjectType.FILE, null, filePath, null, Set(PrivType.SELECT_NOGRANT))
         }.toSet
         if (!isDataFrameDefined && !aclInterface.checkPrivilege(objSet)) {
-          throw new DataLoadingException(
-            "User does not have read permission for one or more csv files")
+          throw PreEventException(
+            "User does not have read permission for one or more csv files", false)
         }
       }
 
@@ -105,8 +105,8 @@ object ACLLoadEventListener {
               bad_record_path,
               null,
               Set(PrivType.INSERT_NOGRANT))))) {
-            throw new DataLoadingException(
-              "User does not have privileges for configured bad records folder path")
+            throw PreEventException(
+              "User does not have privileges for configured bad records folder path", false)
           }
         }
         //        bad_record_path = FileFactory
