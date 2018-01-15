@@ -257,28 +257,4 @@ private[sql] case class CarbonPrivCheck(sparkSession: SparkSession,
   }
 }
 
-case class CarbonInternalProject(
-    tableIdentifier: Seq[String],
-    child: SparkPlan) extends UnaryExecNode with CodegenSupport {
 
-  override def output: Seq[Attribute] = child.output
-
-  override def outputPartitioning: Partitioning = {
-    child.outputPartitioning
-  }
-
-  override def doExecute(): RDD[InternalRow] = child.execute()
-
-  override def inputRDDs(): Seq[RDD[InternalRow]] = {
-    child.asInstanceOf[CodegenSupport].inputRDDs()
-  }
-
-  protected override def doProduce(ctx: CodegenContext): String = {
-    child.asInstanceOf[CodegenSupport].produce(ctx, this)
-  }
-
-  override def doConsume(ctx: CodegenContext, input: Seq[ExprCode], row: ExprCode): String = {
-    asInstanceOf[CodegenSupport].consume(ctx, input)
-  }
-
-}

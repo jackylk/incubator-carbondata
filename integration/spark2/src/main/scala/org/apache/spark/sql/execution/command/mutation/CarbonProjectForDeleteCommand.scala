@@ -67,7 +67,10 @@ private[sql] case class CarbonProjectForDeleteCommand(
     }
 
     IUDCommonUtil.checkIfSegmentListIsSet(sparkSession, plan)
-    val dataFrame = Dataset.ofRows(sparkSession, plan)
+    val dataFrame = Dataset
+      .ofRows(sparkSession,
+        InternalProject(Seq(CarbonEnv.getDatabaseName(databaseNameOp)(sparkSession), tableName),
+      plan))
     val dataRdd = dataFrame.rdd
 
     // trigger event for Delete from table

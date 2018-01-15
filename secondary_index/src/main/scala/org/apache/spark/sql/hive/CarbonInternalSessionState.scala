@@ -124,6 +124,7 @@ object CarbonInternalSessionState {
 
   def init: Unit = {
     if (!initialized) {
+      CarbonEnv.initListeners()
       // register internal carbon property to propertySet
       CarbonPluginProperties.validateAndLoadDefaultInternalProperties()
 

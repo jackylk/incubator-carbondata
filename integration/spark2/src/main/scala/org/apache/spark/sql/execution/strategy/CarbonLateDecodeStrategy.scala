@@ -23,9 +23,9 @@ import scala.collection.mutable.ArrayBuffer
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
-import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions
 import org.apache.spark.sql.catalyst.expressions.{Attribute, _}
+import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.planning.PhysicalOperation
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.plans.physical.{HashPartitioning, Partitioning, UnknownPartitioning}
@@ -102,6 +102,8 @@ private[sql] class CarbonLateDecodeStrategy extends SparkStrategy {
         if l.relation.isInstanceOf[CarbonDatasourceHadoopRelation] && driverSideCountStar(l) =>
         val relation = l.relation.asInstanceOf[CarbonDatasourceHadoopRelation]
         CarbonCountStar(colAttr, relation.carbonTable, SparkSession.getActiveSession.get) :: Nil
+      case InternalProject(tid, child: LogicalPlan) =>
+        CarbonInternalProject(tid, planLater(child)) :: Nil
       case _ => Nil
     }
   }

@@ -19,10 +19,15 @@ package org.apache.spark.sql
 
 import scala.collection.mutable
 
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, Count}
+import org.apache.spark.sql.catalyst.expressions.codegen.{CodegenContext, ExprCode}
 import org.apache.spark.sql.catalyst.plans.logical.{UnaryNode, _}
+import org.apache.spark.sql.catalyst.plans.physical.Partitioning
+import org.apache.spark.sql.execution.{CodegenSupport, SparkPlan, UnaryExecNode}
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.optimizer.CarbonDecoderRelation
 
@@ -190,4 +195,36 @@ object CountStarPlan {
     }
     true
   }
+}
+
+// this class is used to wrp plan with table Identifier , so that we can check and
+// ignore if required the acl check on plan
+case class InternalProject(tableIdentifier: Seq[String], child: LogicalPlan) extends UnaryNode {
+  override def output: Seq[Attribute] = child.output
+}
+
+case class CarbonInternalProject(
+    tableIdentifier: Seq[String],
+    child: SparkPlan) extends UnaryExecNode with CodegenSupport {
+
+  override def output: Seq[Attribute] = child.output
+
+  override def outputPartitioning: Partitioning = {
+    child.outputPartitioning
+  }
+
+  override def doExecute(): RDD[InternalRow] = child.execute()
+
+  override def inputRDDs(): Seq[RDD[InternalRow]] = {
+    child.asInstanceOf[CodegenSupport].inputRDDs()
+  }
+
+  protected override def doProduce(ctx: CodegenContext): String = {
+    child.asInstanceOf[CodegenSupport].produce(ctx, this)
+  }
+
+  override def doConsume(ctx: CodegenContext, input: Seq[ExprCode], row: ExprCode): String = {
+    asInstanceOf[CodegenSupport].consume(ctx, input)
+  }
+
 }
