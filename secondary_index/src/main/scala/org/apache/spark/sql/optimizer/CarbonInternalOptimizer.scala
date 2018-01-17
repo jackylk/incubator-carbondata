@@ -351,7 +351,7 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
     lazy val updateStatusFileExists = FileFactory.getCarbonFile(carbonTable.getMetaDataFilepath,
       FileFactory.getFileType(carbonTable.getMetaDataFilepath)).listFiles()
       .exists(file => file.getName.startsWith(CarbonCommonConstants.TABLEUPDATESTATUS_FILENAME))
-    (!CarbonInternalScalaUtil.isIndexTable(carbonTable) && updateStatusFileExists)
+    (!CarbonInternalScalaUtil.isIndexTable(carbonTable) && !updateStatusFileExists)
   }
 
   def transformFilterToJoin(plan: LogicalPlan): LogicalPlan = {
