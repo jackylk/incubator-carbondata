@@ -57,6 +57,7 @@ private[sql] case class DropIndex(ifExistsSet: Boolean,
     val databaseLoc = CarbonEnv.getDatabaseLocation(dbName, sparkSession)
     // flag to check if folders and files can be successfully deleted
     var isValidDeletion = false
+    var isUnlockRequired = true
     val carbonLocks: scala.collection.mutable.ArrayBuffer[ICarbonLock] = ArrayBuffer[ICarbonLock]()
     try {
       catalog.checkSchemasModifiedTimeAndReloadTable(TableIdentifier(tableName, Option(dbName)))
@@ -114,6 +115,8 @@ private[sql] case class DropIndex(ifExistsSet: Boolean,
           tablePath,
           parentCarbonTable,
           removeEntryFromParentTable = true)(sparkSession)
+        // index table has been deleted already so unlock is not required.
+        isUnlockRequired = false
       }
     } catch {
       case ex: Exception =>
@@ -122,7 +125,7 @@ private[sql] case class DropIndex(ifExistsSet: Boolean,
           sys.error(s"Dropping table $dbName.$tableName failed: ${ ex.getMessage }")
         }
     } finally {
-      if (carbonLocks.nonEmpty) {
+      if (carbonLocks.nonEmpty && isUnlockRequired) {
         val unlocked = carbonLocks.forall(_.unlock())
         if (unlocked) {
           logInfo("Table MetaData Unlocked Successfully")
