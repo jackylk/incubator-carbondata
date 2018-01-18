@@ -24,7 +24,7 @@ import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.catalog.SessionCatalog
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.rules.Rule
-import org.apache.spark.sql.command.CreateIndexTable
+import org.apache.spark.sql.command.{CreateIndexTable, DropIndex}
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.command.management._
 import org.apache.spark.sql.execution.command.schema.{CarbonAlterTableAddColumnCommand, CarbonAlterTableDataTypeChangeCommand, CarbonAlterTableDropColumnCommand, CarbonAlterTableRenameCommand}
@@ -85,7 +85,7 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
         _) =>
           checkPrivilege(c, dbNameOp, tableName, PrivType.DELETE_NOGRANT)
 
-        case c@DropIndexCommand(_, dbNameOp: Option[String], tableName: String,
+        case c@DropIndex(_, dbNameOp: Option[String], tableName: String,
         parentTableName: String, _) =>
           doCheckPrivilege(c, Set(new PrivObject(
             ObjectType.TABLE,
