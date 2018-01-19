@@ -26,7 +26,7 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.command.{CreateIndexTable, DropIndex}
 import org.apache.spark.sql.execution.command._
-import org.apache.spark.sql.execution.command.datamap.CarbonDataMapShowCommand
+import org.apache.spark.sql.execution.command.datamap.{CarbonCreateDataMapCommand, CarbonDataMapShowCommand, CarbonDropDataMapCommand}
 import org.apache.spark.sql.execution.command.management._
 import org.apache.spark.sql.execution.command.preaaggregate.PreAggregateUtil
 import org.apache.spark.sql.execution.command.schema.{CarbonAlterTableAddColumnCommand, CarbonAlterTableDataTypeChangeCommand, CarbonAlterTableDropColumnCommand, CarbonAlterTableRenameCommand}
@@ -58,6 +58,18 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
             null,
             null,
             Set(PrivType.CREATE_NOGRANT))))
+
+        case c@CarbonCreateDataMapCommand(dataMapName: String,
+        tableIdentifier: TableIdentifier,
+        dmClassName: String,
+        dmproperties: Map[String, String],
+        queryString: Option[String]) =>
+          checkPrivilege(c, Set(new PrivObject(
+            ObjectType.TABLE,
+            CarbonEnv.getDatabaseName(tableIdentifier.database)(sparkSession),
+            tableIdentifier.table,
+            null,
+            Set(PrivType.OWNER_PRIV))))
 
         case c@CreateIndexTable(indexModel, _, _, _) =>
           checkPrivilege(c, Set(new PrivObject(
@@ -93,6 +105,18 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
             ObjectType.TABLE,
             CarbonEnv.getDatabaseName(dbNameOp)(sparkSession),
             parentTableName,
+            null,
+            Set(PrivType.OWNER_PRIV))))
+
+        case c@CarbonDropDataMapCommand(
+        dataMapName: String,
+        ifExistsSet: Boolean,
+        databaseNameOp: Option[String],
+        tableName: String) =>
+          checkPrivilege(c, Set(new PrivObject(
+            ObjectType.TABLE,
+            CarbonEnv.getDatabaseName(databaseNameOp)(sparkSession),
+            tableName,
             null,
             Set(PrivType.OWNER_PRIV))))
 
