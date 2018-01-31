@@ -55,7 +55,7 @@ class AlterTableCompactionPostEventListener extends OperationEventListener with 
         val sQLContext = alterTableCompactionPostEvent.sparkSession.sqlContext
         val compactionType: CompactionType = alterTableCompactionPostEvent.carbonMergerMapping
           .campactionType
-        if (compactionType == CompactionType.SEGMENT_INDEX) {
+        if (compactionType == CompactionType.NONE) {
           val carbonMainTable = carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable
           val indexTablesList = CarbonInternalScalaUtil.getIndexesMap(carbonMainTable).asScala
           if (null != indexTablesList && indexTablesList.nonEmpty) {
@@ -72,13 +72,13 @@ class AlterTableCompactionPostEventListener extends OperationEventListener with 
                   .sparkSession).asInstanceOf[CarbonRelation].carbonTable
 
               // Just launch job to merge index for all index tables
-              CommonUtil.mergeIndexFiles(
+              /* CommonUtil.mergeIndexFiles(
                 sQLContext.sparkContext,
                 CarbonDataMergerUtil.getValidSegmentList(
                   indexCarbonTable.getAbsoluteTableIdentifier).asScala,
                 indexCarbonTable.getTablePath,
                 indexCarbonTable,
-                true)
+                true) */
             }
           }
         } else {

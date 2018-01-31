@@ -168,10 +168,10 @@ object SecondaryIndexCreator {
           }
       }
       // merge index files
-      CommonUtil.mergeIndexFiles(sc.sparkContext,
+      /* CommonUtil.mergeIndexFiles(sc.sparkContext,
         secondaryIndexModel.validSegments,
         indexCarbonTable.getTablePath,
-        indexCarbonTable, false)
+        indexCarbonTable, false) */
       // handle success and failure scenarios for each segment secondary index creation status
       if (!secondaryIndexCreationStatus) {
         throw new Exception("Secondary index creation failed")

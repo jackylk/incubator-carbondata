@@ -286,7 +286,7 @@ class CarbonSecondaryIndexRDD[K, V](
             NodeInfo(splitsPerNode.getTaskId, splitsPerNode.getCarbonInputSplitList.size()))
 
           if (blockletCount != 0) {
-            val multiBlockSplit = new CarbonMultiBlockSplit(absoluteTableIdentifier,
+            val multiBlockSplit = new CarbonMultiBlockSplit(
               splitInfo.asInstanceOf[CarbonInputSplitTaskInfo].getCarbonInputSplitList,
               Array(nodeName))
             result.add(new CarbonSparkPartition(id, partitionNo, multiBlockSplit))

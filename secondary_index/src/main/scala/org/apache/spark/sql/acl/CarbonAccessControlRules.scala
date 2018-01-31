@@ -64,7 +64,8 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
         tableIdentifier: TableIdentifier,
         dmClassName: String,
         dmproperties: Map[String, String],
-        queryString: Option[String]) =>
+        queryString: Option[String],
+        ifNotExistsSet: Boolean) =>
           checkPrivilege(c, Set(new PrivObject(
             ObjectType.TABLE,
             CarbonEnv.getDatabaseName(tableIdentifier.database)(sparkSession),
@@ -81,7 +82,7 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
             Set(PrivType.OWNER_PRIV))))
 
         case c@CarbonLoadDataCommand(dbNameOp: Option[String],
-        tableName: String, _, _, _, _, _, _, _, _, _, _) =>
+        tableName: String, _, _, _, _, _, _, _, _, _, _, _, _) =>
           checkPrivilegeRecursively(c, dbNameOp, tableName, PrivType.INSERT_NOGRANT)
         case c@InsertIntoCarbonTable(relation, _, _, _, _) =>
           checkPrivilegeRecursively(c,
