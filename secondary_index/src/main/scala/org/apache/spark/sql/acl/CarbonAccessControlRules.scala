@@ -37,6 +37,7 @@ import org.apache.spark.sql.hive.execution.command.CarbonDropDatabaseCommand
 import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.core.metadata.schema.table.TableInfo
+import org.apache.carbondata.processing.merger.CompactionType
 
 private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
     hCatalog: SessionCatalog,
@@ -194,11 +195,21 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
         case c@CarbonCleanFilesCommand(dbNameOp: Option[String], tableName: Option[String], _) =>
           checkPrivilegeRecursively(c, dbNameOp, tableName.getOrElse(""), PrivType.DELETE_NOGRANT)
 
-        case c@CarbonAlterTableCompactionCommand(alterTableModel, tableInfoOp) =>
-          checkPrivilegeRecursively(c,
-            alterTableModel.dbName,
-            alterTableModel.tableName,
-            PrivType.INSERT_NOGRANT)
+        case c@CarbonAlterTableCompactionCommand(alterTableModel, tableInfoOp, _) =>
+          // for executing close streaming compaction user should have owner Privilege
+          val compactionType = CompactionType.valueOf(alterTableModel.compactionType.toUpperCase)
+          if (compactionType == CompactionType.CLOSE_STREAMING) {
+            checkPrivilegeRecursively(c,
+              alterTableModel.dbName,
+              alterTableModel.tableName,
+              PrivType.OWNER_PRIV)
+          }
+          else {
+            checkPrivilegeRecursively(c,
+              alterTableModel.dbName,
+              alterTableModel.tableName,
+              PrivType.INSERT_NOGRANT)
+          }
 
         case c@CarbonDropDatabaseCommand(command) =>
           checkPrivilege(c, Set(new PrivObject(
