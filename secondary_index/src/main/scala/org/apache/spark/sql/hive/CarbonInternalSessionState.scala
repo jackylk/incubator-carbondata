@@ -33,7 +33,7 @@ import org.apache.spark.sql.parser.CarbonInternalSparkSqlParser
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.util.CarbonPluginProperties
 import org.apache.carbondata.events._
-import org.apache.carbondata.processing.loading.events.LoadEvents.{LoadTableAbortExecutionEvent, LoadTablePostExecutionEvent, LoadTablePreExecutionEvent, LoadTablePreStatusUpdateEvent}
+import org.apache.carbondata.processing.loading.events.LoadEvents._
 import org.apache.carbondata.spark.acl.ACLFileFactory
 
 /**
@@ -261,6 +261,14 @@ object CarbonInternalSessionState {
         .addListener(classOf[CarbonEnvInitPreEvent],
           new CarbonEnvInitPreEventListener)
 
+      // Merge index listeners
+      operationListenerBus
+        .addListener(classOf[LoadTablePreStatusUpdateEvent], new MergeIndexEventListener)
+
+      // Merge partition listeners
+      operationListenerBus
+        .addListener(classOf[LoadTableMergePartitionEvent], new MergeIndexPartitionEventListener)
+
       // SI Listeners
       operationListenerBus
         .addListener(classOf[LoadTablePreStatusUpdateEvent], new SILoadEventListener)
@@ -282,6 +290,9 @@ object CarbonInternalSessionState {
         .addListener(classOf[DeleteSegmentByDatePostEvent], new DeleteSegmentByDateListener)
       operationListenerBus
         .addListener(classOf[CleanFilesPostEvent], new CleanFilesPostEventListener)
+      operationListenerBus
+        .addListener(classOf[AlterTableCompactionExceptionEvent],
+          new AlterTableCompactionExceptionEventListener)
       operationListenerBus
         .addListener(classOf[AlterTableCompactionPreStatusUpdateEvent],
           new AlterTableCompactionPostEventListener)

@@ -17,23 +17,20 @@
 
 package org.apache.spark.sql.events
 
-import java.util
-
 import scala.collection.JavaConverters._
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.CarbonEnv
 import org.apache.spark.sql.command.SecondaryIndex
 import org.apache.spark.sql.hive.CarbonRelation
-import org.apache.spark.util.{CarbonInternalScalaUtil, Compactor}
+import org.apache.spark.util.{CarbonInternalCommonUtil, CarbonInternalScalaUtil, Compactor}
 
 import org.apache.carbondata.common.logging.{LogService, LogServiceFactory}
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.mutate.CarbonUpdateUtil
 import org.apache.carbondata.core.statusmanager.LoadMetadataDetails
 import org.apache.carbondata.events.{AlterTableCompactionPreStatusUpdateEvent, Event, OperationContext, OperationEventListener}
-import org.apache.carbondata.processing.merger.{CarbonDataMergerUtil, CompactionType}
-import org.apache.carbondata.spark.util.CommonUtil
+import org.apache.carbondata.processing.merger.{CarbonDataMergerUtil, CompactionType, InternalCompactionType}
 
 
 /**
@@ -55,7 +52,8 @@ class AlterTableCompactionPostEventListener extends OperationEventListener with 
         val sQLContext = alterTableCompactionPostEvent.sparkSession.sqlContext
         val compactionType: CompactionType = alterTableCompactionPostEvent.carbonMergerMapping
           .campactionType
-        if (compactionType == CompactionType.NONE) {
+        if (compactionType.toString
+          .equalsIgnoreCase(InternalCompactionType.SEGMENT_INDEX.toString)) {
           val carbonMainTable = carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable
           val indexTablesList = CarbonInternalScalaUtil.getIndexesMap(carbonMainTable).asScala
           if (null != indexTablesList && indexTablesList.nonEmpty) {
@@ -72,13 +70,13 @@ class AlterTableCompactionPostEventListener extends OperationEventListener with 
                   .sparkSession).asInstanceOf[CarbonRelation].carbonTable
 
               // Just launch job to merge index for all index tables
-              /* CommonUtil.mergeIndexFiles(
+              CarbonInternalCommonUtil.mergeIndexFiles(
                 sQLContext.sparkContext,
                 CarbonDataMergerUtil.getValidSegmentList(
                   indexCarbonTable.getAbsoluteTableIdentifier).asScala,
                 indexCarbonTable.getTablePath,
                 indexCarbonTable,
-                true) */
+                true)
             }
           }
         } else {

@@ -25,7 +25,7 @@ import scala.util.control.Breaks.{break, breakable}
 import org.apache.spark.sql.{CarbonEnv, SQLContext}
 import org.apache.spark.sql.command.{SecondaryIndex, SecondaryIndexModel}
 import org.apache.spark.sql.hive.CarbonRelation
-import org.apache.spark.util.CarbonInternalScalaUtil
+import org.apache.spark.util.{CarbonInternalCommonUtil, CarbonInternalScalaUtil}
 import org.apache.spark.util.si.FileInternalUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
@@ -168,10 +168,10 @@ object SecondaryIndexCreator {
           }
       }
       // merge index files
-      /* CommonUtil.mergeIndexFiles(sc.sparkContext,
+      CarbonInternalCommonUtil.mergeIndexFiles(sc.sparkContext,
         secondaryIndexModel.validSegments,
         indexCarbonTable.getTablePath,
-        indexCarbonTable, false) */
+        indexCarbonTable, false)
       // handle success and failure scenarios for each segment secondary index creation status
       if (!secondaryIndexCreationStatus) {
         throw new Exception("Secondary index creation failed")
