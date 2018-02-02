@@ -43,7 +43,7 @@ object SparkUtil4Test {
   def createTaskMockUp(sqlContext: SQLContext): Unit = {
     if (!initializedMock) {
       if (sqlContext.sparkContext.version.startsWith("2.1")) {
-        createTaskMockUp2_1
+        createTaskMockUp2_2()
       } else if (sqlContext.sparkContext.version.startsWith("2.2")) {
         createTaskMockUp2_2()
       }
