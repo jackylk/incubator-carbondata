@@ -18,7 +18,7 @@ class TestSIWithSecondryIndex extends QueryTest with BeforeAndAfterAll {
     CarbonProperties.getInstance()
       .addProperty(CarbonCommonConstants.CARBON_TIMESTAMP_FORMAT,
         CarbonCommonConstants.CARBON_TIMESTAMP_DEFAULT_FORMAT)
-      .addProperty(CarbonCommonConstants.ENABLE_UNSAFE_COLUMN_PAGE_LOADING, "true")
+      .addProperty(CarbonCommonConstants.ENABLE_UNSAFE_COLUMN_PAGE, "true")
     sql("create table table_WithSIAndAlter(c1 string, c2 date,c3 timestamp) stored by 'carbondata'")
     sql("insert into table_WithSIAndAlter select 'xx',current_date, current_timestamp")
     sql("alter table table_WithSIAndAlter add columns(date1 date, time timestamp)")

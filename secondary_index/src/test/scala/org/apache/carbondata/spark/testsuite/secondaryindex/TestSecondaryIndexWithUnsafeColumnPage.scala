@@ -14,7 +14,7 @@ class TestSecondaryIndexWithUnsafeColumnPage extends QueryTest with BeforeAndAft
 
   override def beforeAll {
     CarbonProperties.getInstance()
-      .addProperty(CarbonCommonConstants.ENABLE_UNSAFE_COLUMN_PAGE_LOADING, "true")
+      .addProperty(CarbonCommonConstants.ENABLE_UNSAFE_COLUMN_PAGE, "true")
     sql("drop table if exists testSecondryIndex")
     sql("create table testSecondryIndex( a string,b string,c string) stored by 'carbondata'")
     sql("insert into testSecondryIndex select 'babu','a','6'")

@@ -39,8 +39,8 @@ class QueryTest extends PlanTest {
   Locale.setDefault(Locale.US)
 
   CarbonProperties.getInstance().addProperty(
-    CarbonCommonConstants.ENABLE_UNSAFE_COLUMN_PAGE_LOADING,
-    CarbonCommonConstants.ENABLE_UNSAFE_COLUMN_PAGE_LOADING_DEFAULT
+    CarbonCommonConstants.ENABLE_UNSAFE_COLUMN_PAGE,
+    CarbonCommonConstants.ENABLE_UNSAFE_COLUMN_PAGE_DEFAULT
   )
   CarbonProperties.getInstance()
     .addProperty(CarbonCommonConstants.CARBON_TIMESTAMP_FORMAT,
