@@ -55,7 +55,7 @@ object ACLLoadEventListener {
       val isDataFrameDefined = loadTablePreExecutionEvent.isDataFrameDefined
       val optionsFinal = loadTablePreExecutionEvent.getOptionsFinal
 
-      if (!ACLFileUtils.isCarbonDataLoadGroupExist(sparkSession.sparkContext.hadoopConfiguration)) {
+      if (!ACLFileUtils.isCarbonDataLoadGroupExist(sparkSession.sparkContext)) {
         val carbonDataLoadGroup = CarbonProperties.getInstance.
           getProperty(InternalCarbonConstant.CARBON_DATALOAD_GROUP_NAME,
             InternalCarbonConstant.CARBON_DATALOAD_GROUP_NAME_DEFAULT)

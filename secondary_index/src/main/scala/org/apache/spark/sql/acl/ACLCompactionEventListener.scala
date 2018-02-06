@@ -49,7 +49,7 @@ object ACLCompactionEventListener {
       val carbonTablePath = CarbonStorePath
         .getCarbonTablePath(carbonTable.getAbsoluteTableIdentifier)
 
-      if (!ACLFileUtils.isCarbonDataLoadGroupExist(sparkSession.sparkContext.hadoopConfiguration)) {
+      if (!ACLFileUtils.isCarbonDataLoadGroupExist(sparkSession.sparkContext)) {
         val carbonDataLoadGroup = CarbonProperties.getInstance.
           getProperty(InternalCarbonConstant.CARBON_DATALOAD_GROUP_NAME,
             InternalCarbonConstant.CARBON_DATALOAD_GROUP_NAME_DEFAULT)

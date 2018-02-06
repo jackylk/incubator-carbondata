@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.viewfs.ViewFileSystem
 import org.apache.hadoop.hdfs.DistributedFileSystem
 import org.apache.hadoop.security.UserGroupInformation
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod
+import org.apache.spark.SparkContext
 import org.apache.spark.sql.{SparkSession, SQLContext}
 
 import org.apache.carbondata.common.logging.LogServiceFactory
@@ -35,7 +36,7 @@ import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.metadata.CarbonTableIdentifier
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.core.util.path.CarbonTablePath
-import org.apache.carbondata.events.{AlterTableAddColumnPostEvent, OperationContext}
+import org.apache.carbondata.events.OperationContext
 import org.apache.carbondata.spark.acl.{CarbonBadRecordStorePath, CarbonUserGroupInformation, InternalCarbonConstant, UserGroupUtils}
 
 
@@ -348,33 +349,39 @@ object ACLFileUtils {
   /**
    * checks whether current user contains dataload group or not
    *
-   * @param conf
+   * @param sparkContext
    * @return
    */
-  def isCarbonDataLoadGroupExist(conf: Configuration): Boolean = {
+  def isCarbonDataLoadGroupExist(sparkContext: SparkContext): Boolean = {
     if (isSecureModeEnabled()) {
       val carbonDataLoadGroup = CarbonProperties.getInstance.
         getProperty(InternalCarbonConstant.CARBON_DATALOAD_GROUP_NAME,
           InternalCarbonConstant.CARBON_DATALOAD_GROUP_NAME_DEFAULT
         )
       // get user groups from server (any machine from cluster is ok)
-      var filesystem = FileSystem.get(conf)
-      // In case of viewfs we have to select child to point to actual name node
-      if (filesystem.isInstanceOf[ViewFileSystem]) {
-        val childfs = filesystem.getChildFileSystems
-        filesystem = childfs(0)
-      }
       var userGroups: Array[String] = null
-      try {
-        // if filesytem is hdfs then get groups from name node
-        if (filesystem.isInstanceOf[DistributedFileSystem]) {
-          userGroups = UserGroupUtils.getGroupsForUserFromNameNode(conf, filesystem.getUri)
+      // if spark-submit cluster mode no need to get the groups using NameNodeProxy via
+      // GetUserMappingsProtocol as driver already in AM with proper ugi
+      if (!"cluster".equals(sparkContext.getConf.get("spark.submit.deployMode"))) {
+        val conf : Configuration = sparkContext.hadoopConfiguration
+        var filesystem = FileSystem.get(conf)
+        // In case of viewfs we have to select child to point to actual name node
+        if (filesystem.isInstanceOf[ViewFileSystem]) {
+          val childfs = filesystem.getChildFileSystems
+          filesystem = childfs(0)
         }
-      } catch {
-        case ex: Exception =>
-          LOGGER
-            .warn("No groups available for user " +
-                  CarbonUserGroupInformation.getInstance.getCurrentUser.getShortUserName)
+        try {
+          // if filesytem is hdfs then get groups from name node
+          if (filesystem.isInstanceOf[DistributedFileSystem]) {
+            userGroups = UserGroupUtils.getGroupsForUserFromNameNode(conf, filesystem.getUri)
+          }
+        } catch {
+          case ex: Exception =>
+            LOGGER
+              .warn("No groups available for user " +
+                CarbonUserGroupInformation.getInstance.getCurrentUser.getShortUserName
+              )
+        }
       }
       if (null == userGroups) {
         userGroups = CarbonUserGroupInformation.getInstance.getCurrentUser.getGroupNames
