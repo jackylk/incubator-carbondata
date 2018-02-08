@@ -265,13 +265,13 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
         case u@UpdateTable(table, cols, _, sel, where) =>
           checkPrivilegeRecursively(u,
             Some(CarbonEnv.getDatabaseName(table.tableIdentifier.database)(sparkSession)),
-            table.tableName,
+            table.tableIdentifier.table,
             PrivType.UPDATE_NOGRANT)
 
         case d@DeleteRecords(statement, _, table) =>
           checkPrivilegeRecursively(d,
             Some(CarbonEnv.getDatabaseName(table.tableIdentifier.database)(sparkSession)),
-            table.tableName,
+            table.tableIdentifier.table,
             PrivType.DELETE_NOGRANT)
 
         case l: LogicalPlan => l
