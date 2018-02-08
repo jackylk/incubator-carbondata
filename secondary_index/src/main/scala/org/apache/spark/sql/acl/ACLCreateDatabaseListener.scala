@@ -49,15 +49,12 @@ object ACLCreateDatabaseListener {
 //      val loginUser: UserGroupInformation = CarbonUserGroupInformation.getInstance.getLoginUser
       val currentUser: UserGroupInformation = CarbonUserGroupInformation.getInstance.getCurrentUser
       val currentUserName = currentUser.getShortUserName
-      val currentUserGroupName = currentUser.getPrimaryGroupName
       currentUser
         .doAs(new PrivilegedExceptionAction[Unit]() {
           override def run(): Unit = {
             FileFactory
               .setPermission(dataBasePath,
-                ACLFileUtils.getPermissionsOnDatabase(),
-                currentUserName,
-                currentUserGroupName)
+                ACLFileUtils.getPermissionsOnDatabase())
           }
         })
     }

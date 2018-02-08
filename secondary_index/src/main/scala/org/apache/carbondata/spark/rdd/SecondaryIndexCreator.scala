@@ -37,7 +37,7 @@ import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 import org.apache.carbondata.processing.util.CarbonLoaderUtil
 import org.apache.carbondata.spark.SecondaryIndexCreationResultImpl
 import org.apache.carbondata.spark.core.CarbonInternalCommonConstants
-import org.apache.carbondata.spark.util.CommonUtil
+import org.apache.carbondata.spark.util.{CommonUtil, DataLoadingUtil}
 
 /**
  * This class is aimed at creating secondary index for specified segments
@@ -114,6 +114,7 @@ object SecondaryIndexCreator {
         .sparkSession).asInstanceOf[CarbonRelation].carbonTable
 
     try {
+      DataLoadingUtil.deleteLoadsAndUpdateMetadata(isForceDeletion = false, indexCarbonTable)
       TableProcessingOperations.deletePartialLoadDataIfExist(indexCarbonTable, false)
       var execInstance = "1"
       // in case of non dynamic executor allocation, number of executors are fixed.
@@ -180,6 +181,7 @@ object SecondaryIndexCreator {
     } catch {
       case ex: Exception =>
         try {
+          DataLoadingUtil.deleteLoadsAndUpdateMetadata(isForceDeletion = false, indexCarbonTable)
           TableProcessingOperations.deletePartialLoadDataIfExist(indexCarbonTable, false)
         } catch {
           case e: Exception =>

@@ -272,8 +272,8 @@ public class HDFSACLCarbonFile extends HDFSCarbonFile {
   }
 
   @Override
-  public void setPermission(String directoryPath, FsPermission permission, String username,
-      String group) throws IOException {
+  public void setPermission(String directoryPath, FsPermission permission)
+      throws IOException {
     try {
       Path path = new Path(directoryPath);
       FileSystem fs = path.getFileSystem(FileFactory.getConfiguration());

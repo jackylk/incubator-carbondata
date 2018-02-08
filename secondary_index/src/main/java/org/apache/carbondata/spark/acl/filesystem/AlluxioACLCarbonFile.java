@@ -263,13 +263,12 @@ public class AlluxioACLCarbonFile extends AlluxioCarbonFile {
     }
   }
   @Override
-  public void setPermission(String directoryPath, FsPermission permission, String username,
-      String group) throws IOException {
+  public void setPermission(String directoryPath, FsPermission permission) throws IOException {
     try {
       Path path = new Path(directoryPath);
       FileSystem fs = path.getFileSystem(FileFactory.getConfiguration());
       if (fs.exists(path)) {
-        fs.setOwner(path, username, group);
+        // fs.setOwner(path, username, group);
         fs.setPermission(path, permission);
       }
     } catch (IOException e) {

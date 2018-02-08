@@ -69,8 +69,7 @@ object ACLRefreshTableEventListener {
           override def run(): Unit = {
             // Set permission on the table permission on table folder
             FileFactory.setPermission(carbonTablePath.getPath,
-              ACLFileUtils.getPermissionsOnTable(), currentUser.getShortUserName,
-              currentUser.getPrimaryGroupName)
+              ACLFileUtils.getPermissionsOnTable())
           }
         })
       // get path of all possible depths
