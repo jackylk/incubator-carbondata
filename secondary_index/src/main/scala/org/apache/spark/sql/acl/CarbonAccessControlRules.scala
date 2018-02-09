@@ -114,7 +114,8 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
         dataMapName: String,
         ifExistsSet: Boolean,
         databaseNameOp: Option[String],
-        tableName: String) =>
+        tableName: String,
+        forceDrop: Boolean) =>
           checkPrivilege(c, Set(new PrivObject(
             ObjectType.TABLE,
             CarbonEnv.getDatabaseName(databaseNameOp)(sparkSession),
