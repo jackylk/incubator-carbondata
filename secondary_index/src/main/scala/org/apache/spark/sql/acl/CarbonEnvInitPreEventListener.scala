@@ -20,7 +20,8 @@ package org.apache.spark.sql.acl
 import org.apache.spark.sql.execution.command.CreateFunctionCommand
 
 import org.apache.carbondata.events.{CarbonEnvInitPreEvent, Event, OperationContext, OperationEventListener}
-import org.apache.carbondata.spark.acl.{CarbonUserGroupInformation, ThreadLocalUsername}
+import org.apache.carbondata.spark.acl.CarbonUserGroupInformation
+import org.apache.carbondata.spark.core.CarbonInternalCommonConstants
 
 /**
  *
@@ -37,8 +38,10 @@ class CarbonEnvInitPreEventListener extends OperationEventListener {
      val carbonEnvInitPreEvent = event.asInstanceOf[CarbonEnvInitPreEvent]
      val storePath = carbonEnvInitPreEvent.storePath
      val sparkSession = carbonEnvInitPreEvent.sparkSession
+     val carbonSessionInfo = carbonEnvInitPreEvent.carbonSessionInfo
      CarbonUserGroupInformation.getInstance.enableDriverUser
-     ThreadLocalUsername.setUsername(sparkSession.sessionState.catalog.getClientUser)
+    carbonSessionInfo.getNonSerializableExtraInfo.put(CarbonInternalCommonConstants.USER_NAME,
+        sparkSession.sessionState.catalog.getClientUser)
      Utils.initCarbonFoldersPermission(storePath, sparkSession)
      // register position ID UDF
      sparkSession.udf.register("getPositionId", () => "")

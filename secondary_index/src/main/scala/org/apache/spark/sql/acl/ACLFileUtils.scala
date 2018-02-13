@@ -102,35 +102,39 @@ object ACLFileUtils {
 
   def changeOwnerRecursivelyAfterOperation(sqlContext: SQLContext,
       oriPathArr: ArrayBuffer[String], curPathArr: ArrayBuffer[String], delimiter: String = "#~#") {
-    val loginUser = CarbonUserGroupInformation.getInstance.getLoginUser
-    val currentUser = CarbonUserGroupInformation.getInstance.getCurrentUser
-    Utils.proxyOperate(loginUser, currentUser,
-      s"Use login user ${loginUser.getShortUserName} as a proxy user as we need " +
-      s"permission to operate the given path", true) {
-      val diffPathArr = curPathArr.toSeq.diff(oriPathArr.toSeq)
-      LOGGER.info(s"We have chmod ${diffPathArr.size} path(s) to current user")
-      val user = currentUser.getShortUserName
-      val groups = currentUser.getGroupNames
-      val group = if (groups.isEmpty) {
-        null
-      } else {
-        groups.head
-      }
-      var hdfs: FileSystem = null
-      diffPathArr.foreach { pathStr =>
-        val path = new Path(pathStr.split(delimiter)(0))
-        hdfs = path.getFileSystem(sqlContext.sparkContext.hadoopConfiguration)
-        if (hdfs.exists(path)) {
-          if (hdfs.getFileStatus(path).getOwner != user) {
-            hdfs.setOwner(path, user, group)
+    try {
+      val loginUser = CarbonUserGroupInformation.getInstance.getLoginUser
+      val currentUser = CarbonUserGroupInformation.getInstance.getCurrentUser
+      Utils.proxyOperate(loginUser, currentUser,
+        s"Use login user ${loginUser.getShortUserName} as a proxy user as we need " +
+        s"permission to operate the given path", true) {
+        val diffPathArr = curPathArr.toSeq.diff(oriPathArr.toSeq)
+        LOGGER.info(s"We have chmod ${diffPathArr.size} path(s) to current user")
+        val user = currentUser.getShortUserName
+        val groups = currentUser.getGroupNames
+        val group = if (groups.isEmpty) {
+          null
+        } else {
+          groups.head
+        }
+        var hdfs: FileSystem = null
+        diffPathArr.foreach { pathStr =>
+          val path = new Path(pathStr.split(delimiter)(0))
+          hdfs = path.getFileSystem(sqlContext.sparkContext.hadoopConfiguration)
+          if (hdfs.exists(path)) {
+            if (hdfs.getFileStatus(path).getOwner != user) {
+              hdfs.setOwner(path, user, group)
+            }
+            setPermissions(hdfs, path)
+            setACLGroupRights(currentUser, hdfs, path)
           }
-          setPermissions(hdfs, path)
-          setACLGroupRights(currentUser, hdfs, path)
         }
       }
+    } finally {
+      // close the filesystem object
+      CarbonUserGroupInformation.getInstance().cleanUpUGIFromCurrentThread()
     }
   }
-
 
   /**
    * Recur traverse the given path and get all paths which owner is what we hope.

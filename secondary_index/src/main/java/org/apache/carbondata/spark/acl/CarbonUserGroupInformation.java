@@ -19,9 +19,20 @@ package org.apache.carbondata.spark.acl;
 
 import java.io.IOException;
 
+import org.apache.carbondata.common.logging.LogService;
+import org.apache.carbondata.common.logging.LogServiceFactory;
+import org.apache.carbondata.core.util.CarbonSessionInfo;
+import org.apache.carbondata.core.util.ThreadLocalSessionInfo;
+
+import org.apache.carbondata.spark.core.CarbonInternalCommonConstants;
+
 import org.apache.hadoop.security.UserGroupInformation;
 
 public class CarbonUserGroupInformation {
+
+  private static final LogService LOGGER =
+      LogServiceFactory.getLogService(CarbonUserGroupInformation.class.getName());
+
   private boolean isDriver = false;
 
   private static final CarbonUserGroupInformation CARBONUGINSTANCE =
@@ -39,11 +50,25 @@ public class CarbonUserGroupInformation {
   }
 
   public UserGroupInformation getCurrentUser() throws IOException {
+    CarbonSessionInfo carbonSessionInfo = ThreadLocalSessionInfo.getCarbonSessionInfo();
     try {
-      if (isDriver && ThreadLocalUsername.getUsername() != null && !ThreadLocalUsername
-          .getUsername().equals(UserGroupInformation.getCurrentUser().getShortUserName())) {
-        return UserGroupInformation.createProxyUser(ThreadLocalUsername.getUsername(),
-            UserGroupInformation.getLoginUser());
+      UserGroupInformation userUniqueUGIObject =
+          (UserGroupInformation) carbonSessionInfo.getNonSerializableExtraInfo()
+              .get(CarbonInternalCommonConstants.USER_UNIQUE_UGI_OBJECT);
+      String userName = (String) carbonSessionInfo.getNonSerializableExtraInfo()
+          .get(CarbonInternalCommonConstants.USER_NAME);
+      if (isDriver && null == userUniqueUGIObject && userName != null && !userName
+          .equals(UserGroupInformation.getCurrentUser().getShortUserName())) {
+        UserGroupInformation proxyUser =
+            UserGroupInformation.createProxyUser(userName, UserGroupInformation.getLoginUser());
+        // set user unique object only for the first time so that for the same user in the current
+        // thread it is cached and returned same for all the calls for the current query
+        carbonSessionInfo.getNonSerializableExtraInfo()
+            .put(CarbonInternalCommonConstants.USER_UNIQUE_UGI_OBJECT, proxyUser);
+        LOGGER.info("user UGI object created: " + proxyUser.hashCode());
+        return proxyUser;
+      } else if (null != userUniqueUGIObject) {
+        return userUniqueUGIObject;
       }
       return UserGroupInformation.getCurrentUser();
     } catch (IOException e) {
@@ -53,5 +78,21 @@ public class CarbonUserGroupInformation {
 
   public UserGroupInformation getLoginUser() throws IOException {
     return UserGroupInformation.getLoginUser();
+  }
+
+  /**
+   * This method will clean up all the UGI objects which will other wise be cached and
+   * can lead to memory leak over a long run
+   */
+  public void cleanUpUGIFromCurrentThread() {
+    CarbonSessionInfo carbonSessionInfo = ThreadLocalSessionInfo.getCarbonSessionInfo();
+    UserGroupInformation userUniqueUGIObject =
+        (UserGroupInformation) carbonSessionInfo.getNonSerializableExtraInfo()
+            .get(CarbonInternalCommonConstants.USER_UNIQUE_UGI_OBJECT);
+    if (isDriver && null != userUniqueUGIObject) {
+      // set the info object reference to null in the current thread
+      carbonSessionInfo.getNonSerializableExtraInfo()
+          .put(CarbonInternalCommonConstants.USER_UNIQUE_UGI_OBJECT, null);
+    }
   }
 }

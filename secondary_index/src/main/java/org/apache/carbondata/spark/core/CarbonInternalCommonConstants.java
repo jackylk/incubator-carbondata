@@ -96,4 +96,8 @@ public final class CarbonInternalCommonConstants {
 
   public static final String CARBON_MERGE_INDEX_IN_SEGMENT_DEFAULT = "true";
 
+  public static final String USER_NAME = "user_name";
+
+  public static final String USER_UNIQUE_UGI_OBJECT = "userUniqueUGIObject";
+
 }
