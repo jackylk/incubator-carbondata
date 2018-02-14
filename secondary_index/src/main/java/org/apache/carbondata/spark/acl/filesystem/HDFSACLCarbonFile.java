@@ -26,6 +26,7 @@ import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.datastore.filesystem.CarbonFile;
 import org.apache.carbondata.core.datastore.filesystem.HDFSCarbonFile;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
+import org.apache.carbondata.spark.acl.ACLFileUtils;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -90,70 +91,19 @@ public class HDFSACLCarbonFile extends HDFSCarbonFile {
   }
 
   @Override public boolean createNewFile() {
-    try {
-      return PrivilegedFileOperation.execute(new PrivilegedExceptionAction<Boolean>() {
-        @Override public Boolean run() throws Exception {
-          Path path = fileStatus.getPath();
-          return fs.createNewFile(path);
-        }
-      });
-    } catch (IOException e) {
-      return false;
-    } catch (InterruptedException e) {
-      LOGGER.error("Exception occured: " + e.getMessage());
-      return false;
-    }
+    return ACLFileUtils.createNewFile(fileStatus, fs);
   }
 
   public boolean renameTo(final String changetoName) {
-    try {
-      return PrivilegedFileOperation.execute(new PrivilegedExceptionAction<Boolean>() {
-        @Override public Boolean run() throws Exception {
-          FileSystem fs = fileStatus.getPath().getFileSystem(FileFactory.getConfiguration());
-          return fs.rename(fileStatus.getPath(), new Path(changetoName));
-        }
-      });
-    } catch (IOException e) {
-      LOGGER.error("Exception occured:" + e.getMessage());
-      return false;
-    } catch (InterruptedException e) {
-      LOGGER.error("Exception occured: " + e.getMessage());
-      return false;
-    }
+    return ACLFileUtils.renameTo(fileStatus, changetoName);
   }
 
   public boolean delete() {
-    try {
-      return PrivilegedFileOperation.execute(new PrivilegedExceptionAction<Boolean>() {
-        @Override public Boolean run() throws Exception {
-          FileSystem fs = fileStatus.getPath().getFileSystem(FileFactory.getConfiguration());
-          return fs.delete(fileStatus.getPath(), true);
-        }
-      });
-    } catch (IOException e) {
-      LOGGER.error("Exception occured:" + e.getMessage());
-      return false;
-    } catch (InterruptedException e) {
-      LOGGER.error("Exception occured: " + e.getMessage());
-      return false;
-    }
+    return ACLFileUtils.delete(fileStatus);
   }
 
   @Override public boolean setLastModifiedTime(final long timestamp) {
-    try {
-      PrivilegedFileOperation.execute(new PrivilegedExceptionAction<Void>() {
-        @Override public Void run() throws Exception {
-          fs.setTimes(fileStatus.getPath(), timestamp, timestamp);
-          return null;
-        }
-      });
-    } catch (IOException e) {
-      return false;
-    } catch (InterruptedException e) {
-      LOGGER.error("Exception occured: " + e.getMessage());
-      return false;
-    }
-    return true;
+    return ACLFileUtils.setLastModifiedTime(fileStatus, fs, timestamp);
   }
 
   @Override public DataOutputStream getDataOutputStream(final String path,
@@ -274,17 +224,7 @@ public class HDFSACLCarbonFile extends HDFSCarbonFile {
   @Override
   public void setPermission(String directoryPath, FsPermission permission)
       throws IOException {
-    try {
-      Path path = new Path(directoryPath);
-      FileSystem fs = path.getFileSystem(FileFactory.getConfiguration());
-      if (fs.exists(path)) {
-        // fs.setOwner(path, username, group);
-        fs.setPermission(path, permission);
-      }
-    } catch (IOException e) {
-      LOGGER.error("Exception occurred : " + e.getMessage());
-      throw e;
-    }
+    ACLFileUtils.setPermission(directoryPath, permission);
   }
   @Override public boolean createNewFile(final String filePath, final FileFactory.FileType fileType,
       final boolean doAs, final FsPermission permission) throws IOException {
