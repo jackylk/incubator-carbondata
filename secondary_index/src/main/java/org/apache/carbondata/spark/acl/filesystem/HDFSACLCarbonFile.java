@@ -30,10 +30,8 @@ import org.apache.carbondata.spark.acl.ACLFileUtils;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 
 public class HDFSACLCarbonFile extends HDFSCarbonFile {
   /**
@@ -68,26 +66,7 @@ public class HDFSACLCarbonFile extends HDFSCarbonFile {
   }
 
   @Override public boolean renameForce(final String changetoName) {
-    try {
-      return PrivilegedFileOperation.execute(new PrivilegedExceptionAction<Boolean>() {
-        @Override public Boolean run() throws Exception {
-          FileSystem fs = fileStatus.getPath().getFileSystem(FileFactory.getConfiguration());
-          if (fs instanceof DistributedFileSystem) {
-            ((DistributedFileSystem) fs).rename(fileStatus.getPath(), new Path(changetoName),
-                org.apache.hadoop.fs.Options.Rename.OVERWRITE);
-            return true;
-          } else {
-            return false;
-          }
-        }
-      });
-    } catch (IOException e) {
-      LOGGER.error("Exception occured: " + e.getMessage());
-      return false;
-    } catch (InterruptedException e) {
-      LOGGER.error("Exception occured: " + e.getMessage());
-      return false;
-    }
+    return ACLFileUtils.renameForce(fileStatus, changetoName);
   }
 
   @Override public boolean createNewFile() {

@@ -29,10 +29,8 @@ import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.spark.acl.ACLFileUtils;
 
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 
 public class AlluxioACLCarbonFile extends AlluxioCarbonFile {
   /**
@@ -59,34 +57,15 @@ public class AlluxioACLCarbonFile extends AlluxioCarbonFile {
   }
 
   @Override public boolean renameForce(final String changetoName) {
-    try {
-      return PrivilegedFileOperation.execute(new PrivilegedExceptionAction<Boolean>() {
-        @Override public Boolean run() throws Exception {
-          FileSystem fs = fileStatus.getPath().getFileSystem(FileFactory.getConfiguration());
-          if (fs instanceof DistributedFileSystem) {
-            ((DistributedFileSystem) fs).rename(fileStatus.getPath(), new Path(changetoName),
-                org.apache.hadoop.fs.Options.Rename.OVERWRITE);
-            return true;
-          } else {
-            return false;
-          }
-        }
-      });
-    } catch (IOException e) {
-      LOGGER.error("Exception occured: " + e.getMessage());
-      return false;
-    } catch (InterruptedException e) {
-      LOGGER.error("Exception occured: " + e.getMessage());
-      return false;
-    }
+    return ACLFileUtils.renameForce(fileStatus, changetoName);
   }
 
   @Override public boolean createNewFile() {
     return ACLFileUtils.createNewFile(fileStatus, fs);
   }
 
-  public boolean renameTo(final String changetoName) {
-    return ACLFileUtils.renameTo(fileStatus, changetoName);
+  public boolean renameTo(final String changedToName) {
+    return ACLFileUtils.renameTo(fileStatus, changedToName);
   }
 
   public boolean delete() {

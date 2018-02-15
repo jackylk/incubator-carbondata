@@ -29,6 +29,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.viewfs.ViewFileSystem;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 
 /**
  * ACLFileUtils: to do PrivilegedFileOperation on the file
@@ -158,6 +160,41 @@ public class ACLFileUtils {
     } catch (IOException e) {
       LOGGER.error("Exception occurred : " + e.getMessage());
       throw e;
+    }
+  }
+
+  /**
+   * Rename forcefully the current fileName to the given name.
+   *
+   * @param fileStatus   FileStatus object of current file
+   * @param changeToName changed file name
+   * @return <true> if rename is success <false> if rename fails due to Exception happened
+   * during file rename.
+   */
+  public static boolean renameForce(final FileStatus fileStatus, final String changeToName) {
+    try {
+      return PrivilegedFileOperation.execute(new PrivilegedExceptionAction<Boolean>() {
+        @Override public Boolean run() throws Exception {
+          FileSystem fs = fileStatus.getPath().getFileSystem(FileFactory.getConfiguration());
+          if (fs instanceof DistributedFileSystem) {
+            ((DistributedFileSystem) fs).rename(fileStatus.getPath(), new Path(changeToName),
+                org.apache.hadoop.fs.Options.Rename.OVERWRITE);
+            return true;
+          } else if (fs instanceof ViewFileSystem) {
+            fs.delete(new Path(changeToName), true);
+            fs.rename(fileStatus.getPath(), new Path(changeToName));
+            return true;
+          } else {
+            return false;
+          }
+        }
+      });
+    } catch (IOException e) {
+      LOGGER.error("Exception occured: " + e.getMessage());
+      return false;
+    } catch (InterruptedException e) {
+      LOGGER.error("Exception occured: " + e.getMessage());
+      return false;
     }
   }
 }
