@@ -28,7 +28,6 @@ import org.apache.spark.sql.command.{CreateIndexTable, DropIndex}
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.command.datamap.{CarbonCreateDataMapCommand, CarbonDataMapShowCommand, CarbonDropDataMapCommand}
 import org.apache.spark.sql.execution.command.management._
-import org.apache.spark.sql.execution.command.preaaggregate.PreAggregateUtil
 import org.apache.spark.sql.execution.command.schema.{CarbonAlterTableAddColumnCommand, CarbonAlterTableDataTypeChangeCommand, CarbonAlterTableDropColumnCommand, CarbonAlterTableRenameCommand}
 import org.apache.spark.sql.execution.command.table.{CarbonCreateTableCommand, CarbonDropTableCommand}
 import org.apache.spark.sql.hive.CarbonRelation
@@ -37,7 +36,8 @@ import org.apache.spark.sql.hive.execution.command.CarbonDropDatabaseCommand
 import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.core.metadata.schema.table.TableInfo
-import org.apache.carbondata.processing.merger.CompactionType
+import org.apache.carbondata.processing.merger.{CompactionType, InternalCompactionType}
+import org.apache.carbondata.spark.exception.MalformedCarbonCommandException
 
 private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
     hCatalog: SessionCatalog,
@@ -199,7 +199,16 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
 
         case c@CarbonAlterTableCompactionCommand(alterTableModel, tableInfoOp, _) =>
           // for executing close streaming compaction user should have owner Privilege
-          val compactionType = CompactionType.valueOf(alterTableModel.compactionType.toUpperCase)
+          val compactionType = try {
+            CompactionType.valueOf(alterTableModel.compactionType.toUpperCase)
+          } catch {
+            case ex: Exception =>
+              if (!alterTableModel.compactionType.toUpperCase
+                .equalsIgnoreCase(InternalCompactionType.SEGMENT_INDEX.toString)) {
+                throw new MalformedCarbonCommandException(s"unsupported alter operation on carbon" +
+                                                          s" table ${alterTableModel.tableName}")
+              }
+          }
           if (compactionType == CompactionType.CLOSE_STREAMING) {
             checkPrivilegeRecursively(c,
               alterTableModel.dbName,
