@@ -481,9 +481,12 @@ public class SecondaryIndexQueryResultProcessor {
    * @throws SecondaryIndexException
    */
   private void initDataHandler() throws SecondaryIndexException {
+    String carbonStoreLocation = CarbonDataProcessorUtil
+        .createCarbonStoreLocation(indexTable.getTablePath(), carbonLoadModel.getDatabaseName(),
+            indexTableName, carbonLoadModel.getPartitionId(), segmentId);
     CarbonFactDataHandlerModel carbonFactDataHandlerModel = CarbonFactDataHandlerModel
         .getCarbonFactDataHandlerModel(carbonLoadModel, indexTable, segmentProperties,
-            indexTableName, tempStoreLocation);
+            indexTableName, tempStoreLocation, carbonStoreLocation);
     carbonFactDataHandlerModel.setSchemaUpdatedTimeStamp(indexTable.getTableLastUpdatedTime());
     CarbonDataFileAttributes carbonDataFileAttributes =
         new CarbonDataFileAttributes(Integer.parseInt(carbonLoadModel.getTaskNo()),

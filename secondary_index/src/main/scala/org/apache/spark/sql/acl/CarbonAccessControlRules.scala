@@ -48,7 +48,7 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
 
     if (ACLFileUtils.isSecureModeEnabled) {
       plan match {
-        case c@CarbonCreateTableCommand(tableInfo: TableInfo, _, _, _) =>
+        case c@CarbonCreateTableCommand(tableInfo: TableInfo, _, _, _, _) =>
           var databaseOpt : Option[String] = None
           if(tableInfo.getDatabaseName != null) {
             databaseOpt = Some(tableInfo.getDatabaseName)

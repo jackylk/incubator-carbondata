@@ -197,11 +197,6 @@ public class ViewFSACLCarbonFile extends ViewFSCarbonFile {
     }
   }
 
-  @Override
-  public void setPermission(String directoryPath, FsPermission permission) throws IOException {
-    ACLFileUtils.setPermission(directoryPath, permission);
-  }
-
   @Override public boolean createNewFile(final String filePath, final FileFactory.FileType fileType,
       final boolean doAs, final FsPermission permission) throws IOException {
     try {

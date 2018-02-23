@@ -27,6 +27,7 @@ import java.util.Set;
 import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.datamap.DataMapStoreManager;
+import org.apache.carbondata.core.datamap.Segment;
 import org.apache.carbondata.core.datamap.TableDataMap;
 import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMap;
 import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMapFactory;
@@ -59,13 +60,13 @@ public class CarbonTableInputFormatExtended {
    * @return
    * @throws IOException
    */
-  public static List<String> getFilteredSegments(JobContext job,
+  public static List<Segment> getFilteredSegments(JobContext job,
       CarbonTableInputFormat carbonTableInputFormat) throws IOException {
     AbsoluteTableIdentifier identifier =
         carbonTableInputFormat.getAbsoluteTableIdentifier(job.getConfiguration());
-    String[] segmentsToAccess = carbonTableInputFormat.getSegmentsToAccess(job);
-    Set<String> segmentsToAccessSet = new HashSet<String>();
-    for (String segId : segmentsToAccess) {
+    Segment[] segmentsToAccess = carbonTableInputFormat.getSegmentsToAccess(job);
+    Set<Segment> segmentsToAccessSet = new HashSet<Segment>();
+    for (Segment segId : segmentsToAccess) {
       segmentsToAccessSet.add(segId);
     }
     // get all valid segments and set them into the configuration
@@ -73,22 +74,22 @@ public class CarbonTableInputFormatExtended {
     SegmentStatusManager segmentStatusManager = new SegmentStatusManager(identifier);
     SegmentStatusManager.ValidAndInvalidSegmentsInfo segments =
         segmentStatusManager.getValidAndInvalidSegments();
-    List<String> validSegments = segments.getValidSegments();
+    List<Segment> validSegments = segments.getValidSegments();
     //if no segments in table
     if (validSegments.size() == 0) {
       return new ArrayList<>(0);
     }
-    if (segmentsToAccess.length == 0 || segmentsToAccess[0].equalsIgnoreCase("*")) {
+    if (segmentsToAccess.length == 0 || segmentsToAccess[0].getSegmentNo().equalsIgnoreCase("*")) {
       carbonTableInputFormat.setSegmentsToAccess(job.getConfiguration(), validSegments);
     } else {
-      List<String> filteredSegmentToAccess = new ArrayList<String>();
-      for (String segId : validSegments) {
-        if (segmentsToAccessSet.contains(segId)) {
-          filteredSegmentToAccess.add(segId);
+      List<Segment> filteredSegmentToAccess = new ArrayList<Segment>();
+      for (Segment segment : validSegments) {
+        if (segmentsToAccessSet.contains(segment)) {
+          filteredSegmentToAccess.add(segment);
         }
       }
       if (!filteredSegmentToAccess.containsAll(segmentsToAccessSet)) {
-        List<String> filteredSegmentToAccessTemp = new ArrayList<>();
+        List<Segment> filteredSegmentToAccessTemp = new ArrayList<>();
         filteredSegmentToAccessTemp.addAll(filteredSegmentToAccess);
         filteredSegmentToAccessTemp.removeAll(segmentsToAccessSet);
         LOG.info(
@@ -114,10 +115,10 @@ public class CarbonTableInputFormatExtended {
     CarbonInputFormatUtil.processFilterExpression(filter, carbonTable, null, null);
     FilterResolverIntf filterInterface =
         CarbonInputFormatUtil.resolveFilter(filter, identifier, tableProvider);
-    List<String> filteredSegments = new ArrayList<>();
+    List<Segment> filteredSegments = new ArrayList<>();
     // If filter is null then return all segments.
     if (filter != null) {
-      List<String> setSegID = isSegmentValidAfterFilter(identifier, filterInterface,
+      List<Segment> setSegID = isSegmentValidAfterFilter(identifier, filterInterface,
           Arrays.asList(carbonTableInputFormat.getSegmentsToAccess(job)));
       filteredSegments.addAll(setSegID);
     } else {
@@ -129,9 +130,9 @@ public class CarbonTableInputFormatExtended {
   /**
    * @return true if the filter expression lies between any one of the AbstractIndex min max values.
    */
-  public static List<String> isSegmentValidAfterFilter(
+  public static List<Segment> isSegmentValidAfterFilter(
       AbsoluteTableIdentifier absoluteTableIdentifier, FilterResolverIntf filterResolverIntf,
-      List<String> segmentIds) throws IOException {
+      List<Segment> segmentIds) throws IOException {
     TableDataMap blockletMap = DataMapStoreManager.getInstance()
         .getDataMap(absoluteTableIdentifier, BlockletDataMap.NAME,
             BlockletDataMapFactory.class.getName());

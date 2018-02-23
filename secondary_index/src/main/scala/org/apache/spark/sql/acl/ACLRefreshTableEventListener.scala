@@ -68,7 +68,7 @@ object ACLRefreshTableEventListener {
       currentUser.doAs(new PrivilegedExceptionAction[Unit]() {
           override def run(): Unit = {
             // Set permission on the table permission on table folder
-            FileFactory.setPermission(carbonTablePath.getPath,
+            org.apache.carbondata.spark.acl.ACLFileUtils.setPermission(carbonTablePath.getPath,
               ACLFileUtils.getPermissionsOnTable())
           }
         })

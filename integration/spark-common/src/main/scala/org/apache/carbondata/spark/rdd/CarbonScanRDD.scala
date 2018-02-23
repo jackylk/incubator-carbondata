@@ -98,7 +98,7 @@ class CarbonScanRDD[T: ClassTag](
 
   private val bucketedTable = tableInfo.getFactTable.getBucketingInfo
 
-  private var segmentsToAccess: Array[String] = _
+  private var segmentsToAccess: Array[Segment] = _
 
   @transient val LOGGER = LogServiceFactory.getLogService(this.getClass.getName)
 
@@ -226,7 +226,7 @@ class CarbonScanRDD[T: ClassTag](
     }
   }
 
-  def setSegmentsToAccess(segments: Array[String]): Unit = {
+  def setSegmentsToAccess(segments: Array[Segment]): Unit = {
     segmentsToAccess = segments
   }
 

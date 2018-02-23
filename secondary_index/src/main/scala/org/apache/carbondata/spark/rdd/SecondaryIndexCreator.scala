@@ -114,7 +114,7 @@ object SecondaryIndexCreator {
         .sparkSession).asInstanceOf[CarbonRelation].carbonTable
 
     try {
-      DataLoadingUtil.deleteLoadsAndUpdateMetadata(isForceDeletion = false, indexCarbonTable)
+      DataLoadingUtil.deleteLoadsAndUpdateMetadata(isForceDeletion = false, indexCarbonTable, null)
       TableProcessingOperations.deletePartialLoadDataIfExist(indexCarbonTable, false)
       var execInstance = "1"
       // in case of non dynamic executor allocation, number of executors are fixed.
@@ -181,7 +181,8 @@ object SecondaryIndexCreator {
     } catch {
       case ex: Exception =>
         try {
-          DataLoadingUtil.deleteLoadsAndUpdateMetadata(isForceDeletion = false, indexCarbonTable)
+          DataLoadingUtil
+            .deleteLoadsAndUpdateMetadata(isForceDeletion = false, indexCarbonTable, null)
           TableProcessingOperations.deletePartialLoadDataIfExist(indexCarbonTable, false)
         } catch {
           case e: Exception =>

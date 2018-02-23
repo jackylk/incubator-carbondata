@@ -52,7 +52,7 @@ object ACLCreateDatabaseListener {
       currentUser
         .doAs(new PrivilegedExceptionAction[Unit]() {
           override def run(): Unit = {
-            FileFactory
+            org.apache.carbondata.spark.acl.ACLFileUtils
               .setPermission(dataBasePath,
                 ACLFileUtils.getPermissionsOnDatabase())
           }

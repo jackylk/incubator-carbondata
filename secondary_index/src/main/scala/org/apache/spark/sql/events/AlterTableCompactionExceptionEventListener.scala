@@ -18,6 +18,7 @@
 package org.apache.spark.sql.events
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.CarbonEnv
@@ -27,6 +28,7 @@ import org.apache.spark.sql.util.CarbonException
 import org.apache.spark.util.{CarbonInternalCommonUtil, CarbonInternalScalaUtil}
 
 import org.apache.carbondata.common.logging.{LogService, LogServiceFactory}
+import org.apache.carbondata.core.datamap.Segment
 import org.apache.carbondata.core.locks.{CarbonLockFactory, LockUsage}
 import org.apache.carbondata.events.{AlterTableCompactionExceptionEvent, Event, OperationContext, OperationEventListener}
 import org.apache.carbondata.processing.merger.{CarbonDataMergerUtil, InternalCompactionType}
@@ -52,9 +54,14 @@ class AlterTableCompactionExceptionEventListener extends OperationEventListener 
         if (lock.lockWithRetries()) {
           LOGGER.info("Acquired the compaction lock for table" +
                       s" ${carbonMainTable.getDatabaseName}.${carbonMainTable.getTableName}")
+          val validSegments: mutable.Buffer[Segment] = CarbonDataMergerUtil.getValidSegmentList(
+            carbonMainTable.getAbsoluteTableIdentifier).asScala
+          val validSegmentIds: mutable.Buffer[String] = mutable.Buffer[String]()
+          validSegments.foreach { segment =>
+            validSegmentIds += segment.getSegmentNo
+          }
           CarbonInternalCommonUtil.mergeIndexFiles(sparkSession.sparkContext,
-            CarbonDataMergerUtil.getValidSegmentList(
-              carbonMainTable.getAbsoluteTableIdentifier).asScala,
+            validSegmentIds,
             carbonMainTable.getTablePath,
             carbonMainTable,
             true)
@@ -71,12 +78,16 @@ class AlterTableCompactionExceptionEventListener extends OperationEventListener 
                 .lookupRelation(Some(carbonMainTable.getDatabaseName),
                   secondaryIndex.indexTableName)(sparkSession).asInstanceOf[CarbonRelation]
                 .carbonTable
-
+              val validSegments: mutable.Buffer[Segment] = CarbonDataMergerUtil.getValidSegmentList(
+                carbonMainTable.getAbsoluteTableIdentifier).asScala
+              val validSegmentIds: mutable.Buffer[String] = mutable.Buffer[String]()
+              validSegments.foreach { segment =>
+                validSegmentIds += segment.getSegmentNo
+              }
               // Just launch job to merge index for all index tables
               CarbonInternalCommonUtil.mergeIndexFiles(
                 sparkSession.sparkContext,
-                CarbonDataMergerUtil.getValidSegmentList(
-                  indexCarbonTable.getAbsoluteTableIdentifier).asScala,
+                validSegmentIds,
                 indexCarbonTable.getTablePath,
                 indexCarbonTable,
                 true)

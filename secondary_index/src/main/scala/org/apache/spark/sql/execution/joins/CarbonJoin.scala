@@ -42,6 +42,7 @@ import org.apache.spark.sql.types.{LongType, TimestampType}
 import org.apache.spark.unsafe.types.UTF8String
 
 import org.apache.carbondata.common.logging.LogServiceFactory
+import org.apache.carbondata.core.datamap.Segment
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.hadoop.api.CarbonTableInputFormatExtended
 import org.apache.carbondata.spark.core.CarbonInternalCommonConstants
@@ -591,11 +592,11 @@ case class BroadCastSIFilterPushJoin(
       rowData.rdd
   }
 
-  lazy val partitions: Array[String] = if (mainTableRDD.isDefined &&
+  lazy val partitions: Array[Segment] = if (mainTableRDD.isDefined &&
                                            mainTableRDD.get.isInstanceOf[CarbonScanRDD]) {
     getFilteredSegments(mainTableRDD.get.asInstanceOf[CarbonScanRDD])
   } else {
-    Array.empty[String]
+    Array.empty[Segment]
   }
 
   /**
@@ -603,7 +604,7 @@ case class BroadCastSIFilterPushJoin(
    *
    * @return Array of valid segments
    */
-  def getFilteredSegments(carbonScanRdd: CarbonScanRDD): Array[String] = {
+  def getFilteredSegments(carbonScanRdd: CarbonScanRDD): Array[Segment] = {
     val LOGGER = LogServiceFactory.getLogService(BroadCastSIFilterPushJoin.getClass.getName)
     val conf = new Configuration()
     val jobConf = new JobConf(conf)
@@ -611,7 +612,7 @@ case class BroadCastSIFilterPushJoin(
     val job = Job.getInstance(jobConf)
     val format = carbonScanRdd.prepareInputFormatForDriver(job.getConfiguration)
     val startTime = System.currentTimeMillis()
-    val segmentsToAccess: Array[String] = CarbonTableInputFormatExtended
+    val segmentsToAccess: Array[Segment] = CarbonTableInputFormatExtended
       .getFilteredSegments(job, format).asScala.toArray
     LOGGER
       .info("Time taken for getting the splits: " + (System.currentTimeMillis - startTime) +

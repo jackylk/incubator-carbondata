@@ -167,7 +167,7 @@ private[sql] class CarbonLateDecodeStrategy extends SparkStrategy {
       projects: Seq[NamedExpression],
       filterPredicates: Seq[Expression],
       scanBuilder: (Seq[Attribute], Array[Filter],
-        ArrayBuffer[AttributeReference], Seq[PartitionSpec]) => RDD[InternalRow]) = {
+      ArrayBuffer[AttributeReference], Seq[PartitionSpec]) => RDD[InternalRow]): CodegenSupport = {
     val names = relation.catalogTable match {
       case Some(table) => table.partitionColumnNames
       case _ => Seq.empty
