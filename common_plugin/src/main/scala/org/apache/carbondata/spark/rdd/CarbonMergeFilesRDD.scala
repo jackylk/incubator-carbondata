@@ -21,8 +21,9 @@ import org.apache.spark.{Partition, SparkContext, TaskContext}
 
 import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.core.writer.CarbonIndexFileMergeWriter
+import org.apache.carbondata.processing.util.CarbonLoaderUtil
 
-case class CarbonMergeFilePartition(rddId: Int, idx: Int, segmentPath: String)
+case class CarbonMergeFilePartition(rddId: Int, idx: Int, segmentId: String)
   extends Partition {
 
   override val index: Int = idx
@@ -37,27 +38,33 @@ case class CarbonMergeFilePartition(rddId: Int, idx: Int, segmentPath: String)
  * @param segments segments to be merged
  */
 class CarbonMergeFilesRDD(
-    sc: SparkContext,
-    tablePath: String,
-    segments: Seq[String],
-    readFileFooterFromCarbonDataFile: Boolean)
+  sc: SparkContext,
+  tablePath: String,
+  segments: Seq[String],
+  isHivePartitionedTable: Boolean,
+  readFileFooterFromCarbonDataFile: Boolean)
   extends CarbonRDD[String](sc, Nil) {
 
   override def getPartitions: Array[Partition] = {
     segments.zipWithIndex.map {s =>
-      CarbonMergeFilePartition(id, s._2, CarbonTablePath.getSegmentPath(tablePath, s._1))
+      CarbonMergeFilePartition(id, s._2, s._1)
     }.toArray
   }
 
   override def internalCompute(theSplit: Partition, context: TaskContext): Iterator[String] = {
     val iter = new Iterator[String] {
       val split = theSplit.asInstanceOf[CarbonMergeFilePartition]
-      logInfo("Merging carbon index files of segment : " + split.segmentPath)
+      logInfo("Merging carbon index files of segment : " +
+              CarbonTablePath.getSegmentPath(tablePath, split.segmentId))
 
-      new CarbonIndexFileMergeWriter()
-        .mergeCarbonIndexFilesOfSegment(split.segmentPath,
-          tablePath,
-          readFileFooterFromCarbonDataFile)
+      if (isHivePartitionedTable) {
+        CarbonLoaderUtil.mergeIndexFilesinPartitionedSegment(split.segmentId, tablePath)
+      } else {
+        new CarbonIndexFileMergeWriter()
+          .mergeCarbonIndexFilesOfSegment(split.segmentId,
+            tablePath,
+            readFileFooterFromCarbonDataFile)
+      }
 
       var havePair = false
       var finished = false
