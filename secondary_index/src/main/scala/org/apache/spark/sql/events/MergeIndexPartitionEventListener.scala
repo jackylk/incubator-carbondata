@@ -44,7 +44,8 @@ class MergeIndexPartitionEventListener extends OperationEventListener with Loggi
         mergeIndex = CarbonInternalCommonConstants.CARBON_MERGE_INDEX_IN_SEGMENT_DEFAULT.toBoolean
     }
     if (mergeIndex) {
-      new CarbonIndexFileMergeWriter().mergeCarbonIndexFilesOfSegment(segmentPath)
+      //TODO. temporary change done to pass Null as this class will be rewritten for merge index support.
+      new CarbonIndexFileMergeWriter().mergeCarbonIndexFilesOfSegment(segmentPath, null)
     }
   }
 }

@@ -55,7 +55,9 @@ class CarbonMergeFilesRDD(
       logInfo("Merging carbon index files of segment : " + split.segmentPath)
 
       new CarbonIndexFileMergeWriter()
-        .mergeCarbonIndexFilesOfSegment(split.segmentPath, readFileFooterFromCarbonDataFile)
+        .mergeCarbonIndexFilesOfSegment(split.segmentPath,
+          tablePath,
+          readFileFooterFromCarbonDataFile)
 
       var havePair = false
       var finished = false

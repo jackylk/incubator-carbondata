@@ -180,7 +180,7 @@ public class CarbonInternalLoaderUtil {
         } else if (CarbonInternalScalaUtil.isIndexTable(carbonTable)) {
           segmentStatusManager.writeLoadDetailsIntoFile(
               metaDataFilepath + CarbonCommonConstants.FILE_SEPARATOR
-                  + CarbonCommonConstants.LOADMETADATA_FILENAME, listOfLoadFolderDetailsForFact
+                  + CarbonTablePath.TABLE_STATUS_FILE, listOfLoadFolderDetailsForFact
                   .toArray(new LoadMetadataDetails[listOfLoadFolderDetailsForFact.size()]));
         }
         status = true;
