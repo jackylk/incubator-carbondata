@@ -20,6 +20,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 import org.apache.spark.sql._
+import org.apache.spark.sql.CarbonExpressions.{CarbonDescribeTable => DescribeTableCommand}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.catalog.SessionCatalog
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
@@ -185,7 +186,7 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
             tableName,
             PrivType.SELECT_NOGRANT)
 
-        case c@DescribeTableCommand(identifier, _, _, _) =>
+        case c@DescribeTableCommand(identifier, _, _) =>
           checkPrivilege(c, Set(new PrivObject(
             ObjectType.TABLE,
             CarbonEnv.getDatabaseName(identifier.database)(sparkSession),

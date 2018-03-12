@@ -17,12 +17,9 @@
 
 package org.apache.spark.sql.hive
 
-import org.apache.hadoop.hive.ql.exec.UDF
-import org.apache.spark.sql.{CarbonDatasourceHadoopRelation, CarbonEnv, SparkSession}
+import org.apache.spark.sql.{CarbonEnv, SparkSession}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.expressions.Expression
-import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias}
-import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.util.CarbonInternalScalaUtil
 import org.apache.spark.util.si.FileInternalUtil
 
@@ -31,24 +28,13 @@ import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.spark.spark.indextable.IndexTableUtil
 
+
 /**
  *
  */
 object CarbonInternalHiveMetadataUtil {
 
   private val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
-
-  def retrieveRelation(plan: LogicalPlan): CarbonDatasourceHadoopRelation = {
-    plan match {
-      case SubqueryAlias(alias, l: LogicalRelation, _) if (l.relation
-        .isInstanceOf[CarbonDatasourceHadoopRelation]) => l.relation
-        .asInstanceOf[CarbonDatasourceHadoopRelation]
-      case l: LogicalRelation if (l.relation
-        .isInstanceOf[CarbonDatasourceHadoopRelation]) => l.relation
-        .asInstanceOf[CarbonDatasourceHadoopRelation]
-      case _ => null
-    }
-  }
 
   def refreshTable(dbName: String, tableName: String, sparkSession: SparkSession): Unit = {
     val tableWithDb = dbName + "." + tableName

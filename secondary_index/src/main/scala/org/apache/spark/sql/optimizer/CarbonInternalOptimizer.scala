@@ -25,7 +25,7 @@ import org.apache.spark.sql.catalyst.encoders.RowEncoder
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
-import org.apache.spark.sql.hive.{CarbonHiveMetadataUtil, CarbonInternalHiveMetadataUtil,
+import org.apache.spark.sql.hive.{CarbonHiveMetadataUtil, CarbonInternalHiveMetadataUtil, CarbonInternalMetaUtil,
 CarbonRelation}
 import org.apache.spark.util.CarbonInternalScalaUtil
 
@@ -116,17 +116,16 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
       var indexTablesDF: DataFrame = null
       matchingIndexTables.foreach(matchedTable => {
 
-        val indexTableQualifier = Seq(dbName, matchedTable)
         val copyFilter = filter.copy(filter.condition, filter.child)
-        val indexTablelogicalplan = sparkSession.sessionState.catalog
-          .lookupRelation(TableIdentifier(matchedTable, Some(dbName))) match {
-          case SubqueryAlias(_, l: LogicalRelation, _) => l
-          case others => others
-        }
-        var indexTableAttributeMap: Map[String, AttributeReference] = null
+        val indexTableLogicalplan = CarbonInternalMetaUtil
+          .retrievePlan(sparkSession.sessionState.catalog
+            .lookupRelation(TableIdentifier(matchedTable, Some(dbName))))(sparkSession)
+
+        var indexTableAttributeMap: Map[String, AttributeReference] =
+          Map.empty[String, AttributeReference]
 
         // collect index table columns
-        indexTablelogicalplan collect {
+        indexTableLogicalplan collect {
           case l: LogicalRelation if l.relation.isInstanceOf[CarbonDatasourceHadoopRelation] =>
             indexTableAttributeMap = l.output.map { attr => (attr.name.toLowerCase -> attr) }.toMap
         }
@@ -161,7 +160,7 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
               .get(CarbonInternalCommonConstants.POSITION_REFERENCE.toLowerCase())
               .get)
           // Add Filter on logicalRelation
-          var planTransform: LogicalPlan = Filter(indexTableFilter, indexTablelogicalplan)
+          var planTransform: LogicalPlan = Filter(indexTableFilter, indexTableLogicalplan)
           // Add PositionReference Projection on Filter
           planTransform = Project(positionReference, planTransform)
           val indexTableDf = createDF(sparkSession, planTransform)

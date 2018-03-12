@@ -73,7 +73,8 @@ object CarbonInternalMetastore {
           val relation = sparkSession.sessionState.catalog
             .lookupRelation(TableIdentifier(parentTableName, Some(dbName)))
           val indexInfo = if (relation != null) {
-            val datasourceHadoopRelation = CarbonInternalHiveMetadataUtil.retrieveRelation(relation)
+            val datasourceHadoopRelation =
+              CarbonInternalMetaUtil.retrieveRelation(relation)(sparkSession)
             CarbonInternalScalaUtil.getIndexInfo(datasourceHadoopRelation)
           } else {
             sys.error(s"Table $dbName.$parentTableName does not exists")

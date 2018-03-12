@@ -21,19 +21,16 @@ import scala.collection.mutable.ArrayBuffer
 
 import org.apache.hadoop.security.AccessControlException
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{AnalysisException, CarbonDatasourceHadoopRelation,
-CarbonDictionaryCatalystDecoder, SparkSession}
+import org.apache.spark.sql.{AnalysisException, CarbonDatasourceHadoopRelation, CarbonDictionaryCatalystDecoder, SparkSession}
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, Expression,
-IntegerLiteral}
+import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, Expression, IntegerLiteral}
 import org.apache.spark.sql.catalyst.planning.{ExtractEquiJoinKeys, PhysicalOperation}
 import org.apache.spark.sql.catalyst.plans.{Inner, LeftSemi}
-import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, BroadcastHint, Filter => LogicalFilter}
-import org.apache.spark.sql.catalyst.plans.logical.{GlobalLimit, LocalLimit, LogicalPlan}
+import org.apache.spark.sql.catalyst.plans.logical.{Filter => LogicalFilter, _}
 import org.apache.spark.sql.execution.{FilterExec, GlobalLimitExec, LocalLimitExec, SparkPlan}
 import org.apache.spark.sql.execution.datasources.LogicalRelation
-import org.apache.spark.sql.execution.joins.{BroadCastFilterPushJoin, BroadCastSIFilterPushJoin,
-BuildLeft, BuildRight}
+import org.apache.spark.sql.execution.joins.{BroadCastFilterPushJoin, BroadCastSIFilterPushJoin, BuildLeft, BuildRight}
+import org.apache.spark.sql.hive.CarbonInternalMetaUtil
 import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
@@ -69,7 +66,7 @@ private[sql] class CarbonInternalLateDecodeStrategy extends CarbonLateDecodeStra
               canPushDownJoin(right, condition)) =>
           LOGGER.info(s"pushing down for ExtractEquiJoinKeys:right")
           val carbon = apply(left).head
-          val pushedDownJoin = if (checkIsIndexTable(right)) {
+          val pushedDownJoin = if (CarbonInternalScalaUtil.checkIsIndexTable(right)) {
             BroadCastSIFilterPushJoin(
               leftKeys: Seq[Expression],
               rightKeys: Seq[Expression],
@@ -96,7 +93,7 @@ private[sql] class CarbonInternalLateDecodeStrategy extends CarbonLateDecodeStra
           LOGGER.info(s"pushing down for ExtractEquiJoinKeys:left")
           val carbon = planLater(right)
 
-          val pushedDownJoin = if (checkIsIndexTable(left)) {
+          val pushedDownJoin = if (CarbonInternalScalaUtil.checkIsIndexTable(left)) {
             BroadCastSIFilterPushJoin(
               leftKeys: Seq[Expression],
               rightKeys: Seq[Expression],
@@ -181,31 +178,7 @@ private[sql] class CarbonInternalLateDecodeStrategy extends CarbonLateDecodeStra
     if (!pushDowmJoinEnabled) {
       return false
     }
-    otherRDDPlan match {
-      case BroadcastHint(p) => true
-      case p if session.sqlContext.conf.autoBroadcastJoinThreshold > 0 &&
-                p.stats(session.sqlContext.conf).sizeInBytes <=
-                session.sqlContext.conf.autoBroadcastJoinThreshold =>
-        LOGGER.info("canPushDownJoin statistics:" + p.stats(session.sqlContext.conf).sizeInBytes)
-        true
-      case plan if (checkIsIndexTable(plan)) => true
-      case _ => false
-    }
-  }
-
-  private def checkIsIndexTable(plan: LogicalPlan): Boolean = {
-    plan match {
-      case Aggregate(_, _, plan) if (isIndexTablesJoin(plan)) => true
-      case _ => false
-    }
-  }
-
-  private def isIndexTablesJoin(plan: LogicalPlan): Boolean = {
-    val allRelations = plan.collect { case logicalRelation: LogicalRelation => logicalRelation }
-    !allRelations.exists(x =>
-      !(x.relation.isInstanceOf[CarbonDatasourceHadoopRelation]
-        && CarbonInternalScalaUtil
-          .isIndexTable(x.relation.asInstanceOf[CarbonDatasourceHadoopRelation].carbonTable)))
+    CarbonInternalMetaUtil.canPushDown(otherRDDPlan, session)
   }
 
   private def isLeftSemiExistPushDownEnabled: Boolean = {

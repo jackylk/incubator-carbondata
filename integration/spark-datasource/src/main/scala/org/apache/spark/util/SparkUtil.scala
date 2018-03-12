@@ -21,10 +21,18 @@ import org.apache.spark.{SPARK_VERSION, TaskContext}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.execution.SQLExecution.EXECUTION_ID_KEY
 
+import org.apache.carbondata.core.constants.CarbonCommonConstants
+import org.apache.carbondata.core.util.CarbonProperties
+
 /*
  * this object use to handle file splits
  */
 object SparkUtil {
+
+  // switch for FI private code
+  def isFI: Boolean = CarbonProperties.getInstance().getProperty(
+    CarbonCommonConstants.IS_FI,
+    CarbonCommonConstants.IS_FI_DEFAULT).toBoolean
 
   def setTaskContext(context: TaskContext): Unit = {
     val localThreadContext = TaskContext.get()

@@ -41,7 +41,7 @@ class CarbonEnvInitPreEventListener extends OperationEventListener {
      val carbonSessionInfo = carbonEnvInitPreEvent.carbonSessionInfo
      CarbonUserGroupInformation.getInstance.enableDriverUser
     carbonSessionInfo.getNonSerializableExtraInfo.put(CarbonInternalCommonConstants.USER_NAME,
-        sparkSession.sessionState.catalog.getClientUser)
+      sparkSession.sessionState.catalog.getClientUser)
      Utils.initCarbonFoldersPermission(storePath, sparkSession)
      // register position ID UDF
      sparkSession.udf.register("getPositionId", () => "")

@@ -126,7 +126,7 @@ class TestSecondaryIndexWithIUD extends QueryTest with BeforeAndAfterAll {
       .equals(SegmentStatus.SUCCESS.getMessage))
   }
 
-/*  test("test index with IUD delete using Join") {
+  test("test index with IUD delete using Join") {
     sql(
       "create table test (c1 string,c2 int,c3 string,c5 string) STORED BY 'org.apache.carbondata" +
       ".format'")
@@ -140,7 +140,7 @@ class TestSecondaryIndexWithIUD extends QueryTest with BeforeAndAfterAll {
         "select test.c3, index_test1.c3 from test right join index_test1  on test.c3 =  " +
         "index_test1.c3"),
       Seq())
-  }*/
+  }
 
   test("test if secondary index gives correct result on limit query after row deletion") {
     sql("drop table if exists t10")

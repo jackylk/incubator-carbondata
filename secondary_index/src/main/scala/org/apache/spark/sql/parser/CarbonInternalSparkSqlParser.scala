@@ -21,7 +21,7 @@ import org.apache.spark.sql.{CarbonEnv, CarbonSession, SparkSession}
 import org.apache.spark.sql.catalyst.parser.SqlBaseParser
 import org.apache.spark.sql.catalyst.parser.SqlBaseParser.CreateTableContext
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.hive.CarbonSqlAstBuilder
+import org.apache.spark.sql.hive.CarbonInternalSqlAstBuilder
 import org.apache.spark.sql.internal.{SQLConf, VariableSubstitution}
 
 import org.apache.carbondata.core.util.{CarbonSessionInfo, ThreadLocalSessionInfo}
@@ -64,10 +64,4 @@ class CarbonInternalSparkSqlParser(conf: SQLConf, sparkSession: SparkSession)
   }
 }
 
-class CarbonInternalSqlAstBuilder(conf: SQLConf, parser: CarbonInternalSpark2SqlParser,
-    sparkSession: SparkSession) extends CarbonSqlAstBuilder(conf, parser, sparkSession) {
 
-  override def visitCreateTable(ctx: CreateTableContext): LogicalPlan = {
-    super.visitCreateTable(ctx)
-  }
-}

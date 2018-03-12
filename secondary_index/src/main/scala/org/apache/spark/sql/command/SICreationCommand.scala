@@ -25,7 +25,7 @@ import scala.language.implicitConversions
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.execution.command.RunnableCommand
-import org.apache.spark.sql.hive.{CarbonInternalHiveMetadataUtil, CarbonInternalMetastore, CarbonRelation}
+import org.apache.spark.sql.hive.{CarbonInternalHiveMetadataUtil, CarbonInternalMetastore, CarbonInternalMetaUtil, CarbonRelation}
 import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
@@ -195,8 +195,9 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
         throw new ErrorMessage(
           s"Index table column indexing order is same as Parent table column start order")
       }
-      val parentTableRelation = CarbonInternalHiveMetadataUtil
-        .retrieveRelation(sparkSession.sessionState.catalog.lookupRelation(identifier, None))
+      val parentTableRelation = CarbonInternalMetaUtil
+        .retrieveRelation(sparkSession.sessionState.catalog.
+          lookupRelation(identifier))(sparkSession)
       val parentCarbonTable = parentTableRelation.carbonTable
       // Should not allow to create index on an index table
       val isIndexTable = CarbonInternalScalaUtil.isIndexTable(parentCarbonTable)

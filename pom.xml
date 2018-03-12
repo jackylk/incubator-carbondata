@@ -583,7 +583,7 @@
       </activation>
       <properties>
         <spark.version>2.2.1.0100</spark.version>
-		<hadoop.version>2.7.2</hadoop.version>
+        <hadoop.version>2.7.2</hadoop.version>
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11.8</scala.version>
       </properties>
@@ -698,7 +698,7 @@
         </plugins>
       </build>
     </profile>
-	<profile>
+	  <profile>
       <id>mrs</id>
       <properties>
         <spark.version>2.2.1.0200</spark.version>
@@ -709,6 +709,7 @@
       <modules>
         <module>integration/spark2</module>
         <module>common_plugin</module>
+        <module>secondary_index</module>
         <module>integration/hive</module>
         <module>streaming</module>
         <module>examples/spark2</module>

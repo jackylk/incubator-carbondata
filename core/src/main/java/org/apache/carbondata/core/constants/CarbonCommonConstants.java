@@ -1331,6 +1331,10 @@ public final class CarbonCommonConstants {
    */
   public static final String CARBON_TASK_DISTRIBUTION_CUSTOM = "custom";
 
+  public static final String IS_FI = "carbon.private.fi";
+
+  public static final String IS_FI_DEFAULT = "false";
+
   /**
    * It creates the splits as per the number of blocks/carbondata files available for query.
    */

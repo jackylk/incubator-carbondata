@@ -154,7 +154,9 @@ object ACLFileUtils {
       }
       val fileStatuses: Seq[FileStatus] = fs match {
         case dfs: DistributedFileSystem =>
-          dfs.globLocatedStatus(path, pathFilter, false)
+          // TODO: globLocatedStatus is not working for hadoop version 2.8.3
+           dfs.globLocatedStatus(path, pathFilter, false)
+          dfs.globStatus(path, pathFilter)
         case vfs: ViewFileSystem =>
           vfs.globStatus(path, pathFilter)
       }

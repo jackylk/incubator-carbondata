@@ -28,12 +28,12 @@ import org.apache.spark.TaskContext
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.deploy.SparkHadoopUtil
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.CarbonDecoderRDD
+import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.{And, Attribute, BindReferences, BoundReference, Expression, In, Literal, UnsafeRow}
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodegenContext, ExprCode, GenerateUnsafeProjection}
 import org.apache.spark.sql.catalyst.plans._
-import org.apache.spark.sql.catalyst.plans.physical.{BroadcastDistribution, Distribution, UnspecifiedDistribution}
+import org.apache.spark.sql.catalyst.plans.physical.{BroadcastDistribution, BroadcastMode, Distribution, UnspecifiedDistribution}
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.exchange.{BroadcastExchangeExec, ReusedExchangeExec}
 import org.apache.spark.sql.execution.metric.SQLMetrics
@@ -72,14 +72,16 @@ case class BroadCastFilterPushJoin(
     // 2. BroadcastExchangeExec
     // Both the relations to be removed to execute and get the output
     val buildPlanOutput =
-    buildPlan match {
-      case b: BroadcastExchangeExec => b.child.execute
-      case others => buildPlan.children(0) match {
-        case b: BroadcastExchangeExec => b.child.execute
-        case ReusedExchangeExec(_, broadcast@BroadcastExchangeExec(_, _, _)) =>
-          broadcast.child.execute
-        case others => buildPlan.execute
-      }
+      buildPlan match {
+        case b@CarbonBroadcastExchangeExec(_, _) => b.asInstanceOf[BroadcastExchangeExec].child
+          .execute()
+        case others => buildPlan.children(0) match {
+          case a@CarbonBroadcastExchangeExec(_, _) => a.asInstanceOf[BroadcastExchangeExec].child
+            .execute()
+          case ReusedExchangeExec(_, broadcast@CarbonBroadcastExchangeExec(_, _)) =>
+            broadcast.asInstanceOf[BroadcastExchangeExec].child.execute()
+          case others => buildPlan.execute
+        }
     }
 
     val input: Array[InternalRow] = buildPlanOutput.map(_.copy()).collect()
@@ -767,5 +769,18 @@ object BroadCastFilterPushJoin {
       buffer.asJava.get(0)
     }
     Seq(cond)
+  }
+}
+
+/**
+ * unapply method of BroadcastExchangeExec
+ */
+object CarbonBroadcastExchangeExec {
+  def unapply(plan: SparkPlan): Option[(BroadcastMode, SparkPlan)] = {
+    plan match {
+      case cExec: BroadcastExchangeExec =>
+        Some(cExec.mode, cExec.child)
+      case _ => None
+    }
   }
 }

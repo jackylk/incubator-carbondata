@@ -20,15 +20,15 @@ package org.apache.spark.sql.events
 import scala.collection.JavaConverters._
 
 import org.apache.spark.internal.Logging
-import org.apache.spark.sql.CarbonEnv
-import org.apache.spark.sql.hive.{CarbonRelation, CarbonSessionState}
-import org.apache.spark.util.CarbonInternalScalaUtil
+import org.apache.spark.sql.{CarbonEnv}
+import org.apache.spark.sql.hive._
+import org.apache.spark.util.{CarbonInternalScalaUtil}
 
 import org.apache.carbondata.common.logging.{LogService, LogServiceFactory}
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.datastore.impl.FileFactory.FileType
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
-import org.apache.carbondata.events.{AlterTableRenamePostEvent, AlterTableRenamePreEvent, Event, OperationContext, OperationEventListener}
+import org.apache.carbondata.events.{AlterTableRenamePostEvent, Event, OperationContext, OperationEventListener}
 
 /**
  *
@@ -54,8 +54,8 @@ class AlterTableRenameEventListener extends OperationEventListener with Logging 
         val newTableName = alterTableRenameModel.newTableIdentifier.table
 
         if (!FileFactory.getFileType(newTablePath).equals(FileType.LOCAL)) {
-          sparkSession.sessionState.asInstanceOf[CarbonSessionState].metadataHive
-            .runSqlHive(
+          sparkSession.sessionState.catalog.asInstanceOf[ICarbonSessionCatalog]
+            .getClient().runSqlHive(
               s"ALTER TABLE $oldDatabaseName.$newTableName SET LOCATION '$newTablePath'")
         }
         val metastore = CarbonEnv.getInstance(sparkSession).carbonMetastore
@@ -65,7 +65,8 @@ class AlterTableRenameEventListener extends OperationEventListener with Logging 
         CarbonInternalScalaUtil.getIndexesMap(table)
           .asScala.map {
           entry =>
-            sparkSession.sessionState.asInstanceOf[CarbonSessionState].metadataHive.runSqlHive(
+            sparkSession.sessionState.catalog.asInstanceOf[ICarbonSessionCatalog]
+              .getClient().runSqlHive(
               s"ALTER TABLE $oldDatabaseName.${
                 entry
                   ._1

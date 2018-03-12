@@ -22,8 +22,9 @@ import scala.collection.mutable.ArrayBuffer
 
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.{CarbonEnv, SparkSession, SQLContext}
-import org.apache.spark.sql.hive.{CarbonRelation, CarbonSessionState}
-import org.apache.spark.sql.hive.acl.{ObjectType, PrivObject, PrivType}
+import org.apache.spark.sql.hive.CarbonRelation
+import org.apache.spark.sql.hive.acl._
+import org.apache.spark.util.CarbonReflectionUtils
 
 import org.apache.carbondata.common.constants.LoggerAction
 import org.apache.carbondata.common.logging.LogServiceFactory
@@ -37,6 +38,7 @@ import org.apache.carbondata.events.exception.PreEventException
 import org.apache.carbondata.processing.loading.events.LoadEvents.{LoadTablePostExecutionEvent, LoadTablePreExecutionEvent}
 import org.apache.carbondata.processing.util.CarbonQueryUtil
 import org.apache.carbondata.spark.acl.{CarbonUserGroupInformation, InternalCarbonConstant}
+
 
 object ACLLoadEventListener {
 
@@ -66,7 +68,8 @@ object ACLLoadEventListener {
 
       // loadPre2
       if (ACLFileUtils.isSecureModeEnabled) {
-        val aclInterface = sparkSession.sessionState.asInstanceOf[CarbonSessionState].aclInterface
+        val aclInterface: HiveACLInterface = CarbonReflectionUtils.getField("aclInterface",
+          sparkSession.sessionState).asInstanceOf[HiveACLInterface]
         val files: java.util.List[String] =
           new java.util.ArrayList[String](CarbonCommonConstants.CONSTANT_SIZE_TEN)
         CarbonQueryUtil.splitFilePath(factPath, files, CarbonCommonConstants.COMMA)
@@ -99,8 +102,9 @@ object ACLLoadEventListener {
         //          sys.error("Invalid bad records location.")
         //        } else
         if (CarbonUtil.isValidBadStorePath(bad_record_path) && ACLFileUtils.isSecureModeEnabled) {
-          if (!sparkSession.sessionState.asInstanceOf[CarbonSessionState].aclInterface
-            .checkPrivilege(Set(new PrivObject(ObjectType.FILE,
+          val aclInterface: ACLInterface = CarbonReflectionUtils.getField("aclInterface",
+            sparkSession.sessionState).asInstanceOf[ACLInterface]
+          if (!aclInterface.checkPrivilege(Set(new PrivObject(ObjectType.FILE,
               null,
               bad_record_path,
               null,

@@ -22,6 +22,8 @@ import java.util
 import scala.collection.JavaConverters._
 
 import org.apache.spark.sql.CarbonDatasourceHadoopRelation
+import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, LogicalPlan}
+import org.apache.spark.sql.execution.datasources.LogicalRelation
 
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.mutate.CarbonUpdateUtil
@@ -180,5 +182,20 @@ object CarbonInternalScalaUtil {
       }
     }
     indexTableDetailsList
+  }
+
+  def checkIsIndexTable(plan: LogicalPlan): Boolean = {
+    plan match {
+      case Aggregate(_, _, plan) if (isIndexTablesJoin(plan)) => true
+      case _ => false
+    }
+  }
+
+  def isIndexTablesJoin(plan: LogicalPlan): Boolean = {
+    val allRelations = plan.collect { case logicalRelation: LogicalRelation => logicalRelation }
+    !allRelations.exists(x =>
+      !(x.relation.isInstanceOf[CarbonDatasourceHadoopRelation]
+        && CarbonInternalScalaUtil
+        .isIndexTable(x.relation.asInstanceOf[CarbonDatasourceHadoopRelation].carbonTable)))
   }
 }
