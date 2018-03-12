@@ -21,7 +21,7 @@ import org.apache.spark.SparkContext
 
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.util.CarbonProperties
-import org.apache.carbondata.spark.core.CarbonInternalCommonConstants
+import org.apache.carbondata.spark.core.CarbonCommonPluginConstants
 import org.apache.carbondata.spark.rdd.CarbonMergeFilesRDD
 
 
@@ -51,27 +51,30 @@ object CarbonInternalCommonUtil {
         sparkContext,
         carbonTable.getTablePath,
         segmentIds,
+        carbonTable.isHivePartitionTable,
         readFileFooterFromCarbonDataFile).collect()
     } else {
       try {
         CarbonProperties.getInstance()
-          .getProperty(CarbonInternalCommonConstants.CARBON_MERGE_INDEX_IN_SEGMENT).toBoolean
+          .getProperty(CarbonCommonPluginConstants.CARBON_MERGE_INDEX_IN_SEGMENT).toBoolean
         if (CarbonProperties.getInstance().getProperty(
-          CarbonInternalCommonConstants.CARBON_MERGE_INDEX_IN_SEGMENT,
-          CarbonInternalCommonConstants.CARBON_MERGE_INDEX_IN_SEGMENT_DEFAULT).toBoolean) {
+          CarbonCommonPluginConstants.CARBON_MERGE_INDEX_IN_SEGMENT,
+          CarbonCommonPluginConstants.CARBON_MERGE_INDEX_IN_SEGMENT_DEFAULT).toBoolean) {
           new CarbonMergeFilesRDD(
             sparkContext,
             carbonTable.getTablePath,
             segmentIds,
+            carbonTable.isHivePartitionTable,
             readFileFooterFromCarbonDataFile).collect()
         }
       } catch {
         case _: Exception =>
-          if (CarbonInternalCommonConstants.CARBON_MERGE_INDEX_IN_SEGMENT_DEFAULT.toBoolean) {
+          if (CarbonCommonPluginConstants.CARBON_MERGE_INDEX_IN_SEGMENT_DEFAULT.toBoolean) {
             new CarbonMergeFilesRDD(
               sparkContext,
               carbonTable.getTablePath,
               segmentIds,
+              carbonTable.isHivePartitionTable,
               readFileFooterFromCarbonDataFile).collect()
           }
       }

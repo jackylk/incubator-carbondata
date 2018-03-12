@@ -88,14 +88,6 @@ public final class CarbonInternalCommonConstants {
    */
   public static final String DEFAULT_BROADCAST_RECORD_SIZE = "100";
 
-  /**
-   * It is internal configuration and used only for test purpose.
-   * It will merge the carbon index files with in the segment to single segment.
-   */
-  public static final String CARBON_MERGE_INDEX_IN_SEGMENT = "carbon.merge.index.in.segment";
-
-  public static final String CARBON_MERGE_INDEX_IN_SEGMENT_DEFAULT = "true";
-
   public static final String USER_NAME = "user_name";
 
   public static final String USER_UNIQUE_UGI_OBJECT = "userUniqueUGIObject";

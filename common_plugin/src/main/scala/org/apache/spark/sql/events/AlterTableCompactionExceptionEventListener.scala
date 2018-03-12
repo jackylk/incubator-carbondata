@@ -21,18 +21,14 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 import org.apache.spark.internal.Logging
-import org.apache.spark.sql.CarbonEnv
-import org.apache.spark.sql.command.SecondaryIndex
-import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.sql.util.CarbonException
-import org.apache.spark.util.{CarbonInternalCommonUtil, CarbonInternalScalaUtil}
+import org.apache.spark.util.CarbonInternalCommonUtil
 
 import org.apache.carbondata.common.logging.{LogService, LogServiceFactory}
 import org.apache.carbondata.core.datamap.Segment
 import org.apache.carbondata.core.locks.{CarbonLockFactory, LockUsage}
 import org.apache.carbondata.events.{AlterTableCompactionExceptionEvent, Event, OperationContext, OperationEventListener}
 import org.apache.carbondata.processing.merger.{CarbonDataMergerUtil, InternalCompactionType}
-
 
 class AlterTableCompactionExceptionEventListener extends OperationEventListener with Logging {
   val LOGGER: LogService = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
@@ -65,43 +61,15 @@ class AlterTableCompactionExceptionEventListener extends OperationEventListener 
             carbonMainTable.getTablePath,
             carbonMainTable,
             true)
-          val indexTablesList = CarbonInternalScalaUtil.getIndexesMap(carbonMainTable).asScala
-          if (null != indexTablesList && indexTablesList.nonEmpty) {
-            indexTablesList.foreach { indexTableAndColumns =>
-              val secondaryIndex = SecondaryIndex(Some(carbonMainTable.getDatabaseName),
-                carbonMainTable.getTableName,
-                indexTableAndColumns._2.asScala.toList,
-                indexTableAndColumns._1)
-              val metastore = CarbonEnv.getInstance(sparkSession)
-                .carbonMetastore
-              val indexCarbonTable = metastore
-                .lookupRelation(Some(carbonMainTable.getDatabaseName),
-                  secondaryIndex.indexTableName)(sparkSession).asInstanceOf[CarbonRelation]
-                .carbonTable
-              val validSegments: mutable.Buffer[Segment] = CarbonDataMergerUtil.getValidSegmentList(
-                carbonMainTable.getAbsoluteTableIdentifier).asScala
-              val validSegmentIds: mutable.Buffer[String] = mutable.Buffer[String]()
-              validSegments.foreach { segment =>
-                validSegmentIds += segment.getSegmentNo
-              }
-              // Just launch job to merge index for all index tables
-              CarbonInternalCommonUtil.mergeIndexFiles(
-                sparkSession.sparkContext,
-                validSegmentIds,
-                indexCarbonTable.getTablePath,
-                indexCarbonTable,
-                true)
-            }
-          }
-          LOGGER.audit(s"Compaction request completed for table " +
-                       s"${carbonMainTable.getDatabaseName}.${carbonMainTable.getTableName}")
-          LOGGER.info(s"Compaction request completed for table " +
-                      s"${carbonMainTable.getDatabaseName}.${carbonMainTable.getTableName}")
+          val requestMessage = "Compaction request completed for table "
+                               s"${carbonMainTable.getDatabaseName}.${carbonMainTable.getTableName}"
+          LOGGER.audit(requestMessage)
+          LOGGER.info(requestMessage)
         } else {
-          LOGGER.audit("Not able to acquire the compaction lock for table " +
-                       s"${carbonMainTable.getDatabaseName}.${carbonMainTable.getTableName}")
-          LOGGER.error(s"Not able to acquire the compaction lock for table" +
-                       s" ${carbonMainTable.getDatabaseName}.${carbonMainTable.getTableName}")
+          val lockMessage = "Not able to acquire the compaction lock for table " +
+                            s"${carbonMainTable.getDatabaseName}.${carbonMainTable.getTableName}"
+          LOGGER.audit(lockMessage)
+          LOGGER.error(lockMessage)
           CarbonException.analysisException(
             "Table is already locked for compaction. Please try after some time.")
         }

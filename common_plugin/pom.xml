@@ -27,8 +27,8 @@
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>carbondata-secondary_index</artifactId>
-  <name>Apache CarbonData :: SecondaryIndex</name>
+  <artifactId>carbondata-common_plugin</artifactId>
+  <name>Apache CarbonData :: CommonPlugin</name>
 
   <properties>
     <dev.path>${basedir}/../dev</dev.path>
@@ -57,11 +57,6 @@
           <artifactId>spark-hive-thriftserver_2.10</artifactId>
         </exclusion>
       </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.carbondata</groupId>
-      <artifactId>carbondata-common_plugin</artifactId>
-      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.carbondata</groupId>

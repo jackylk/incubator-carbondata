@@ -261,14 +261,6 @@ object CarbonInternalSessionState {
         .addListener(classOf[CarbonEnvInitPreEvent],
           new CarbonEnvInitPreEventListener)
 
-      // Merge index listeners
-      operationListenerBus
-        .addListener(classOf[LoadTablePreStatusUpdateEvent], new MergeIndexEventListener)
-
-      // Merge partition listeners
-      operationListenerBus
-        .addListener(classOf[LoadTableMergePartitionEvent], new MergeIndexPartitionEventListener)
-
       // SI Listeners
       operationListenerBus
         .addListener(classOf[LoadTablePreStatusUpdateEvent], new SILoadEventListener)
@@ -291,11 +283,11 @@ object CarbonInternalSessionState {
       operationListenerBus
         .addListener(classOf[CleanFilesPostEvent], new CleanFilesPostEventListener)
       operationListenerBus
-        .addListener(classOf[AlterTableCompactionExceptionEvent],
-          new AlterTableCompactionExceptionEventListener)
-      operationListenerBus
         .addListener(classOf[AlterTableCompactionPreStatusUpdateEvent],
           new AlterTableCompactionPostEventListener)
+      operationListenerBus
+        .addListener(classOf[AlterTableCompactionExceptionEvent],
+          new AlterTableCompactionExceptionSIEventListener)
       operationListenerBus
         .addListener(classOf[UpdateTablePreEvent], new UpdateTablePreEventListener)
       operationListenerBus
