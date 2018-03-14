@@ -93,7 +93,7 @@ class CarbonACLSessionCatalog(
   }
 
   // Initialize all listeners to the Operation bus.
-  CarbonEnv.initListeners()
+  CarbonEnv.init(sparkSession)
 
   override def lookupRelation(name: TableIdentifier): LogicalPlan = {
     val rtnRelation = super.lookupRelation(name)
@@ -238,7 +238,7 @@ class CarbonACLInternalSessionStateBuilder(sparkSession: SparkSession,
   )
 
   // initialize all listeners
-  CarbonACLInternalSessionStateBuilder.init
+  CarbonACLInternalSessionStateBuilder.init(sparkSession)
 
   class CarbonPreOptimizerRule extends Rule[LogicalPlan] {
 
@@ -260,9 +260,9 @@ class CarbonACLInternalSessionStateBuilder(sparkSession: SparkSession,
 object CarbonACLInternalSessionStateBuilder {
   var initialized = false
 
-  def init: Unit = {
+  def init(sparkSession: SparkSession): Unit = {
     if (!initialized) {
-      CarbonCommonInitializer.init
+      CarbonCommonInitializer.init(sparkSession)
       initialized = true
     }
   }

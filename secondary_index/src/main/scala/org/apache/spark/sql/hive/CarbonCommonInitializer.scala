@@ -17,7 +17,7 @@
 
 package org.apache.spark.sql.hive
 
-import org.apache.spark.sql.CarbonEnv
+import org.apache.spark.sql.{CarbonEnv, SparkSession}
 import org.apache.spark.sql.acl.{ACLIUDDeleteEventListener, ACLIUDUpdateEventListener, ACLRefreshTableEventListener, CarbonEnvInitPreEventListener, _}
 import org.apache.spark.sql.events.{DeleteFromTableEventListener, _}
 import org.apache.spark.util.SparkUtil
@@ -34,9 +34,9 @@ import org.apache.carbondata.spark.acl.ACLFileFactory
 object CarbonCommonInitializer {
   var initialized = false
 
-  def init: Unit = {
+  def init(sparkSession: SparkSession): Unit = {
     if (!initialized) {
-      CarbonEnv.initListeners()
+      CarbonEnv.init(sparkSession)
       // register internal carbon property to propertySet
       CarbonPluginProperties.validateAndLoadDefaultInternalProperties()
 

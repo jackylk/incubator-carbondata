@@ -85,7 +85,7 @@ class CarbonHiveSessionCatalog(
   }
 
   // Initialize all listeners to the Operation bus.
-  CarbonEnv.init
+  CarbonEnv.init(sparkSession)
 
   override def lookupRelation(name: TableIdentifier): LogicalPlan = {
     var rtnRelation = super.lookupRelation(name)

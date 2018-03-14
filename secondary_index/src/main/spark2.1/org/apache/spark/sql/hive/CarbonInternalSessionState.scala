@@ -104,7 +104,7 @@ class CarbonInternalSessionState(sparkSession: SparkSession)
   }
 
   // initialize all listeners
-  CarbonInternalSessionState.init
+  CarbonInternalSessionState.init(sparkSession)
 
   class CarbonPreOptimizerRule extends Rule[LogicalPlan] {
 
@@ -122,9 +122,10 @@ class CarbonInternalSessionState(sparkSession: SparkSession)
 // need to be registered only once
 object CarbonInternalSessionState {
   var initialized = false
-  def init: Unit = {
+
+  def init(sparkSession: SparkSession): Unit = {
     if (!initialized) {
-      CarbonCommonInitializer.init
+      CarbonCommonInitializer.init(sparkSession)
       initialized = true
     }
   }
