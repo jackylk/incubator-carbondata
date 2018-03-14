@@ -27,8 +27,8 @@
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>carbondata-common_plugin</artifactId>
-  <name>Apache CarbonData :: CommonPlugin</name>
+  <artifactId>carbondata-common-plugin</artifactId>
+  <name>Apache CarbonData :: Common Plugin</name>
 
   <properties>
     <dev.path>${basedir}/../dev</dev.path>

@@ -60,7 +60,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.carbondata</groupId>
-      <artifactId>carbondata-common_plugin</artifactId>
+      <artifactId>carbondata-common-plugin</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
