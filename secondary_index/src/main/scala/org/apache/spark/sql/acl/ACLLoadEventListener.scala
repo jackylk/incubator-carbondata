@@ -22,9 +22,8 @@ import scala.collection.mutable.ArrayBuffer
 
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.{CarbonEnv, SparkSession, SQLContext}
-import org.apache.spark.sql.hive.CarbonRelation
+import org.apache.spark.sql.hive.{CarbonInternalMetaUtil, CarbonRelation}
 import org.apache.spark.sql.hive.acl._
-import org.apache.spark.util.CarbonReflectionUtils
 
 import org.apache.carbondata.common.constants.LoggerAction
 import org.apache.carbondata.common.logging.LogServiceFactory
@@ -68,8 +67,7 @@ object ACLLoadEventListener {
 
       // loadPre2
       if (ACLFileUtils.isSecureModeEnabled) {
-        val aclInterface: HiveACLInterface = CarbonReflectionUtils.getField("aclInterface",
-          sparkSession.sessionState).asInstanceOf[HiveACLInterface]
+        val aclInterface: ACLInterface = CarbonInternalMetaUtil.getACLInterface(sparkSession)
         val files: java.util.List[String] =
           new java.util.ArrayList[String](CarbonCommonConstants.CONSTANT_SIZE_TEN)
         CarbonQueryUtil.splitFilePath(factPath, files, CarbonCommonConstants.COMMA)
@@ -102,8 +100,7 @@ object ACLLoadEventListener {
         //          sys.error("Invalid bad records location.")
         //        } else
         if (CarbonUtil.isValidBadStorePath(bad_record_path) && ACLFileUtils.isSecureModeEnabled) {
-          val aclInterface: ACLInterface = CarbonReflectionUtils.getField("aclInterface",
-            sparkSession.sessionState).asInstanceOf[ACLInterface]
+          val aclInterface: ACLInterface = CarbonInternalMetaUtil.getACLInterface(sparkSession)
           if (!aclInterface.checkPrivilege(Set(new PrivObject(ObjectType.FILE,
               null,
               bad_record_path,

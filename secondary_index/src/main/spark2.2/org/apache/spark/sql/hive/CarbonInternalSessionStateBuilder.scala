@@ -25,7 +25,6 @@ import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.{Analyzer, FunctionRegistry}
 import org.apache.spark.sql.catalyst.catalog.{DropTablePreEvent => _, _}
 import org.apache.spark.sql.catalyst.expressions.Expression
-import org.apache.spark.sql.catalyst.optimizer.Optimizer
 import org.apache.spark.sql.catalyst.parser.ParserInterface
 import org.apache.spark.sql.catalyst.parser.ParserUtils._
 import org.apache.spark.sql.catalyst.parser.SqlBaseParser._
@@ -38,6 +37,8 @@ import org.apache.spark.sql.execution.command.table.CarbonShowTablesCommand
 import org.apache.spark.sql.execution.command.{AlterTableAddColumnsModel, AlterTableDataTypeChangeModel}
 import org.apache.spark.sql.execution.datasources.{DataSourceAnalysis, PreprocessTableCreation, PreprocessTableInsertion, _}
 import org.apache.spark.sql.execution.strategy.{CarbonInternalLateDecodeStrategy, CarbonLateDecodeStrategy, DDLStrategy, StreamingTableStrategy}
+import org.apache.spark.sql.hive.acl.ACLInterface
+import org.apache.spark.sql.hive.client.HiveClient
 import org.apache.spark.sql.internal.{SQLConf, SessionState}
 import org.apache.spark.sql.optimizer.{CarbonIUDRule, CarbonLateDecodeRule, CarbonSITransformationRule, CarbonUDFTransformRule}
 import org.apache.spark.sql.parser._
@@ -83,6 +84,21 @@ class CarbonACLSessionCatalog(
     env.init(sparkSession)
     env
   }
+
+  var hiveClient: HiveClient = null
+  var aclInterface: ACLInterface = null
+
+  def setHiveClient(client: HiveClient): Unit = {
+    hiveClient = client
+  }
+
+  /**
+   * to set acl interface
+   * @param aCLInterface
+   */
+  def setACLInterface(aCLInterface: ACLInterface): Unit = {
+    aclInterface = aCLInterface
+  }
   /**
    * return's the corbonEnv instance
     *
@@ -112,13 +128,17 @@ class CarbonACLSessionCatalog(
    * @return
    */
   def getClient(): org.apache.spark.sql.hive.client.HiveClient = {
-    //    For Spark2.2 we need to use unified Spark thrift server instead of carbon thrift
-    //    server. CarbonSession is not available anymore so HiveClient is created directly
-    //    using sparkSession.sharedState which internally contains all required carbon rules,
-    //    optimizers pluged-in through SessionStateBuilder in spark-defaults.conf.
-    //    spark.sql.session.state.builder=org.apache.spark.sql.hive.CarbonSessionStateBuilder
-    sparkSession.sharedState.externalCatalog.asInstanceOf[HiveACLExternalCatalog].client
+    hiveClient
   }
+
+  /**
+   * Return's the aclinterface
+   * @return
+   */
+  def getACLInterface(): ACLInterface = {
+    aclInterface
+  }
+
 
   override def createPartitions(
     tableName: TableIdentifier,
@@ -180,8 +200,8 @@ class CarbonACLInternalSessionStateBuilder(sparkSession: SparkSession,
     new CarbonLateDecodeRule
   )
 
-  var preExecutionRules: Seq[Rule[SparkPlan]] =
-    CarbonPrivCheck(sparkSession, catalog, aclInterface) :: Nil
+  var preExecutionRules: Rule[SparkPlan] =
+    CarbonPrivCheck(sparkSession, catalog, aclInterface)
 
   override def getPreOptimizerRules: Seq[Rule[LogicalPlan]] = {
     super.getPreOptimizerRules ++ Seq(new CarbonPreOptimizerRule)
@@ -217,6 +237,7 @@ class CarbonACLInternalSessionStateBuilder(sparkSession: SparkSession,
     new Analyzer(catalog, conf) {
 
       override val extendedResolutionRules: Seq[Rule[LogicalPlan]] =
+        new CarbonAccessControlRules(sparkSession, catalog, aclInterface) +:
         new ResolveHiveSerdeTable(session) +:
           new FindDataSourceTable(session) +:
           new ResolveSQLOnFile(session) +:
@@ -247,9 +268,12 @@ class CarbonACLInternalSessionStateBuilder(sparkSession: SparkSession,
     }
   }
 
-  override def customResolutionRules: Seq[Rule[LogicalPlan]] = {
-    super.customResolutionRules
-    CarbonAccessControlRules(sparkSession, catalog, aclInterface) :: Nil
+  override def build(): SessionState = {
+    val state = super.build()
+    state.preExecutionRules = state.preExecutionRules :+ preExecutionRules
+    catalog.setHiveClient(client)
+    catalog.setACLInterface(aclInterface)
+    state
   }
 
   override protected def newBuilder: NewBuilder = new CarbonACLInternalSessionStateBuilder(_, _)

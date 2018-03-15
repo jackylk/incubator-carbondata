@@ -4,11 +4,11 @@ import org.apache.spark.sql.CarbonExpressions.{CarbonSubqueryAlias => SubqueryAl
 import org.apache.spark.sql.catalyst.catalog.UnresolvedCatalogRelation
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, ResolvedHint}
 import org.apache.spark.sql.execution.datasources.{FindDataSourceTable, LogicalRelation}
+import org.apache.spark.sql.hive.acl.ACLInterface
 import org.apache.spark.sql.{CarbonDatasourceHadoopRelation, SparkSession}
 import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
-
 /**
  *
  */
@@ -77,4 +77,13 @@ object CarbonInternalMetaUtil {
     }
   }
 
+  /**
+   * return's aclInterface from CarbonACLSessionCatalog
+   *
+   * @param sparkSession
+   * @return
+   */
+  def getACLInterface(sparkSession: SparkSession) : ACLInterface = {
+    sparkSession.sessionState.catalog.asInstanceOf[CarbonACLSessionCatalog].getACLInterface()
+  }
 }
