@@ -55,8 +55,6 @@ object CarbonInternalCommonUtil {
         readFileFooterFromCarbonDataFile).collect()
     } else {
       try {
-        CarbonProperties.getInstance()
-          .getProperty(CarbonCommonPluginConstants.CARBON_MERGE_INDEX_IN_SEGMENT).toBoolean
         if (CarbonProperties.getInstance().getProperty(
           CarbonCommonPluginConstants.CARBON_MERGE_INDEX_IN_SEGMENT,
           CarbonCommonPluginConstants.CARBON_MERGE_INDEX_IN_SEGMENT_DEFAULT).toBoolean) {
