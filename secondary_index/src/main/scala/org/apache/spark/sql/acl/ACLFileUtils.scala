@@ -33,6 +33,7 @@ import org.apache.spark.sql.{SparkSession, SQLContext}
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.datastore.impl.FileFactory
+import org.apache.carbondata.core.locks.LockUsage
 import org.apache.carbondata.core.metadata.CarbonTableIdentifier
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.core.util.path.CarbonTablePath
@@ -121,7 +122,7 @@ object ACLFileUtils {
         diffPathArr.foreach { pathStr =>
           val path = new Path(pathStr.split(delimiter)(0))
           hdfs = path.getFileSystem(sqlContext.sparkContext.hadoopConfiguration)
-          if (hdfs.exists(path)) {
+          if (!path.getName.contains(LockUsage.LOCK) && hdfs.exists(path)) {
             if (hdfs.getFileStatus(path).getOwner != user) {
               hdfs.setOwner(path, user, group)
             }
@@ -130,9 +131,6 @@ object ACLFileUtils {
           }
         }
       }
-    } finally {
-      // close the filesystem object
-      CarbonUserGroupInformation.getInstance().cleanUpUGIFromCurrentThread()
     }
   }
 

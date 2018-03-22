@@ -86,4 +86,13 @@ object CarbonInternalMetaUtil {
   def getACLInterface(sparkSession: SparkSession) : ACLInterface = {
     sparkSession.sessionState.catalog.asInstanceOf[CarbonACLSessionCatalog].getACLInterface()
   }
+
+  /**
+    *
+    * @param sparkSession
+    * @return
+    */
+  def getClientUser(sparkSession: SparkSession): String = {
+    sparkSession.sessionState.catalog.asInstanceOf[CarbonACLSessionCatalog].getClientUser()
+  }
 }

@@ -22,12 +22,13 @@ import java.security.PrivilegedExceptionAction
 import scala.collection.mutable.ArrayBuffer
 
 import org.apache.hadoop.fs.Path
+import org.apache.hadoop.fs.permission.{FsAction, FsPermission}
 import org.apache.spark.sql.SparkSession
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.metadata.CarbonTableIdentifier
-import org.apache.carbondata.core.util.path.CarbonStorePath
+import org.apache.carbondata.core.util.path.{CarbonStorePath, CarbonTablePath}
 import org.apache.carbondata.events.{CreateTablePostExecutionEvent, CreateTablePreExecutionEvent, Event, OperationEventListener}
 import org.apache.carbondata.events.OperationContext
 import org.apache.carbondata.spark.acl.CarbonUserGroupInformation
@@ -52,6 +53,14 @@ object ACLCreateTableEventListener {
           override def run(): Unit = {
             FileFactory.createDirectoryAndSetPermission(tablePath,
               ACLFileUtils.getPermissionsOnTable())
+            // create the lock directory path during create table and before taking first snapshot
+            // to avoid permission issue in acl for lock files
+            val lockDirPath = CarbonTablePath.getLockFilesDirPath(tablePath)
+            if (null != lockDirPath && !FileFactory.isFileExist(lockDirPath)) {
+              FileFactory
+                .createDirectoryAndSetPermission(lockDirPath,
+                  new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL))
+            }
           }
         })
 //      val folderListbeforeCreate: List[Path] = ACLFileUtils
