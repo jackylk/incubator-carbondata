@@ -92,6 +92,17 @@ object CarbonCommonInitializer {
         )
 
       operationListenerBus
+        .addListener(classOf[PreAlterTableHivePartitionCommandEvent],
+          new AlterTableHivePartitionCommandEventListeners
+          .ACLPreAlterTableHivePartitionCommandEventListener
+        )
+      operationListenerBus
+        .addListener(classOf[PostAlterTableHivePartitionCommandEvent],
+          new AlterTableHivePartitionCommandEventListeners
+          .ACLPostAlterTableHivePartitionCommandEventListener
+        )
+
+      operationListenerBus
         .addListener(classOf[AlterTableDropColumnPreEvent],
           new ACLAlterTableDropColumnEventListener.ACLPreAlterTableDropColumnEventListener
         )

@@ -29,6 +29,7 @@ import org.apache.spark.sql.command.{CreateIndexTable, DropIndex}
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.command.datamap.{CarbonCreateDataMapCommand, CarbonDataMapShowCommand, CarbonDropDataMapCommand}
 import org.apache.spark.sql.execution.command.management._
+import org.apache.spark.sql.execution.command.partition.{CarbonAlterTableAddHivePartitionCommand, CarbonAlterTableDropHivePartitionCommand, CarbonAlterTableSplitPartitionCommand}
 import org.apache.spark.sql.execution.command.schema.{CarbonAlterTableAddColumnCommand, CarbonAlterTableDataTypeChangeCommand, CarbonAlterTableDropColumnCommand, CarbonAlterTableRenameCommand}
 import org.apache.spark.sql.execution.command.table.{CarbonCreateTableCommand, CarbonDropTableCommand}
 import org.apache.spark.sql.hive.CarbonRelation
@@ -258,6 +259,25 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
             Some(CarbonEnv
               .getDatabaseName(alterTableRenameModel.oldTableIdentifier.database)(sparkSession)),
             alterTableRenameModel.oldTableIdentifier.table,
+            PrivType.OWNER_PRIV)
+        case c@AlterTableAddPartitionCommand(tableName, partitionSpecsAndLocs, ifNotExists) =>
+          checkPrivilegeRecursively(c,
+            Some(CarbonEnv
+              .getDatabaseName(tableName.database)(sparkSession)),
+            tableName.table,
+            PrivType.OWNER_PRIV)
+        case c@AlterTableDropPartitionCommand(tableIdentifier, specs, ifExists, purge,
+        retainData) =>
+          checkPrivilegeRecursively(c,
+            Some(CarbonEnv
+              .getDatabaseName(tableIdentifier.database)(sparkSession)),
+            tableIdentifier.table,
+            PrivType.OWNER_PRIV)
+        case c@CarbonAlterTableSplitPartitionCommand(splitPartitionModel) =>
+          checkPrivilegeRecursively(c,
+            Some(CarbonEnv
+              .getDatabaseName(splitPartitionModel.databaseName)(sparkSession)),
+            splitPartitionModel.tableName,
             PrivType.OWNER_PRIV)
         case s@CarbonAlterTableFinishStreaming(dbName, tableName) =>
           checkPrivilege(s, Set(new PrivObject(

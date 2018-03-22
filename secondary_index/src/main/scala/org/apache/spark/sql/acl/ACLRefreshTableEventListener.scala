@@ -73,7 +73,7 @@ object ACLRefreshTableEventListener {
           }
         })
       // get path of all possible depths
-      val folderListBeforeCreate: List[Path] = ACLFileUtils
+      val folderListBeforeCreate: List[String] = ACLFileUtils
         .getTablePathListForSnapshot(carbonTablePath)
       // get the snapshot of the table folder
       val pathArrBeforeCreateOperation = ACLFileUtils

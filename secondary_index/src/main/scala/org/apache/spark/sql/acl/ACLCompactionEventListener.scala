@@ -33,8 +33,6 @@ import org.apache.carbondata.spark.acl.{CarbonUserGroupInformation, InternalCarb
 object ACLCompactionEventListener {
 
   val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
-  val folderListBeforeOperation = "folderListBeforeOperation"
-  val pathArrBeforeOperation = "pathArrBeforeOperation"
 
   class ACLPreCompactionEventListener extends OperationEventListener {
 

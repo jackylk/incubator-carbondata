@@ -51,27 +51,32 @@ public class CarbonUserGroupInformation {
 
   public UserGroupInformation getCurrentUser() throws IOException {
     CarbonSessionInfo carbonSessionInfo = ThreadLocalSessionInfo.getCarbonSessionInfo();
-    try {
-      UserGroupInformation userUniqueUGIObject =
-          (UserGroupInformation) carbonSessionInfo.getNonSerializableExtraInfo()
-              .get(CarbonInternalCommonConstants.USER_UNIQUE_UGI_OBJECT);
-      String userName = (String) carbonSessionInfo.getNonSerializableExtraInfo()
-          .get(CarbonInternalCommonConstants.USER_NAME);
-      if (isDriver && null == userUniqueUGIObject && userName != null && !userName
-          .equals(UserGroupInformation.getCurrentUser().getShortUserName())) {
-        UserGroupInformation proxyUser =
-            UserGroupInformation.createProxyUser(userName, UserGroupInformation.getLoginUser());
-        // set user unique object only for the first time so that for the same user in the current
-        // thread it is cached and returned same for all the calls for the current query
-        carbonSessionInfo.getNonSerializableExtraInfo()
-            .put(CarbonInternalCommonConstants.USER_UNIQUE_UGI_OBJECT, proxyUser);
-        LOGGER.info("user UGI object created: " + proxyUser.hashCode());
-        return proxyUser;
-      } else if (null != userUniqueUGIObject) {
-        return userUniqueUGIObject;
+    if (isDriver && carbonSessionInfo != null) {
+      try {
+        UserGroupInformation userUniqueUGIObject =
+            (UserGroupInformation) carbonSessionInfo.getNonSerializableExtraInfo()
+                .get(CarbonInternalCommonConstants.USER_UNIQUE_UGI_OBJECT);
+        String userName = (String) carbonSessionInfo.getNonSerializableExtraInfo()
+            .get(CarbonInternalCommonConstants.USER_NAME);
+        if (null == userUniqueUGIObject && userName != null && !userName
+            .equals(UserGroupInformation.getCurrentUser().getShortUserName())) {
+          UserGroupInformation proxyUser =
+              UserGroupInformation.createProxyUser(userName, UserGroupInformation.getLoginUser());
+          // set user unique object only for the first time so that for the same user in the current
+          // thread it is cached and returned same for all the calls for the current query
+          carbonSessionInfo.getNonSerializableExtraInfo()
+              .put(CarbonInternalCommonConstants.USER_UNIQUE_UGI_OBJECT, proxyUser);
+          LOGGER.info("user UGI object created: " + proxyUser.hashCode());
+          return proxyUser;
+        } else if (null != userUniqueUGIObject) {
+          return userUniqueUGIObject;
+        }
+        return UserGroupInformation.getCurrentUser();
+      } catch (IOException e) {
+        LOGGER.error(e, e.getMessage());
+        return UserGroupInformation.getCurrentUser();
       }
-      return UserGroupInformation.getCurrentUser();
-    } catch (IOException e) {
+    } else {
       return UserGroupInformation.getCurrentUser();
     }
   }

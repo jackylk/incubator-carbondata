@@ -54,7 +54,7 @@ object ACLFileUtils {
   }
 
   def takeRecurTraverseSnapshot(sqlContext: SQLContext,
-      folderPaths: List[Path], delimiter: String = "#~#"): ArrayBuffer[String] = {
+      folderPaths: List[String], delimiter: String = "#~#"): ArrayBuffer[String] = {
     val loginUser = CarbonUserGroupInformation.getInstance.getLoginUser
     val currentUser = CarbonUserGroupInformation.getInstance.getCurrentUser
     val oriPathArr = new ArrayBuffer[String]()
@@ -62,7 +62,8 @@ object ACLFileUtils {
       s"Use login user ${loginUser.getShortUserName} as a proxy user as we need " +
       s"permission to operate the given path", true) {
       var hdfs: FileSystem = null
-      folderPaths.foreach { path =>
+      folderPaths.foreach { pathStr =>
+        val path = new Path(pathStr)
         hdfs = path.getFileSystem(sqlContext.sparkContext.hadoopConfiguration)
         recurTraverse(
           hdfs,
@@ -239,14 +240,14 @@ object ACLFileUtils {
    * @param tablePath
    * @return
    */
-  def getTablePathListForSnapshot(tablePath: CarbonTablePath): List[Path] = {
+  def getTablePathListForSnapshot(tablePath: CarbonTablePath): List[String] = {
     // e.g 1. dbName/tableName/Fact/Part0/Segment_0/carbondata_files
     // e.g 2. dbName/tableName/Metadata/{dictionary_files, tableStatus, schema}
-    val carbonTablePath = new Path(tablePath.getPath)
-    val factAndMetadataDir = new Path(carbonTablePath.toString + "/*")
-    val metadataContentAndPartitionDir = new Path(factAndMetadataDir.toString + "/*")
-    val segmentDirPath = new Path(metadataContentAndPartitionDir.toString + "/*")
-    val carbonDataFilePath = new Path(segmentDirPath.toString + "/*")
+    val carbonTablePath = tablePath.getPath
+    val factAndMetadataDir = carbonTablePath + "/*"
+    val metadataContentAndPartitionDir = factAndMetadataDir + "/*"
+    val segmentDirPath = metadataContentAndPartitionDir + "/*"
+    val carbonDataFilePath = segmentDirPath + "/*"
     List(carbonTablePath,
       factAndMetadataDir,
       metadataContentAndPartitionDir,
@@ -262,12 +263,12 @@ object ACLFileUtils {
    * @return
    */
   def getBadRecordsPathListForSnapshot(badRecordTablePath: String,
-      carbonTableIdentifier: CarbonTableIdentifier): List[Path] = {
+      carbonTableIdentifier: CarbonTableIdentifier): List[String] = {
     // e.g badRecords_base_folder/dbName/tableName/segmentId/taskId/bad_record_file
     // till tableName permissions have already been given for logged in user
-    val badRecordSegmentIdPath = new Path(badRecordTablePath.toString + "/*")
-    val badRecordTaskNoPath = new Path(badRecordSegmentIdPath.toString + "/*")
-    val badRecordFilesPath = new Path(badRecordTaskNoPath.toString + "/*")
+    val badRecordSegmentIdPath = badRecordTablePath + "/*"
+    val badRecordTaskNoPath = badRecordSegmentIdPath + "/*"
+    val badRecordFilesPath = badRecordTaskNoPath + "/*"
     List(badRecordSegmentIdPath,
       badRecordTaskNoPath,
       badRecordFilesPath)
@@ -462,10 +463,15 @@ object ACLFileUtils {
 
   def takeSnapshotBeforeOpeartion(operationContext: OperationContext,
       sparkSession: SparkSession,
-      carbonTablePath: CarbonTablePath): Unit = {
+      carbonTablePath: CarbonTablePath, otherPaths: List[Path] = List.empty): Unit = {
 
-    val folderListbeforeCreate: List[Path] = ACLFileUtils
+    val folderListbeforeCreate: List[String] = ACLFileUtils
       .getTablePathListForSnapshot(carbonTablePath)
+    val finalPaths = if (otherPaths.isEmpty) {
+      folderListbeforeCreate
+    } else {
+      folderListbeforeCreate :: otherPaths
+    }
     val pathArrBeforeCreateOperation = ACLFileUtils
       .takeRecurTraverseSnapshot(sparkSession.sqlContext, folderListbeforeCreate)
     operationContext.setProperty(folderListBeforeOperation, folderListbeforeCreate)
@@ -475,7 +481,7 @@ object ACLFileUtils {
   def takeSnapAfterOperationAndApplyACL(sparkSession: SparkSession,
       operationContext: OperationContext): Unit = {
     val folderPathsBeforeCreate = operationContext.getProperty(folderListBeforeOperation)
-      .asInstanceOf[List[Path]]
+      .asInstanceOf[List[String]]
     val pathArrBeforeCreate = operationContext.getProperty(pathArrBeforeOperation)
       .asInstanceOf[ArrayBuffer[String]]
     val pathArrAfterCreate = ACLFileUtils

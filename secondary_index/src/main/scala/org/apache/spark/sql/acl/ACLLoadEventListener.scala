@@ -17,24 +17,30 @@
 
 package org.apache.spark.sql.acl
 
+import java.security.PrivilegedExceptionAction
+
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.{CarbonEnv, SparkSession, SQLContext}
+import org.apache.spark.sql.acl.ACLFileUtils.{getPermissionsOnTable, setACLGroupRights}
 import org.apache.spark.sql.hive.{CarbonInternalMetaUtil, CarbonRelation}
 import org.apache.spark.sql.hive.acl._
 
 import org.apache.carbondata.common.constants.LoggerAction
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
+import org.apache.carbondata.core.datastore.filesystem.CarbonFile
+import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.metadata.CarbonTableIdentifier
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
-import org.apache.carbondata.core.util.path.CarbonStorePath
+import org.apache.carbondata.core.util.path.{CarbonStorePath, CarbonTablePath}
 import org.apache.carbondata.events._
 import org.apache.carbondata.events.exception.PreEventException
 import org.apache.carbondata.processing.loading.events.LoadEvents.{LoadTablePostExecutionEvent, LoadTablePreExecutionEvent}
+import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 import org.apache.carbondata.processing.util.CarbonQueryUtil
 import org.apache.carbondata.spark.acl.{CarbonUserGroupInformation, InternalCarbonConstant}
 
@@ -44,6 +50,45 @@ object ACLLoadEventListener {
   val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
   val folderListBeforeOperation = "folderListBeforeOperation"
   val pathArrBeforeOperation = "pathArrBeforeOperation"
+
+  /**
+   * to create Metadata/segments/tmp folder for standard hive partition table
+   *
+   * @param carbonLoadModel
+   * @param sparkSession
+   * @return
+   */
+  def createPartitionDirectory(carbonLoadModel: CarbonLoadModel)
+    (sparkSession: SparkSession): String = {
+    val tempFolderLoc = carbonLoadModel.getSegmentId + "_" +
+                        carbonLoadModel.getFactTimeStamp + ".tmp"
+    val segmentFilesLocation = CarbonTablePath
+      .getSegmentFilesLocation(carbonLoadModel.getCarbonDataLoadSchema
+        .getCarbonTable.getTablePath)
+    val writePath = segmentFilesLocation + CarbonCommonConstants.FILE_SEPARATOR + tempFolderLoc
+    createDirectoryAndSetGroupAcl(segmentFilesLocation)(sparkSession)
+    createDirectoryAndSetGroupAcl(writePath)(sparkSession)
+    writePath
+  }
+
+  /**
+   * creeate directory with 777 permission and set ACL group rights
+   *
+   * @param dirPath
+   * @param sparkSession
+   */
+  def createDirectoryAndSetGroupAcl(dirPath: String)(sparkSession: SparkSession): Unit = {
+    CarbonUserGroupInformation.getInstance.getCurrentUser
+      .doAs(new PrivilegedExceptionAction[Unit]() {
+        override def run(): Unit = {
+          FileFactory.createDirectoryAndSetPermission(dirPath,
+            getPermissionsOnTable())
+        }
+      });
+    val path = new Path(dirPath)
+    setACLGroupRights(CarbonUserGroupInformation.getInstance.getCurrentUser,
+      path.getFileSystem(sparkSession.sqlContext.sparkContext.hadoopConfiguration), path)
+  }
 
   class ACLPreLoadEventListener extends OperationEventListener {
 
@@ -115,7 +160,11 @@ object ACLLoadEventListener {
         //          .getCanonicalPath
       }
       //      carbonLoadModel.setBadRecordsLocation(bad_record_path)
-
+      val partitionDirectoryPath = if (carbonTable.isHivePartitionTable) {
+        createPartitionDirectory(carbonLoadModel)(sparkSession)
+      } else {
+        ""
+      }
 
       // loadPre3
 
@@ -125,7 +174,8 @@ object ACLLoadEventListener {
         bad_records_action,
         dbName,
         carbonTable,
-        bad_record_path)
+        bad_record_path,
+        partitionDirectoryPath)
       val pathArrBeforeLoadOperation = ACLFileUtils
         .takeRecurTraverseSnapshot(sparkSession.sqlContext, folderListBeforLoad)
       operationContext.setProperty(folderListBeforeOperation, folderListBeforLoad)
@@ -139,7 +189,8 @@ object ACLLoadEventListener {
         badRecordsAction: String,
         dbName: String,
         carbonTable: CarbonTable,
-        badRecordLocation: String): List[Path] = {
+        badRecordLocation: String,
+        partitionDirectoryPath: String): List[String] = {
       var carbonBadRecordTablePath: String = null
       if (("true".equals(badRecordsLoggerEnable.toLowerCase) &&
            !LoggerAction.FAIL.name().equalsIgnoreCase(badRecordsAction)) ||
@@ -163,6 +214,9 @@ object ACLLoadEventListener {
           list = list ::: ACLFileUtils.getTablePathListForSnapshot(indexTablePath)
         }
       }
+      if (!partitionDirectoryPath.isEmpty) {
+        list = list ::: List(partitionDirectoryPath + "/*")
+      }
       list
     }
   }
@@ -175,7 +229,7 @@ object ACLLoadEventListener {
       val carbonLoadModel = loadTablePostExecutionEvent.getCarbonLoadModel
       val folderPathsBeforeLoad = operationContext
         .getProperty(ACLLoadEventListener.folderListBeforeOperation)
-        .asInstanceOf[List[Path]]
+        .asInstanceOf[List[String]]
       val pathArrBeforeLoad = operationContext
         .getProperty(ACLLoadEventListener.pathArrBeforeOperation)
         .asInstanceOf[ArrayBuffer[String]]
