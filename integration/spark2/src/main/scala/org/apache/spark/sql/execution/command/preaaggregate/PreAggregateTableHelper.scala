@@ -90,6 +90,12 @@ case class PreAggregateTableHelper(
       throw new MalformedDataMapCommandException(
         "Parent table name is different in select and create")
     }
+    assert(!parentTable.isStreamingTable,
+      s"Parent table ${ parentTable.getDatabaseName }.${
+        parentTable
+          .getTableName
+      }is a Streaming table." +
+      s"and PreAggregate datamap on Streaming table is not supported ")
     DataMapUtil
       .inheritTablePropertiesFromMainTable(parentTable, fields, fieldRelationMap, tableProperties)
     val tableIdentifier =

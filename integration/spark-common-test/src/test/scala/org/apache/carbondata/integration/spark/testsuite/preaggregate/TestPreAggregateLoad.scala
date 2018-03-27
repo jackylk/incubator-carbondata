@@ -260,7 +260,7 @@ class TestPreAggregateLoad extends SparkQueryTest with BeforeAndAfterAll with Be
     CarbonProperties.getInstance().addProperty(CarbonCommonConstants.CARBON_BAD_RECORDS_ACTION, originalBadRecordsAction)
   }
 
-  test("test partition load into main table with pre-aggregate table") {
+  ignore("test partition load into main table with pre-aggregate table") {
     sql("DROP TABLE IF EXISTS maintable")
     sql(
       """

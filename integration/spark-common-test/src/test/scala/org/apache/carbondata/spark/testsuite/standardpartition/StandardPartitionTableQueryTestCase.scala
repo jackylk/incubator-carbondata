@@ -422,7 +422,7 @@ test("Creation of partition table should fail if the colname in table schema and
     }
   }
 
-  test("drop partition on preAggregate table should fail"){
+  ignore("drop partition on preAggregate table should fail"){
     sql("drop table if exists partitionTable")
     sql("create table partitionTable (id int,city string,age int) partitioned by(name string) stored by 'carbondata'".stripMargin)
     sql(

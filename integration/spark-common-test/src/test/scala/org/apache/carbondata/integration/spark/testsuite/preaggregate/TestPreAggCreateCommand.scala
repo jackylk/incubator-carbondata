@@ -51,6 +51,12 @@ class TestPreAggCreateCommand extends QueryTest with BeforeAndAfterAll {
     sql("create table preaggMain (a string, b string, c string) stored by 'carbondata'")
     sql("create table preaggMain1 (a string, b string, c string) stored by 'carbondata' tblProperties('DICTIONARY_INCLUDE' = 'a')")
     sql("create table maintable (column1 int, column6 string, column5 string, column2 string, column3 int, column4 int) stored by 'carbondata' tblproperties('dictionary_include'='column1,column6', 'dictionary_exclude'='column3,column5')")
+    sql("drop table if exists stream_si")
+    sql("drop table if exists part_si")
+    sql("CREATE TABLE stream_si(c1 string,c2 int,c3 string,c5 string) " +
+        "STORED BY 'org.apache.carbondata.format' TBLPROPERTIES ('streaming' = 'true')")
+    sql("CREATE TABLE part_si(c1 string,c2 int,c3 string,c5 string) PARTITIONED BY (c6 string)" +
+        "STORED BY 'org.apache.carbondata.format' ")
   }
 
   test("test pre agg create table 1") {
@@ -378,7 +384,12 @@ class TestPreAggCreateCommand extends QueryTest with BeforeAndAfterAll {
     }
     sql("use default")
   }
-
+  test("test block  agg table with Streaming Table") {
+    intercept[MalformedCarbonCommandException]{
+      sql("create datamap stream_table on table stream_si using 'preaggregate' as select sum(c1) from stream_si")
+    }
+  }
+  
   // TODO: to be confirmed
   test("test pre agg create table 26") {
     sql("drop datamap if exists preagg2 on table PreAggMain")

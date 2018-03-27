@@ -89,6 +89,22 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
       if (carbonTable == null) {
         throw new ErrorMessage(s"Parent Table $databaseName.$tableName is not found")
       }
+
+      if (carbonTable.isStreamingTable) {
+        throw new ErrorMessage(
+          s"Parent Table  ${ carbonTable.getDatabaseName }." +
+          s"${ carbonTable.getTableName }" +
+          s" is Streaming Table and Secondary index on Streaming table is not supported ")
+      }
+
+      if (carbonTable.isHivePartitionTable) {
+        throw new ErrorMessage(
+          s"Parent Table  ${ carbonTable.getDatabaseName }." +
+          s"${ carbonTable.getTableName }" +
+          s" is Partition Table and Secondary index on Partition table is not supported ")
+      }
+
+
       locks = acquireLockForSecondaryIndexCreation(carbonTable.getAbsoluteTableIdentifier)
       if (locks.isEmpty) {
         throw new ErrorMessage(s"Not able to acquire lock. Another Data Modification operation " +

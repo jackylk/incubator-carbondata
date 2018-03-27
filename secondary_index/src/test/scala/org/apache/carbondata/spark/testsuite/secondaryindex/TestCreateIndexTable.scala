@@ -26,6 +26,7 @@ import org.apache.carbondata.core.util.CarbonProperties
 import scala.collection.JavaConverters._
 import org.apache.carbondata.format.TableInfo
 import org.apache.carbondata.spark.core.CarbonInternalCommonConstants
+import org.apache.carbondata.spark.exception.MalformedCarbonCommandException
 
 /**
  * test cases for testing create index table
@@ -46,7 +47,12 @@ class TestCreateIndexTable extends QueryTest with BeforeAndAfterAll {
     sql("drop table if exists dropindextemptable")
     sql("drop table if exists dropindextemptable1")
     sql(s"DROP DATABASE if  exists temptablecheckDB cascade")
-
+    sql("drop table if exists stream_si")
+    sql("drop table if exists part_si")
+    sql("CREATE TABLE stream_si(c1 string,c2 int,c3 string,c5 string) " +
+        "STORED BY 'org.apache.carbondata.format' TBLPROPERTIES ('streaming' = 'true')")
+    sql("CREATE TABLE part_si(c1 string,c2 int,c3 string,c5 string) PARTITIONED BY (c6 string)" +
+        "STORED BY 'org.apache.carbondata.format' ")
   }
 
   test("test create index table with no parent table") {
@@ -495,6 +501,18 @@ class TestCreateIndexTable extends QueryTest with BeforeAndAfterAll {
       ".carbondata.format'")
     checkAnswer(sql("select designation from si_drop_i1"),
       sql("select designation from carbon_si_same_name_test"))
+  }
+
+  test("test blocking secondary Index on streaming table") {
+    intercept[RuntimeException] {
+      sql("""create index streamin_index on table stream_si(c3) as 'org.apache.carbondata.format'""").show()
+    }
+  }
+
+  test("test blocking secondary Index on Partition table") {
+    intercept[RuntimeException] {
+      sql("""create index part_index on table part_si(c3) as 'org.apache.carbondata.format'""").show()
+    }
   }
 
   object CarbonMetastore {
