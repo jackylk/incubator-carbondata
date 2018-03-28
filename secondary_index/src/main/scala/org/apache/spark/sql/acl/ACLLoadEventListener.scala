@@ -66,8 +66,10 @@ object ACLLoadEventListener {
       .getSegmentFilesLocation(carbonLoadModel.getCarbonDataLoadSchema
         .getCarbonTable.getTablePath)
     val writePath = segmentFilesLocation + CarbonCommonConstants.FILE_SEPARATOR + tempFolderLoc
-    createDirectoryAndSetGroupAcl(segmentFilesLocation)(sparkSession)
-    createDirectoryAndSetGroupAcl(writePath)(sparkSession)
+    if (!FileFactory.isFileExist(segmentFilesLocation)) {
+      createDirectoryAndSetGroupAcl(segmentFilesLocation)(sparkSession)
+      createDirectoryAndSetGroupAcl(writePath)(sparkSession)
+    }
     writePath
   }
 
