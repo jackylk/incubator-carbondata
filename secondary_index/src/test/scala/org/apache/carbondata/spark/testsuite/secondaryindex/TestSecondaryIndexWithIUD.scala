@@ -164,6 +164,26 @@ class TestSecondaryIndexWithIUD extends QueryTest with BeforeAndAfterAll {
     checkAnswer(sql(" select country from t10 where country = 'china' order by id limit 1"), Row("china"))
   }
 
+  test("test index with IUD delete and compaction") {
+    sql("drop table if exists test")
+    sql(
+      "create table test (c1 string,c2 int,c3 string,c5 string) STORED BY 'org.apache.carbondata" +
+      ".format'")
+    sql(s"""LOAD DATA LOCAL INPATH '$resourcesPath/IUD/dest.csv' INTO table test""")
+    sql("drop index if exists index_test1 on test")
+    sql("create index index_test1 on table test (c3) AS 'org.apache.carbondata.format'")
+    sql("delete from test d where d.c2 = '1'").show
+    sql(s"""LOAD DATA LOCAL INPATH '$resourcesPath/IUD/dest.csv' INTO table test""")
+    sql("alter table test compact 'major'")
+    // delete all rows in the segment
+    sql("delete from test d where d.c2 not in (56)").show
+    checkAnswer(
+      sql(
+        "select test.c3, index_test1.c3 from test right join index_test1  on test.c3 =  " +
+        "index_test1.c3"),
+      Seq())
+  }
+
   override def afterAll: Unit = {
     sql("drop table if exists dest")
     sql("drop table if exists source")
