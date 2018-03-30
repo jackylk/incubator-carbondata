@@ -19,6 +19,7 @@ package org.apache.carbondata.spark.rdd
 
 import org.apache.spark.{Partition, SparkContext, TaskContext}
 
+import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.core.writer.CarbonIndexFileMergeWriter
 import org.apache.carbondata.processing.util.CarbonLoaderUtil
@@ -34,16 +35,16 @@ case class CarbonMergeFilePartition(rddId: Int, idx: Int, segmentId: String)
 /**
  * RDD to merge all carbonindex files of each segment to carbonindex file into the same segment.
  * @param sc
- * @param tablePath
+ * @param carbonTable
  * @param segments segments to be merged
  */
 class CarbonMergeFilesRDD(
   sc: SparkContext,
-  tablePath: String,
+  carbonTable: CarbonTable,
   segments: Seq[String],
   isHivePartitionedTable: Boolean,
   readFileFooterFromCarbonDataFile: Boolean)
-  extends CarbonRDD[String](sc, Nil) {
+  extends CarbonRDD[String](sc, Nil, sc.hadoopConfiguration) {
 
   override def getPartitions: Array[Partition] = {
     segments.zipWithIndex.map {s =>
@@ -52,15 +53,16 @@ class CarbonMergeFilesRDD(
   }
 
   override def internalCompute(theSplit: Partition, context: TaskContext): Iterator[String] = {
+    val tablePath = carbonTable.getTablePath
     val iter = new Iterator[String] {
       val split = theSplit.asInstanceOf[CarbonMergeFilePartition]
       logInfo("Merging carbon index files of segment : " +
               CarbonTablePath.getSegmentPath(tablePath, split.segmentId))
 
       if (isHivePartitionedTable) {
-        CarbonLoaderUtil.mergeIndexFilesinPartitionedSegment(split.segmentId, tablePath)
+        CarbonLoaderUtil.mergeIndexFilesinPartitionedSegment(split.segmentId, carbonTable)
       } else {
-        new CarbonIndexFileMergeWriter()
+        new CarbonIndexFileMergeWriter(carbonTable)
           .mergeCarbonIndexFilesOfSegment(split.segmentId,
             tablePath,
             readFileFooterFromCarbonDataFile)

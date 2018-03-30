@@ -127,12 +127,12 @@ class CarbonScanRDD[T: ClassTag](
       }
       // initialise query_id for job
       job.getConfiguration.set("query.id", queryId)
-    if (null != segmentsToAccess) {
-      CarbonTableInputFormat
-        .setSegmentsToAccess(job.getConfiguration, segmentsToAccess.toList.asJava)
-      // As we have already set input segments that we got from main table no need to validate.
-      CarbonTableInputFormat.setValidateSegmentsToAccess(job.getConfiguration, false)
-    }
+      if (null != segmentsToAccess) {
+        CarbonInputFormat
+          .setSegmentsToAccess(job.getConfiguration, segmentsToAccess.toList.asJava)
+        // As we have already set input segments that we got from main table no need to validate.
+        CarbonInputFormat.setValidateSegmentsToAccess(job.getConfiguration, false)
+      }
 
       // get splits
       getSplitsStartTime = System.currentTimeMillis()

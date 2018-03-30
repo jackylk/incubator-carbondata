@@ -49,7 +49,7 @@ object CarbonInternalCommonUtil {
     if (mergeIndexProperty) {
       new CarbonMergeFilesRDD(
         sparkContext,
-        carbonTable.getTablePath,
+        carbonTable,
         segmentIds,
         carbonTable.isHivePartitionTable,
         readFileFooterFromCarbonDataFile).collect()
@@ -60,7 +60,7 @@ object CarbonInternalCommonUtil {
           CarbonCommonPluginConstants.CARBON_MERGE_INDEX_IN_SEGMENT_DEFAULT).toBoolean) {
           new CarbonMergeFilesRDD(
             sparkContext,
-            carbonTable.getTablePath,
+            carbonTable,
             segmentIds,
             carbonTable.isHivePartitionTable,
             readFileFooterFromCarbonDataFile).collect()
@@ -70,7 +70,7 @@ object CarbonInternalCommonUtil {
           if (CarbonCommonPluginConstants.CARBON_MERGE_INDEX_IN_SEGMENT_DEFAULT.toBoolean) {
             new CarbonMergeFilesRDD(
               sparkContext,
-              carbonTable.getTablePath,
+              carbonTable,
               segmentIds,
               carbonTable.isHivePartitionTable,
               readFileFooterFromCarbonDataFile).collect()
