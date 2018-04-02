@@ -26,7 +26,10 @@ import org.apache.carbondata.core.util.ThreadLocalSessionInfo;
 
 import org.apache.carbondata.spark.core.CarbonInternalCommonConstants;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.spark.sql.CarbonEnv;
+import org.apache.spark.sql.SparkSession;
 
 public class CarbonUserGroupInformation {
 
@@ -49,36 +52,42 @@ public class CarbonUserGroupInformation {
     isDriver = true;
   }
 
+  /**
+   * Create and return a proxy user if required. Return null otherwise.
+   */
+  public UserGroupInformation createCurrentUser(String userName) throws IOException {
+
+    UserGroupInformation proxyUser = null;
+    try {
+
+      if (userName != null && !userName
+          .equals(UserGroupInformation.getCurrentUser().getShortUserName())) {
+        proxyUser =
+            UserGroupInformation.createProxyUser(userName, UserGroupInformation.getLoginUser());
+
+        LOGGER.info("Proxy UGI object created: " + proxyUser.hashCode());
+      }
+    } catch (IOException e) {
+      LOGGER.error(e, e.getMessage());
+    }
+
+    return proxyUser;
+  }
+
   public UserGroupInformation getCurrentUser() throws IOException {
     CarbonSessionInfo carbonSessionInfo = ThreadLocalSessionInfo.getCarbonSessionInfo();
+
+    UserGroupInformation userUniqueUGIObject = null;
     if (isDriver && carbonSessionInfo != null) {
-      try {
-        UserGroupInformation userUniqueUGIObject =
-            (UserGroupInformation) carbonSessionInfo.getNonSerializableExtraInfo()
-                .get(CarbonInternalCommonConstants.USER_UNIQUE_UGI_OBJECT);
-        String userName = (String) carbonSessionInfo.getNonSerializableExtraInfo()
-            .get(CarbonInternalCommonConstants.USER_NAME);
-        if (null == userUniqueUGIObject && userName != null && !userName
-            .equals(UserGroupInformation.getCurrentUser().getShortUserName())) {
-          UserGroupInformation proxyUser =
-              UserGroupInformation.createProxyUser(userName, UserGroupInformation.getLoginUser());
-          // set user unique object only for the first time so that for the same user in the current
-          // thread it is cached and returned same for all the calls for the current query
-          carbonSessionInfo.getNonSerializableExtraInfo()
-              .put(CarbonInternalCommonConstants.USER_UNIQUE_UGI_OBJECT, proxyUser);
-          LOGGER.info("user UGI object created: " + proxyUser.hashCode());
-          return proxyUser;
-        } else if (null != userUniqueUGIObject) {
-          return userUniqueUGIObject;
-        }
-        return UserGroupInformation.getCurrentUser();
-      } catch (IOException e) {
-        LOGGER.error(e, e.getMessage());
-        return UserGroupInformation.getCurrentUser();
-      }
-    } else {
-      return UserGroupInformation.getCurrentUser();
+      userUniqueUGIObject = (UserGroupInformation) carbonSessionInfo.getNonSerializableExtraInfo()
+          .get(CarbonInternalCommonConstants.USER_UNIQUE_UGI_OBJECT);
     }
+
+    if (null == userUniqueUGIObject) {
+      userUniqueUGIObject = UserGroupInformation.getCurrentUser();
+    }
+
+    return userUniqueUGIObject;
   }
 
   public UserGroupInformation getLoginUser() throws IOException {
@@ -89,15 +98,25 @@ public class CarbonUserGroupInformation {
    * This method will clean up all the UGI objects which will other wise be cached and
    * can lead to memory leak over a long run
    */
-  public void cleanUpUGIFromCurrentThread() {
-    CarbonSessionInfo carbonSessionInfo = ThreadLocalSessionInfo.getCarbonSessionInfo();
+  public static void cleanUpUGIFromSession(SparkSession sparkSession) {
+
+    CarbonSessionInfo carbonSessionInfo = CarbonEnv.getInstance(sparkSession).carbonSessionInfo();
+    CarbonEnv.carbonEnvMap().remove(sparkSession);
     UserGroupInformation userUniqueUGIObject =
         (UserGroupInformation) carbonSessionInfo.getNonSerializableExtraInfo()
-            .get(CarbonInternalCommonConstants.USER_UNIQUE_UGI_OBJECT);
-    if (isDriver && null != userUniqueUGIObject) {
-      // set the info object reference to null in the current thread
-      carbonSessionInfo.getNonSerializableExtraInfo()
-          .put(CarbonInternalCommonConstants.USER_UNIQUE_UGI_OBJECT, null);
+            .remove(CarbonInternalCommonConstants.USER_UNIQUE_UGI_OBJECT);
+
+    if (null == userUniqueUGIObject) {
+      LOGGER.info("No Proxy UGI found in session info.");
+    } else {
+      try {
+        FileSystem.closeAllForUGI(userUniqueUGIObject);
+        LOGGER.info(
+            "Proxy UGI found in cache. Cleaned the FileSystem cache for ugi " + userUniqueUGIObject
+                .hashCode());
+      } catch (Exception e) {
+        LOGGER.error(e, " Error in closing file System.");
+      }
     }
   }
 }

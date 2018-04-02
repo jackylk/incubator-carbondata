@@ -39,13 +39,14 @@ import org.apache.spark.sql.execution.datasources.{DataSourceAnalysis, Preproces
 import org.apache.spark.sql.execution.strategy.{CarbonInternalLateDecodeStrategy, CarbonLateDecodeStrategy, DDLStrategy, StreamingTableStrategy}
 import org.apache.spark.sql.hive.acl.ACLInterface
 import org.apache.spark.sql.hive.client.HiveClient
-import org.apache.spark.sql.internal.{SQLConf, SessionState}
+import org.apache.spark.sql.internal.{SQLConf, SessionState, SparkSessionListener}
 import org.apache.spark.sql.optimizer.{CarbonIUDRule, CarbonLateDecodeRule, CarbonSITransformationRule, CarbonUDFTransformRule}
 import org.apache.spark.sql.parser._
 import org.apache.spark.sql.types.DecimalType
 import org.apache.spark.util.SparkUtil
 
-import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
+import org.apache.carbondata.spark.acl.CarbonUserGroupInformation
+import org.apache.carbondata.spark.exception.MalformedCarbonCommandException
 import org.apache.carbondata.spark.util.CarbonScalaUtil
 
 /**
@@ -268,11 +269,26 @@ class CarbonACLInternalSessionStateBuilder(sparkSession: SparkSession,
     }
   }
 
+  /**
+   * Listener on session to handle clean during close session.
+   */
+  class CarbonSessionListener(sparkSession: SparkSession, sessionState:
+  SessionState) extends SparkSessionListener {
+
+    override def closeSession(): Unit = {
+      CarbonUserGroupInformation.cleanUpUGIFromSession(sparkSession)
+
+      // Remove the listener from session state
+      sessionState.sessionStateListenerManager.removeListener(this)
+    }
+  }
+
   override def build(): SessionState = {
     val state = super.build()
     state.preExecutionRules = state.preExecutionRules :+ preExecutionRules
     catalog.setHiveClient(client)
     catalog.setACLInterface(aclInterface)
+    state.sessionStateListenerManager.addListener(new CarbonSessionListener(sparkSession, state))
     state
   }
 

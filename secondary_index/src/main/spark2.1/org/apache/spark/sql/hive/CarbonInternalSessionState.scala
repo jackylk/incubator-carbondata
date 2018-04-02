@@ -17,25 +17,24 @@
 
 package org.apache.spark.sql.hive
 
-import org.apache.spark.sql._
+import org.apache.hadoop.fs.FileSystem
+import org.apache.hadoop.security.UserGroupInformation
+import org.apache.spark.sql.{SparkSessionListener, _}
 import org.apache.spark.sql.acl._
 import org.apache.spark.sql.catalyst.optimizer.Optimizer
 import org.apache.spark.sql.catalyst.parser.ParserInterface
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.command.InternalDDLStrategy
-import org.apache.spark.sql.events._
 import org.apache.spark.sql.execution.{SparkOptimizer, SparkPlan}
 import org.apache.spark.sql.execution.strategy.CarbonInternalLateDecodeStrategy
 import org.apache.spark.sql.optimizer.{CarbonIUDRule, CarbonLateDecodeRule, CarbonSITransformationRule, CarbonUDFTransformRule}
 import org.apache.spark.sql.parser.{CarbonInternalSpark2SqlParser, CarbonInternalSparkSqlParser}
-import org.apache.carbondata.core.datastore.impl.FileFactory
-import org.apache.carbondata.core.util.CarbonPluginProperties
-import org.apache.carbondata.events._
-import org.apache.carbondata.processing.loading.events.LoadEvents._
-import org.apache.carbondata.spark.acl.ACLFileFactory
 import org.apache.spark.sql.catalyst.parser.SqlBaseParser.CreateTableContext
 import org.apache.spark.sql.internal.SQLConf
+
+import org.apache.carbondata.common.logging.LogServiceFactory
+import org.apache.carbondata.spark.acl.CarbonUserGroupInformation
 
 /**
  *
@@ -118,12 +117,28 @@ class CarbonInternalSessionState(sparkSession: SparkSession)
   }
 }
 
+/**
+ * Listener on session to handle clean during close session.
+ */
+class CarbonSessionCloseListener(sparkSession: SparkSession) extends SparkSessionListener {
+
+  override def closeSession(): Unit = {
+    CarbonUserGroupInformation.cleanUpUGIFromSession(sparkSession)
+
+    // Remove the listener from session
+    sparkSession.sessionStateListenerManager.removeListener(this)
+  }
+}
+
 // Register all the required listeners using the singleton instance as the listeners
 // need to be registered only once
 object CarbonInternalSessionState {
   var initialized = false
 
   def init(sparkSession: SparkSession): Unit = {
+
+    sparkSession.sessionStateListenerManager
+      .addListener(new CarbonSessionCloseListener(sparkSession))
     if (!initialized) {
       CarbonCommonInitializer.init(sparkSession)
       initialized = true
