@@ -384,11 +384,6 @@ class TestPreAggCreateCommand extends QueryTest with BeforeAndAfterAll {
     }
     sql("use default")
   }
-  test("test block  agg table with Streaming Table") {
-    intercept[MalformedCarbonCommandException]{
-      sql("create datamap stream_table on table stream_si using 'preaggregate' as select sum(c1) from stream_si")
-    }
-  }
   
   // TODO: to be confirmed
   test("test pre agg create table 26") {
