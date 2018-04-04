@@ -22,6 +22,7 @@ import org.apache.spark.sql.{CarbonEnv, SparkSession}
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.metadata.CarbonTableIdentifier
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
+import org.apache.carbondata.core.util.path.CarbonStorePath
 import org.apache.carbondata.events.{CleanFilesPreEvent, _}
 
 
@@ -41,8 +42,12 @@ object ACLCleanFilesEventListener {
       val carbonTableIdentifier: CarbonTableIdentifier = carbonTable
         .getCarbonTableIdentifier
       val sparkSession: SparkSession = cleanFilesPreEvent.sparkSession
-      val carbonTablePath = carbonTable.getAbsoluteTableIdentifier.getTablePath
-      ACLFileUtils.takeSnapshotBeforeOpeartion(operationContext, sparkSession, carbonTablePath)
+      val carbonTablePath = CarbonStorePath
+        .getCarbonTablePath(carbonTable.getAbsoluteTableIdentifier)
+
+      ACLFileUtils
+          .takeSnapshotBeforeOpeartion(operationContext, sparkSession, carbonTablePath,
+            carbonTable.getPartitionInfo(carbonTable.getTableName))
     }
   }
 

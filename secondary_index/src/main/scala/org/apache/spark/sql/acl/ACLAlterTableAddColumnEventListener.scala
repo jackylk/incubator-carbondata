@@ -45,7 +45,9 @@ object ACLAlterTableAddColumnEventListener {
       val carbonTablePath = carbonTable.getAbsoluteTableIdentifier.getTablePath
 
 
-      ACLFileUtils.takeSnapshotBeforeOpeartion(operationContext, sparkSession, carbonTablePath)
+     ACLFileUtils
+          .takeSnapshotBeforeOpeartion(operationContext, sparkSession, carbonTablePath,
+            carbonTable.getPartitionInfo(carbonTable.getTableName))
     }
   }
 

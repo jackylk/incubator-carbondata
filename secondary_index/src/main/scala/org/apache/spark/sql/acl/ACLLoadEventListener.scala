@@ -36,7 +36,7 @@ import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.metadata.CarbonTableIdentifier
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
-import org.apache.carbondata.core.util.path.CarbonTablePath
+import org.apache.carbondata.core.util.path.{CarbonStorePath, CarbonTablePath}
 import org.apache.carbondata.events._
 import org.apache.carbondata.events.exception.PreEventException
 import org.apache.carbondata.processing.loading.events.LoadEvents.{LoadTablePostExecutionEvent, LoadTablePreExecutionEvent}
@@ -201,21 +201,24 @@ object ACLLoadEventListener {
         carbonBadRecordTablePath = ACLFileUtils.createBadRecordsTablePath(sqlContext,
           carbonTableIdentifier, badRecordLocation)
       }
-      val tablePath = carbonTable.getAbsoluteTableIdentifier.getTablePath
+      val tablePath = CarbonStorePath.getCarbonTablePath(carbonTable.getAbsoluteTableIdentifier)
       val currentUser = CarbonUserGroupInformation.getInstance.getCurrentUser
-      var list = ACLFileUtils.getTablePathListForSnapshot(tablePath)
+      var list = ACLFileUtils
+        .getTablePathListForSnapshot(tablePath,
+          carbonTable.getPartitionInfo(carbonTable.getTableName))
       if (null != carbonBadRecordTablePath) {
         list = list ::: ACLFileUtils
           .getBadRecordsPathListForSnapshot(carbonBadRecordTablePath, carbonTableIdentifier)
       }
       // get the list of index tables
-//      val indexTablesPathList = Utils
-//        .getIndexTablePathList(dbName, carbonTableIdentifier.getTableName, carbonTable)
-//      if (!indexTablesPathList.isEmpty) {
-//        indexTablesPathList.foreach { indexTablePath =>
-//          list = list ::: ACLFileUtils.getTablePathListForSnapshot(indexTablePath)
-//        }
-//      }
+      val indexTablesPathList = Utils
+        .getIndexTablePathList(dbName, carbonTableIdentifier.getTableName, carbonTable)
+      if (!indexTablesPathList.isEmpty) {
+        indexTablesPathList.foreach { indexTablePath =>
+          list = list ::: ACLFileUtils.getTablePathListForSnapshot(indexTablePath,
+            carbonTable.getPartitionInfo(carbonTable.getTableName))
+        }
+      }
       if (!partitionDirectoryPath.isEmpty) {
         list = list ::: List(partitionDirectoryPath + "/*")
       }

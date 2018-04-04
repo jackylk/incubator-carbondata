@@ -35,6 +35,7 @@ import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.locks.LockUsage
 import org.apache.carbondata.core.metadata.CarbonTableIdentifier
+import org.apache.carbondata.core.metadata.schema.PartitionInfo
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.events.OperationContext
@@ -240,18 +241,25 @@ object ACLFileUtils {
    * @param tablePath
    * @return
    */
-  def getTablePathListForSnapshot(tablePath: String): List[String] = {
+  def getTablePathListForSnapshot(tablePath: CarbonTablePath,
+      partitionInfo: PartitionInfo): List[String] = {
     // e.g 1. dbName/tableName/Fact/Part0/Segment_0/carbondata_files
-    // e.g 2. dbName/tableName/Metadata/{dictionary_files, tableStatus, schema}
-    val factAndMetadataDir = tablePath + "/*"
-    val metadataContentAndPartitionDir = factAndMetadataDir + "/*"
-    val segmentDirPath = metadataContentAndPartitionDir + "/*"
-    val carbonDataFilePath = segmentDirPath + "/*"
-    List(tablePath,
-      factAndMetadataDir,
-      metadataContentAndPartitionDir,
-      segmentDirPath,
-      carbonDataFilePath)
+    // e.g 2. dbName/tableName/Metadata/{
+    //                dictionary_files, tableStatus, schema, segments/partition_segment_files }
+    // e.g 3. dbName/tableName/partCol1=val1/partCol2=val2/partCol3=val3/partCol4=val4 ....
+
+    val depth: Integer = if (partitionInfo != null) {
+      partitionInfo.getColumnSchemaList.size()
+    } else {
+      4
+    }
+
+    var path = tablePath.getPath
+    List.tabulate(depth) {
+      p =>
+        path = path + "/*"
+        path
+    }
   }
 
   /**
@@ -462,15 +470,10 @@ object ACLFileUtils {
 
   def takeSnapshotBeforeOpeartion(operationContext: OperationContext,
       sparkSession: SparkSession,
-      carbonTablePath: String, otherPaths: List[Path] = List.empty): Unit = {
+      carbonTablePath: CarbonTablePath, partitionInfo: PartitionInfo): Unit = {
 
     val folderListbeforeCreate: List[String] = ACLFileUtils
-      .getTablePathListForSnapshot(carbonTablePath)
-    val finalPaths = if (otherPaths.isEmpty) {
-      folderListbeforeCreate
-    } else {
-      folderListbeforeCreate :: otherPaths
-    }
+      .getTablePathListForSnapshot(carbonTablePath, partitionInfo)
     val pathArrBeforeCreateOperation = ACLFileUtils
       .takeRecurTraverseSnapshot(sparkSession.sqlContext, folderListbeforeCreate)
     operationContext.setProperty(folderListBeforeOperation, folderListbeforeCreate)

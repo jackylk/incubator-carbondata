@@ -54,7 +54,9 @@ object ACLCompactionEventListener {
           .error(s"CarbonDataLoad Group: $carbonDataLoadGroup is not set for the user $currentUser")
       }
 
-      ACLFileUtils.takeSnapshotBeforeOpeartion(operationContext, sparkSession, carbonTablePath)
+      ACLFileUtils
+          .takeSnapshotBeforeOpeartion(operationContext, sparkSession, carbonTablePath,
+            carbonTable.getPartitionInfo(carbonTable.getTableName))
     }
   }
 
