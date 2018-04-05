@@ -1222,8 +1222,17 @@ abstract class CarbonDDLSqlParser extends AbstractCarbonSparkSQLParser {
       val optionValue: String = options("bad_records_action").head._2
       try {
         LoggerAction.valueOf(optionValue.toUpperCase)
+        try {
+          LoggerAction.valueOf(optionValue.toUpperCase)
+        }
+        catch {
+          case _: IllegalArgumentException =>
+            throw new MalformedCarbonCommandException(
+              "option BAD_RECORDS_ACTION can have only either FORCE or IGNORE or REDIRECT or FAIL")
+        }
       }
     }
+
     if (options.exists(_._1.equalsIgnoreCase("IS_EMPTY_DATA_BAD_RECORD"))) {
       val optionValue: String = options("is_empty_data_bad_record").head._2
       if (!("true".equalsIgnoreCase(optionValue) || "false".equalsIgnoreCase(optionValue))) {
