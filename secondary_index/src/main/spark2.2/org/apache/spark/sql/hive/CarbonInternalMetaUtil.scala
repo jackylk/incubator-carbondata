@@ -93,6 +93,6 @@ object CarbonInternalMetaUtil {
     * @return
     */
   def getClientUser(sparkSession: SparkSession): String = {
-    sparkSession.sessionState.catalog.asInstanceOf[CarbonACLSessionCatalog].getClientUser()
+    sparkSession.sessionState.catalog.asInstanceOf[CarbonACLSessionCatalog].getClientUser
   }
 }

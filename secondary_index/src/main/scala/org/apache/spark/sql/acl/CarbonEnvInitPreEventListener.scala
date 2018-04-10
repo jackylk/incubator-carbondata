@@ -41,12 +41,12 @@ class CarbonEnvInitPreEventListener extends OperationEventListener {
      val sparkSession = carbonEnvInitPreEvent.sparkSession
      val carbonSessionInfo = carbonEnvInitPreEvent.carbonSessionInfo
      CarbonUserGroupInformation.getInstance.enableDriverUser
-    carbonSessionInfo.getNonSerializableExtraInfo.put(CarbonInternalCommonConstants.USER_NAME,
-      CarbonInternalMetaUtil.getClientUser(sparkSession))
+     carbonSessionInfo.getNonSerializableExtraInfo.put(CarbonInternalCommonConstants.USER_NAME,
+       CarbonInternalMetaUtil.getClientUser(sparkSession))
      Utils.initCarbonFoldersPermission(storePath, sparkSession)
      // register position ID UDF
      sparkSession.udf.register("getPositionId", () => "")
-    CreateFunctionCommand(None, "NI", "org.apache.spark.sql.hive.NonIndexUDFExpression",
-      Seq(), true).run(sparkSession)
+     CreateFunctionCommand(None, "NI", "org.apache.spark.sql.hive.NonIndexUDFExpression",
+       Seq(), true).run(sparkSession)
   }
 }
