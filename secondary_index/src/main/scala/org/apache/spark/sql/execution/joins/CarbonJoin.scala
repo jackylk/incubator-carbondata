@@ -724,7 +724,8 @@ object BroadCastFilterPushJoin {
 
     if (tableScan.isDefined && null != filters
         && filters.size > 0
-        && (filters(0).size <= configuredFilterRecordSize.toInt || isIndexTable)) {
+        && ((filters(0).size > 0 && filters(0).size <= configuredFilterRecordSize.toInt) ||
+            isIndexTable)) {
       LOGGER.info("Pushing down filter for broadcast join. Filter size:" + filters(0).size)
       if (tableScan.get.isInstanceOf[BatchedDataSourceScanExec]) {
         addPushdownToCarbonRDD(tableScan.get.asInstanceOf[BatchedDataSourceScanExec].rdd,
