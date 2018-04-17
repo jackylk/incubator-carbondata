@@ -283,7 +283,13 @@ case class CarbonLoadDataCommand(
       val loadTablePreExecutionEvent: LoadTablePreExecutionEvent =
         new LoadTablePreExecutionEvent(
           table.getCarbonTableIdentifier,
-          carbonLoadModel)
+          carbonLoadModel,
+          factPath,
+          dataFrame.isDefined,
+          optionsFinal,
+          options.asJava,
+          isOverwriteTable,
+          sparkSession)
       operationContext.setProperty("isOverwrite", isOverwriteTable)
       OperationListenerBus.getInstance.fireEvent(loadTablePreExecutionEvent, operationContext)
       // Add pre event listener for index datamap
@@ -373,7 +379,6 @@ case class CarbonLoadDataCommand(
         OperationListenerBus.getInstance()
           .fireEvent(buildDataMapPostExecutionEvent, dataMapOperationContext)
       }
-
     } catch {
       case CausedBy(ex: NoRetryException) =>
         // update the load entry in table status file for changing the status to marked for delete

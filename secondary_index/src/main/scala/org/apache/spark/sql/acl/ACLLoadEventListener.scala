@@ -98,7 +98,7 @@ object ACLLoadEventListener {
         operationContext: OperationContext): Unit = {
       val loadTablePreExecutionEvent = event.asInstanceOf[LoadTablePreExecutionEvent]
       val carbonLoadModel = loadTablePreExecutionEvent.getCarbonLoadModel
-      val sparkSession = SparkSession.getActiveSession.get
+      val sparkSession = loadTablePreExecutionEvent.getSparkSession
       val factPath = loadTablePreExecutionEvent.getFactPath
       val isDataFrameDefined = loadTablePreExecutionEvent.isDataFrameDefined
       val optionsFinal = loadTablePreExecutionEvent.getOptionsFinal
@@ -130,10 +130,7 @@ object ACLLoadEventListener {
       // loadPre3
 
       val dbName = carbonLoadModel.getDatabaseName
-      val relation = CarbonEnv.getInstance(sparkSession).carbonMetastore
-        .lookupRelation(Option(dbName), carbonLoadModel.getTableName)(sparkSession)
-        .asInstanceOf[CarbonRelation]
-      val carbonTable = relation.carbonTable
+      val carbonTable = carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable
       val bad_records_logger_enable = optionsFinal.get("bad_records_logger_enable")
       val bad_records_action = optionsFinal.get("bad_records_action")
       var bad_record_path = optionsFinal.get("bad_record_path")
@@ -171,7 +168,7 @@ object ACLLoadEventListener {
       // loadPre3
 
       val folderListBeforLoad = takeSnapshotBeforeLoad(sparkSession.sqlContext,
-        relation.carbonTable.getCarbonTableIdentifier,
+        carbonTable.getCarbonTableIdentifier,
         bad_records_logger_enable,
         bad_records_action,
         dbName,

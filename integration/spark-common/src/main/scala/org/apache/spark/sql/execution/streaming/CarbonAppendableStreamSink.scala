@@ -127,9 +127,17 @@ class CarbonAppendableStreamSink(
 
       // fire pre event on every batch add
       // in case of streaming options and optionsFinal can be same
+      val operationContext = new OperationContext
       val loadTablePreExecutionEvent = new LoadTablePreExecutionEvent(
         carbonTable.getCarbonTableIdentifier,
-        carbonLoadModel)
+        carbonLoadModel,
+        carbonLoadModel.getFactFilePath,
+        false,
+        parameters.asJava,
+        parameters.asJava,
+        false,
+        sparkSession
+      )
       OperationListenerBus.getInstance().fireEvent(loadTablePreExecutionEvent, operationContext)
       checkOrHandOffSegment()
 

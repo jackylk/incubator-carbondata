@@ -24,6 +24,8 @@ import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.events.Event;
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel;
 
+import org.apache.spark.sql.SparkSession;
+
 public class LoadEvents {
   /**
    * Class for handling operations before start of a load process.
@@ -32,11 +34,30 @@ public class LoadEvents {
   public static class LoadTablePreExecutionEvent extends Event {
     private CarbonTableIdentifier carbonTableIdentifier;
     private CarbonLoadModel carbonLoadModel;
+    private String factPath;
+    private boolean isDataFrameDefined;
+    private Map<String, String> optionsFinal;
+    // userProvidedOptions are needed if we need only the load options given by user
+    private Map<String, String> userProvidedOptions;
+    private boolean isOverWriteTable;
+    private SparkSession sparkSession;
 
     public LoadTablePreExecutionEvent(CarbonTableIdentifier carbonTableIdentifier,
-        CarbonLoadModel carbonLoadModel) {
+        CarbonLoadModel carbonLoadModel, String factPath, boolean isDataFrameDefined,
+        Map<String, String> optionsFinal, Map<String, String> userProvidedOptions,
+        boolean isOverWriteTable, SparkSession sparkSession) {
       this.carbonTableIdentifier = carbonTableIdentifier;
       this.carbonLoadModel = carbonLoadModel;
+      this.factPath = factPath;
+      this.isDataFrameDefined = isDataFrameDefined;
+      this.optionsFinal = optionsFinal;
+      this.userProvidedOptions = userProvidedOptions;
+      this.isOverWriteTable = isOverWriteTable;
+      this.sparkSession = sparkSession;
+    }
+
+    public SparkSession getSparkSession() {
+      return sparkSession;
     }
 
     public CarbonTableIdentifier getCarbonTableIdentifier() {
