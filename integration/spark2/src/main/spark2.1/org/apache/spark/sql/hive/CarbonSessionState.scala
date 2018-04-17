@@ -72,7 +72,8 @@ class CarbonHiveSessionCatalog(
     functionResourceLoader,
     functionRegistry,
     conf,
-    hadoopConf) with CarbonSessionCatalog {
+    hadoopConf,
+    parser) with CarbonSessionCatalog {
 
   private lazy val carbonEnv = {
     val env = new CarbonEnv

@@ -508,12 +508,12 @@ class CarbonDecoderRDD(
     serializedTableInfo) {
 
   def setFilterExpression(extraPreds: Seq[Expression]): Unit = {
-    if (prev.isInstanceOf[CarbonScanRDD]) {
+    if (prev.isInstanceOf[CarbonScanRDD[InternalRow]]) {
       if (extraPreds.nonEmpty) {
         val expressionVal = CarbonFilters
           .transformExpression(CarbonFilters.preProcessExpressions(extraPreds).head)
         if (null != expressionVal) {
-          prev.asInstanceOf[CarbonScanRDD].setFilterExpression(expressionVal)
+          prev.asInstanceOf[CarbonScanRDD[InternalRow]].setFilterExpression(expressionVal)
         }
       }
     }

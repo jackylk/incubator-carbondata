@@ -71,7 +71,7 @@ case class PreAggregateTableHelper(
     val partitionInfo = parentTable.getPartitionInfo
     val fields = fieldRelationMap.keySet.toSeq
     val tableProperties = mutable.Map[String, String]()
-    val usePartitioning = dataMapProperties.getOrDefault("partitioning", "true").toBoolean
+    val usePartitioning = dataMapProperties.asScala.getOrElse("partitioning", "true").toBoolean
     val parentPartitionColumns = if (!usePartitioning) {
       Seq.empty
     } else if (parentTable.isHivePartitionTable) {
