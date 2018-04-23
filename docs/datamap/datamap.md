@@ -15,21 +15,21 @@ DataMap can be created using following DDL
 
 Currently, there are 4 kinds of datamap. 
 
-| DataMap provider | Description                      | DMPROPERTIES                                                 |Management |
+| DataMap Provider | Description                      | DMPROPERTIES                                                 |Management |
 | ---------------- | -------------------------------- | ------------------------------------------------------------ |-----------|
-| preaggregate     | single table pre-aggregate table | No DMPROPERTY is required                                    |Automatic  |
-| timeseries       | time dimension rollup table.     | event_time, xx_granularity, please refer to [Timeseries DataMap](https://github.com/apache/carbondata/blob/master/docs/datamap/timeseries-datamap-guide.md) |Automatic |
-| mv               | multi-table pre-aggregate table, | No DMPROPERTY is required                                    |Manual |
-| lucene           | lucene indexing for text column                  | text_column                                |Manual |
-| bloom           | bloom filter for high cardinality column, geospatial column                   | bloom_column   |Manual |
+| preaggregate     | single table pre-aggregate table | No DMPROPERTY is required                                    |Automatic Refresh |
+| timeseries       | time dimension rollup table.     | event_time, xx_granularity, please refer to [Timeseries DataMap](https://github.com/apache/carbondata/blob/master/docs/datamap/timeseries-datamap-guide.md) |Automatic Refresh|
+| mv               | multi-table pre-aggregate table, | No DMPROPERTY is required                                    |Manual Refresh|
+| lucene           | lucene indexing for text column                  | text_column                                |Manual Refresh|
+| bloom           | bloom filter for high cardinality column, geospatial column                   | bloom_column   |Manual Refresh|
 
 ## DataMap Management
 
-There are three kinds of semantic for DataMap management:
+There are three kinds of semantic for DataMap management. If the datamap is created on external table, managment semantic is manual management. 
 
 ### Automatic Refresh
 
-All datamap except MV datamap (preaggregate/timeseries/lucene) is in this category.
+All datamap except MV datamap (preaggregate/timeseries) is in this category.
 
 When a user creates a datamap on the main table, system will immediately triger a datamap refresh automatically. It is triggered internally by the system, and the user does not need to issue REFRESH command.
 
