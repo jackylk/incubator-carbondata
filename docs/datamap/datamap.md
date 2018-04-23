@@ -90,8 +90,8 @@ Currently, when user creates a datamap, system will store the datamap metadata i
 
 In this *system* folder, it contains:
 
-- DataMapSchema file. It is a json file containing schema for one datamap. If user creates 100 datamaps (on different tables), there will be 100 files in *system* folder. 
-- DataMapStatus file. Only one file, it is in json format, and each entry in the file represents for one datamap.
+- DataMapSchema file. It is a json file containing schema for one datamap. Ses DataMapSchema class. If user creates 100 datamaps (on different tables), there will be 100 files in *system* folder. 
+- DataMapStatus file. Only one file, it is in json format, and each entry in the file represents for one datamap. Ses DataMapStatusDetail class
 
 There is a DataMapCatalog interface to retrieve schema of all datamap, it can be used in optimizer to get the metadata of datamap. 
 
