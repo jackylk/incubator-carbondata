@@ -15,13 +15,13 @@ DataMap can be created using following DDL
 
 Currently, there are 4 kinds of datamap. 
 
-| DataMap provider | Description                      | DMPROPERTIES                                                 |
-| ---------------- | -------------------------------- | ------------------------------------------------------------ |
-| preaggregate     | single table pre-aggregate table | No DMPROPERTY is required                                    |
-| timeseries       | time dimension rollup table.     | event_time, xx_granularity, please refer to [Timeseries DataMap](https://github.com/apache/carbondata/blob/master/docs/datamap/timeseries-datamap-guide.md) |
-| mv               | multi-table pre-aggregate table, | No DMPROPERTY is required                                    |
-| lucene           | lucene indexing                  | text_column                                                  |
-|                  |                                  |                                                              |
+| DataMap provider | Description                      | DMPROPERTIES                                                 |Management |
+| ---------------- | -------------------------------- | ------------------------------------------------------------ |-----------|
+| preaggregate     | single table pre-aggregate table | No DMPROPERTY is required                                    |Automatic  |
+| timeseries       | time dimension rollup table.     | event_time, xx_granularity, please refer to [Timeseries DataMap](https://github.com/apache/carbondata/blob/master/docs/datamap/timeseries-datamap-guide.md) |Automatic |
+| mv               | multi-table pre-aggregate table, | No DMPROPERTY is required                                    |Manual |
+| lucene           | lucene indexing for text column                  | text_column                                |Manual |
+| bloom           | bloom filter for high cardinality column, geospatial column                   | bloom_column   |Manual |
 
 ## DataMap Management
 
