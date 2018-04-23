@@ -17,11 +17,11 @@ Currently, there are 4 kinds of datamap.
 
 | DataMap Provider | Description                      | DMPROPERTIES                                                 |Management |
 | ---------------- | -------------------------------- | ------------------------------------------------------------ |-----------|
-| preaggregate     | single table pre-aggregate table | No DMPROPERTY is required                                    |Automatic Refresh |
-| timeseries       | time dimension rollup table.     | event_time, xx_granularity, please refer to [Timeseries DataMap](https://github.com/apache/carbondata/blob/master/docs/datamap/timeseries-datamap-guide.md) |Automatic Refresh|
-| mv               | multi-table pre-aggregate table, | No DMPROPERTY is required                                    |Manual Refresh|
-| lucene           | lucene indexing for text column                  | text_column                                |Manual Refresh|
-| bloom           | bloom filter for high cardinality column, geospatial column                   | bloom_column   |Manual Refresh|
+| preaggregate     | single table pre-aggregate table | No DMPROPERTY is required                                    |Automatic  |
+| timeseries       | time dimension rollup table.     | event_time, xx_granularity, please refer to [Timeseries DataMap](https://github.com/apache/carbondata/blob/master/docs/datamap/timeseries-datamap-guide.md) |Automatic |
+| mv               | multi-table pre-aggregate table, | No DMPROPERTY is required                                    |Manual |
+| lucene           | lucene indexing for text column                  | text_column                                |Manual |
+| bloom           | bloom filter for high cardinality column, geospatial column                   | bloom_column   |Manual |
 
 ## DataMap Management
 
