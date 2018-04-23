@@ -26,7 +26,6 @@ import org.apache.carbondata.core.util.CarbonProperties
 import scala.collection.JavaConverters._
 import org.apache.carbondata.format.TableInfo
 import org.apache.carbondata.spark.core.CarbonInternalCommonConstants
-import org.apache.carbondata.spark.exception.MalformedCarbonCommandException
 
 /**
  * test cases for testing create index table

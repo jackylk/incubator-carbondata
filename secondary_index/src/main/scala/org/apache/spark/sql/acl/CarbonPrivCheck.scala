@@ -139,31 +139,31 @@ private[sql] case class CarbonPrivCheck(sparkSession: SparkSession,
             case internalProject: CarbonInternalProject =>
               internalTable = Some(internalProject)
               internalProject
-            case scan@BatchedDataSourceScanExec(projectList, rdd: CarbonScanRDD,
+            case scan@BatchedDataSourceScanExec(projectList, rdd: CarbonScanRDD[InternalRow],
             relation: CarbonDatasourceHadoopRelation, _, _, _, logicalRelation)
               if !isSameTable(relation, internalTable) && logicalRelation.needPriv =>
               checkPrivilege(projectList, relation.carbonRelation, rdd)
               scan
-            case scan@RowDataSourceScanExec(projectList, rdd: CarbonScanRDD,
+            case scan@RowDataSourceScanExec(projectList, rdd: CarbonScanRDD[InternalRow],
             relation: CarbonDatasourceHadoopRelation, _, _, _, _)
               if !isSameTable(relation, internalTable) && scan.needPriv =>
               checkPrivilege(projectList, relation.carbonRelation, rdd)
               scan
             case scan@BatchedDataSourceScanExec(projectList, rdd: CarbonDecoderRDD,
             relation: CarbonDatasourceHadoopRelation, _, _, _, logicalRelation)
-              if rdd.prev.isInstanceOf[CarbonScanRDD] &&
+              if rdd.prev.isInstanceOf[CarbonScanRDD[InternalRow]] &&
                  !isSameTable(relation, internalTable) && logicalRelation.needPriv =>
               checkPrivilege(projectList,
                 relation.carbonRelation,
-                rdd.prev.asInstanceOf[CarbonScanRDD])
+                rdd.prev.asInstanceOf[CarbonScanRDD[InternalRow]])
               scan
             case scan@RowDataSourceScanExec(projectList, rdd: CarbonDecoderRDD,
             relation: CarbonDatasourceHadoopRelation, _, _, _, _)
-              if rdd.prev.isInstanceOf[CarbonScanRDD] &&
+              if rdd.prev.isInstanceOf[CarbonScanRDD[InternalRow]] &&
                  !isSameTable(relation, internalTable) && scan.needPriv =>
               checkPrivilege(projectList,
                 relation.carbonRelation,
-                rdd.prev.asInstanceOf[CarbonScanRDD])
+                rdd.prev.asInstanceOf[CarbonScanRDD[InternalRow]])
               scan
             //            case countStar@CarbonCountStar(_, relation: CarbonRelation, _, needPrev)
             //              if !isSameTable(relation, internalTable) && needPrev =>
@@ -203,7 +203,7 @@ private[sql] case class CarbonPrivCheck(sparkSession: SparkSession,
   private def checkPrivilege(
       projectList: Seq[Attribute],
       relation: CarbonRelation,
-      carbonScanRDD: CarbonScanRDD): Unit = {
+      carbonScanRDD: CarbonScanRDD[InternalRow]): Unit = {
     val (dbName, tblName) = (relation.databaseName, relation.tableName)
     LOGGER.info("Start Select query Acl privilege table level")
     if (!aclInterface.checkPrivilege(

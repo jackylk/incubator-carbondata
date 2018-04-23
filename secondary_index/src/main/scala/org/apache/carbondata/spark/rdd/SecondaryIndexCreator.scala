@@ -30,14 +30,13 @@ import org.apache.spark.util.si.FileInternalUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
-import org.apache.carbondata.core.statusmanager.SegmentStatus
+import org.apache.carbondata.core.statusmanager.{SegmentStatus, SegmentStatusManager}
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.processing.loading.TableProcessingOperations
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 import org.apache.carbondata.processing.util.CarbonLoaderUtil
 import org.apache.carbondata.spark.SecondaryIndexCreationResultImpl
 import org.apache.carbondata.spark.core.CarbonInternalCommonConstants
-import org.apache.carbondata.spark.util.{CommonUtil, DataLoadingUtil}
 
 /**
  * This class is aimed at creating secondary index for specified segments
@@ -114,7 +113,7 @@ object SecondaryIndexCreator {
         .sparkSession).asInstanceOf[CarbonRelation].carbonTable
 
     try {
-      DataLoadingUtil.deleteLoadsAndUpdateMetadata(isForceDeletion = false, indexCarbonTable, null)
+      SegmentStatusManager.deleteLoadsAndUpdateMetadata(indexCarbonTable, false, null)
       TableProcessingOperations.deletePartialLoadDataIfExist(indexCarbonTable, false)
       var execInstance = "1"
       // in case of non dynamic executor allocation, number of executors are fixed.
@@ -181,8 +180,8 @@ object SecondaryIndexCreator {
     } catch {
       case ex: Exception =>
         try {
-          DataLoadingUtil
-            .deleteLoadsAndUpdateMetadata(isForceDeletion = false, indexCarbonTable, null)
+          SegmentStatusManager
+            .deleteLoadsAndUpdateMetadata(indexCarbonTable, false, null)
           TableProcessingOperations.deletePartialLoadDataIfExist(indexCarbonTable, false)
         } catch {
           case e: Exception =>
@@ -209,7 +208,7 @@ object SecondaryIndexCreator {
     val copyObj = new CarbonLoadModel
     copyObj.setTableName(carbonLoadModel.getTableName)
     copyObj.setDatabaseName(carbonLoadModel.getDatabaseName)
-    copyObj.setPartitionId(carbonLoadModel.getPartitionId)
+//    copyObj.setPartitionId(carbonLoadModel.getPartitionId)
     copyObj.setLoadMetadataDetails(carbonLoadModel.getLoadMetadataDetails)
     copyObj.setCarbonDataLoadSchema(carbonLoadModel.getCarbonDataLoadSchema)
     copyObj

@@ -39,18 +39,19 @@ import org.apache.carbondata.core.datastore.block.{Distributable, TableBlockInfo
 import org.apache.carbondata.core.metadata.{AbsoluteTableIdentifier, CarbonMetadata, CarbonTableIdentifier}
 import org.apache.carbondata.core.metadata.blocklet.DataFileFooter
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
-import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema
+import org.apache.carbondata.core.metadata.schema.table.column.{CarbonDimension, ColumnSchema}
 import org.apache.carbondata.core.mutate.UpdateVO
 import org.apache.carbondata.core.statusmanager.SegmentUpdateStatusManager
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.hadoop.{CarbonInputSplit, CarbonMultiBlockSplit}
-import org.apache.carbondata.hadoop.api.CarbonTableInputFormat
+import org.apache.carbondata.hadoop.api.{CarbonInputFormat, CarbonTableInputFormat}
 import org.apache.carbondata.hadoop.util.{CarbonInputFormatUtil, CarbonInputSplitTaskInfo}
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 import org.apache.carbondata.processing.merger.CarbonCompactionUtil
 import org.apache.carbondata.processing.util.{CarbonDataProcessorUtil, CarbonLoaderUtil}
 import org.apache.carbondata.spark.SecondaryIndexCreationResult
 import org.apache.carbondata.spark.spark.secondaryindex.{CarbonSecondaryIndexExecutor, SecondaryIndexQueryResultProcessor, SecondaryIndexUtil}
+import org.apache.carbondata.spark.util.SparkDataTypeConverterImpl
 
 
 class CarbonSecondaryIndexRDD[K, V](
@@ -62,7 +63,7 @@ class CarbonSecondaryIndexRDD[K, V](
     confExecutorsTemp: String,
     indexCarbonTable: CarbonTable,
     forceAccessSegment: Boolean = false)
-  extends CarbonRDD[(K, V)](sc, Nil) {
+  extends CarbonRDD[(K, V)](sc, Nil, sc.hadoopConfiguration) {
 
   private val queryId = sparkContext.getConf.get("queryId", System.nanoTime() + "")
   val defaultParallelism = sc.defaultParallelism
@@ -120,11 +121,12 @@ class CarbonSecondaryIndexRDD[K, V](
           SecondaryIndexUtil.createTaskAndBlockMapping(tableBlockInfoList)
         exec = new CarbonSecondaryIndexExecutor(taskAndBlockMapping,
           carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable,
-          secondaryIndex.columnNames.asJava
+          secondaryIndex.columnNames.asJava,
+          new SparkDataTypeConverterImpl
         )
         // fire a query and get the results.
         val queryResultIterators = exec.processTableBlocks()
-        carbonLoadModel.setPartitionId("0")
+//        carbonLoadModel.setPartitionId("0")
         carbonLoadModel.setSegmentId(segmentId)
         val tempLocationKey = CarbonDataProcessorUtil
           .getTempStoreLocationKey(carbonLoadModel.getDatabaseName,
@@ -186,7 +188,7 @@ class CarbonSecondaryIndexRDD[K, V](
     val absoluteTableIdentifier: AbsoluteTableIdentifier = AbsoluteTableIdentifier.from(
       carbonStoreLocation, databaseName, factTableName, tableId)
     val updateStatusManager: SegmentUpdateStatusManager = new SegmentUpdateStatusManager(
-      absoluteTableIdentifier)
+      carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable)
     val jobConf: JobConf = new JobConf(new Configuration)
     SparkHadoopUtil.get.addCredentials(jobConf)
     val job: Job = new Job(jobConf)
@@ -213,7 +215,7 @@ class CarbonSecondaryIndexRDD[K, V](
 
     // map for keeping the relation of a task and its blocks.
     job.getConfiguration.set(CarbonTableInputFormat.INPUT_SEGMENT_NUMBERS, segmentId)
-    CarbonTableInputFormat.setValidateSegmentsToAccess(job.getConfiguration, false)
+    CarbonInputFormat.setValidateSegmentsToAccess(job.getConfiguration, false)
 
     val updateDetails: UpdateVO = updateStatusManager.getInvalidTimestampRange(segmentId)
 

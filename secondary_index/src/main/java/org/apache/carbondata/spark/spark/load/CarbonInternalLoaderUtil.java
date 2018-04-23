@@ -37,7 +37,6 @@ import org.apache.carbondata.core.mutate.CarbonUpdateUtil;
 import org.apache.carbondata.core.statusmanager.LoadMetadataDetails;
 import org.apache.carbondata.core.statusmanager.SegmentStatus;
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager;
-import org.apache.carbondata.core.util.path.CarbonStorePath;
 import org.apache.carbondata.core.util.path.CarbonTablePath;
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel;
 import org.apache.carbondata.processing.util.CarbonLoaderUtil;
@@ -132,7 +131,7 @@ public class CarbonInternalLoaderUtil {
       List<String> validSegments, String databaseName, String tableName,
       CarbonTable carbonTable) throws IOException {
     boolean status = false;
-    String metaDataFilepath = carbonTable.getMetaDataFilepath();
+    String metaDataFilepath = carbonTable.getMetadataPath();
     AbsoluteTableIdentifier absoluteTableIdentifier = carbonTable.getAbsoluteTableIdentifier();
     SegmentStatusManager segmentStatusManager = new SegmentStatusManager(absoluteTableIdentifier);
     ICarbonLock carbonLock = segmentStatusManager.getTableStatusLock();
@@ -170,10 +169,9 @@ public class CarbonInternalLoaderUtil {
             List<LoadMetadataDetails> indexTableDetailsList = CarbonInternalScalaUtil
                 .getTableStatusDetailsForIndexTable(listOfLoadFolderDetailsForFact, indexTable,
                     newSegmentDetailsListForIndexTable);
-            CarbonTablePath indexTablePath = CarbonStorePath
-                .getCarbonTablePath(indexTable.getTablePath(),
-                    indexTable.getCarbonTableIdentifier());
-            segmentStatusManager.writeLoadDetailsIntoFile(indexTablePath.getTableStatusFilePath(),
+
+            segmentStatusManager.writeLoadDetailsIntoFile(
+                CarbonTablePath.getTableStatusFilePath(indexTable.getTablePath()),
                 indexTableDetailsList
                     .toArray(new LoadMetadataDetails[indexTableDetailsList.size()]));
           }
@@ -232,7 +230,7 @@ public class CarbonInternalLoaderUtil {
         LOGGER.info("Acquired lock for the table " + carbonLoadModel.getDatabaseName() + "."
             + carbonLoadModel.getTableName() + " for table status updation ");
         LoadMetadataDetails[] loadDetails =
-            SegmentStatusManager.readLoadMetadata(indexCarbonTable.getMetaDataFilepath());
+            SegmentStatusManager.readLoadMetadata(indexCarbonTable.getMetadataPath());
 
         long modificationOrDeletionTimeStamp = CarbonUpdateUtil.readCurrentTime();
         for (LoadMetadataDetails loadDetail : loadDetails) {
@@ -254,7 +252,7 @@ public class CarbonInternalLoaderUtil {
 
         // create entry for merged one.
         LoadMetadataDetails loadMetadataDetails = new LoadMetadataDetails();
-        loadMetadataDetails.setPartitionCount(carbonLoadModel.getPartitionId());
+        loadMetadataDetails.setPartitionCount("0");
         loadMetadataDetails.setSegmentStatus(SegmentStatus.SUCCESS);
         long loadEnddate = CarbonUpdateUtil.readCurrentTime();
         loadMetadataDetails.setLoadEndTime(loadEnddate);
@@ -269,10 +267,8 @@ public class CarbonInternalLoaderUtil {
 
         // put the merged folder entry
         updatedDetailsList.add(loadMetadataDetails);
-        CarbonTablePath indexTablePath = CarbonStorePath
-            .getCarbonTablePath(indexCarbonTable.getTablePath(),
-                indexCarbonTable.getCarbonTableIdentifier());
-        segmentStatusManager.writeLoadDetailsIntoFile(indexTablePath.getTableStatusFilePath(),
+        segmentStatusManager.writeLoadDetailsIntoFile(
+            CarbonTablePath.getTableStatusFilePath(indexCarbonTable.getTablePath()),
             updatedDetailsList.toArray(new LoadMetadataDetails[updatedDetailsList.size()]));
         tableStatusUpdationStatus = true;
       } else {

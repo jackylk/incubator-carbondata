@@ -25,7 +25,6 @@ import org.apache.spark.sql.{CarbonEnv, SparkSession}
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.metadata.CarbonTableIdentifier
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
-import org.apache.carbondata.core.util.path.CarbonStorePath
 import org.apache.carbondata.events.{DeleteFromTableAbortEvent, DeleteFromTablePostEvent, DeleteFromTablePreEvent, _}
 
 object ACLIUDDeleteEventListener {
@@ -44,8 +43,7 @@ object ACLIUDDeleteEventListener {
       val carbonTableIdentifier: CarbonTableIdentifier = carbonTable
         .getCarbonTableIdentifier
       val sparkSession: SparkSession = deleteFromTablePreEvent.sparkSession
-      val carbonTablePath = CarbonStorePath
-        .getCarbonTablePath(carbonTable.getAbsoluteTableIdentifier)
+      val carbonTablePath = carbonTable.getAbsoluteTableIdentifier.getTablePath
       ACLFileUtils.takeSnapshotBeforeOpeartion(operationContext, sparkSession, carbonTablePath)
     }
   }

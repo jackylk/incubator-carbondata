@@ -28,7 +28,6 @@ import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.statusmanager.LoadMetadataDetails;
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager;
 import org.apache.carbondata.core.util.DeleteLoadFolders;
-import org.apache.carbondata.core.util.path.CarbonStorePath;
 import org.apache.carbondata.core.util.path.CarbonTablePath;
 
 import org.apache.spark.util.CarbonInternalScalaUtil;
@@ -57,17 +56,15 @@ public final class CarbonPluginUtil {
           factTable.getCarbonTableIdentifier().getDatabaseName() + CarbonCommonConstants.UNDERSCORE
               + indexTableName);
       if (null != indexTable) {
-        CarbonTablePath carbonTablePath = CarbonStorePath
-            .getCarbonTablePath(indexTable.getAbsoluteTableIdentifier().getTablePath(),
-                indexTable.getAbsoluteTableIdentifier().getCarbonTableIdentifier());
         LoadMetadataDetails[] loadMetadataDetails =
-            SegmentStatusManager.readLoadMetadata(carbonTablePath.getMetadataDirectoryPath());
+            SegmentStatusManager.readLoadMetadata(indexTable.getMetadataPath());
         // Delete marked loads
         boolean isUpdationRequired = DeleteLoadFolders
             .deleteLoadFoldersFromFileSystem(indexTable.getAbsoluteTableIdentifier(),
-                isForceDeletion, loadMetadataDetails, indexTable.getMetaDataFilepath());
+                isForceDeletion, loadMetadataDetails, indexTable.getMetadataPath());
         if (isUpdationRequired) {
-          SegmentStatusManager.writeLoadDetailsIntoFile(carbonTablePath.getTableStatusFilePath(),
+          SegmentStatusManager.writeLoadDetailsIntoFile(
+              CarbonTablePath.getTableStatusFilePath(indexTable.getTablePath()),
               loadMetadataDetails);
           LOG.info("Clean up files successful for index table: " + indexTableName);
         } else {

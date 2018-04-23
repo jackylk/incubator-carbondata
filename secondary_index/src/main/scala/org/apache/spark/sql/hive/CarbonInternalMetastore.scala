@@ -36,7 +36,7 @@ import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.metadata.{AbsoluteTableIdentifier, CarbonTableIdentifier}
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.util.CarbonUtil
-import org.apache.carbondata.core.util.path.CarbonStorePath
+import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.spark.core.metadata.IndexMetadata
 import org.apache.carbondata.spark.spark.indextable.{IndexTableInfo, IndexTableUtil}
 
@@ -192,18 +192,18 @@ object CarbonInternalMetastore {
    */
   private def setDictionaryPathInCarbonTable(carbonTable: CarbonTable,
       indexMetadata: IndexMetadata): Unit = {
-    val indexTablePath = CarbonStorePath.getCarbonTablePath(carbonTable.getAbsoluteTableIdentifier)
-    val newTablePath: String = CarbonUtil
+    val indexTablePath = carbonTable.getAbsoluteTableIdentifier.getTablePath
+    val newTablePath: String = CarbonTablePath
       .getNewTablePath(indexTablePath, indexMetadata.getParentTableName)
     val parentTableAbsoluteTableIdentifier = AbsoluteTableIdentifier
       .from(newTablePath,
         carbonTable.getDatabaseName,
         indexMetadata.getParentTableName,
         indexMetadata.getParentTableId)
-    val parentCarbonTablePath = CarbonStorePath
-      .getCarbonTablePath(parentTableAbsoluteTableIdentifier)
+    val parentCarbonTablePath = parentTableAbsoluteTableIdentifier.getTablePath
     carbonTable.getTableInfo.getFactTable.getTableProperties
-      .put(CarbonCommonConstants.DICTIONARY_PATH, parentCarbonTablePath.getMetadataDirectoryPath)
+      .put(CarbonCommonConstants.DICTIONARY_PATH,
+        CarbonTablePath.getMetadataPath(parentCarbonTablePath))
   }
 
   private def indexInfoFromHive(databaseName: String, tableName: String)
@@ -266,7 +266,7 @@ object CarbonInternalMetastore {
     val tablePath = databaseLocation + CarbonCommonConstants.FILE_SEPARATOR + tableName.toLowerCase
     val tableIdentifier = AbsoluteTableIdentifier.from(tablePath, dbName, tableName)
     val metadataFilePath =
-      CarbonStorePath.getCarbonTablePath(tableIdentifier).getMetadataDirectoryPath
+      CarbonTablePath.getMetadataPath(tablePath)
     val fileType = FileFactory.getFileType(metadataFilePath)
     if (FileFactory.isFileExist(metadataFilePath, fileType)) {
       // while drop we should refresh the schema modified time so that if any thing has changed

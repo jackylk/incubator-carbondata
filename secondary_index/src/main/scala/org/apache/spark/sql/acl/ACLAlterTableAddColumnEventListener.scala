@@ -25,7 +25,7 @@ import org.apache.spark.sql.{CarbonEnv, SparkSession}
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.metadata.CarbonTableIdentifier
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
-import org.apache.carbondata.core.util.path.{CarbonStorePath, CarbonTablePath}
+import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.events.{AlterTableAddColumnPreEvent, _}
 
 object ACLAlterTableAddColumnEventListener {
@@ -42,8 +42,8 @@ object ACLAlterTableAddColumnEventListener {
       val carbonTable: CarbonTable = alterTableAddColumnPreEvent.carbonTable
       val carbonTableIdentifier: CarbonTableIdentifier = carbonTable.getCarbonTableIdentifier
       val sparkSession: SparkSession = alterTableAddColumnPreEvent.sparkSession
-      val carbonTablePath = CarbonStorePath
-        .getCarbonTablePath(carbonTable.getAbsoluteTableIdentifier)
+      val carbonTablePath = carbonTable.getAbsoluteTableIdentifier.getTablePath
+
 
       ACLFileUtils.takeSnapshotBeforeOpeartion(operationContext, sparkSession, carbonTablePath)
     }

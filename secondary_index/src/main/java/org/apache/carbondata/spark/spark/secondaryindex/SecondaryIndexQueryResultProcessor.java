@@ -33,7 +33,7 @@ import org.apache.carbondata.core.metadata.encoder.Encoding;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonDimension;
 import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema;
-import org.apache.carbondata.core.scan.result.BatchResult;
+import org.apache.carbondata.core.scan.result.RowBatch;
 import org.apache.carbondata.core.scan.wrappers.ByteArrayWrapper;
 import org.apache.carbondata.core.util.CarbonUtil;
 import org.apache.carbondata.processing.loading.TableProcessingOperations;
@@ -180,7 +180,7 @@ public class SecondaryIndexQueryResultProcessor {
    * @param detailQueryResultIteratorList
    * @throws SecondaryIndexException
    */
-  public void processQueryResult(List<CarbonIterator<BatchResult>> detailQueryResultIteratorList)
+  public void processQueryResult(List<CarbonIterator<RowBatch>> detailQueryResultIteratorList)
       throws SecondaryIndexException {
     try {
       initTempStoreLocation();
@@ -224,11 +224,11 @@ public class SecondaryIndexQueryResultProcessor {
    * @param detailQueryResultIteratorList
    * @throws SecondaryIndexException
    */
-  private void processResult(List<CarbonIterator<BatchResult>> detailQueryResultIteratorList)
+  private void processResult(List<CarbonIterator<RowBatch>> detailQueryResultIteratorList)
       throws SecondaryIndexException {
-    for (CarbonIterator<BatchResult> detailQueryIterator : detailQueryResultIteratorList) {
+    for (CarbonIterator<RowBatch> detailQueryIterator : detailQueryResultIteratorList) {
       while (detailQueryIterator.hasNext()) {
-        BatchResult batchResult = detailQueryIterator.next();
+        RowBatch batchResult = detailQueryIterator.next();
         while (batchResult.hasNext()) {
           addRowForSorting(prepareRowObjectForSorting(batchResult.next()));
           isRecordFound = true;
@@ -449,7 +449,7 @@ public class SecondaryIndexQueryResultProcessor {
     SortParameters parameters = SortParameters
         .createSortParameters(indexTable, databaseName, indexTableName, dimensionColumnCount,
             complexDimensionCount, measureCount, noDictionaryCount,
-            carbonLoadModel.getPartitionId(), segmentId, carbonLoadModel.getTaskNo(),
+            segmentId, carbonLoadModel.getTaskNo(),
             noDictionaryColMapping, false);
     return parameters;
   }
@@ -482,8 +482,8 @@ public class SecondaryIndexQueryResultProcessor {
    */
   private void initDataHandler() throws SecondaryIndexException {
     String carbonStoreLocation = CarbonDataProcessorUtil
-        .createCarbonStoreLocation(indexTable.getTablePath(), carbonLoadModel.getDatabaseName(),
-            indexTableName, carbonLoadModel.getPartitionId(), segmentId);
+        .createCarbonStoreLocation(carbonLoadModel.getDatabaseName(),
+            indexTableName, segmentId);
     CarbonFactDataHandlerModel carbonFactDataHandlerModel = CarbonFactDataHandlerModel
         .getCarbonFactDataHandlerModel(carbonLoadModel, indexTable, segmentProperties,
             indexTableName, tempStoreLocation, carbonStoreLocation);
@@ -509,8 +509,8 @@ public class SecondaryIndexQueryResultProcessor {
    */
   private void initTempStoreLocation() {
     tempStoreLocation = CarbonDataProcessorUtil
-        .getLocalDataFolderLocation(databaseName, indexTableName, carbonLoadModel.getTaskNo(),
-            carbonLoadModel.getPartitionId(), segmentId, false, false);
+        .getLocalDataFolderLocation(indexTable, carbonLoadModel.getTaskNo(), segmentId, false,
+            false);
   }
 
   /**

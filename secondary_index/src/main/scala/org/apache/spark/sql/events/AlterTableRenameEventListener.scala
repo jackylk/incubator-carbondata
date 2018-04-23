@@ -54,7 +54,7 @@ class AlterTableRenameEventListener extends OperationEventListener with Logging 
         val newTableName = alterTableRenameModel.newTableIdentifier.table
 
         if (!FileFactory.getFileType(newTablePath).equals(FileType.LOCAL)) {
-          sparkSession.sessionState.catalog.asInstanceOf[ICarbonSessionCatalog]
+          sparkSession.sessionState.catalog.asInstanceOf[CarbonSessionCatalog]
             .getClient().runSqlHive(
               s"ALTER TABLE $oldDatabaseName.$newTableName SET LOCATION '$newTablePath'")
         }
@@ -65,7 +65,7 @@ class AlterTableRenameEventListener extends OperationEventListener with Logging 
         CarbonInternalScalaUtil.getIndexesMap(table)
           .asScala.map {
           entry =>
-            sparkSession.sessionState.catalog.asInstanceOf[ICarbonSessionCatalog]
+            sparkSession.sessionState.catalog.asInstanceOf[CarbonSessionCatalog]
               .getClient().runSqlHive(
               s"ALTER TABLE $oldDatabaseName.${
                 entry

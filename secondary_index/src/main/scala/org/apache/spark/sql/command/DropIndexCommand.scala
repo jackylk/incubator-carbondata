@@ -35,8 +35,8 @@ import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.locks.{CarbonLockUtil, ICarbonLock, LockUsage}
 import org.apache.carbondata.core.metadata.{AbsoluteTableIdentifier, CarbonTableIdentifier}
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
-import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
-import org.apache.carbondata.core.util.path.CarbonStorePath
+import org.apache.carbondata.core.util.path.CarbonTablePath
+import org.apache.carbondata.core.util.CarbonUtil
 
 /**
  * Command to drop secondary index on a table
@@ -132,8 +132,7 @@ private[sql] case class DropIndex(ifExistsSet: Boolean,
           if (isValidDeletion) {
             val tablePath = databaseLoc + CarbonCommonConstants.FILE_SEPARATOR + tableName
             // deleting any remaining files.
-            val metadataFilePath = CarbonStorePath
-              .getCarbonTablePath(tablePath, carbonTableIdentifier).getMetadataDirectoryPath
+            val metadataFilePath = CarbonTablePath.getMetadataPath(tablePath)
             val fileType = FileFactory.getFileType(metadataFilePath)
             if (FileFactory.isFileExist(metadataFilePath, fileType)) {
               val file = FileFactory.getCarbonFile(metadataFilePath, fileType)

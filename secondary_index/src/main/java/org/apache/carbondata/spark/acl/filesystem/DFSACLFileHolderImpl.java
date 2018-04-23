@@ -22,11 +22,11 @@ import java.security.PrivilegedExceptionAction;
 
 import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
-import org.apache.carbondata.core.datastore.impl.DFSFileHolderImpl;
+import org.apache.carbondata.core.datastore.impl.DFSFileReaderImpl;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 
-public class DFSACLFileHolderImpl extends DFSFileHolderImpl {
+public class DFSACLFileHolderImpl extends DFSFileReaderImpl {
 
   private static final LogService LOGGER =
       LogServiceFactory.getLogService(DFSACLFileHolderImpl.class.getName());

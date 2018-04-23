@@ -127,7 +127,7 @@ private[sql] case class LoadDataForSecondaryIndex(indexModel: SecondaryIndex) ex
     }
 
     def readTableStatusFile(model: CarbonLoadModel): Array[LoadMetadataDetails] = {
-      val metadataPath = model.getCarbonDataLoadSchema.getCarbonTable.getMetaDataFilepath
+      val metadataPath = model.getCarbonDataLoadSchema.getCarbonTable.getMetadataPath
       val details = SegmentStatusManager.readLoadMetadata(metadataPath)
       details
     }

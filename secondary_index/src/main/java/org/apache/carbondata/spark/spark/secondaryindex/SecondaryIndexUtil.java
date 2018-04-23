@@ -35,7 +35,6 @@ import org.apache.carbondata.core.metadata.schema.table.column.CarbonDimension;
 import org.apache.carbondata.core.statusmanager.LoadMetadataDetails;
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager;
 import org.apache.carbondata.core.util.CarbonUtil;
-import org.apache.carbondata.core.util.path.CarbonStorePath;
 import org.apache.carbondata.core.util.path.CarbonTablePath;
 import org.apache.carbondata.spark.spark.secondaryindex.exception.SecondaryIndexException;
 
@@ -203,23 +202,23 @@ public class SecondaryIndexUtil {
       List<CarbonTable> indexTables) throws IOException {
 
     LoadMetadataDetails[] loadFolderDetailsArrayMainTable =
-        SegmentStatusManager.readLoadMetadata(parentCarbonTable.getMetaDataFilepath());
+        SegmentStatusManager.readLoadMetadata(parentCarbonTable.getMetadataPath());
     for (CarbonTable indexTable : indexTables) {
-      CarbonTablePath carbonTablePath = CarbonStorePath
-          .getCarbonTablePath(indexTable.getAbsoluteTableIdentifier().getTablePath(),
-              indexTable.getAbsoluteTableIdentifier().getCarbonTableIdentifier());
-      String tableStatusFilePath = carbonTablePath.getTableStatusFilePath();
+
+      String tableStatusFilePath =
+          CarbonTablePath.getTableStatusFilePath(indexTable.getTablePath());
       if (!CarbonUtil.isFileExists(tableStatusFilePath)) {
         LOG.info(
             "Table status file does not exist for index table: " + indexTable.getTableUniqueName());
         continue;
       }
       LoadMetadataDetails[] loadFolderDetailsArray =
-          SegmentStatusManager.readLoadMetadata(carbonTablePath.getMetadataDirectoryPath());
+          SegmentStatusManager.readLoadMetadata(indexTable.getMetadataPath());
       if (null != loadFolderDetailsArray && loadFolderDetailsArray.length > 0) {
         List<String> invalidLoads = new ArrayList<>(CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);
         try {
-          SegmentStatusManager.writeLoadDetailsIntoFile(carbonTablePath.getTableStatusFilePath(),
+          SegmentStatusManager.writeLoadDetailsIntoFile(
+              CarbonTablePath.getTableStatusFilePath(indexTable.getTablePath()),
               loadFolderDetailsArrayMainTable);
           if (invalidLoads.size() > 0) {
             LOG.audit("Delete segment by Id is successfull for $dbName.$tableName.");

@@ -32,7 +32,6 @@ import org.apache.carbondata.common.logging.{LogService, LogServiceFactory}
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
-import org.apache.carbondata.core.util.path.CarbonStorePath
 import org.apache.carbondata.events.{DropTablePreEvent, Event, OperationContext,
 OperationEventListener}
 
@@ -100,9 +99,7 @@ class SIDropEventListener extends OperationEventListener with Logging {
                       val tablePath = databaseLoc + CarbonCommonConstants.FILE_SEPARATOR +
                                       tableName
                       // deleting any remaining files.
-                      val metadataFilePath = CarbonStorePath
-                        .getCarbonTablePath(tablePath, carbonTable.getCarbonTableIdentifier)
-                        .getMetadataDirectoryPath
+                      val metadataFilePath = carbonTable.getMetadataPath
                       val fileType = FileFactory.getFileType(metadataFilePath)
                       if (FileFactory.isFileExist(metadataFilePath, fileType)) {
                         val file = FileFactory.getCarbonFile(metadataFilePath, fileType)

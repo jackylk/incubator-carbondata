@@ -24,8 +24,8 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.hive.CarbonInternalSqlAstBuilder
 import org.apache.spark.sql.internal.{SQLConf, VariableSubstitution}
 
+import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.core.util.{CarbonSessionInfo, ThreadLocalSessionInfo}
-import org.apache.carbondata.spark.exception.MalformedCarbonCommandException
 
 /**
  *

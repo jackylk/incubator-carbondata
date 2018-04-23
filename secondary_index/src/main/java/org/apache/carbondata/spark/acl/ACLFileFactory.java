@@ -16,14 +16,14 @@
  */
 package org.apache.carbondata.spark.acl;
 
-import org.apache.carbondata.core.datastore.FileHolder;
+import org.apache.carbondata.core.datastore.FileReader;
 import org.apache.carbondata.core.datastore.filesystem.CarbonFile;
 import org.apache.carbondata.core.datastore.filesystem.LocalCarbonFile;
+import org.apache.carbondata.core.datastore.impl.DFSFileReaderImpl;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
-import org.apache.carbondata.core.datastore.impl.FileHolderImpl;
+import org.apache.carbondata.core.datastore.impl.FileReaderImpl;
 import org.apache.carbondata.core.datastore.impl.FileTypeInerface;
 import org.apache.carbondata.spark.acl.filesystem.AlluxioACLCarbonFile;
-import org.apache.carbondata.spark.acl.filesystem.DFSACLFileHolderImpl;
 import org.apache.carbondata.spark.acl.filesystem.HDFSACLCarbonFile;
 import org.apache.carbondata.spark.acl.filesystem.ViewFSACLCarbonFile;
 
@@ -36,17 +36,17 @@ public class ACLFileFactory implements FileTypeInerface {
 
   private static final Log LOG = LogFactory.getLog(FileFactory.class);
 
-  public  FileHolder getFileHolder(FileFactory.FileType fileType) {
+  public FileReader getFileHolder(FileFactory.FileType fileType) {
     switch (fileType) {
       case LOCAL:
-        return new FileHolderImpl();
+        return new FileReaderImpl();
       case HDFS:
       case ALLUXIO:
       case VIEWFS:
       case S3:
-        return new DFSACLFileHolderImpl();
+        return new DFSFileReaderImpl();
       default:
-        return new FileHolderImpl();
+        return new FileReaderImpl();
     }
   }
 

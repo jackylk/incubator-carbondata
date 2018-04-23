@@ -7,16 +7,15 @@ import org.apache.spark.sql.catalyst.parser.ParserUtils._
 import org.apache.spark.sql.catalyst.parser.SqlBaseParser._
 import org.apache.spark.sql.catalyst.parser.{ParseException, SqlBaseParser}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.execution.command.table.{CarbonCreateTableAsSelectCommand,
-CarbonCreateTableCommand}
+import org.apache.spark.sql.execution.command.table.{CarbonCreateTableAsSelectCommand, CarbonCreateTableCommand}
 import org.apache.spark.sql.execution.command.{PartitionerField, TableModel, TableNewProcessor}
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types.StructField
 import org.apache.spark.sql.{CarbonEnv, SparkACLSqlAstBuilder, SparkSession}
 import org.apache.spark.util.SparkUtil
 
+import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.spark.CarbonOption
-import org.apache.carbondata.spark.exception.MalformedCarbonCommandException
 import org.apache.carbondata.spark.util.CommonUtil
 
 class CarbonHelperACLSqlAstBuilder(conf: SQLConf,

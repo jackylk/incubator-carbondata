@@ -22,11 +22,14 @@ package org.apache.carbondata.spark.testsuite.secondaryindex
 import org.apache.spark.sql.{CarbonEnv, Row}
 import org.apache.spark.sql.common.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
+
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatus, SegmentStatusManager}
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.sql.test.Spark2TestQueryExecutor
+
+import org.apache.carbondata.core.util.path.CarbonTablePath
 
 /**
  * test cases for testing creation of index table with load and compaction
@@ -243,7 +246,7 @@ class TestCreateIndexWithLoadAndCompaction extends QueryTest with BeforeAndAfter
         .asInstanceOf[CarbonRelation].carbonTable
       // read load metadata details
       val loadDetails: Array[LoadMetadataDetails] = SegmentStatusManager
-        .readLoadMetadata(indexCarbonTable.getMetaDataFilepath)
+        .readLoadMetadata(CarbonTablePath.getMetadataPath(indexCarbonTable.getTablePath))
       assert(loadDetails.length == 3)
       // compacted status segment should only be 2
       val compactedStatusSegments = loadDetails

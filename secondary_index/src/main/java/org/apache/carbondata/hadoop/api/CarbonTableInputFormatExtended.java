@@ -29,16 +29,14 @@ import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.datamap.DataMapStoreManager;
 import org.apache.carbondata.core.datamap.Segment;
 import org.apache.carbondata.core.datamap.TableDataMap;
-import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMap;
-import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMapFactory;
 import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
+import org.apache.carbondata.core.readcommitter.ReadCommittedScope;
 import org.apache.carbondata.core.scan.expression.Expression;
 import org.apache.carbondata.core.scan.filter.SingleTableProvider;
 import org.apache.carbondata.core.scan.filter.TableProvider;
 import org.apache.carbondata.core.scan.filter.resolver.FilterResolverIntf;
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager;
-import org.apache.carbondata.hadoop.util.CarbonInputFormatUtil;
 
 import org.apache.hadoop.mapreduce.JobContext;
 
@@ -112,14 +110,16 @@ public class CarbonTableInputFormatExtended {
     if (null == carbonTable) {
       throw new IOException("Missing/Corrupt schema file for table.");
     }
-    CarbonInputFormatUtil.processFilterExpression(filter, carbonTable, null, null);
+    carbonTable.processFilterExpression(filter, null, null);
     FilterResolverIntf filterInterface =
-        CarbonInputFormatUtil.resolveFilter(filter, identifier, tableProvider);
+        carbonTable.resolveFilter(filter, tableProvider);
     List<Segment> filteredSegments = new ArrayList<>();
     // If filter is null then return all segments.
     if (filter != null) {
-      List<Segment> setSegID = isSegmentValidAfterFilter(identifier, filterInterface,
-          Arrays.asList(carbonTableInputFormat.getSegmentsToAccess(job)));
+      ReadCommittedScope readCommittedScope =
+          carbonTableInputFormat.getReadCommitted(job, identifier);
+      List<Segment> setSegID = isSegmentValidAfterFilter(carbonTable, filterInterface,
+          Arrays.asList(carbonTableInputFormat.getSegmentsToAccess(job)), readCommittedScope);
       filteredSegments.addAll(setSegID);
     } else {
       filteredSegments = Arrays.asList(carbonTableInputFormat.getSegmentsToAccess(job));
@@ -131,12 +131,10 @@ public class CarbonTableInputFormatExtended {
    * @return true if the filter expression lies between any one of the AbstractIndex min max values.
    */
   public static List<Segment> isSegmentValidAfterFilter(
-      AbsoluteTableIdentifier absoluteTableIdentifier, FilterResolverIntf filterResolverIntf,
-      List<Segment> segmentIds) throws IOException {
-    TableDataMap blockletMap = DataMapStoreManager.getInstance()
-        .getDataMap(absoluteTableIdentifier, BlockletDataMap.NAME,
-            BlockletDataMapFactory.class.getName());
-    return blockletMap.pruneSegments(segmentIds, filterResolverIntf);
+      CarbonTable carbonTable, FilterResolverIntf filterResolverIntf,
+      List<Segment> segmentIds, ReadCommittedScope readCommittedScope) throws IOException {
+    TableDataMap blockletMap = DataMapStoreManager.getInstance().getDefaultDataMap(carbonTable);
+    return blockletMap.pruneSegments(segmentIds, filterResolverIntf, readCommittedScope);
   }
 
 }

@@ -26,7 +26,6 @@ import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.metadata.CarbonTableIdentifier
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.util.CarbonProperties
-import org.apache.carbondata.core.util.path.CarbonStorePath
 import org.apache.carbondata.events._
 import org.apache.carbondata.spark.acl.{CarbonUserGroupInformation, InternalCarbonConstant}
 
@@ -44,8 +43,7 @@ object ACLCompactionEventListener {
       val carbonTableIdentifier: CarbonTableIdentifier = carbonTable
         .getCarbonTableIdentifier
       val sparkSession: SparkSession = compactionPreExecutionEvent.sparkSession
-      val carbonTablePath = CarbonStorePath
-        .getCarbonTablePath(carbonTable.getAbsoluteTableIdentifier)
+      val carbonTablePath = carbonTable.getAbsoluteTableIdentifier.getTablePath
 
       if (!ACLFileUtils.isCarbonDataLoadGroupExist(sparkSession.sparkContext)) {
         val carbonDataLoadGroup = CarbonProperties.getInstance.

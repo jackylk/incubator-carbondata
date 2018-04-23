@@ -37,9 +37,9 @@ import org.apache.spark.sql.hive.acl.{HiveACLInterface, ObjectType, PrivObject, 
 import org.apache.spark.sql.hive.execution.command.CarbonDropDatabaseCommand
 import org.apache.spark.util.CarbonInternalScalaUtil
 
+import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.core.metadata.schema.table.TableInfo
 import org.apache.carbondata.processing.merger.{CompactionType, InternalCompactionType}
-import org.apache.carbondata.spark.exception.MalformedCarbonCommandException
 
 private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
     hCatalog: SessionCatalog,
@@ -50,7 +50,7 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
 
     if (ACLFileUtils.isSecureModeEnabled) {
       plan match {
-        case c@CarbonCreateTableCommand(tableInfo: TableInfo, _, _, _, _) =>
+        case c@CarbonCreateTableCommand(tableInfo: TableInfo, _, _, _, _, _) =>
           var databaseOpt : Option[String] = None
           if(tableInfo.getDatabaseName != null) {
             databaseOpt = Some(tableInfo.getDatabaseName)
@@ -115,13 +115,12 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
         case c@CarbonDropDataMapCommand(
         dataMapName: String,
         ifExistsSet: Boolean,
-        databaseNameOp: Option[String],
-        tableName: String,
+        table: Option[TableIdentifier],
         forceDrop: Boolean) =>
           checkPrivilege(c, Set(new PrivObject(
             ObjectType.TABLE,
-            CarbonEnv.getDatabaseName(databaseNameOp)(sparkSession),
-            tableName,
+            CarbonEnv.getDatabaseName(table.get.database)(sparkSession),
+            table.get.table,
             null,
             Set(PrivType.OWNER_PRIV))))
 
@@ -165,7 +164,7 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
             null,
             Set(PrivType.OWNER_PRIV))))
 
-        case c@CarbonShowLoadsCommand(dbNameOp, tableName, _, _) =>
+        case c@CarbonShowLoadsCommand(dbNameOp, tableName, _, _, _) =>
           checkPrivilege(c, Set(new PrivObject(
             ObjectType.TABLE,
             CarbonEnv.getDatabaseName(dbNameOp)(sparkSession),
@@ -181,10 +180,10 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
             null,
             Set(PrivType.SELECT_NOGRANT))))
 
-        case c@CarbonDataMapShowCommand(dbNameOp, tableName) =>
+        case c@CarbonDataMapShowCommand(table) =>
           checkPrivilegeRecursively(c, Some(
-            CarbonEnv.getDatabaseName(dbNameOp)(sparkSession)),
-            tableName,
+            CarbonEnv.getDatabaseName(table.get.database)(sparkSession)),
+            table.get.table,
             PrivType.SELECT_NOGRANT)
 
         case c@DescribeTableCommand(identifier, _, _) =>
@@ -196,7 +195,7 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
             Set(PrivType.SELECT_NOGRANT))),
             identifier)
 
-        case c@CarbonCleanFilesCommand(dbNameOp: Option[String], tableName: Option[String], _) =>
+        case c@CarbonCleanFilesCommand(dbNameOp: Option[String], tableName: Option[String], _, _) =>
           checkPrivilegeRecursively(c, dbNameOp, tableName.getOrElse(""), PrivType.DELETE_NOGRANT)
 
         case c@CarbonAlterTableCompactionCommand(alterTableModel, tableInfoOp, _) =>

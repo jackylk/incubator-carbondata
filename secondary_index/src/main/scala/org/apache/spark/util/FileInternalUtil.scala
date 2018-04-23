@@ -29,7 +29,7 @@ import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.mutate.CarbonUpdateUtil
 import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatus}
 import org.apache.carbondata.core.util.CarbonProperties
-import org.apache.carbondata.core.util.path.CarbonStorePath
+import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.spark.core.CarbonInternalCommonConstants
 import org.apache.carbondata.spark.spark.load.CarbonInternalLoaderUtil
 import org.apache.carbondata.spark.spark.util.CarbonPluginUtil
@@ -119,13 +119,11 @@ object FileInternalUtil {
 
   def touchSchemaFileTimestamp(dbName: String,
       tableName: String,
-      storePath: String,
+      tablePath: String,
       schemaTimeStamp: Long): Unit = {
     val carbonTableIdentifier = new CarbonTableIdentifier(dbName,
       tableName, UUID.randomUUID().toString)
-    val carbonTablePath = CarbonStorePath.getCarbonTablePath(storePath,
-      carbonTableIdentifier)
-    val tableMetadataFile = carbonTablePath.getSchemaFilePath
+    val tableMetadataFile = CarbonTablePath.getSchemaFilePath(tablePath)
     val fileType = FileFactory.getFileType(tableMetadataFile)
     if (FileFactory.isFileExist(tableMetadataFile, fileType)) {
       FileFactory.getCarbonFile(tableMetadataFile, fileType)

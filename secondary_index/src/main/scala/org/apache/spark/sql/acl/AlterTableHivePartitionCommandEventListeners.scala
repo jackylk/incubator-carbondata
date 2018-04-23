@@ -23,7 +23,7 @@ import org.apache.spark.sql.SparkSession
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.metadata.CarbonTableIdentifier
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
-import org.apache.carbondata.core.util.path.{CarbonStorePath, CarbonTablePath}
+import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.events.{Event, OperationContext, OperationEventListener, PostAlterTableHivePartitionCommandEvent, PreAlterTableHivePartitionCommandEvent}
 
 /**
@@ -48,10 +48,9 @@ object AlterTableHivePartitionCommandEventListeners {
       val carbonTable: CarbonTable = preAlterTableHivePartitionCommandEvent.carbonTable
       val carbonTableIdentifier: CarbonTableIdentifier = carbonTable.getCarbonTableIdentifier
       val sparkSession: SparkSession = preAlterTableHivePartitionCommandEvent.sparkSession
-      val carbonTablePath = CarbonStorePath
-        .getCarbonTablePath(carbonTable.getAbsoluteTableIdentifier)
+      val carbonTablePath = carbonTable.getAbsoluteTableIdentifier.getTablePath
       val segmentFilesLocation = CarbonTablePath
-        .getSegmentFilesLocation(carbonTablePath.getPath)
+        .getSegmentFilesLocation(carbonTablePath)
       if (carbonTable.isHivePartitionTable) {
         ACLLoadEventListener.createDirectoryAndSetGroupAcl(segmentFilesLocation)(sparkSession)
       }

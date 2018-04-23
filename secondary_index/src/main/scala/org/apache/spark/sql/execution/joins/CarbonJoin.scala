@@ -574,8 +574,8 @@ case class BroadCastSIFilterPushJoin(
         rowData.rdd
     }
     if (partitions.nonEmpty && secondaryIndexRDD.isDefined &&
-        secondaryIndexRDD.get.isInstanceOf[CarbonScanRDD]) {
-      secondaryIndexRDD.get.asInstanceOf[CarbonScanRDD].setSegmentsToAccess(partitions)
+        secondaryIndexRDD.get.isInstanceOf[CarbonScanRDD[InternalRow]]) {
+      secondaryIndexRDD.get.asInstanceOf[CarbonScanRDD[InternalRow]].setSegmentsToAccess(partitions)
     }
     val input: Array[InternalRow] = buildPlan.execute.map(_.copy()).collect()
     val inputCopy: Array[InternalRow] = input.clone()
@@ -594,9 +594,9 @@ case class BroadCastSIFilterPushJoin(
       rowData.rdd
   }
 
-  lazy val partitions: Array[Segment] = if (mainTableRDD.isDefined &&
-                                           mainTableRDD.get.isInstanceOf[CarbonScanRDD]) {
-    getFilteredSegments(mainTableRDD.get.asInstanceOf[CarbonScanRDD])
+  lazy val partitions: Array[Segment] = if (mainTableRDD.isDefined && mainTableRDD.get
+    .isInstanceOf[CarbonScanRDD[InternalRow]]) {
+    getFilteredSegments(mainTableRDD.get.asInstanceOf[CarbonScanRDD[InternalRow]])
   } else {
     Array.empty[Segment]
   }
@@ -606,7 +606,7 @@ case class BroadCastSIFilterPushJoin(
    *
    * @return Array of valid segments
    */
-  def getFilteredSegments(carbonScanRdd: CarbonScanRDD): Array[Segment] = {
+  def getFilteredSegments(carbonScanRdd: CarbonScanRDD[InternalRow]): Array[Segment] = {
     val LOGGER = LogServiceFactory.getLogService(BroadCastSIFilterPushJoin.getClass.getName)
     val conf = new Configuration()
     val jobConf = new JobConf(conf)
@@ -740,12 +740,12 @@ object BroadCastFilterPushJoin {
       expressions: Seq[Expression]): Unit = {
     if (rdd.isInstanceOf[CarbonDecoderRDD]) {
       rdd.asInstanceOf[CarbonDecoderRDD].setFilterExpression(expressions)
-    } else if (rdd.isInstanceOf[CarbonScanRDD]) {
+    } else if (rdd.isInstanceOf[CarbonScanRDD[InternalRow]]) {
       if (expressions.nonEmpty) {
         val expressionVal = CarbonFilters
           .transformExpression(CarbonFilters.preProcessExpressions(expressions).head)
         if (null != expressionVal) {
-          rdd.asInstanceOf[CarbonScanRDD].setFilterExpression(expressionVal)
+          rdd.asInstanceOf[CarbonScanRDD[InternalRow]].setFilterExpression(expressionVal)
         }
       }
     }

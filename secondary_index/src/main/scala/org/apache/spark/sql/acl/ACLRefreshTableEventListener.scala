@@ -25,7 +25,7 @@ import org.apache.spark.sql.SparkSession
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier
-import org.apache.carbondata.core.util.path.{CarbonStorePath, CarbonTablePath}
+import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.events._
 import org.apache.carbondata.spark.acl.CarbonUserGroupInformation
 
@@ -49,7 +49,7 @@ object ACLRefreshTableEventListener {
       val absoluteTableIdentifier: AbsoluteTableIdentifier = refreshTablePreExecutionEvent
         .identifier
       val sparkSession: SparkSession = refreshTablePreExecutionEvent.sparkSession
-      val carbonTablePath = CarbonStorePath.getCarbonTablePath(absoluteTableIdentifier)
+      val carbonTablePath = absoluteTableIdentifier.getTablePath
       takeSnapshotBeforeOperation(operationContext, sparkSession, carbonTablePath)
     }
 
@@ -63,12 +63,12 @@ object ACLRefreshTableEventListener {
      */
     def takeSnapshotBeforeOperation(operationContext: OperationContext,
       sparkSession: SparkSession,
-      carbonTablePath: CarbonTablePath): Unit = {
+      carbonTablePath: String): Unit = {
      val currentUser = CarbonUserGroupInformation.getInstance.getCurrentUser
       currentUser.doAs(new PrivilegedExceptionAction[Unit]() {
           override def run(): Unit = {
             // Set permission on the table permission on table folder
-            org.apache.carbondata.spark.acl.ACLFileUtils.setPermission(carbonTablePath.getPath,
+            org.apache.carbondata.spark.acl.ACLFileUtils.setPermission(carbonTablePath,
               ACLFileUtils.getPermissionsOnTable())
           }
         })
@@ -77,7 +77,7 @@ object ACLRefreshTableEventListener {
         .getTablePathListForSnapshot(carbonTablePath)
       // get the snapshot of the table folder
       val pathArrBeforeCreateOperation = ACLFileUtils
-          .takeNonRecursiveSnapshot(sparkSession.sqlContext, carbonTablePath)
+          .takeNonRecursiveSnapshot(sparkSession.sqlContext, new Path(carbonTablePath))
       operationContext.setProperty(FOLDER_LIST_BEFORE_OPERATION, folderListBeforeCreate)
       operationContext.setProperty(PATH_ARR_BEFORE_OPERATION, pathArrBeforeCreateOperation)
     }

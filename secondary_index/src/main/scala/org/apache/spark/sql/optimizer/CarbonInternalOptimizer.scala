@@ -347,8 +347,8 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
    */
   private def isLimitPushDownRequired(relation: CarbonRelation): Boolean = {
     val carbonTable = relation.carbonTable
-    lazy val updateStatusFileExists = FileFactory.getCarbonFile(carbonTable.getMetaDataFilepath,
-      FileFactory.getFileType(carbonTable.getMetaDataFilepath)).listFiles()
+    lazy val updateStatusFileExists = FileFactory.getCarbonFile(carbonTable.getMetadataPath,
+      FileFactory.getFileType(carbonTable.getMetadataPath)).listFiles()
       .exists(file => file.getName.startsWith(CarbonCommonConstants.TABLEUPDATESTATUS_FILENAME))
     (!CarbonInternalScalaUtil.isIndexTable(carbonTable) && !updateStatusFileExists)
   }

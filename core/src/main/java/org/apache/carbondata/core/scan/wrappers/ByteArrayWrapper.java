@@ -45,7 +45,7 @@ public class ByteArrayWrapper implements Comparable<ByteArrayWrapper>, Serializa
   /**
    * contains value of implicit columns in byte array format
    */
-  private byte[] implicitColumnByteArray;
+  protected byte[] implicitColumnByteArray;
 
   public ByteArrayWrapper() {
   }
@@ -217,7 +217,6 @@ public class ByteArrayWrapper implements Comparable<ByteArrayWrapper>, Serializa
   public void setImplicitColumnByteArray(byte[] implicitColumnByteArray) {
     this.implicitColumnByteArray = implicitColumnByteArray;
   }
-
   public byte[] getImplicitColumnByteArray() {
     return implicitColumnByteArray;
   }

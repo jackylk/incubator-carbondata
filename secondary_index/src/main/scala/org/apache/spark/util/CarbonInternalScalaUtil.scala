@@ -136,7 +136,7 @@ object CarbonInternalScalaUtil {
     .ArrayList[LoadMetadataDetails](
       factLoadMetadataDetails.size)
     val indexTableStatusDetailsArray: Array[LoadMetadataDetails] = SegmentStatusManager
-      .readLoadMetadata(indexTable.getMetaDataFilepath)
+      .readLoadMetadata(indexTable.getMetadataPath)
     if (null !=
         indexTableStatusDetailsArray) {
       for (loadMetadataDetails <- indexTableStatusDetailsArray) {

@@ -45,7 +45,7 @@ import org.apache.spark.sql.parser._
 import org.apache.spark.sql.types.DecimalType
 import org.apache.spark.util.SparkUtil
 
-import org.apache.carbondata.spark.exception.MalformedCarbonCommandException
+import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.spark.util.CarbonScalaUtil
 
 /**
@@ -78,7 +78,7 @@ class CarbonACLSessionCatalog(
     hadoopConf,
     parser,
     functionResourceLoader
-  ) with ICarbonSessionCatalog {
+  ) with CarbonSessionCatalog {
   lazy val carbonEnv = {
     val env = new CarbonEnv
     env.init(sparkSession)
