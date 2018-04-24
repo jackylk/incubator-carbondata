@@ -62,7 +62,10 @@ public class CarbonTableInputFormatExtended {
       CarbonTableInputFormat carbonTableInputFormat) throws IOException {
     AbsoluteTableIdentifier identifier =
         carbonTableInputFormat.getAbsoluteTableIdentifier(job.getConfiguration());
-    Segment[] segmentsToAccess = carbonTableInputFormat.getSegmentsToAccess(job);
+    ReadCommittedScope readCommittedScope =
+        carbonTableInputFormat.getReadCommitted(job, identifier);
+    Segment[] segmentsToAccess =
+        carbonTableInputFormat.getSegmentsToAccess(job, readCommittedScope);
     Set<Segment> segmentsToAccessSet = new HashSet<Segment>();
     for (Segment segId : segmentsToAccess) {
       segmentsToAccessSet.add(segId);
@@ -116,13 +119,12 @@ public class CarbonTableInputFormatExtended {
     List<Segment> filteredSegments = new ArrayList<>();
     // If filter is null then return all segments.
     if (filter != null) {
-      ReadCommittedScope readCommittedScope =
-          carbonTableInputFormat.getReadCommitted(job, identifier);
       List<Segment> setSegID = isSegmentValidAfterFilter(carbonTable, filterInterface,
-          Arrays.asList(carbonTableInputFormat.getSegmentsToAccess(job)), readCommittedScope);
+          Arrays.asList(carbonTableInputFormat.getSegmentsToAccess(job, readCommittedScope)));
       filteredSegments.addAll(setSegID);
     } else {
-      filteredSegments = Arrays.asList(carbonTableInputFormat.getSegmentsToAccess(job));
+      filteredSegments =
+          Arrays.asList(carbonTableInputFormat.getSegmentsToAccess(job, readCommittedScope));
     }
     return filteredSegments;
   }
@@ -132,9 +134,9 @@ public class CarbonTableInputFormatExtended {
    */
   public static List<Segment> isSegmentValidAfterFilter(
       CarbonTable carbonTable, FilterResolverIntf filterResolverIntf,
-      List<Segment> segmentIds, ReadCommittedScope readCommittedScope) throws IOException {
+      List<Segment> segmentIds) throws IOException {
     TableDataMap blockletMap = DataMapStoreManager.getInstance().getDefaultDataMap(carbonTable);
-    return blockletMap.pruneSegments(segmentIds, filterResolverIntf, readCommittedScope);
+    return blockletMap.pruneSegments(segmentIds, filterResolverIntf);
   }
 
 }

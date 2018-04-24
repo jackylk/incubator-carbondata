@@ -37,6 +37,7 @@ import org.apache.carbondata.core.scan.executor.QueryExecutor;
 import org.apache.carbondata.core.scan.executor.QueryExecutorFactory;
 import org.apache.carbondata.core.scan.executor.exception.QueryExecutionException;
 import org.apache.carbondata.core.scan.model.QueryModel;
+import org.apache.carbondata.core.scan.model.QueryModelBuilder;
 import org.apache.carbondata.core.scan.result.RowBatch;
 import org.apache.carbondata.core.util.CarbonUtil;
 import org.apache.carbondata.core.util.DataTypeConverter;
@@ -168,9 +169,9 @@ public class CarbonSecondaryIndexExecutor {
       columnsArray[j] = implicitDimensionList.get(i).getColName();
       j++;
     }
-    QueryModel model = carbonTable.createQueryWithProjection(columnsArray, dataTypeConverter);
-    model.setForcedDetailRawQuery(true);
-    model.setFilterExpressionResolverTree(null);
+    QueryModelBuilder builder = new QueryModelBuilder(carbonTable).projectColumns(columnsArray)
+        .dataConverter(dataTypeConverter).enableForcedDetailRawQuery();
+    QueryModel model = builder.build();
     model.setQueryId(System.nanoTime() + "");
     return model;
   }
