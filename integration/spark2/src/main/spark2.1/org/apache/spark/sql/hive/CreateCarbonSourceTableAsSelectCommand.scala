@@ -142,20 +142,19 @@ case class CreateCarbonSourceTableAsSelectCommand(
       options = table.storage.properties ++ pathOption,
       catalogTable = Some(table))
 
-    val result = try {
+    try {
       dataSource.write(mode, df)
     } catch {
       case ex: AnalysisException =>
         logError(s"Failed to write to table $tableName in $mode mode", ex)
         throw ex
     }
-    result match {
-      case fs: HadoopFsRelation if table.partitionColumnNames.nonEmpty &&
-                                   sparkSession.sqlContext.conf.manageFilesourcePartitions =>
-        // Need to recover partitions into the metastore so our saved data is visible.
-        sparkSession.sessionState.executePlan(
-          AlterTableRecoverPartitionsCommand(table.identifier)).toRdd
-      case _ =>
+
+    if (table.partitionColumnNames.nonEmpty &&
+        sparkSession.sqlContext.conf.manageFilesourcePartitions) {
+      // Need to recover partitions into the metastore so our saved data is visible.
+      sparkSession.sessionState.executePlan(
+        AlterTableRecoverPartitionsCommand(table.identifier)).toRdd
     }
 
     // Refresh the cache of the table in the catalog.
