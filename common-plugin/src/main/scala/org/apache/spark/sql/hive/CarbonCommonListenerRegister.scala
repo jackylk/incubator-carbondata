@@ -17,11 +17,10 @@
 
 package org.apache.spark.sql.hive
 
-import org.apache.spark.sql._
 import org.apache.spark.sql.events._
 
 import org.apache.carbondata.events._
-import org.apache.carbondata.processing.loading.events.LoadEvents.LoadTablePreStatusUpdateEvent
+import org.apache.carbondata.processing.loading.events.LoadEvents.LoadTablePostExecutionEvent
 
 /**
  * This class registers common listeners
@@ -43,11 +42,11 @@ object CarbonCommonListenerRegister {
       val operationListenerBus = OperationListenerBus.getInstance()
       // Merge index listeners
       operationListenerBus
-        .addListener(classOf[LoadTablePreStatusUpdateEvent], new MergeIndexEventListener)
+        .addListener(classOf[LoadTablePostExecutionEvent], new MergeIndexEventListener)
       // Merge compaction listeners
       operationListenerBus
-        .addListener(classOf[AlterTableCompactionPreStatusUpdateEvent],
-          new MergeIndexCompactionEventListener)
+        .addListener(classOf[AlterTableCompactionPostEvent],
+          new MergeIndexEventListener)
       // Merge index compaction DDL listener
       operationListenerBus
         .addListener(classOf[AlterTableCompactionExceptionEvent],
