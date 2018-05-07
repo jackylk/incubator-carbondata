@@ -53,6 +53,7 @@ import org.apache.carbondata.core.metadata.blocklet.index.BlockletMinMaxIndex;
 import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.metadata.datatype.DataTypes;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
+import org.apache.carbondata.core.metadata.schema.table.RelationIdentifier;
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonColumn;
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonDimension;
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonMeasure;
@@ -550,4 +551,31 @@ public class BlockletDataMapUtil {
       }
     }
   }
+
+  /**
+   * Validate whether load datamaps parallel is SET or not
+   *
+   * @param carbonTable
+   * @return
+   */
+  public static boolean loadDataMapsParallel(CarbonTable carbonTable) {
+    String tableName;
+    String dbName;
+    if (carbonTable.isChildDataMap()) {
+      // if the table is a perAggregate table, check the property on its parent table
+      // RelationIdentifier of a preAggregate table will give us the parent table name
+      RelationIdentifier relationIdentifier =
+          carbonTable.getTableInfo().getParentRelationIdentifiers().get(0);
+      tableName = relationIdentifier.getTableName();
+      dbName = relationIdentifier.getDatabaseName();
+    } else {
+      // if it is a normal carbon table, then check on the table name
+      tableName = carbonTable.getTableName();
+      dbName = carbonTable.getDatabaseName();
+    }
+    return Boolean.parseBoolean(CarbonProperties.getInstance()
+        .getProperty(CarbonCommonConstants.CARBON_LOAD_DATAMAPS_PARALLEL + dbName + "." + tableName,
+            "false"));
+  }
+
 }

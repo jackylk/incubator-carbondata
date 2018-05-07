@@ -42,6 +42,7 @@ import org.apache.carbondata.core.datamap.DataMapUtil;
 import org.apache.carbondata.core.datamap.Segment;
 import org.apache.carbondata.core.datamap.TableDataMap;
 import org.apache.carbondata.core.datamap.dev.expr.DataMapExprWrapper;
+import org.apache.carbondata.core.datamap.dev.expr.DataMapExprWrapperImpl;
 import org.apache.carbondata.core.datamap.dev.expr.DataMapWrapperSimpleInfo;
 import org.apache.carbondata.core.exception.InvalidConfigurationException;
 import org.apache.carbondata.core.indexstore.ExtendedBlocklet;
@@ -77,6 +78,7 @@ import org.apache.carbondata.hadoop.CarbonProjection;
 import org.apache.carbondata.hadoop.CarbonRecordReader;
 import org.apache.carbondata.hadoop.readsupport.CarbonReadSupport;
 import org.apache.carbondata.hadoop.readsupport.impl.DictionaryDecodeReadSupport;
+import org.apache.carbondata.hadoop.util.CarbonInputFormatUtil;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -555,6 +557,11 @@ m filterExpression
         prunedBlocklets = defaultDataMap.prune(segmentIds, filter, partitionsToPrune);
       }
     } else {
+      if (carbonTable.isTransactionalTable()) {
+        DataMapExprWrapper dataMapExprWrapper =
+            DataMapChooser.getDefaultDataMap(getOrCreateCarbonTable(job.getConfiguration()), null);
+        DataMapUtil.loadDataMaps(carbonTable, dataMapExprWrapper, segmentIds, partitionsToPrune);
+      }
       prunedBlocklets = defaultDataMap.prune(segmentIds, filter, partitionsToPrune);
 
       if (ExplainCollector.enabled()) {
