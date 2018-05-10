@@ -24,6 +24,7 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -559,9 +560,25 @@ public class BlockletDataMapUtil {
    * @return
    */
   public static boolean loadDataMapsParallel(CarbonTable carbonTable) {
+    String parentTableName;
+    String clsName = "org.apache.spark.util.CarbonInternalScalaUtil";
+    try {
+      Method getParentTableNameMethod =
+          Class.forName(clsName).getDeclaredMethod("getParentTableName", CarbonTable.class);
+      getParentTableNameMethod.setAccessible(true);
+      parentTableName =
+          getParentTableNameMethod.invoke(getParentTableNameMethod, carbonTable).toString();
+    } catch (Throwable e) {
+      parentTableName = null;
+    }
     String tableName;
     String dbName;
-    if (carbonTable.isChildDataMap()) {
+    if (null != parentTableName && !parentTableName.isEmpty()) {
+      // if the table is index table, then check the property on parent table name
+      // as index table is a child of the main table
+      tableName = parentTableName;
+      dbName = carbonTable.getDatabaseName();
+    } else if (carbonTable.isChildDataMap()) {
       // if the table is a perAggregate table, check the property on its parent table
       // RelationIdentifier of a preAggregate table will give us the parent table name
       RelationIdentifier relationIdentifier =
