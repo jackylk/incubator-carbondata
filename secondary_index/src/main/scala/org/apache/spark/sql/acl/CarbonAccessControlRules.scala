@@ -261,18 +261,18 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
             alterTableRenameModel.oldTableIdentifier.table,
             PrivType.OWNER_PRIV)
         case c@AlterTableAddPartitionCommand(tableName, partitionSpecsAndLocs, ifNotExists) =>
-          checkPrivilegeRecursively(c,
-            Some(CarbonEnv
-              .getDatabaseName(tableName.database)(sparkSession)),
-            tableName.table,
-            PrivType.OWNER_PRIV)
+            checkPrivilegeRecursively(c,
+              Some(CarbonEnv
+                .getDatabaseName(tableName.database)(sparkSession)),
+              tableName.table,
+              PrivType.OWNER_PRIV)
         case c@AlterTableDropPartitionCommand(tableIdentifier, specs, ifExists, purge,
         retainData) =>
-          checkPrivilegeRecursively(c,
-            Some(CarbonEnv
-              .getDatabaseName(tableIdentifier.database)(sparkSession)),
-            tableIdentifier.table,
-            PrivType.OWNER_PRIV)
+            checkPrivilegeRecursively(c,
+              Some(CarbonEnv
+                .getDatabaseName(tableIdentifier.database)(sparkSession)),
+              tableIdentifier.table,
+              PrivType.OWNER_PRIV)
         case c@CarbonAlterTableSplitPartitionCommand(splitPartitionModel) =>
           checkPrivilegeRecursively(c,
             Some(CarbonEnv
@@ -340,15 +340,20 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
       dbNameOp: Option[String],
       tableName: String,
       privType: PrivType.PrivType): LogicalPlan = {
-    checkPrivilege(plan, Set(new PrivObject(
-      ObjectType.TABLE,
-      CarbonEnv.getDatabaseName(dbNameOp)(sparkSession),
-      tableName,
-      null,
-      Set(privType))))
-    val carbonTable = CarbonEnv.getInstance(sparkSession).carbonMetastore
-      .lookupRelation(dbNameOp, tableName)(sparkSession).asInstanceOf[CarbonRelation]
-      .carbonTable
+    val isCarbonTable = CarbonEnv.getInstance(sparkSession).carbonMetastore
+      .tableExists(TableIdentifier(tableName,
+        Some(CarbonEnv.getDatabaseName(dbNameOp)(sparkSession))))(
+        sparkSession)
+    if (isCarbonTable) {
+      checkPrivilege(plan, Set(new PrivObject(
+        ObjectType.TABLE,
+        CarbonEnv.getDatabaseName(dbNameOp)(sparkSession),
+        tableName,
+        null,
+        Set(privType))))
+      val carbonTable = CarbonEnv.getInstance(sparkSession).carbonMetastore
+        .lookupRelation(dbNameOp, tableName)(sparkSession).asInstanceOf[CarbonRelation]
+        .carbonTable
       val tableList = CarbonInternalScalaUtil.getIndexesTables(carbonTable)
       if (!tableList.isEmpty) {
         tableList.asScala.foreach { tableName =>
@@ -371,7 +376,9 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
             Set(privType))))
         }
       }
+    }
     plan
   }
+
 }
 
