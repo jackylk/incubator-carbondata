@@ -266,6 +266,14 @@ object CarbonCommonInitializer {
         .addListener(classOf[RefreshTablePostExecutionEvent],
           new ACLRefreshTableEventListener.ACLPostRefreshTableEventListener
         )
+      operationListenerBus
+        .addListener(classOf[LoadTableSIPreExecutionEvent],
+          new ACLIndexLoadEventListener.ACLPreCreateIndexEventListener
+        )
+      operationListenerBus
+        .addListener(classOf[LoadTableSIPostExecutionEvent],
+          new ACLIndexLoadEventListener.ACLPostCreateIndexEventListener
+        )
       initialized = true
     }
   }

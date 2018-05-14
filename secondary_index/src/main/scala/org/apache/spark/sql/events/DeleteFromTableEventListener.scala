@@ -19,13 +19,17 @@ package org.apache.spark.sql.events
 
 import scala.collection.JavaConverters._
 
+import org.apache.hadoop.fs.Path
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.CarbonEnv
+import org.apache.spark.sql.acl.ACLFileUtils
 import org.apache.spark.sql.hive.{CarbonInternalMetastore, CarbonRelation}
 import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.common.logging.{LogService, LogServiceFactory}
+import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.events.{DeleteFromTablePostEvent, DeleteFromTablePreEvent, Event, OperationContext, OperationEventListener}
+import org.apache.carbondata.spark.acl.CarbonUserGroupInformation
 import org.apache.carbondata.spark.spark.secondaryindex.SecondaryIndexUtil
 
 /**
@@ -72,6 +76,13 @@ class DeleteFromTableEventListener extends OperationEventListener with Logging {
           }.toList
           SecondaryIndexUtil
             .updateTableStatusForIndexTables(parentCarbonTable, indexCarbonTableList.asJava)
+          indexCarbonTableList.foreach({ indexTable => {
+            val tableStatusPath = CarbonTablePath.getTableStatusFilePath(indexTable.getTablePath)
+            val path = new Path(tableStatusPath)
+            ACLFileUtils.setACLGroupRights(CarbonUserGroupInformation.getInstance.getCurrentUser,
+              path.getFileSystem(sparkSession.sqlContext.sparkContext.hadoopConfiguration), path)
+          }
+          })
         }
     }
   }
