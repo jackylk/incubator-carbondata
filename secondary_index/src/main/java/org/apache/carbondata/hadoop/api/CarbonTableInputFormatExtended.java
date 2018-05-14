@@ -33,8 +33,6 @@ import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.readcommitter.ReadCommittedScope;
 import org.apache.carbondata.core.scan.expression.Expression;
-import org.apache.carbondata.core.scan.filter.SingleTableProvider;
-import org.apache.carbondata.core.scan.filter.TableProvider;
 import org.apache.carbondata.core.scan.filter.resolver.FilterResolverIntf;
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager;
 
@@ -108,14 +106,13 @@ public class CarbonTableInputFormatExtended {
     // process and resolve the expression
     Expression filter = carbonTableInputFormat.getFilterPredicates(job.getConfiguration());
     CarbonTable carbonTable = carbonTableInputFormat.getOrCreateCarbonTable(job.getConfiguration());
-    TableProvider tableProvider = new SingleTableProvider(carbonTable);
     // this will be null in case of corrupt schema file.
     if (null == carbonTable) {
       throw new IOException("Missing/Corrupt schema file for table.");
     }
     carbonTable.processFilterExpression(filter, null, null);
     FilterResolverIntf filterInterface =
-        carbonTable.resolveFilter(filter, tableProvider);
+        carbonTable.resolveFilter(filter);
     List<Segment> filteredSegments = new ArrayList<>();
     // If filter is null then return all segments.
     if (filter != null) {
