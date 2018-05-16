@@ -31,6 +31,7 @@ import org.apache.carbondata.common.logging.{LogService, LogServiceFactory}
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datamap.Segment
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
+import org.apache.carbondata.core.statusmanager.SegmentStatusManager
 import org.apache.carbondata.events.{AlterTableCompactionPostEvent, Event, OperationContext, OperationEventListener}
 import org.apache.carbondata.processing.loading.events.LoadEvents.LoadTablePostExecutionEvent
 import org.apache.carbondata.processing.merger.CarbonDataMergerUtil
@@ -53,11 +54,14 @@ class MergeIndexEventListener extends OperationEventListener with Logging {
             carbonTable,
             compactedSegments)
         } else {
-        CarbonInternalCommonUtil.mergeIndexFiles(sparkSession.sparkContext,
-          Seq(loadModel.getSegmentId),
-          carbonTable.getTablePath,
-          carbonTable, false)
-    }
+          val segmentFileNameMap: java.util.Map[String, String] = new util.HashMap[String, String]()
+          segmentFileNameMap.put(loadModel.getSegmentId, String.valueOf(loadModel.getFactTimeStamp))
+          CarbonInternalCommonUtil.mergeIndexFiles(sparkSession.sparkContext,
+            Seq(loadModel.getSegmentId),
+            segmentFileNameMap,
+            carbonTable.getTablePath,
+            carbonTable, false)
+        }
       case alterTableCompactionPostEvent: AlterTableCompactionPostEvent =>
         LOGGER.audit("Merge index for compaction called")
         val alterTableCompactionPostEvent = event.asInstanceOf[AlterTableCompactionPostEvent]
@@ -65,7 +69,7 @@ class MergeIndexEventListener extends OperationEventListener with Logging {
         val mergedLoads = alterTableCompactionPostEvent.compactedLoads
         val sparkContext = alterTableCompactionPostEvent.sparkSession.sparkContext
         mergeIndexFilesForCompactedSegments(sparkContext, carbonTable, mergedLoads)
-  }
+    }
   }
 
   def mergeIndexFilesForCompactedSegments(sparkContext: SparkContext,
@@ -81,6 +85,12 @@ class MergeIndexEventListener extends OperationEventListener with Logging {
                    CarbonCommonConstants.LOAD_FOLDER.length)
       mergedSegmentIds.add(loadName)
     })
+    val loadFolderDetailsArray = SegmentStatusManager
+      .readLoadMetadata(carbonTable.getMetadataPath)
+    val segmentFileNameMap: java.util.Map[String, String] = new util.HashMap[String, String]()
+    loadFolderDetailsArray.foreach(loadMetadataDetails => {
+      segmentFileNameMap.put(loadMetadataDetails.getLoadName, loadMetadataDetails.getSegmentFile)
+    })
     // filter out only the valid segments from the list of compacted segments
     // Example: say compacted segments list contains 0.1, 3.1, 6.1, 0.2.
     // In this list 0.1, 3.1 and 6.1 are compacted to 0.2 in the level 2 compaction.
@@ -91,6 +101,7 @@ class MergeIndexEventListener extends OperationEventListener with Logging {
       CarbonInternalCommonUtil
         .mergeIndexFiles(sparkContext,
           validMergedSegIds,
+          segmentFileNameMap,
           carbonTable.getTablePath,
           carbonTable,
           false)

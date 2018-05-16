@@ -67,12 +67,13 @@ object FileInternalUtil {
   }
 
   def updateTableStatus(
-      validSegments: List[String],
-      databaseName: String,
-      tableName: String,
-      loadStatus: SegmentStatus,
-      segmentIdToLoadStartTimeMapping: scala.collection.mutable.Map[String, java.lang.Long],
-      carbonTable: CarbonTable): Boolean = {
+    validSegments: List[String],
+    databaseName: String,
+    tableName: String,
+    loadStatus: SegmentStatus,
+    segmentIdToLoadStartTimeMapping: scala.collection.mutable.Map[String, java.lang.Long],
+    segmentToSegmentFileNameMap: java.util.Map[String, String],
+    carbonTable: CarbonTable): Boolean = {
     var loadMetadataDetailsList = Array[LoadMetadataDetails]()
     val loadEndTime = CarbonUpdateUtil.readCurrentTime
     validSegments.foreach { segmentId =>
@@ -82,6 +83,7 @@ object FileInternalUtil {
       loadMetadataDetail.setSegmentStatus(loadStatus)
       loadMetadataDetail.setLoadStartTime(segmentIdToLoadStartTimeMapping.get(segmentId).get)
       loadMetadataDetail.setLoadEndTime(loadEndTime)
+      loadMetadataDetail.setSegmentFile(segmentToSegmentFileNameMap.get(segmentId))
       loadMetadataDetailsList +:= loadMetadataDetail
     }
 

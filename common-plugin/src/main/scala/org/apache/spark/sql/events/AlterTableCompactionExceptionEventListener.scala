@@ -17,6 +17,8 @@
 
 package org.apache.spark.sql.events
 
+import java.util
+
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
@@ -27,6 +29,7 @@ import org.apache.spark.util.CarbonInternalCommonUtil
 import org.apache.carbondata.common.logging.{LogService, LogServiceFactory}
 import org.apache.carbondata.core.datamap.Segment
 import org.apache.carbondata.core.locks.{CarbonLockFactory, LockUsage}
+import org.apache.carbondata.core.statusmanager.SegmentStatusManager
 import org.apache.carbondata.events.{AlterTableCompactionExceptionEvent, Event, OperationContext, OperationEventListener}
 import org.apache.carbondata.processing.merger.{CarbonDataMergerUtil, InternalCompactionType}
 
@@ -56,8 +59,16 @@ class AlterTableCompactionExceptionEventListener extends OperationEventListener 
           validSegments.foreach { segment =>
             validSegmentIds += segment.getSegmentNo
           }
+          val loadFolderDetailsArray = SegmentStatusManager
+            .readLoadMetadata(carbonMainTable.getMetadataPath)
+          val segmentFileNameMap: java.util.Map[String, String] = new util.HashMap[String, String]()
+          loadFolderDetailsArray.foreach(loadMetadataDetails => {
+            segmentFileNameMap
+              .put(loadMetadataDetails.getLoadName, loadMetadataDetails.getSegmentFile)
+          })
           CarbonInternalCommonUtil.mergeIndexFiles(sparkSession.sparkContext,
             validSegmentIds,
+            segmentFileNameMap,
             carbonMainTable.getTablePath,
             carbonMainTable,
             true)

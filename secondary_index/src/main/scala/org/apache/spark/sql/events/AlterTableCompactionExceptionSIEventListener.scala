@@ -17,6 +17,8 @@
 
 package org.apache.spark.sql.events
 
+import java.util
+
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
@@ -30,6 +32,7 @@ import org.apache.spark.util.{CarbonInternalCommonUtil, CarbonInternalScalaUtil}
 import org.apache.carbondata.common.logging.{LogService, LogServiceFactory}
 import org.apache.carbondata.core.datamap.Segment
 import org.apache.carbondata.core.locks.{CarbonLockFactory, LockUsage}
+import org.apache.carbondata.core.statusmanager.SegmentStatusManager
 import org.apache.carbondata.events.{AlterTableCompactionExceptionEvent, Event, OperationContext, OperationEventListener}
 import org.apache.carbondata.processing.merger.{CarbonDataMergerUtil, InternalCompactionType}
 
@@ -55,6 +58,13 @@ class AlterTableCompactionExceptionSIEventListener extends OperationEventListene
           LOGGER.info("Acquired the compaction lock for table" +
                       s" ${carbonMainTable.getDatabaseName}.${carbonMainTable.getTableName}")
           val indexTablesList = CarbonInternalScalaUtil.getIndexesMap(carbonMainTable).asScala
+          val loadFolderDetailsArray = SegmentStatusManager
+            .readLoadMetadata(carbonMainTable.getMetadataPath)
+          val segmentFileNameMap: java.util.Map[String, String] = new util.HashMap[String, String]()
+          loadFolderDetailsArray.foreach(loadMetadataDetails => {
+            segmentFileNameMap
+              .put(loadMetadataDetails.getLoadName, loadMetadataDetails.getSegmentFile)
+          })
           if (null != indexTablesList && indexTablesList.nonEmpty) {
             indexTablesList.foreach { indexTableAndColumns =>
               val secondaryIndex = SecondaryIndex(Some(carbonMainTable.getDatabaseName),
@@ -77,6 +87,7 @@ class AlterTableCompactionExceptionSIEventListener extends OperationEventListene
               CarbonInternalCommonUtil.mergeIndexFiles(
                 sparkSession.sparkContext,
                 validSegmentIds,
+                segmentFileNameMap,
                 indexCarbonTable.getTablePath,
                 indexCarbonTable,
                 true)

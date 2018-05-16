@@ -26,17 +26,23 @@ import java.util.Set;
 
 import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
+import org.apache.carbondata.core.constants.CarbonCommonConstants;
+import org.apache.carbondata.core.datamap.DataMapChooser;
 import org.apache.carbondata.core.datamap.DataMapStoreManager;
 import org.apache.carbondata.core.datamap.Segment;
 import org.apache.carbondata.core.datamap.TableDataMap;
+import org.apache.carbondata.core.datamap.dev.expr.DataMapExprWrapper;
 import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.readcommitter.ReadCommittedScope;
 import org.apache.carbondata.core.scan.expression.Expression;
 import org.apache.carbondata.core.scan.filter.resolver.FilterResolverIntf;
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager;
+import org.apache.carbondata.core.util.CarbonProperties;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.spark.util.CarbonInternalScalaUtil;
 
 /**
  * class specific for input output related functions of plugins
@@ -58,8 +64,14 @@ public class CarbonTableInputFormatExtended {
    */
   public static List<Segment> getFilteredSegments(JobContext job,
       CarbonTableInputFormat carbonTableInputFormat) throws IOException {
-    AbsoluteTableIdentifier identifier =
-        carbonTableInputFormat.getAbsoluteTableIdentifier(job.getConfiguration());
+    CarbonTable carbonTable = carbonTableInputFormat.getOrCreateCarbonTable(job.getConfiguration());
+    // this will be null in case of corrupt schema file.
+    if (null == carbonTable) {
+      throw new IOException("Missing/Corrupt schema file for table.");
+    }
+    // copy dynamic set segment property from parent table to child index table
+    setQuerySegmentForIndexTable(job.getConfiguration(), carbonTable);
+    AbsoluteTableIdentifier identifier = carbonTable.getAbsoluteTableIdentifier();
     ReadCommittedScope readCommittedScope =
         carbonTableInputFormat.getReadCommitted(job, identifier);
     Segment[] segmentsToAccess =
@@ -105,11 +117,6 @@ public class CarbonTableInputFormatExtended {
     //    return getSplitsInternal(job, true);
     // process and resolve the expression
     Expression filter = carbonTableInputFormat.getFilterPredicates(job.getConfiguration());
-    CarbonTable carbonTable = carbonTableInputFormat.getOrCreateCarbonTable(job.getConfiguration());
-    // this will be null in case of corrupt schema file.
-    if (null == carbonTable) {
-      throw new IOException("Missing/Corrupt schema file for table.");
-    }
     carbonTable.processFilterExpression(filter, null, null);
     FilterResolverIntf filterInterface =
         carbonTable.resolveFilter(filter);
@@ -117,7 +124,8 @@ public class CarbonTableInputFormatExtended {
     // If filter is null then return all segments.
     if (filter != null) {
       List<Segment> setSegID = isSegmentValidAfterFilter(carbonTable, filterInterface,
-          Arrays.asList(carbonTableInputFormat.getSegmentsToAccess(job, readCommittedScope)));
+          Arrays.asList(carbonTableInputFormat.getSegmentsToAccess(job, readCommittedScope)),
+          carbonTableInputFormat);
       filteredSegments.addAll(setSegID);
     } else {
       filteredSegments =
@@ -129,11 +137,29 @@ public class CarbonTableInputFormatExtended {
   /**
    * @return true if the filter expression lies between any one of the AbstractIndex min max values.
    */
-  public static List<Segment> isSegmentValidAfterFilter(
-      CarbonTable carbonTable, FilterResolverIntf filterResolverIntf,
-      List<Segment> segmentIds) throws IOException {
+  public static List<Segment> isSegmentValidAfterFilter(CarbonTable carbonTable,
+      FilterResolverIntf filterResolverIntf, List<Segment> segmentIds,
+      CarbonTableInputFormat carbonTableInputFormat) throws IOException {
     TableDataMap blockletMap = DataMapStoreManager.getInstance().getDefaultDataMap(carbonTable);
+    DataMapExprWrapper dataMapExprWrapper = DataMapChooser.getDefaultDataMap(carbonTable, null);
+    carbonTableInputFormat.loadDataMaps(carbonTable, dataMapExprWrapper, segmentIds, null);
     return blockletMap.pruneSegments(segmentIds, filterResolverIntf);
+  }
+
+  /**
+   * To copy dynamic set segment property form parent table to index table
+   */
+  private static void setQuerySegmentForIndexTable(Configuration conf, CarbonTable carbonTable) {
+    if (CarbonInternalScalaUtil.isIndexTable(carbonTable)) {
+      String dbName = carbonTable.getDatabaseName();
+      String tbName = CarbonInternalScalaUtil.getParentTableName(carbonTable);
+      String segmentNumbersFromProperty = CarbonProperties.getInstance()
+          .getProperty(CarbonCommonConstants.CARBON_INPUT_SEGMENTS + dbName + "." + tbName, "*");
+      if (!segmentNumbersFromProperty.trim().equals("*")) {
+        CarbonTableInputFormat.setSegmentsToAccess(conf,
+            Segment.toSegmentList(segmentNumbersFromProperty.split(","), null));
+      }
+    }
   }
 
 }

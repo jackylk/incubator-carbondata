@@ -65,14 +65,25 @@ object Compactor {
         validSegments,
         segmentIdToLoadStartTimeMapping)
       try {
+        val segmentToSegmentFileNameMap: java.util.Map[String, String] = new java.util
+        .HashMap[String, String]()
         val indexCarbonTable = SecondaryIndexCreator
-          .createSecondaryIndex(secondaryIndexModel, forceAccessSegment)
+          .createSecondaryIndex(secondaryIndexModel,
+            segmentToSegmentFileNameMap,
+            forceAccessSegment)
         CarbonInternalLoaderUtil.updateLoadMetadataWithMergeStatus(
           indexCarbonTable,
           loadsToMerge,
           validSegments.head,
           carbonLoadModel,
+          segmentToSegmentFileNameMap,
           segmentIdToLoadStartTimeMapping.get(validSegments.head).get)
+        // merge index files
+        CarbonInternalCommonUtil.mergeIndexFiles(sqlContext.sparkContext,
+          secondaryIndexModel.validSegments,
+          segmentToSegmentFileNameMap,
+          indexCarbonTable.getTablePath,
+          indexCarbonTable, false)
       } catch {
         case ex: Exception =>
           LOGGER.error(ex, s"Compaction failed for SI table ${secondaryIndex.indexTableName}")

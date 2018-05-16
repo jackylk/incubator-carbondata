@@ -23,6 +23,7 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.command.{SecondaryIndex, SecondaryIndexModel}
 import org.apache.spark.util.si.FileInternalUtil
+import org.apache.spark.util.CarbonInternalCommonUtil
 
 import org.apache.carbondata.common.logging.{LogService, LogServiceFactory}
 import org.apache.carbondata.core.constants.CarbonCommonConstants
@@ -90,8 +91,10 @@ class SILoadEventListener extends OperationEventListener with Logging {
                 OperationListenerBus.getInstance
                   .fireEvent(loadTableSIPreExecutionEvent, operationContext)
 
+                val segmentToSegmentFileNameMap: java.util.Map[String, String] = new java.util
+                .HashMap[String, String]()
                 val indexCarbonTable = SecondaryIndexCreator
-                  .createSecondaryIndex(secondaryIndexModel, true)
+                  .createSecondaryIndex(secondaryIndexModel, segmentToSegmentFileNameMap, true)
 
                 val tableStatusUpdation = FileInternalUtil.updateTableStatus(
                   secondaryIndexModel.validSegments,
@@ -99,7 +102,15 @@ class SILoadEventListener extends OperationEventListener with Logging {
                   secondaryIndexModel.secondaryIndex.indexTableName,
                   SegmentStatus.SUCCESS,
                   secondaryIndexModel.segmentIdToLoadStartTimeMapping,
+                  segmentToSegmentFileNameMap,
                   indexCarbonTable)
+
+                // merge index files
+                CarbonInternalCommonUtil.mergeIndexFiles(sparkSession.sparkContext,
+                  secondaryIndexModel.validSegments,
+                  segmentToSegmentFileNameMap,
+                  indexCarbonTable.getTablePath,
+                  indexCarbonTable, false)
 
                 val loadTableACLPostExecutionEvent: LoadTableSIPostExecutionEvent =
                   new LoadTableSIPostExecutionEvent(sparkSession,

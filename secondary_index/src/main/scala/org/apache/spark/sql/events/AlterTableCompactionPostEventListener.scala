@@ -17,6 +17,8 @@
 
 package org.apache.spark.sql.events
 
+import java.util
+
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
@@ -30,7 +32,7 @@ import org.apache.carbondata.common.logging.{LogService, LogServiceFactory}
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datamap.Segment
 import org.apache.carbondata.core.mutate.CarbonUpdateUtil
-import org.apache.carbondata.core.statusmanager.LoadMetadataDetails
+import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatusManager}
 import org.apache.carbondata.events.{AlterTableCompactionPreStatusUpdateEvent, Event, OperationContext, OperationEventListener}
 import org.apache.carbondata.processing.merger.{CarbonDataMergerUtil, CompactionType, InternalCompactionType}
 
@@ -58,6 +60,13 @@ class AlterTableCompactionPostEventListener extends OperationEventListener with 
           .equalsIgnoreCase(InternalCompactionType.SEGMENT_INDEX.toString)) {
           val carbonMainTable = carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable
           val indexTablesList = CarbonInternalScalaUtil.getIndexesMap(carbonMainTable).asScala
+          val loadFolderDetailsArray = SegmentStatusManager
+            .readLoadMetadata(carbonMainTable.getMetadataPath)
+          val segmentFileNameMap: java.util.Map[String, String] = new util.HashMap[String, String]()
+          loadFolderDetailsArray.foreach(loadMetadataDetails => {
+            segmentFileNameMap
+              .put(loadMetadataDetails.getLoadName, loadMetadataDetails.getSegmentFile)
+          })
           if (null != indexTablesList && indexTablesList.nonEmpty) {
             indexTablesList.foreach { indexTableAndColumns =>
               val secondaryIndex = SecondaryIndex(Some(carbonLoadModel.getDatabaseName),
@@ -81,6 +90,7 @@ class AlterTableCompactionPostEventListener extends OperationEventListener with 
               CarbonInternalCommonUtil.mergeIndexFiles(
                 sQLContext.sparkContext,
                 validSegmentIds,
+                segmentFileNameMap,
                 indexCarbonTable.getTablePath,
                 indexCarbonTable,
                 true)

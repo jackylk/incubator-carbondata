@@ -42,6 +42,7 @@ class CarbonMergeFilesRDD(
   sc: SparkContext,
   carbonTable: CarbonTable,
   segments: Seq[String],
+  segmentFileNameToSegmentIdMap: java.util.Map[String, String],
   isHivePartitionedTable: Boolean,
   readFileFooterFromCarbonDataFile: Boolean)
   extends CarbonRDD[String](sc, Nil, sc.hadoopConfiguration) {
@@ -60,12 +61,16 @@ class CarbonMergeFilesRDD(
               CarbonTablePath.getSegmentPath(tablePath, split.segmentId))
 
       if (isHivePartitionedTable) {
-        CarbonLoaderUtil.mergeIndexFilesinPartitionedSegment(split.segmentId, carbonTable)
+        CarbonLoaderUtil
+          .mergeIndexFilesinPartitionedSegment(split.segmentId,
+            segmentFileNameToSegmentIdMap.get(split.segmentId),
+            carbonTable)
       } else {
         new CarbonIndexFileMergeWriter(carbonTable)
           .mergeCarbonIndexFilesOfSegment(split.segmentId,
             tablePath,
-            readFileFooterFromCarbonDataFile)
+            readFileFooterFromCarbonDataFile,
+            segmentFileNameToSegmentIdMap.get(split.segmentId))
       }
 
       var havePair = false

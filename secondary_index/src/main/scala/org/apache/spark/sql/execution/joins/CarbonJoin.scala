@@ -567,19 +567,28 @@ case class BroadCastSIFilterPushJoin(
       case BuildLeft => longMetric("numLeftRows")
       case BuildRight => longMetric("numRightRows")
     }
-    val secondaryIndexRDD = buildPlan.collectFirst {
+    val secondaryIndexRDD = buildPlan.collect {
       case batchData: BatchedDataSourceScanExec =>
         batchData.rdd
       case rowData: RowDataSourceScanExec =>
         rowData.rdd
     }
-    if (partitions.nonEmpty && secondaryIndexRDD.isDefined &&
-        secondaryIndexRDD.get.isInstanceOf[CarbonScanRDD[InternalRow]]) {
-      secondaryIndexRDD.get.asInstanceOf[CarbonScanRDD[InternalRow]].setSegmentsToAccess(partitions)
+    if (partitions.nonEmpty && secondaryIndexRDD.nonEmpty) {
+      secondaryIndexRDD.foreach { siRDD =>
+        if (siRDD.isInstanceOf[CarbonScanRDD[InternalRow]]) {
+          siRDD.asInstanceOf[CarbonScanRDD[InternalRow]].setSegmentsToAccess(partitions)
+        }
+      }
     }
-    val input: Array[InternalRow] = buildPlan.execute.map(_.copy()).collect()
-    val inputCopy: Array[InternalRow] = input.clone()
-    (input, inputCopy)
+    // If the partitions that are recognized from the main table are empty then no need to
+    // execute the SI plan.
+    if (partitions.nonEmpty) {
+      val input: Array[InternalRow] = buildPlan.execute.map(_.copy()).collect()
+      val inputCopy: Array[InternalRow] = input.clone()
+      (input, inputCopy)
+    } else {
+      (Array.empty[InternalRow], Array.empty[InternalRow])
+    }
   }
 
   val carbonScan: SparkPlan = buildSide match {

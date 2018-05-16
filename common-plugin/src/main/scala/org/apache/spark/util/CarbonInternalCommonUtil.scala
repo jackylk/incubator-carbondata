@@ -42,6 +42,7 @@ object CarbonInternalCommonUtil {
    */
   def mergeIndexFiles(sparkContext: SparkContext,
     segmentIds: Seq[String],
+    segmentFileNameToSegmentIdMap: java.util.Map[String, String],
     tablePath: String,
     carbonTable: CarbonTable,
     mergeIndexProperty: Boolean,
@@ -51,6 +52,7 @@ object CarbonInternalCommonUtil {
         sparkContext,
         carbonTable,
         segmentIds,
+        segmentFileNameToSegmentIdMap,
         carbonTable.isHivePartitionTable,
         readFileFooterFromCarbonDataFile).collect()
     } else {
@@ -62,6 +64,7 @@ object CarbonInternalCommonUtil {
             sparkContext,
             carbonTable,
             segmentIds,
+            segmentFileNameToSegmentIdMap,
             carbonTable.isHivePartitionTable,
             readFileFooterFromCarbonDataFile).collect()
         }
@@ -72,6 +75,7 @@ object CarbonInternalCommonUtil {
               sparkContext,
               carbonTable,
               segmentIds,
+              segmentFileNameToSegmentIdMap,
               carbonTable.isHivePartitionTable,
               readFileFooterFromCarbonDataFile).collect()
           }

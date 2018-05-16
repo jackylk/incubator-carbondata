@@ -216,7 +216,7 @@ public class CarbonInternalLoaderUtil {
    */
   public static boolean updateLoadMetadataWithMergeStatus(CarbonTable indexCarbonTable,
       String[] loadsToMerge, String mergedLoadNumber, CarbonLoadModel carbonLoadModel,
-      long mergeLoadStartTime) throws IOException {
+      Map<String, String> segmentToSegmentFileNameMap, long mergeLoadStartTime) throws IOException {
     boolean tableStatusUpdationStatus = false;
     List<String> loadMergeList = new ArrayList<>(Arrays.asList(loadsToMerge));
     AbsoluteTableIdentifier absoluteTableIdentifier =
@@ -258,6 +258,7 @@ public class CarbonInternalLoaderUtil {
         loadMetadataDetails.setLoadEndTime(loadEnddate);
         CarbonTable carbonTable = carbonLoadModel.getCarbonDataLoadSchema().getCarbonTable();
         loadMetadataDetails.setLoadName(mergedLoadNumber);
+        loadMetadataDetails.setSegmentFile(segmentToSegmentFileNameMap.get(mergedLoadNumber));
         CarbonLoaderUtil
             .addDataIndexSizeIntoMetaEntry(loadMetadataDetails, mergedLoadNumber, carbonTable);
         loadMetadataDetails.setLoadStartTime(mergeLoadStartTime);
