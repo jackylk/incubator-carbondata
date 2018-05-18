@@ -196,13 +196,13 @@ public class DataMapUtil {
     }
   }
 
-  private static DistributableDataMapFormat createDataMapJob(CarbonTable carbonTable,
+  private static FileInputFormat createDataMapJob(CarbonTable carbonTable,
       DataMapExprWrapper dataMapExprWrapper, List<Segment> validsegments,
       List<Segment> invalidSegments, List<PartitionSpec> partitionsToPrune, String clsName,
       boolean isJobToClearDataMaps) {
     try {
       Constructor<?> cons = Class.forName(clsName).getDeclaredConstructors()[0];
-      return (DistributableDataMapFormat) cons
+      return (FileInputFormat) cons
           .newInstance(carbonTable, dataMapExprWrapper, validsegments, invalidSegments,
               partitionsToPrune, isJobToClearDataMaps);
     } catch (Exception e) {

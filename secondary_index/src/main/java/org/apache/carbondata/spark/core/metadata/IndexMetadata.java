@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.carbondata.hadoop.util.ObjectSerializationUtil;
+import org.apache.carbondata.core.util.ObjectSerializationUtil;
 
 /**
  * Secondary Index properties holder

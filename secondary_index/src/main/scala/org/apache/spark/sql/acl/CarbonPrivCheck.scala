@@ -125,7 +125,7 @@ private[sql] case class CarbonPrivCheck(sparkSession: SparkSession,
             null,
             Set(PrivType.OWNER_PRIV))),
             drop.ifExists)
-        case c@ExecutedCommandExec(CarbonDescribeFormattedCommand(_, _, identifier)) =>
+        case c@ExecutedCommandExec(CarbonDescribeFormattedCommand(_, _, _, identifier)) =>
           doCheckPrivilege(c, Set(new PrivObject(
             ObjectType.TABLE,
             CarbonEnv.getDatabaseName(identifier.database)(sparkSession),

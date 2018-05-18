@@ -67,7 +67,8 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
         dmClassName: String,
         dmproperties: Map[String, String],
         queryString: Option[String],
-        ifNotExistsSet: Boolean) =>
+        ifNotExistsSet: Boolean,
+        deferredRebuild: Boolean) =>
           checkPrivilege(c, Set(new PrivObject(
             ObjectType.TABLE,
             CarbonEnv.getDatabaseName(tableIdentifier.database)(sparkSession),

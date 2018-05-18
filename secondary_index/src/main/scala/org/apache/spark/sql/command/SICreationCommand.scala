@@ -426,7 +426,7 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
     tableSchema.setTableId(UUID.randomUUID().toString)
     tableSchema.setTableName(indexTableName)
     tableSchema.setListOfColumns(allColumns.asJava)
-    tableSchema.setSchemaEvalution(schemaEvol)
+    tableSchema.setSchemaEvolution(schemaEvol)
     // populate table properties map
     val tablePropertiesMap = new java.util.HashMap[String, String]()
     tableProperties.foreach {

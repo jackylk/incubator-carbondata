@@ -29,6 +29,7 @@ import org.apache.carbondata.core.datamap.dev.DataMap;
 import org.apache.carbondata.core.indexstore.BlockMetaInfo;
 import org.apache.carbondata.core.indexstore.BlockletDataMapIndexWrapper;
 import org.apache.carbondata.core.indexstore.TableBlockIndexUniqueIdentifier;
+import org.apache.carbondata.core.indexstore.TableBlockIndexUniqueIdentifierWrapper;
 import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMap;
 import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMapModel;
 import org.apache.carbondata.core.indexstore.blockletindex.SegmentIndexFileStore;
@@ -39,14 +40,16 @@ public class BlockletDataMapLoader {
   /**
    * This method loads the dataMap for the TableBlockIndexUniqueIdentifier passed
    *
-   * @param blockIndexUniqueIdentifier
+   * @param blockIndexUniqueIdentifierWrapper
    * @return
    * @throws IOException
    * @throws MemoryException
    */
   public static BlockletDataMapIndexWrapper loadDataMap(
-      TableBlockIndexUniqueIdentifier blockIndexUniqueIdentifier)
+      TableBlockIndexUniqueIdentifierWrapper blockIndexUniqueIdentifierWrapper)
       throws IOException, MemoryException {
+    TableBlockIndexUniqueIdentifier blockIndexUniqueIdentifier =
+        blockIndexUniqueIdentifierWrapper.getTableBlockIndexUniqueIdentifier();
     List<BlockletDataMap> dataMaps = new ArrayList<>();
     if (null != blockIndexUniqueIdentifier) {
       try {
@@ -59,23 +62,31 @@ public class BlockletDataMapLoader {
         // then we can directly get the datamaps for that
         if (blockIndexUniqueIdentifier.getMergeIndexFileName() == null) {
           Map<String, BlockMetaInfo> blockMetaInfoMap = BlockletDataMapUtil
-              .getBlockMetaInfoMap(blockIndexUniqueIdentifier, indexFileStore, filesRead,
+              .getBlockMetaInfoMap(blockIndexUniqueIdentifierWrapper, indexFileStore, filesRead,
                   carbonDataFileBlockMetaInfoMapping);
-          dataMaps
-              .add(loadAndGetDataMap(blockIndexUniqueIdentifier, indexFileStore, blockMetaInfoMap));
+          dataMaps.add(loadAndGetDataMap(blockIndexUniqueIdentifierWrapper, indexFileStore,
+              blockMetaInfoMap));
         } else {
           // if the identifier is a merge index file then get the index files inside it
           // and then get the datamaps
           List<TableBlockIndexUniqueIdentifier> tableBlockIndexUniqueIdentifiers =
               BlockletDataMapUtil
                   .getIndexFileIdentifiersFromMergeFile(blockIndexUniqueIdentifier, indexFileStore);
-          for (TableBlockIndexUniqueIdentifier indexUniqueIdentifier :
-              tableBlockIndexUniqueIdentifiers) {
+          List<TableBlockIndexUniqueIdentifierWrapper> tableBlockIndexUniqueIdentifiersWrapper =
+              new ArrayList<>(tableBlockIndexUniqueIdentifiers.size());
+          for (TableBlockIndexUniqueIdentifier
+                   tableBlockIndexUniqueIdentifier : tableBlockIndexUniqueIdentifiers) {
+            tableBlockIndexUniqueIdentifiersWrapper.add(
+                new TableBlockIndexUniqueIdentifierWrapper(tableBlockIndexUniqueIdentifier,
+                    blockIndexUniqueIdentifierWrapper.getCarbonTable()));
+          }
+          for (TableBlockIndexUniqueIdentifierWrapper
+                   indexUniqueIdentifierWrapper : tableBlockIndexUniqueIdentifiersWrapper) {
             Map<String, BlockMetaInfo> blockMetaInfoMap = BlockletDataMapUtil
-                .getBlockMetaInfoMap(indexUniqueIdentifier, indexFileStore, filesRead,
+                .getBlockMetaInfoMap(indexUniqueIdentifierWrapper, indexFileStore, filesRead,
                     carbonDataFileBlockMetaInfoMapping);
-            dataMaps
-                .add(loadAndGetDataMap(indexUniqueIdentifier, indexFileStore, blockMetaInfoMap));
+            dataMaps.add(loadAndGetDataMap(indexUniqueIdentifierWrapper, indexFileStore,
+                blockMetaInfoMap));
           }
         }
       } catch (Throwable e) {
@@ -91,16 +102,19 @@ public class BlockletDataMapLoader {
   /**
    * This method initializes and loads the blocklet dataMap
    *
-   * @param identifier
+   * @param identifierWrapper
    * @param indexFileStore
    * @param blockMetaInfoMap
    * @return
    * @throws IOException
    * @throws MemoryException
    */
-  private static BlockletDataMap loadAndGetDataMap(TableBlockIndexUniqueIdentifier identifier,
+  private static BlockletDataMap loadAndGetDataMap(
+      TableBlockIndexUniqueIdentifierWrapper identifierWrapper,
       SegmentIndexFileStore indexFileStore, Map<String, BlockMetaInfo> blockMetaInfoMap)
       throws IOException, MemoryException {
+    TableBlockIndexUniqueIdentifier identifier =
+        identifierWrapper.getTableBlockIndexUniqueIdentifier();
     BlockletDataMap dataMap = new BlockletDataMap();
     dataMap.init(new BlockletDataMapModel(
         identifier.getIndexFilePath() + CarbonCommonConstants.FILE_SEPARATOR + identifier

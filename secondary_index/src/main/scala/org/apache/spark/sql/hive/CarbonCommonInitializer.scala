@@ -55,7 +55,7 @@ object CarbonCommonInitializer {
       }
 
       // ACL Listeners
-      FileFactory.setFileTypeInerface(new ACLFileFactory())
+      FileFactory.setFileTypeInterface(new ACLFileFactory())
       operationListenerBus
         .addListener(classOf[LoadTablePreExecutionEvent],
           new ACLLoadEventListener.ACLPreLoadEventListener

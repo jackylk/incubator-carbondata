@@ -22,7 +22,7 @@ import org.apache.carbondata.core.datastore.filesystem.LocalCarbonFile;
 import org.apache.carbondata.core.datastore.impl.DFSFileReaderImpl;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.datastore.impl.FileReaderImpl;
-import org.apache.carbondata.core.datastore.impl.FileTypeInerface;
+import org.apache.carbondata.core.datastore.impl.FileTypeInterface;
 import org.apache.carbondata.spark.acl.filesystem.AlluxioACLCarbonFile;
 import org.apache.carbondata.spark.acl.filesystem.HDFSACLCarbonFile;
 import org.apache.carbondata.spark.acl.filesystem.ViewFSACLCarbonFile;
@@ -32,7 +32,7 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
 
-public class ACLFileFactory implements FileTypeInerface {
+public class ACLFileFactory implements FileTypeInterface {
 
   private static final Log LOG = LogFactory.getLog(FileFactory.class);
 
