@@ -27,6 +27,7 @@ import scala.collection.mutable
 
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.TableIdentifier
+import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.sql.streaming.{ProcessingTime, StreamingQuery}
 import org.apache.spark.sql.test.util.QueryTest
@@ -244,7 +245,6 @@ class TestStreamingTableOperation extends QueryTest with BeforeAndAfterAll {
       identifier)
     thread.start()
     Thread.sleep(2000)
-    sql("select * from stream_table_file").show(50, false)
     generateCSVDataFile(spark, idStart = 30, rowNums = 10, csvDataDir)
     Thread.sleep(5000)
     thread.interrupt()
@@ -1564,9 +1564,12 @@ class TestStreamingTableOperation extends QueryTest with BeforeAndAfterAll {
     assertResult("true")(resultStreaming(0).getString(1).trim)
   }
 
-  test("StreamSQL") {
+  test("StreamSQL: create stream") {
     sql("DROP TABLE IF EXISTS source")
     sql("DROP TABLE IF EXISTS sink")
+
+    var rows = sql("SHOW STREAMS").collect()
+    assertResult(0)(rows.length)
 
     val csvDataDir = new File("target/streamdata").getCanonicalPath
     // streaming ingest 10 rows
@@ -1634,12 +1637,67 @@ class TestStreamingTableOperation extends QueryTest with BeforeAndAfterAll {
     assertResult(exceptedRow)(row)
 
     sql("SHOW STREAMS").show(false)
-    assertResult(1)(sql("SHOW STREAMS").collect().length)
-    assertResult(1)(sql("SHOW STREAMS ON TABLE sink").collect().length)
+
+    rows = sql("SHOW STREAMS").collect()
+    assertResult(1)(rows.length)
+    assertResult("RUNNING")(rows.head.getString(1))
+    assertResult("streaming.source")(rows.head.getString(2))
+    assertResult("streaming.sink")(rows.head.getString(3))
+
+    rows = sql("SHOW STREAMS ON TABLE sink").collect()
+    assertResult(1)(rows.length)
+    assertResult("RUNNING")(rows.head.getString(1))
+    assertResult("streaming.source")(rows.head.getString(2))
+    assertResult("streaming.sink")(rows.head.getString(3))
+
     sql("KILL STREAM ON TABLE sink")
-    assertResult(0)(sql("SHOW STREAMS ON TABLE sink").collect().length)
+
+    rows = sql("SHOW STREAMS").collect()
+
     sql("DROP TABLE IF EXISTS source")
     sql("DROP TABLE IF EXISTS sink")
+    new File(csvDataDir).delete()
+  }
+
+  test("StreamSQL: kill stream on non exist table") {
+    val ex = intercept[NoSuchTableException] {
+      sql("KILL STREAM ON TABLE xx")
+    }
+    assert(ex.getMessage.contains("'xx' not found"))
+  }
+
+  test("StreamSQL: create stream on non exist source") {
+    sql(
+      s"""
+         |CREATE TABLE sink(
+         | id INT,
+         | name STRING,
+         | city STRING,
+         | salary FLOAT,
+         | tax DECIMAL(8,2),
+         | percent double,
+         | birthday DATE,
+         | register TIMESTAMP,
+         | updated TIMESTAMP
+         | )
+         |STORED AS carbondata
+         |TBLPROPERTIES('streaming'='true')
+      """.stripMargin)
+
+    val ex = intercept[AnalysisException] {
+    sql(
+      """
+        |CREATE STREAM ON TABLE sink
+        |STMPROPERTIES(
+        |  'trigger'='ProcessingTime',
+        |  'interval'='1 seconds')
+        |AS
+        |  SELECT *
+        |  FROM source
+        |  WHERE id % 2 = 1
+      """.stripMargin).show(false)
+    }
+    sql("DROP TABLE sink")
   }
 
   def createWriteSocketThread(
@@ -1791,28 +1849,6 @@ class TestStreamingTableOperation extends QueryTest with BeforeAndAfterAll {
     }
   }
 
-  def generateCSVDataFile2(
-      spark: SparkSession,
-      idStart: Int,
-      rowNums: Int,
-      csvDirPath: String,
-      saveMode: SaveMode = SaveMode.Overwrite): Unit = {
-    // Create csv data frame file
-    val csvRDD = spark.sparkContext.parallelize(idStart until idStart + rowNums)
-      .map { id =>
-        (id,
-          "name_" + id,
-          "city_" + id)
-      }
-    val csvDataDF = spark.createDataFrame(csvRDD).toDF(
-      "id", "name", "city")
-
-    csvDataDF.write
-      .option("header", "false")
-      .mode(saveMode)
-      .csv(csvDirPath)
-  }
-
   def generateCSVDataFile(
       spark: SparkSession,
       idStart: Int,
@@ -1852,10 +1888,7 @@ class TestStreamingTableOperation extends QueryTest with BeforeAndAfterAll {
       override def run(): Unit = {
         var qry: StreamingQuery = null
         try {
-          val sc = new StructType().add("id", "int")
-          val readSocketDF = spark.readStream.schema(sc)
-            .csv(csvDataDir)
-            .filter("id < 3").select("id")
+          val readSocketDF = spark.readStream.text(csvDataDir)
 
           // Write data from socket stream to carbondata file
           qry = readSocketDF.writeStream

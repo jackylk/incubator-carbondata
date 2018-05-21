@@ -49,12 +49,6 @@ case class CarbonRelation(
     carbonTable: CarbonTable)
   extends LeafNode with MultiInstanceRelation {
 
-  override def isStreaming: Boolean = {
-    carbonTable.getTableInfo.getFactTable.getTableProperties
-      .get("streaming")
-      .equalsIgnoreCase("source")
-  }
-
   override def newInstance(): LogicalPlan = {
     CarbonRelation(databaseName, tableName, metaData, carbonTable)
       .asInstanceOf[this.type]
