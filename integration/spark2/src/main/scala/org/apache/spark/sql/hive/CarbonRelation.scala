@@ -22,6 +22,7 @@ import scala.Array.canBuildFrom
 import scala.collection.JavaConverters._
 import scala.util.parsing.combinator.RegexParsers
 
+import org.apache.spark.sql.CarbonEnv
 import org.apache.spark.sql.catalyst.analysis.MultiInstanceRelation
 import org.apache.spark.sql.catalyst.expressions.AttributeReference
 import org.apache.spark.sql.catalyst.plans.logical.{LeafNode, LogicalPlan}
@@ -47,6 +48,12 @@ case class CarbonRelation(
     var metaData: CarbonMetaData,
     carbonTable: CarbonTable)
   extends LeafNode with MultiInstanceRelation {
+
+  override def isStreaming: Boolean = {
+    carbonTable.getTableInfo.getFactTable.getTableProperties
+      .get("streaming")
+      .equalsIgnoreCase("source")
+  }
 
   override def newInstance(): LogicalPlan = {
     CarbonRelation(databaseName, tableName, metaData, carbonTable)

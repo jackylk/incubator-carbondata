@@ -25,11 +25,12 @@ import java.util.concurrent.Executors
 
 import scala.collection.mutable
 
+import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.hive.CarbonRelation
-import org.apache.spark.sql.{CarbonEnv, Row, SaveMode, SparkSession}
 import org.apache.spark.sql.streaming.{ProcessingTime, StreamingQuery}
 import org.apache.spark.sql.test.util.QueryTest
+import org.apache.spark.sql.types.StructType
 import org.scalatest.BeforeAndAfterAll
 
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
@@ -243,6 +244,7 @@ class TestStreamingTableOperation extends QueryTest with BeforeAndAfterAll {
       identifier)
     thread.start()
     Thread.sleep(2000)
+    sql("select * from stream_table_file").show(50, false)
     generateCSVDataFile(spark, idStart = 30, rowNums = 10, csvDataDir)
     Thread.sleep(5000)
     thread.interrupt()
@@ -1562,6 +1564,84 @@ class TestStreamingTableOperation extends QueryTest with BeforeAndAfterAll {
     assertResult("true")(resultStreaming(0).getString(1).trim)
   }
 
+  test("StreamSQL") {
+    sql("DROP TABLE IF EXISTS source")
+    sql("DROP TABLE IF EXISTS sink")
+
+    val csvDataDir = new File("target/streamdata").getCanonicalPath
+    // streaming ingest 10 rows
+    generateCSVDataFile(spark, idStart = 10, rowNums = 10, csvDataDir)
+
+    sql(
+      s"""
+         |CREATE STREAM SOURCE source(
+         | id INT,
+         | name STRING,
+         | city STRING,
+         | salary FLOAT,
+         | tax DECIMAL(8,2),
+         | percent double,
+         | birthday DATE,
+         | register TIMESTAMP,
+         | updated TIMESTAMP
+         |)
+         |TBLPROPERTIES (
+         | 'streaming'='source',
+         | 'format'='csv',
+         | 'path'='$csvDataDir'
+         |)
+      """.stripMargin)
+
+    sql(
+      s"""
+         |CREATE TABLE sink(
+         | id INT,
+         | name STRING,
+         | city STRING,
+         | salary FLOAT,
+         | tax DECIMAL(8,2),
+         | percent double,
+         | birthday DATE,
+         | register TIMESTAMP,
+         | updated TIMESTAMP
+         | )
+         |STORED AS carbondata
+         |TBLPROPERTIES('streaming'='true')
+      """.stripMargin)
+
+    sql(
+      """
+        |CREATE STREAM ON TABLE sink
+        |STMPROPERTIES(
+        |  'trigger'='ProcessingTime',
+        |  'interval'='1 seconds')
+        |AS
+        |  SELECT *
+        |  FROM source
+        |  WHERE id % 2 = 1
+      """.stripMargin).show(false)
+    Thread.sleep(2000)
+    sql("select * from sink").show
+
+    generateCSVDataFile(spark, idStart = 30, rowNums = 10, csvDataDir)
+    Thread.sleep(5000)
+
+    // after 2 minibatch, there should be 10 row added (filter condition: id%2=1)
+    checkAnswer(sql("select count(*) from sink"), Seq(Row(10)))
+
+    val row = sql("select * from sink order by id").head()
+    val exceptedRow = Row(11, "name_11", "city_11", 110000.0, BigDecimal.valueOf(0.01), 80.01, Date.valueOf("1990-01-01"), Timestamp.valueOf("2010-01-01 10:01:01.0"), Timestamp.valueOf("2010-01-01 10:01:01.0"))
+    assertResult(exceptedRow)(row)
+
+    sql("SHOW STREAMS").show(false)
+    assertResult(1)(sql("SHOW STREAMS").collect().length)
+    assertResult(1)(sql("SHOW STREAMS ON TABLE sink").collect().length)
+    sql("KILL STREAM ON TABLE sink")
+    assertResult(0)(sql("SHOW STREAMS ON TABLE sink").collect().length)
+    sql("DROP TABLE IF EXISTS source")
+    sql("DROP TABLE IF EXISTS sink")
+  }
+
   def createWriteSocketThread(
       serverSocket: ServerSocket,
       writeNums: Int,
@@ -1711,6 +1791,28 @@ class TestStreamingTableOperation extends QueryTest with BeforeAndAfterAll {
     }
   }
 
+  def generateCSVDataFile2(
+      spark: SparkSession,
+      idStart: Int,
+      rowNums: Int,
+      csvDirPath: String,
+      saveMode: SaveMode = SaveMode.Overwrite): Unit = {
+    // Create csv data frame file
+    val csvRDD = spark.sparkContext.parallelize(idStart until idStart + rowNums)
+      .map { id =>
+        (id,
+          "name_" + id,
+          "city_" + id)
+      }
+    val csvDataDF = spark.createDataFrame(csvRDD).toDF(
+      "id", "name", "city")
+
+    csvDataDF.write
+      .option("header", "false")
+      .mode(saveMode)
+      .csv(csvDirPath)
+  }
+
   def generateCSVDataFile(
       spark: SparkSession,
       idStart: Int,
@@ -1750,7 +1852,10 @@ class TestStreamingTableOperation extends QueryTest with BeforeAndAfterAll {
       override def run(): Unit = {
         var qry: StreamingQuery = null
         try {
-          val readSocketDF = spark.readStream.text(csvDataDir)
+          val sc = new StructType().add("id", "int")
+          val readSocketDF = spark.readStream.schema(sc)
+            .csv(csvDataDir)
+            .filter("id < 3").select("id")
 
           // Write data from socket stream to carbondata file
           qry = readSocketDF.writeStream

@@ -831,6 +831,14 @@ public class CarbonTable implements Serializable {
   }
 
   /**
+   * Return true if this is a streaming source (table with property "streaming"="source")
+   */
+  public boolean isStreamingSource() {
+    String streaming = getTableInfo().getFactTable().getTableProperties().get("streaming");
+    return streaming != null && streaming.equalsIgnoreCase("source");
+  }
+
+  /**
    * Return true if 'autoRefreshDataMap' is enabled, by default it is enabled
    */
   public boolean isAutoRefreshDataMap() {

@@ -183,6 +183,11 @@ abstract class CarbonDDLSqlParser extends AbstractCarbonSparkSQLParser {
   protected val SELECT = carbonKeyWord("SELECT")
   protected val REBUILD = carbonKeyWord("REBUILD")
   protected val DEFERRED = carbonKeyWord("DEFERRED")
+  protected val STREAM = carbonKeyWord("STREAM")
+  protected val STREAMS = carbonKeyWord("STREAMS")
+  protected val SOURCE = carbonKeyWord("SOURCE")
+  protected val KILL = carbonKeyWord("KILL")
+  protected val STMPROPERTIES = carbonKeyWord("STMPROPERTIES")
 
   protected val doubleQuotedString = "\"([^\"]+)\"".r
   protected val singleQuotedString = "'([^']+)'".r
