@@ -1609,7 +1609,7 @@ class TestStreamingTableOperation extends QueryTest with BeforeAndAfterAll {
          | updated TIMESTAMP
          | )
          |STORED AS carbondata
-         |TBLPROPERTIES('streaming'='true')
+         |TBLPROPERTIES('streaming'='sink')
       """.stripMargin)
 
     sql(
@@ -1654,6 +1654,20 @@ class TestStreamingTableOperation extends QueryTest with BeforeAndAfterAll {
 
     rows = sql("SHOW STREAMS").collect()
 
+    val ex = intercept[MalformedCarbonCommandException] {
+      sql(
+        """
+          |CREATE STREAM ON TABLE sink
+          |STMPROPERTIES(
+          |  'trigger'='ProcessingTime')
+          |AS
+          |  SELECT *
+          |  FROM source
+          |  WHERE id % 2 = 1
+        """.stripMargin)
+    }
+    assert(ex.getMessage.contains("interval must be specified"))
+
     sql("DROP TABLE IF EXISTS source")
     sql("DROP TABLE IF EXISTS sink")
     new File(csvDataDir).delete()
@@ -1697,6 +1711,56 @@ class TestStreamingTableOperation extends QueryTest with BeforeAndAfterAll {
         |  WHERE id % 2 = 1
       """.stripMargin).show(false)
     }
+    sql("DROP TABLE sink")
+  }
+
+  test("StreamSQL: create stream on plain table") {
+    sql(
+      s"""
+         |CREATE TABLE notsource(
+         | id INT,
+         | name STRING,
+         | city STRING,
+         | salary FLOAT,
+         | tax DECIMAL(8,2),
+         | percent double,
+         | birthday DATE,
+         | register TIMESTAMP,
+         | updated TIMESTAMP
+         | )
+         |STORED AS carbondata
+      """.stripMargin)
+    sql(
+      s"""
+         |CREATE TABLE sink(
+         | id INT,
+         | name STRING,
+         | city STRING,
+         | salary FLOAT,
+         | tax DECIMAL(8,2),
+         | percent double,
+         | birthday DATE,
+         | register TIMESTAMP,
+         | updated TIMESTAMP
+         | )
+         |STORED AS carbondata
+         |TBLPROPERTIES('streaming'='true')
+      """.stripMargin)
+
+    val ex = intercept[MalformedCarbonCommandException] {
+      sql(
+        """
+          |CREATE STREAM ON TABLE sink
+          |STMPROPERTIES(
+          |  'trigger'='ProcessingTime',
+          |  'interval'='1 seconds')
+          |AS
+          |  SELECT *
+          |  FROM notsource
+          |  WHERE id % 2 = 1
+        """.stripMargin).show(false)
+    }
+    assert(ex.getMessage.contains("Must specify streaming source in select query"))
     sql("DROP TABLE sink")
   }
 

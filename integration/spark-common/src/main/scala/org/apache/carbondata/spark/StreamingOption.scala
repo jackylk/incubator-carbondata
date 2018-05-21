@@ -27,9 +27,9 @@ import org.apache.carbondata.streaming.parser.CarbonStreamParser
 class StreamingOption(val userInputMap: Map[String, String]) {
   def trigger: Trigger = {
     val trigger = userInputMap.getOrElse(
-      "trigger", throw new MalformedCarbonCommandException("trigger must be specify"))
+      "trigger", throw new MalformedCarbonCommandException("trigger must be specified"))
     val interval = userInputMap.getOrElse(
-      "interval", throw new MalformedCarbonCommandException("interval must be specify"))
+      "interval", throw new MalformedCarbonCommandException("interval must be specified"))
     trigger match {
       case "ProcessingTime" => ProcessingTime(interval)
       case others => throw new MalformedCarbonCommandException("invalid trigger: " + trigger)

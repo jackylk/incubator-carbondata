@@ -27,6 +27,7 @@ import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.execution.streaming.StreamingRelation
 import org.apache.spark.sql.types.StringType
 
+import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.spark.StreamingOption
@@ -52,11 +53,13 @@ case class CarbonCreateStreamCommand(
   override def processData(sparkSession: SparkSession): Seq[Row] = {
     val df = sparkSession.sql(query)
     var sourceTable: CarbonTable = null
+    var matched = false
     // replace the LogicalRelation in the plan with StreamingRelation
     val streamLp = df.logicalPlan transform {
       case r@LogicalRelation(relation, output, _)
         if relation.isInstanceOf[CarbonDatasourceHadoopRelation] &&
            relation.asInstanceOf[CarbonDatasourceHadoopRelation].carbonTable.isStreamingSource =>
+        matched = true
         sourceTable = relation.asInstanceOf[CarbonDatasourceHadoopRelation].carbonTable
         val tblproperty = sourceTable.getTableInfo.getFactTable.getTableProperties
         val cols = sourceTable.getTableInfo.getFactTable.getListOfColumns.asScala.toArray
@@ -74,6 +77,10 @@ case class CarbonCreateStreamCommand(
         // create a new StreamRelation and re-use the same attribute from LogicalRelation
         StreamingRelation(streamRelation.dataSource, streamRelation.sourceName, output)
       case plan: LogicalPlan => plan
+    }
+
+    if (!matched) {
+      throw new MalformedCarbonCommandException("Must specify streaming source in select query")
     }
 
     val sinkTable = CarbonEnv.getCarbonTable(sinkDbName, sinkTableName)(sparkSession)
