@@ -18,9 +18,13 @@
 package org.apache.carbondata.sdk.file;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 
 import org.apache.carbondata.common.annotations.InterfaceAudience;
 import org.apache.carbondata.common.annotations.InterfaceStability;
+import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema;
 
 import com.google.gson.GsonBuilder;
 import com.google.gson.TypeAdapter;
@@ -76,5 +80,20 @@ public class Schema {
 
   public Field[] getFields() {
     return fields;
+  }
+
+  /**
+   * Read CarbonData file and return the user schema,
+   * the schema order is the same as user save schema
+   */
+  public Schema asOriginOrder() throws IOException {
+    List<ColumnSchema> columnSchemas = readSchemaInIndexFile(indexFilePath);
+    Collections.sort(columnSchemas, new Comparator<ColumnSchema>() {
+      @Override
+      public int compare(ColumnSchema o1, ColumnSchema o2) {
+        return Integer.compare(o1.getSchemaOrdinal(), o2.getSchemaOrdinal());
+      }
+    });
+    return columnSchemas;
   }
 }
