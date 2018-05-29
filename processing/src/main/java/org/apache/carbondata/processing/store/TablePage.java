@@ -47,9 +47,8 @@ import org.apache.carbondata.core.keygenerator.KeyGenException;
 import org.apache.carbondata.core.memory.MemoryException;
 import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.metadata.datatype.DataTypes;
+import org.apache.carbondata.core.util.DataTypeUtil;
 import org.apache.carbondata.processing.datatypes.GenericDataType;
-
-import org.apache.spark.sql.types.Decimal;
 
 /**
  * Represent a page data for all columns, we store its data in columnar layout, so that
@@ -184,14 +183,14 @@ public class TablePage {
       if (DataTypes.isDecimal(measurePages[i].getDataType()) &&
           model.isCompactionFlow() &&
           value != null) {
-        value = ((Decimal) value).toJavaBigDecimal();
+        value = DataTypeUtil.getDataTypeConverter().convertFromDecimalToBigDecimal(value);
       }
       measurePages[i].putData(rowId, value);
     }
   }
 
   /**
-   * add a complex column into internal member compleDimensionPage
+   * add a complex column into internal member complexDimensionPage
    *
    * @param index          index of the complexDimensionPage
    * @param rowId          Id of the input row
@@ -205,8 +204,9 @@ public class TablePage {
 
     // initialize the page if first row
     if (rowId == 0) {
-      int depthInComplexColumn = complexDataType.getColsCount();
-      complexDimensionPages[index] = new ComplexColumnPage(pageSize, depthInComplexColumn);
+      List<ColumnType> complexColumnType = new ArrayList<>();
+      complexDataType.getChildrenType(complexColumnType);
+      complexDimensionPages[index] = new ComplexColumnPage(pageSize, complexColumnType);
     }
 
     int depthInComplexColumn = complexDimensionPages[index].getDepth();
@@ -222,7 +222,7 @@ public class TablePage {
       ByteBuffer byteArrayInput = ByteBuffer.wrap(complexColumns);
       ByteArrayOutputStream byteArrayOutput = new ByteArrayOutputStream();
       DataOutputStream dataOutputStream = new DataOutputStream(byteArrayOutput);
-      complexDataType.parseAndBitPack(byteArrayInput, dataOutputStream,
+      complexDataType.parseComplexValue(byteArrayInput, dataOutputStream,
           model.getComplexDimensionKeyGenerator());
       complexDataType.getColumnarDataForComplexType(encodedComplexColumnar,
           ByteBuffer.wrap(byteArrayOutput.toByteArray()));

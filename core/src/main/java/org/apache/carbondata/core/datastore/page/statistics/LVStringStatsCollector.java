@@ -73,29 +73,32 @@ public class LVStringStatsCollector implements ColumnPageStatsCollector {
   @Override
   public void update(byte[] value) {
     // input value is LV encoded
+    byte[] newValue = null;
     assert (value.length >= 2);
     if (value.length == 2) {
       assert (value[0] == 0 && value[1] == 0);
-      if (min == null && max == null) {
-        min = new byte[0];
-        max = new byte[0];
-      }
-      return;
-    }
-    int length = (value[0] << 8) + (value[1] & 0xff);
-    assert (length > 0);
-    byte[] v = new byte[value.length - 2];
-    System.arraycopy(value, 2, v, 0, v.length);
-    if (min == null && max == null) {
-      min = v;
-      max = v;
+      newValue = new byte[0];
     } else {
-      if (ByteUtil.UnsafeComparer.INSTANCE.compareTo(min, v) > 0) {
-        min = v;
-      }
-      if (ByteUtil.UnsafeComparer.INSTANCE.compareTo(max, v) < 0) {
-        max = v;
-      }
+      int length = (value[0] << 8) + (value[1] & 0xff);
+      assert (length > 0);
+      newValue = new byte[value.length - 2];
+      System.arraycopy(value, 2, newValue, 0, newValue.length);
+    }
+
+    if (null == min) {
+      min = newValue;
+    }
+
+    if (null == max) {
+      max = newValue;
+    }
+
+    if (ByteUtil.UnsafeComparer.INSTANCE.compareTo(min, newValue) > 0) {
+      min = newValue;
+    }
+
+    if (ByteUtil.UnsafeComparer.INSTANCE.compareTo(max, newValue) < 0) {
+      max = newValue;
     }
   }
 

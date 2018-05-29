@@ -28,7 +28,7 @@ import java.nio.channels.FileChannel;
 import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
-import org.apache.carbondata.core.datastore.FileHolder;
+import org.apache.carbondata.core.datastore.FileReader;
 import org.apache.carbondata.core.datastore.filesystem.CarbonFile;
 
 import org.apache.commons.io.FileUtils;
@@ -50,9 +50,9 @@ public final class FileFactory {
     configuration.addResource(new Path("../core-default.xml"));
   }
 
-  private static FileTypeInerface fileFileTypeInerface = new DefaultFileTypeProvider();
-  public static void setFileTypeInerface(FileTypeInerface fileTypeInerface) {
-    fileFileTypeInerface = fileTypeInerface;
+  private static FileTypeInterface fileFileTypeInterface = new DefaultFileTypeProvider();
+  public static void setFileTypeInterface(FileTypeInterface fileTypeInterface) {
+    fileFileTypeInterface = fileTypeInterface;
   }
   private FileFactory() {
 
@@ -62,8 +62,8 @@ public final class FileFactory {
     return configuration;
   }
 
-  public static FileHolder getFileHolder(FileType fileType) {
-    return fileFileTypeInerface.getFileHolder(fileType);
+  public static FileReader getFileHolder(FileType fileType) {
+    return fileFileTypeInterface.getFileHolder(fileType);
   }
 
   public static FileType getFileType(String path) {
@@ -83,14 +83,14 @@ public final class FileFactory {
   }
 
   public static CarbonFile getCarbonFile(String path) {
-    return fileFileTypeInerface.getCarbonFile(path, getFileType(path));
+    return fileFileTypeInterface.getCarbonFile(path, getFileType(path));
   }
   public static CarbonFile getCarbonFile(String path, FileType fileType) {
-    return fileFileTypeInerface.getCarbonFile(path, fileType);
+    return fileFileTypeInterface.getCarbonFile(path, fileType);
   }
   public static CarbonFile getCarbonFile(String path, FileType fileType,
       Configuration hadoopConf) {
-    return fileFileTypeInerface.getCarbonFile(path, fileType, hadoopConf);
+    return fileFileTypeInterface.getCarbonFile(path, fileType, hadoopConf);
   }
 
   public static DataInputStream getDataInputStream(String path, FileType fileType)
@@ -107,6 +107,19 @@ public final class FileFactory {
     return getCarbonFile(path).getDataInputStream(path, fileType, bufferSize, configuration);
   }
 
+  /**
+   * get data input stream
+   * @param path
+   * @param fileType
+   * @param bufferSize
+   * @param compressorName name of compressor to read this file
+   * @return data input stream
+   * @throws IOException
+   */
+  public static DataInputStream getDataInputStream(String path, FileType fileType, int bufferSize,
+      String compressorName) throws IOException {
+    return getCarbonFile(path).getDataInputStream(path, fileType, bufferSize, compressorName);
+  }
   /**
    * return the datainputStream which is seek to the offset of file
    *
@@ -138,6 +151,34 @@ public final class FileFactory {
   }
 
   /**
+   * get data output stream
+   * @param path file path
+   * @param fileType file type
+   * @param bufferSize write buffer size
+   * @param blockSize block size
+   * @param replication replication
+   * @return data output stream
+   * @throws IOException if error occurs
+   */
+  public static DataOutputStream getDataOutputStream(String path, FileType fileType, int bufferSize,
+      long blockSize, short replication) throws IOException {
+    return getCarbonFile(path).getDataOutputStream(path, fileType, bufferSize, blockSize,
+        replication);
+  }
+  /**
+   * get data out put stream
+   * @param path
+   * @param fileType
+   * @param bufferSize
+   * @param compressorName name of compressor to write this file
+   * @return data out put stram
+   * @throws IOException
+   */
+  public static DataOutputStream getDataOutputStream(String path, FileType fileType, int bufferSize,
+      String compressorName) throws IOException {
+    return getCarbonFile(path).getDataOutputStream(path, fileType, bufferSize, compressorName);
+  }
+  /**
    * This method checks the given path exists or not and also is it file or
    * not if the performFileCheck is true
    *
@@ -151,14 +192,22 @@ public final class FileFactory {
   }
 
   /**
-   * This method checks the given path exists or not and also is it file or
-   * not if the performFileCheck is true
+   * This method checks the given path exists or not.
    *
    * @param filePath - Path
    * @param fileType - FileType Local/HDFS
    */
   public static boolean isFileExist(String filePath, FileType fileType) throws IOException {
     return getCarbonFile(filePath).isFileExist(filePath, fileType);
+  }
+
+  /**
+   * This method checks the given path exists or not.
+   *
+   * @param filePath - Path
+   */
+  public static boolean isFileExist(String filePath) throws IOException {
+    return isFileExist(filePath, getFileType(filePath));
   }
 
   public static boolean createNewFile(String filePath, FileType fileType) throws IOException {
@@ -220,7 +269,15 @@ public final class FileFactory {
    */
   public static DataOutputStream getDataOutputStreamUsingAppend(String path, FileType fileType)
       throws IOException {
-    return getCarbonFile(path).getDataOutputStreamUsingAppend(path, fileType);
+    if (FileType.S3 == fileType) {
+      CarbonFile carbonFile = getCarbonFile(path);
+      if (carbonFile.exists()) {
+        carbonFile.delete();
+      }
+      return carbonFile.getDataOutputStream(path,fileType);
+    } else {
+      return getCarbonFile(path).getDataOutputStreamUsingAppend(path, fileType);
+    }
   }
 
   /**
@@ -397,6 +454,7 @@ public final class FileFactory {
       throws IOException {
     FileFactory.FileType fileType = FileFactory.getFileType(directoryPath);
     switch (fileType) {
+      case S3:
       case HDFS:
       case VIEWFS:
         try {
@@ -422,9 +480,30 @@ public final class FileFactory {
     }
   }
 
-  public static void setPermission(String directoryPath, FsPermission permission, String username,
-      String group) throws IOException {
-    getCarbonFile(directoryPath).setPermission(directoryPath, permission, username, group);
+  /**
+   * set the file replication
+   *
+   * @param path file path
+   * @param fileType file type
+   * @param replication replication
+   * @return true, if success; false, if failed
+   * @throws IOException if error occurs
+   */
+  public static boolean setReplication(String path, FileFactory.FileType fileType,
+      short replication) throws IOException {
+    return getCarbonFile(path, fileType).setReplication(path, replication);
   }
 
+  /**
+   * get the default replication
+   *
+   * @param path file path
+   * @param fileType file type
+   * @return replication
+   * @throws IOException if error occurs
+   */
+  public static short getDefaultReplication(String path, FileFactory.FileType fileType)
+      throws IOException {
+    return getCarbonFile(path, fileType).getDefaultReplication(path);
+  }
 }

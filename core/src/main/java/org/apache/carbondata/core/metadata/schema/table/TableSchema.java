@@ -20,6 +20,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,6 +31,7 @@ import org.apache.carbondata.core.metadata.schema.BucketingInfo;
 import org.apache.carbondata.core.metadata.schema.PartitionInfo;
 import org.apache.carbondata.core.metadata.schema.SchemaEvolution;
 import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema;
+import org.apache.carbondata.core.util.CarbonUtil;
 
 /**
  * Persisting the table information
@@ -59,7 +61,7 @@ public class TableSchema implements Serializable, Writable {
   /**
    * History of schema evolution of this table
    */
-  private SchemaEvolution schemaEvalution;
+  private SchemaEvolution schemaEvolution;
 
   /**
    * contains all key value pairs for table properties set by user in craete DDL
@@ -110,17 +112,17 @@ public class TableSchema implements Serializable, Writable {
   }
 
   /**
-   * @return the schemaEvalution
+   * @return the schemaEvolution
    */
-  public SchemaEvolution getSchemaEvalution() {
-    return schemaEvalution;
+  public SchemaEvolution getSchemaEvolution() {
+    return schemaEvolution;
   }
 
   /**
-   * @param schemaEvalution the schemaEvalution to set
+   * @param schemaEvolution the schemaEvolution to set
    */
-  public void setSchemaEvalution(SchemaEvolution schemaEvalution) {
-    this.schemaEvalution = schemaEvalution;
+  public void setSchemaEvolution(SchemaEvolution schemaEvolution) {
+    this.schemaEvolution = schemaEvolution;
   }
 
   /**
@@ -272,18 +274,32 @@ public class TableSchema implements Serializable, Writable {
    *
    */
   public DataMapSchema buildChildSchema(String dataMapName, String className, String databaseName,
-      String queryString, String queryType) {
+      String queryString, String queryType) throws UnsupportedEncodingException {
     RelationIdentifier relationIdentifier =
         new RelationIdentifier(databaseName, tableName, tableId);
     Map<String, String> properties = new HashMap<>();
-    properties.put("CHILD_SELECT QUERY", queryString);
-    properties.put("QUERYTYPE", queryType);
-    DataMapSchema dataMapSchema =
-        new DataMapSchema(dataMapName, className);
+    if (queryString != null) {
+      properties.put(
+          "CHILD_SELECT QUERY",
+          CarbonUtil.encodeToString(queryString.trim().getBytes(
+              // replace = to with & as hive metastore does not allow = inside. For base 64
+              // only = is allowed as special character , so replace with &
+              CarbonCommonConstants.DEFAULT_CHARSET)).replace("=", "&"));
+      properties.put("QUERYTYPE", queryType);
+    }
+    DataMapSchema dataMapSchema = new DataMapSchema(dataMapName, className);
     dataMapSchema.setProperties(properties);
+
     dataMapSchema.setChildSchema(this);
     dataMapSchema.setRelationIdentifier(relationIdentifier);
     return dataMapSchema;
+  }
+
+  /**
+   * Create a {@link TableSchemaBuilder} to create {@link TableSchema}
+   */
+  public static TableSchemaBuilder builder() {
+    return new TableSchemaBuilder();
   }
 
 }

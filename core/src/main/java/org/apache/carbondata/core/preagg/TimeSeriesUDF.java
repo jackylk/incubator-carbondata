@@ -91,13 +91,13 @@ public class TimeSeriesUDF {
         calendar.set(Calendar.MILLISECOND, 0);
         calendar.set(Calendar.SECOND, 0);
         calendar.set(Calendar.MINUTE, 0);
-        calendar.set(Calendar.HOUR, 0);
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
         calendar.set(Calendar.DAY_OF_MONTH, 1);
         break;
       case YEAR:
         calendar.set(Calendar.MONTH, 1);
         calendar.set(Calendar.DAY_OF_YEAR, 1);
-        calendar.set(Calendar.HOUR, 0);
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
         calendar.set(Calendar.MINUTE, 0);
         calendar.set(Calendar.SECOND, 0);
         calendar.set(Calendar.MILLISECOND, 0);
@@ -112,7 +112,7 @@ public class TimeSeriesUDF {
   /**
    * Below method will be used to initialize the thread local
    */
-  private synchronized void initialize() {
+  private void initialize() {
     if (calanderThreadLocal.get() == null) {
       calanderThreadLocal.set(new GregorianCalendar());
     }

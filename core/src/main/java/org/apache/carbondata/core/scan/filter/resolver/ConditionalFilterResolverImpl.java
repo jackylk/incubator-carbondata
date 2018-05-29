@@ -31,7 +31,6 @@ import org.apache.carbondata.core.scan.expression.conditional.ConditionalExpress
 import org.apache.carbondata.core.scan.expression.exception.FilterUnsupportedException;
 import org.apache.carbondata.core.scan.expression.logical.RangeExpression;
 import org.apache.carbondata.core.scan.filter.FilterUtil;
-import org.apache.carbondata.core.scan.filter.TableProvider;
 import org.apache.carbondata.core.scan.filter.intf.FilterExecuterType;
 import org.apache.carbondata.core.scan.filter.resolver.metadata.FilterResolverMetadata;
 import org.apache.carbondata.core.scan.filter.resolver.resolverinfo.DimColumnResolvedFilterInfo;
@@ -46,17 +45,13 @@ public class ConditionalFilterResolverImpl implements FilterResolverIntf {
   protected boolean isIncludeFilter;
   private DimColumnResolvedFilterInfo dimColResolvedFilterInfo;
   private MeasureColumnResolvedFilterInfo msrColResolvedFilterInfo;
-  private AbsoluteTableIdentifier tableIdentifier;
-  private boolean isMeasure;
 
   public ConditionalFilterResolverImpl(Expression exp, boolean isExpressionResolve,
-      boolean isIncludeFilter, AbsoluteTableIdentifier tableIdentifier, boolean isMeasure) {
+      boolean isIncludeFilter, boolean isMeasure) {
     this.exp = exp;
     this.isExpressionResolve = isExpressionResolve;
     this.isIncludeFilter = isIncludeFilter;
-    this.tableIdentifier = tableIdentifier;
-    this.isMeasure = isMeasure;
-    if (isMeasure == false) {
+    if (!isMeasure) {
       this.dimColResolvedFilterInfo = new DimColumnResolvedFilterInfo();
     } else {
       this.msrColResolvedFilterInfo = new MeasureColumnResolvedFilterInfo();
@@ -71,8 +66,7 @@ public class ConditionalFilterResolverImpl implements FilterResolverIntf {
    *
    * @throws FilterUnsupportedException
    */
-  @Override public void resolve(AbsoluteTableIdentifier absoluteTableIdentifier,
-      TableProvider tableProvider)
+  @Override public void resolve(AbsoluteTableIdentifier absoluteTableIdentifier)
       throws FilterUnsupportedException, IOException {
     FilterResolverMetadata metadata = new FilterResolverMetadata();
     metadata.setTableIdentifier(absoluteTableIdentifier);
@@ -85,7 +79,6 @@ public class ConditionalFilterResolverImpl implements FilterResolverIntf {
         metadata.setColumnExpression(columnExpression);
         metadata.setExpression(rightExp);
         metadata.setIncludeFilter(isIncludeFilter);
-        metadata.setTableProvider(tableProvider);
         // If imei=imei comes in filter condition then we need to
         // skip processing of right expression.
         // This flow has reached here assuming that this is a single
@@ -121,7 +114,6 @@ public class ConditionalFilterResolverImpl implements FilterResolverIntf {
         metadata.setColumnExpression(columnExpression);
         metadata.setExpression(leftExp);
         metadata.setIncludeFilter(isIncludeFilter);
-        metadata.setTableProvider(tableProvider);
         if (columnExpression.getDataType().equals(DataTypes.TIMESTAMP) ||
             columnExpression.getDataType().equals(DataTypes.DATE)) {
           isExpressionResolve = true;
@@ -157,7 +149,6 @@ public class ConditionalFilterResolverImpl implements FilterResolverIntf {
       metadata.setColumnExpression(columnList.get(0));
       metadata.setExpression(exp);
       metadata.setIncludeFilter(isIncludeFilter);
-      metadata.setTableProvider(tableProvider);
       if ((null != columnList.get(0).getDimension()) && (
           !columnList.get(0).getDimension().hasEncoding(Encoding.DICTIONARY) || columnList.get(0)
               .getDimension().hasEncoding(Encoding.DIRECT_DICTIONARY))
@@ -171,7 +162,7 @@ public class ConditionalFilterResolverImpl implements FilterResolverIntf {
               ! columnList.get(0).getDimension().getDataType().isComplexType())) {
         dimColResolvedFilterInfo.setFilterValues(FilterUtil
             .getFilterListForAllValues(absoluteTableIdentifier, exp, columnList.get(0),
-                isIncludeFilter, tableProvider, isExpressionResolve));
+                isIncludeFilter, isExpressionResolve));
 
         dimColResolvedFilterInfo.setColumnIndex(columnList.get(0).getDimension().getOrdinal());
         dimColResolvedFilterInfo.setDimension(columnList.get(0).getDimension());
@@ -230,10 +221,6 @@ public class ConditionalFilterResolverImpl implements FilterResolverIntf {
     return msrColResolvedFilterInfo;
   }
 
-  public AbsoluteTableIdentifier getTableIdentifier() {
-    return tableIdentifier;
-  }
-
   /**
    * method will calculates the start key based on the filter surrogates
    */
@@ -245,12 +232,6 @@ public class ConditionalFilterResolverImpl implements FilterResolverIntf {
       FilterUtil.getStartKeyForNoDictionaryDimension(dimColResolvedFilterInfo, segmentProperties,
           setOfStartKeyByteArray);
     }
-// else {
-//      FilterUtil.getStartKey(dimColResolvedFilterInfo.getDimensionResolvedFilterInstance(),
-//          segmentProperties, startKey, startKeyList);
-//      FilterUtil.getStartKeyForNoDictionaryDimension(dimColResolvedFilterInfo, segmentProperties,
-//          setOfStartKeyByteArray);
-//    }
   }
 
   /**
@@ -322,7 +303,6 @@ public class ConditionalFilterResolverImpl implements FilterResolverIntf {
           this.dimColResolvedFilterInfo.getDimension(), segmentProperties, false);
     }
     return null;
-
   }
 
 

@@ -16,28 +16,68 @@
  */
 package org.apache.carbondata.core.indexstore;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.io.Serializable;
+
+import org.apache.carbondata.core.metadata.schema.table.Writable;
 
 /**
  * Blocklet
  */
-public class Blocklet implements Serializable {
+public class Blocklet implements Writable,Serializable {
 
-  private String path;
+  /** file path of this blocklet */
+  private String filePath;
 
+  /** id to identify the blocklet inside the block (it is a sequential number) */
   private String blockletId;
 
-  public Blocklet(String path, String blockletId) {
-    this.path = path;
+  public Blocklet(String filePath, String blockletId) {
+    this.filePath = filePath;
     this.blockletId = blockletId;
   }
 
-  public String getPath() {
-    return path;
+  // For serialization purpose
+  public Blocklet() {
   }
 
   public String getBlockletId() {
     return blockletId;
   }
 
+  public String getFilePath() {
+    return filePath;
+  }
+
+  @Override public void write(DataOutput out) throws IOException {
+    out.writeUTF(filePath);
+    out.writeUTF(blockletId);
+  }
+
+  @Override public void readFields(DataInput in) throws IOException {
+    filePath = in.readUTF();
+    blockletId = in.readUTF();
+  }
+
+  @Override public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    Blocklet blocklet = (Blocklet) o;
+
+    if (filePath != null ? !filePath.equals(blocklet.filePath) : blocklet.filePath != null) {
+      return false;
+    }
+    return blockletId != null ?
+        blockletId.equals(blocklet.blockletId) :
+        blocklet.blockletId == null;
+  }
+
+  @Override public int hashCode() {
+    int result = filePath != null ? filePath.hashCode() : 0;
+    result = 31 * result + (blockletId != null ? blockletId.hashCode() : 0);
+    return result;
+  }
 }

@@ -22,9 +22,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.carbondata.core.datastore.chunk.impl.DimensionRawColumnChunk;
-import org.apache.carbondata.core.scan.processor.BlocksChunkHolder;
-
-import org.apache.spark.sql.types.DataType;
+import org.apache.carbondata.core.scan.processor.RawBlockletColumnChunks;
 
 public interface GenericQueryType {
 
@@ -43,9 +41,8 @@ public interface GenericQueryType {
   void parseBlocksAndReturnComplexColumnByteArray(DimensionRawColumnChunk[] rawColumnChunks,
       int rowNumber, int pageNumber, DataOutputStream dataOutputStream) throws IOException;
 
-  DataType getSchemaType();
+  void fillRequiredBlockData(RawBlockletColumnChunks blockChunkHolder) throws IOException;
 
-  void fillRequiredBlockData(BlocksChunkHolder blockChunkHolder) throws IOException;
+  Object getDataBasedOnDataType(ByteBuffer dataBuffer);
 
-  Object getDataBasedOnDataTypeFromSurrogates(ByteBuffer surrogateData);
 }

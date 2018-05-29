@@ -33,9 +33,10 @@ import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.metadata.schema.table.TableInfo;
 import org.apache.carbondata.core.util.CarbonProperties;
 import org.apache.carbondata.core.util.CarbonThreadFactory;
-import org.apache.carbondata.hadoop.util.ObjectSerializationUtil;
+import org.apache.carbondata.core.util.ObjectSerializationUtil;
+import org.apache.carbondata.hadoop.internal.ObjectArrayWritable;
 import org.apache.carbondata.processing.loading.DataLoadExecutor;
-import org.apache.carbondata.processing.loading.csvinput.StringArrayWritable;
+import org.apache.carbondata.processing.loading.TableProcessingOperations;
 import org.apache.carbondata.processing.loading.iterator.CarbonOutputIteratorWrapper;
 import org.apache.carbondata.processing.loading.model.CarbonDataLoadSchema;
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel;
@@ -56,7 +57,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
  * It also generate and writes dictionary data during load only if dictionary server is configured.
  */
 // TODO Move dictionary generater which is coded in spark to MR framework.
-public class CarbonTableOutputFormat extends FileOutputFormat<NullWritable, StringArrayWritable> {
+public class CarbonTableOutputFormat extends FileOutputFormat<NullWritable, ObjectArrayWritable> {
 
   private static final String LOAD_MODEL = "mapreduce.carbontable.load.model";
   private static final String DATABASE_NAME = "mapreduce.carbontable.databaseName";
@@ -67,6 +68,8 @@ public class CarbonTableOutputFormat extends FileOutputFormat<NullWritable, Stri
   private static final String TEMP_STORE_LOCATIONS = "mapreduce.carbontable.tempstore.locations";
   private static final String OVERWRITE_SET = "mapreduce.carbontable.set.overwrite";
   public static final String COMPLEX_DELIMITERS = "mapreduce.carbontable.complex_delimiters";
+  private static final String CARBON_TRANSACTIONAL_TABLE =
+      "mapreduce.input.carboninputformat.transactional";
   public static final String SERIALIZATION_NULL_FORMAT =
       "mapreduce.carbontable.serialization.null.format";
   public static final String BAD_RECORDS_LOGGER_ENABLE =
@@ -94,6 +97,19 @@ public class CarbonTableOutputFormat extends FileOutputFormat<NullWritable, Stri
    * in load status update time
    */
   public static final String UPADTE_TIMESTAMP = "mapreduce.carbontable.update.timestamp";
+
+  /**
+   * During update query we first delete the old data and then add updated data to new segment, so
+   * sometimes there is a chance that complete segments needs to removed during deletion. We should
+   * do 'Mark for delete' for those segments during table status update.
+   */
+  public static final String SEGMENTS_TO_BE_DELETED =
+      "mapreduce.carbontable.segments.to.be.removed";
+
+  /**
+   * It is used only to fire events in case of any child tables to be loaded.
+   */
+  public static final String OPERATION_CONTEXT = "mapreduce.carbontable.operation.context";
 
   private static final Log LOG = LogFactory.getLog(CarbonTableOutputFormat.class);
 
@@ -214,14 +230,20 @@ public class CarbonTableOutputFormat extends FileOutputFormat<NullWritable, Stri
   }
 
   @Override
-  public RecordWriter<NullWritable, StringArrayWritable> getRecordWriter(
+  public RecordWriter<NullWritable, ObjectArrayWritable> getRecordWriter(
       TaskAttemptContext taskAttemptContext) throws IOException {
     final CarbonLoadModel loadModel = getLoadModel(taskAttemptContext.getConfiguration());
-    loadModel.setTaskNo(System.nanoTime() + "");
+    //if loadModel having taskNo already(like in SDK) then no need to overwrite
+    if (null == loadModel.getTaskNo() || loadModel.getTaskNo().isEmpty()) {
+      loadModel.setTaskNo(taskAttemptContext.getConfiguration()
+          .get("carbon.outputformat.taskno", String.valueOf(System.nanoTime())));
+    }
+    loadModel.setDataWritePath(
+        taskAttemptContext.getConfiguration().get("carbon.outputformat.writepath"));
     final String[] tempStoreLocations = getTempStoreLocations(taskAttemptContext);
     final CarbonOutputIteratorWrapper iteratorWrapper = new CarbonOutputIteratorWrapper();
     final DataLoadExecutor dataLoadExecutor = new DataLoadExecutor();
-    ExecutorService executorService = Executors.newFixedThreadPool(1,
+    final ExecutorService executorService = Executors.newFixedThreadPool(1,
         new CarbonThreadFactory("CarbonRecordWriter:" + loadModel.getTableName()));;
     // It should be started in new thread as the underlying iterator uses blocking queue.
     Future future = executorService.submit(new Thread() {
@@ -230,7 +252,12 @@ public class CarbonTableOutputFormat extends FileOutputFormat<NullWritable, Stri
           dataLoadExecutor
               .execute(loadModel, tempStoreLocations, new CarbonIterator[] { iteratorWrapper });
         } catch (Exception e) {
+          executorService.shutdownNow();
+          iteratorWrapper.closeWriter(true);
           dataLoadExecutor.close();
+          // clean up the folders and files created locally for data load operation
+          TableProcessingOperations.deleteLocalDataLoadFolderLocation(loadModel, false, false);
+
           throw new RuntimeException(e);
         }
       }
@@ -251,6 +278,7 @@ public class CarbonTableOutputFormat extends FileOutputFormat<NullWritable, Stri
     CarbonProperties carbonProperty = CarbonProperties.getInstance();
     model.setDatabaseName(CarbonTableOutputFormat.getDatabaseName(conf));
     model.setTableName(CarbonTableOutputFormat.getTableName(conf));
+    model.setCarbonTransactionalTable(true);
     model.setCarbonDataLoadSchema(new CarbonDataLoadSchema(getCarbonTable(conf)));
     model.setTablePath(getTablePath(conf));
 
@@ -281,11 +309,11 @@ public class CarbonTableOutputFormat extends FileOutputFormat<NullWritable, Stri
             SKIP_EMPTY_LINE,
             carbonProperty.getProperty(CarbonLoadOptionConstants.CARBON_OPTIONS_SKIP_EMPTY_LINE)));
 
-    String complexDelim = conf.get(COMPLEX_DELIMITERS, "\\$" + "," + "\\:");
+    String complexDelim = conf.get(COMPLEX_DELIMITERS, "$" + "," + ":");
     String[] split = complexDelim.split(",");
     model.setComplexDelimiterLevel1(split[0]);
     if (split.length > 1) {
-      model.setComplexDelimiterLevel1(split[1]);
+      model.setComplexDelimiterLevel2(split[1]);
     }
     model.setDateFormat(
         conf.get(
@@ -354,7 +382,7 @@ public class CarbonTableOutputFormat extends FileOutputFormat<NullWritable, Stri
     model.setCsvHeaderColumns(columns);
   }
 
-  public static class CarbonRecordWriter extends RecordWriter<NullWritable, StringArrayWritable> {
+  public static class CarbonRecordWriter extends RecordWriter<NullWritable, ObjectArrayWritable> {
 
     private CarbonOutputIteratorWrapper iteratorWrapper;
 
@@ -376,13 +404,13 @@ public class CarbonTableOutputFormat extends FileOutputFormat<NullWritable, Stri
       this.future = future;
     }
 
-    @Override public void write(NullWritable aVoid, StringArrayWritable strings)
+    @Override public void write(NullWritable aVoid, ObjectArrayWritable objects)
         throws InterruptedException {
-      iteratorWrapper.write(strings.get());
+      iteratorWrapper.write(objects.get());
     }
 
     @Override public void close(TaskAttemptContext taskAttemptContext) throws InterruptedException {
-      iteratorWrapper.closeWriter();
+      iteratorWrapper.closeWriter(false);
       try {
         future.get();
       } catch (ExecutionException e) {
@@ -391,8 +419,10 @@ public class CarbonTableOutputFormat extends FileOutputFormat<NullWritable, Stri
       } finally {
         executorService.shutdownNow();
         dataLoadExecutor.close();
+        // clean up the folders and files created locally for data load operation
+        TableProcessingOperations.deleteLocalDataLoadFolderLocation(loadModel, false, false);
       }
-      LOG.info("Closed partition writer task " + taskAttemptContext.getTaskAttemptID());
+      LOG.info("Closed writer task " + taskAttemptContext.getTaskAttemptID());
     }
 
     public CarbonLoadModel getLoadModel() {

@@ -33,7 +33,6 @@ import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.exception.CarbonDataWriterException;
 import org.apache.carbondata.core.datastore.row.CarbonRow;
-import org.apache.carbondata.core.memory.MemoryException;
 import org.apache.carbondata.core.util.CarbonProperties;
 import org.apache.carbondata.core.util.CarbonTimeStatisticsFactory;
 import org.apache.carbondata.processing.loading.exception.CarbonDataLoadingException;
@@ -165,7 +164,9 @@ public class UnsafeBatchParallelReadMergeSorterImpl extends AbstractMergeSorter 
         LOGGER.error(e);
         this.threadStatusObserver.notifyFailed(e);
       } finally {
-        sortDataRows.finishThread();
+        synchronized (sortDataRows) {
+          sortDataRows.finishThread();
+        }
       }
     }
 
@@ -212,17 +213,16 @@ public class UnsafeBatchParallelReadMergeSorterImpl extends AbstractMergeSorter 
 
       try {
         sortDataRow.initialize();
-      } catch (MemoryException e) {
+      } catch (Exception e) {
         throw new CarbonDataLoadingException(e);
       }
       batchCount++;
     }
 
     private void setTempLocation(SortParameters parameters) {
-      String[] carbonDataDirectoryPath = CarbonDataProcessorUtil
-          .getLocalDataFolderLocation(parameters.getDatabaseName(),
-            parameters.getTableName(), parameters.getTaskNo(), batchCount + "",
-            parameters.getSegmentId(), false, false);
+      String[] carbonDataDirectoryPath = CarbonDataProcessorUtil.getLocalDataFolderLocation(
+          parameters.getDatabaseName(), parameters.getTableName(), parameters.getTaskNo(),
+          parameters.getSegmentId(), false, false);
       String[] tempDirs = CarbonDataProcessorUtil.arrayAppend(carbonDataDirectoryPath,
           File.separator, CarbonCommonConstants.SORT_TEMP_FILE_LOCATION);
       parameters.setTempFileLocation(tempDirs);
@@ -329,7 +329,7 @@ public class UnsafeBatchParallelReadMergeSorterImpl extends AbstractMergeSorter 
             .recordDictionaryValuesTotalTime(parameters.getPartitionID(),
                 System.currentTimeMillis());
         return false;
-      } catch (InterruptedException e) {
+      } catch (Exception e) {
         throw new CarbonDataLoadingException(e);
       }
     }

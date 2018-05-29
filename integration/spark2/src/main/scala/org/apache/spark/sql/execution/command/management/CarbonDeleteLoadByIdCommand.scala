@@ -21,6 +21,9 @@ import org.apache.spark.sql.{CarbonEnv, Row, SparkSession}
 import org.apache.spark.sql.execution.command.{Checker, DataCommand}
 
 import org.apache.carbondata.api.CarbonStore
+import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
+import org.apache.carbondata.core.exception.ConcurrentOperationException
+import org.apache.carbondata.core.statusmanager.SegmentStatusManager
 import org.apache.carbondata.events.{DeleteSegmentByIdPostEvent, DeleteSegmentByIdPreEvent, OperationContext, OperationListenerBus}
 
 case class CarbonDeleteLoadByIdCommand(
@@ -32,8 +35,17 @@ case class CarbonDeleteLoadByIdCommand(
   override def processData(sparkSession: SparkSession): Seq[Row] = {
     Checker.validateTableExists(databaseNameOp, tableName, sparkSession)
     val carbonTable = CarbonEnv.getCarbonTable(databaseNameOp, tableName)(sparkSession)
-    val operationContext = new OperationContext
 
+    if (!carbonTable.getTableInfo.isTransactionalTable) {
+      throw new MalformedCarbonCommandException("Unsupported operation on non transactional table")
+    }
+
+    // if insert overwrite in progress, do not allow delete segment
+    if (SegmentStatusManager.isOverwriteInProgressInTable(carbonTable)) {
+      throw new ConcurrentOperationException(carbonTable, "insert overwrite", "delete segment")
+    }
+
+    val operationContext = new OperationContext
     val deleteSegmentByIdPreEvent: DeleteSegmentByIdPreEvent =
       DeleteSegmentByIdPreEvent(carbonTable,
         loadIds,

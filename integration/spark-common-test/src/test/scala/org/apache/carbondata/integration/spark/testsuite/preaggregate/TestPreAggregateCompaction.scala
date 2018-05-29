@@ -21,6 +21,9 @@ import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatest.Matchers._
 
+import org.apache.carbondata.core.constants.CarbonCommonConstants
+import org.apache.carbondata.core.util.CarbonProperties
+
 class TestPreAggregateCompaction extends QueryTest with BeforeAndAfterEach with BeforeAndAfterAll {
 
   val testData = s"$resourcesPath/sample.csv"
@@ -154,6 +157,9 @@ class TestPreAggregateCompaction extends QueryTest with BeforeAndAfterEach with 
     segmentNamesSum = sql("show segments for table maintable_preagg_sum").collect().map(_.get(0).toString)
     segmentNamesSum should equal (Array("11", "10", "9", "8.1", "8", "7", "6", "5", "4.1", "4", "3", "2", "1", "0.2", "0.1", "0"))
     checkAnswer(sql("select maintable_id, sum(maintable_age_sum) from maintable_preagg_sum group by maintable_id"), sumResult)
+    val mainTableSegment = sql("SHOW SEGMENTS FOR TABLE maintable")
+    val SegmentSequenceIds = mainTableSegment.collect().map { each => (each.toSeq) (0) }
+    assert(!SegmentSequenceIds.contains("0.1"))
   }
 
   test("test if minor/major compaction is successful for pre-agg table") {
@@ -173,7 +179,32 @@ class TestPreAggregateCompaction extends QueryTest with BeforeAndAfterEach with 
     segmentNamesSum.sorted should equal (Array("0", "0.1", "0.2", "1", "2", "3", "4", "5", "6", "7"))
   }
 
+  test("test auto compaction on aggregate table") {
+    CarbonProperties.getInstance().addProperty(CarbonCommonConstants.ENABLE_AUTO_LOAD_MERGE, "true")
+    sql(s"LOAD DATA LOCAL INPATH '$testData' into table maintable")
+    sql(s"LOAD DATA LOCAL INPATH '$testData' into table maintable")
+    sql(s"LOAD DATA LOCAL INPATH '$testData' into table maintable")
+    sql(s"LOAD DATA LOCAL INPATH '$testData' into table maintable")
+    val segmentNamesSum = sql("show segments for table maintable_preagg_sum").collect().map(_.get(0).toString)
+    segmentNamesSum.sorted should equal  (Array("0", "0.1", "1", "2", "3"))
+    CarbonProperties.getInstance().addProperty(CarbonCommonConstants.ENABLE_AUTO_LOAD_MERGE, "false")
+  }
+
+  test("test minor compaction on Pre-agg tables after multiple loads") {
+    CarbonProperties.getInstance().addProperty(CarbonCommonConstants.ENABLE_AUTO_LOAD_MERGE, "true")
+    sql(s"LOAD DATA LOCAL INPATH '$testData' into table maintable")
+    sql(s"LOAD DATA LOCAL INPATH '$testData' into table maintable")
+    sql(s"LOAD DATA LOCAL INPATH '$testData' into table maintable")
+    sql(s"LOAD DATA LOCAL INPATH '$testData' into table maintable")
+    sql(s"LOAD DATA LOCAL INPATH '$testData' into table maintable")
+    sql(s"LOAD DATA LOCAL INPATH '$testData' into table maintable")
+    sql(s"LOAD DATA LOCAL INPATH '$testData' into table maintable")
+    sql("alter table maintable compact 'minor'")
+    assert(sql("show segments for table maintable").collect().map(_.get(1).toString.toLowerCase).contains("compacted"))
+  }
+
   override def afterAll(): Unit = {
+    CarbonProperties.getInstance().addProperty(CarbonCommonConstants.ENABLE_AUTO_LOAD_MERGE, "false")
     sql("drop database if exists compaction cascade")
     sql("use default")
   }

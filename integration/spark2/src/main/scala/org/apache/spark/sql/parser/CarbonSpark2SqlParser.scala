@@ -25,7 +25,7 @@ import org.apache.spark.sql.catalyst.{CarbonDDLSqlParser, TableIdentifier}
 import org.apache.spark.sql.catalyst.CarbonTableIdentifierImplicit._
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.execution.command._
-import org.apache.spark.sql.execution.command.datamap.{CarbonCreateDataMapCommand, CarbonDataMapShowCommand, CarbonDropDataMapCommand}
+import org.apache.spark.sql.execution.command.datamap.{CarbonCreateDataMapCommand, CarbonDataMapRebuildCommand, CarbonDataMapShowCommand, CarbonDropDataMapCommand}
 import org.apache.spark.sql.execution.command.management._
 import org.apache.spark.sql.execution.command.partition.{CarbonAlterTableDropPartitionCommand, CarbonAlterTableSplitPartitionCommand}
 import org.apache.spark.sql.execution.command.schema.{CarbonAlterTableAddColumnCommand, CarbonAlterTableDataTypeChangeCommand, CarbonAlterTableDropColumnCommand}
@@ -36,10 +36,10 @@ import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
 import org.apache.spark.sql.util.CarbonException
 import org.apache.spark.util.CarbonReflectionUtils
 
+import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.spark.CarbonOption
-import org.apache.carbondata.spark.exception.MalformedCarbonCommandException
-import org.apache.carbondata.spark.util.CommonUtil
+import org.apache.carbondata.spark.util.{CarbonScalaUtil, CommonUtil}
 
 /**
  * TODO remove the duplicate code and add the common methods to common class.
@@ -52,16 +52,19 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
       // Initialize the Keywords.
       initLexical
       phrase(start)(new lexical.Scanner(input)) match {
-        case Success(plan, _) => plan match {
-          case x: CarbonLoadDataCommand =>
-            x.inputSqlString = input
-            x
-          case x: CarbonAlterTableCompactionCommand =>
-            x.alterTableModel.alterSql = input
-            x
-          case logicalPlan => logicalPlan
+        case Success(plan, _) =>
+          CarbonScalaUtil.cleanParserThreadLocals()
+          plan match {
+            case x: CarbonLoadDataCommand =>
+              x.inputSqlString = input
+              x
+            case x: CarbonAlterTableCompactionCommand =>
+              x.alterTableModel.alterSql = input
+              x
+            case logicalPlan => logicalPlan
         }
         case failureOrError =>
+          CarbonScalaUtil.cleanParserThreadLocals()
           CarbonException.analysisException(failureOrError.toString)
       }
     }
@@ -84,7 +87,7 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
     alterAddPartition | alterSplitPartition | alterDropPartition
 
   protected lazy val datamapManagement: Parser[LogicalPlan] =
-    createDataMap | dropDataMap | showDataMap
+    createDataMap | dropDataMap | showDataMap | refreshDataMap
 
   protected lazy val alterAddPartition: Parser[LogicalPlan] =
     ALTER ~> TABLE ~> (ident <~ ".").? ~ ident ~ (ADD ~> PARTITION ~>
@@ -121,11 +124,13 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
 
 
   protected lazy val alterTable: Parser[LogicalPlan] =
-    ALTER ~> TABLE ~> (ident <~ ".").? ~ ident ~ (COMPACT ~ stringLit) <~ opt(";")  ^^ {
-      case dbName ~ table ~ (compact ~ compactType) =>
+    ALTER ~> TABLE ~> (ident <~ ".").? ~ ident ~ (COMPACT ~ stringLit) ~
+      (WHERE ~> (SEGMENT ~ "." ~ ID) ~> IN ~> "(" ~> repsep(segmentId, ",") <~ ")").? <~
+      opt(";") ^^ {
+      case dbName ~ table ~ (compact ~ compactType) ~ segs =>
         val altertablemodel =
           AlterTableModel(convertDbNameToLowerCase(dbName), table, None, compactType,
-          Some(System.currentTimeMillis()), null)
+          Some(System.currentTimeMillis()), null, segs)
         CarbonAlterTableCompactionCommand(altertablemodel)
     }
 
@@ -142,17 +147,29 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
 
   /**
    * The syntax of datamap creation is as follows.
-   * CREATE DATAMAP datamapName ON TABLE tableName USING 'DataMapClassName'
+   * CREATE DATAMAP IF NOT EXISTS datamapName [ON TABLE tableName]
+   * USING 'DataMapProviderName'
+   * [WITH DEFERRED REBUILD]
    * DMPROPERTIES('KEY'='VALUE') AS SELECT COUNT(COL1) FROM tableName
    */
   protected lazy val createDataMap: Parser[LogicalPlan] =
-    CREATE ~> DATAMAP ~> ident ~ (ON ~ TABLE) ~  (ident <~ ".").? ~ ident ~
-    (USING ~> stringLit) ~ (DMPROPERTIES ~> "(" ~> repsep(loadOptions, ",") <~ ")").? ~
+    CREATE ~> DATAMAP ~> opt(IF ~> NOT ~> EXISTS) ~ ident ~
+    opt(ontable) ~
+    (USING ~> stringLit) ~
+    opt(WITH ~> DEFERRED ~> REBUILD) ~
+    (DMPROPERTIES ~> "(" ~> repsep(loadOptions, ",") <~ ")").? ~
     (AS ~> restInput).? <~ opt(";") ^^ {
-      case dmname ~ ontable ~ dbName ~ tableName ~ className ~ dmprops ~ query =>
+      case ifnotexists ~ dmname ~ tableIdent ~ dmProviderName ~ deferred ~ dmprops ~ query =>
+
         val map = dmprops.getOrElse(List[(String, String)]()).toMap[String, String]
-        CarbonCreateDataMapCommand(
-          dmname, TableIdentifier(tableName, dbName), className, map, query)
+        CarbonCreateDataMapCommand(dmname, tableIdent, dmProviderName, map, query,
+          ifnotexists.isDefined, deferred.isDefined)
+    }
+
+  protected lazy val ontable: Parser[TableIdentifier] =
+    ON ~> TABLE ~>  (ident <~ ".").? ~ ident ^^ {
+      case dbName ~ tableName =>
+        TableIdentifier(tableName, dbName)
     }
 
   /**
@@ -160,10 +177,9 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
    * DROP DATAMAP IF EXISTS datamapName ON TABLE tablename
    */
   protected lazy val dropDataMap: Parser[LogicalPlan] =
-    DROP ~> DATAMAP ~> opt(IF ~> EXISTS) ~ ident ~ (ON ~ TABLE) ~
-    (ident <~ ".").? ~ ident <~ opt(";")  ^^ {
-      case ifexists ~ dmname ~ ontable ~ dbName ~ tableName =>
-        CarbonDropDataMapCommand(dmname, ifexists.isDefined, dbName, tableName)
+    DROP ~> DATAMAP ~> opt(IF ~> EXISTS) ~ ident ~ opt(ontable) <~ opt(";")  ^^ {
+      case ifexists ~ dmname ~ tableIdent =>
+        CarbonDropDataMapCommand(dmname, ifexists.isDefined, tableIdent)
     }
 
   /**
@@ -171,9 +187,19 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
    * SHOW DATAMAP ON TABLE tableName
    */
   protected lazy val showDataMap: Parser[LogicalPlan] =
-    SHOW ~> DATAMAP ~> ON ~> TABLE ~> (ident <~ ".").? ~ ident <~ opt(";") ^^ {
-      case databaseName ~ tableName =>
-        CarbonDataMapShowCommand(convertDbNameToLowerCase(databaseName), tableName.toLowerCase())
+    SHOW ~> DATAMAP ~> opt(ontable) <~ opt(";") ^^ {
+      case tableIdent =>
+        CarbonDataMapShowCommand(tableIdent)
+    }
+
+  /**
+   * The syntax of show datamap is used to show datamaps on the table
+   * REBUILD DATAMAP datamapname [ON TABLE] tableName
+   */
+  protected lazy val refreshDataMap: Parser[LogicalPlan] =
+    REBUILD ~> DATAMAP ~> ident ~ opt(ontable) <~ opt(";") ^^ {
+      case datamap ~ tableIdent =>
+        CarbonDataMapRebuildCommand(datamap, tableIdent)
     }
 
   protected lazy val deleteRecords: Parser[LogicalPlan] =
@@ -212,8 +238,8 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
             val relation : UnresolvedRelation = tab._1 match {
               case r@CarbonUnresolvedRelation(tableIdentifier) =>
                 tab._3 match {
-                  case Some(a) => (updateRelation(r, tableIdentifier, tab._4, Some(tab._3.get)))
-                  case None => (updateRelation(r, tableIdentifier, tab._4, None))
+                  case Some(a) => updateRelation(r, tableIdentifier, tab._4, Some(tab._3.get))
+                  case None => updateRelation(r, tableIdentifier, tab._4, None)
                 }
               case _ => tab._1
             }
@@ -226,7 +252,7 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
             }
 
           } else {
-            (sel, updateRelation(tab._1, tab._2, tab._4, Some(tab._3.get)))
+            (sel, updateRelation(tab._1, tab._2, tab._4, tab._3))
           }
         val rel = tab._3 match {
           case Some(a) => UpdateTable(relation, columns, selectStmt, Some(tab._3.get), where)
@@ -361,7 +387,7 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
           validateOptions(optionsList)
         }
         val optionsMap = optionsList.getOrElse(List.empty[(String, String)]).toMap
-        val partitionSpec = partitions.getOrElse(List.empty[(String, String)]).toMap
+        val partitionSpec = partitions.getOrElse(List.empty[(String, Option[String])]).toMap
         CarbonLoadDataCommand(
           databaseNameOp = convertDbNameToLowerCase(databaseNameOp),
           tableName = tableName,
@@ -374,7 +400,7 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
           updateModel = None,
           tableInfoOp = None,
           internalOptions = Map.empty,
-          partition = partitionSpec.map { case (key, value) => (key, Some(value))})
+          partition = partitionSpec)
     }
 
   protected lazy val deleteLoadsByID: Parser[LogicalPlan] =
@@ -418,12 +444,13 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
     }
 
   protected lazy val showLoads: Parser[LogicalPlan] =
-    SHOW ~> SEGMENTS ~> FOR ~> TABLE ~> (ident <~ ".").? ~ ident ~
+    (SHOW ~> opt(HISTORY) <~ SEGMENTS <~ FOR <~ TABLE) ~ (ident <~ ".").? ~ ident ~
     (LIMIT ~> numericLit).? <~
     opt(";") ^^ {
-      case databaseName ~ tableName ~ limit =>
+      case showHistory ~ databaseName ~ tableName ~ limit =>
         CarbonShowLoadsCommand(
-          convertDbNameToLowerCase(databaseName), tableName.toLowerCase(), limit)
+          convertDbNameToLowerCase(databaseName), tableName.toLowerCase(), limit,
+          showHistory.isDefined)
     }
 
   protected lazy val alterTableModifyDataType: Parser[LogicalPlan] =

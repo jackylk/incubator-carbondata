@@ -29,11 +29,6 @@ import java.util.concurrent.Future;
 
 import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
-import org.apache.carbondata.core.cache.Cache;
-import org.apache.carbondata.core.cache.CacheProvider;
-import org.apache.carbondata.core.cache.CacheType;
-import org.apache.carbondata.core.cache.dictionary.Dictionary;
-import org.apache.carbondata.core.cache.dictionary.DictionaryColumnUniqueIdentifier;
 import org.apache.carbondata.core.datastore.row.CarbonRow;
 import org.apache.carbondata.core.dictionary.client.DictionaryClient;
 import org.apache.carbondata.core.dictionary.service.DictionaryOnePassService;
@@ -72,8 +67,6 @@ public class RowConverterImpl implements RowConverter {
 
   private ExecutorService executorService;
 
-  private Cache<DictionaryColumnUniqueIdentifier, Dictionary> cache;
-
   private Map<Object, Integer>[] localCaches;
 
   public RowConverterImpl(DataField[] fields, CarbonDataLoadConfiguration configuration,
@@ -85,8 +78,6 @@ public class RowConverterImpl implements RowConverter {
 
   @Override
   public void initialize() throws IOException {
-    CacheProvider cacheProvider = CacheProvider.getInstance();
-    cache = cacheProvider.createCache(CacheType.REVERSE_DICTIONARY);
     String nullFormat =
         configuration.getDataLoadProperty(DataLoadProcessorConstants.SERIALIZATION_NULL_FORMAT)
             .toString();
@@ -102,7 +93,7 @@ public class RowConverterImpl implements RowConverter {
     for (int i = 0; i < fields.length; i++) {
       localCaches[i] = new ConcurrentHashMap<>();
       FieldConverter fieldConverter = FieldEncoderFactory.getInstance()
-          .createFieldEncoder(fields[i], cache, configuration.getTableIdentifier(), i, nullFormat,
+          .createFieldEncoder(fields[i], configuration.getTableIdentifier(), i, nullFormat,
               client, configuration.getUseOnePass(), localCaches[i], isEmptyBadRecord);
       fieldConverterList.add(fieldConverter);
     }
@@ -128,7 +119,7 @@ public class RowConverterImpl implements RowConverter {
             @Override public DictionaryClient call() throws Exception {
               Thread.currentThread().setName("Dictionary client");
               DictionaryClient client =
-                  DictionaryOnePassService.getDictionayProvider().getDictionaryClient();
+                  DictionaryOnePassService.getDictionaryProvider().getDictionaryClient();
               client.startClient(configuration.getDictionaryServerSecretKey(),
                   configuration.getDictionaryServerHost(), configuration.getDictionaryServerPort(),
                   configuration.getDictionaryEncryptServerSecure());
@@ -156,14 +147,12 @@ public class RowConverterImpl implements RowConverter {
 
   @Override
   public CarbonRow convert(CarbonRow row) throws CarbonDataLoadingException {
-    //TODO: only copy if it is bad record
-    CarbonRow copy = row.getCopy();
     logHolder.setLogged(false);
     logHolder.clear();
     for (int i = 0; i < fieldConverters.length; i++) {
       fieldConverters[i].convert(row, logHolder);
       if (!logHolder.isLogged() && logHolder.isBadRecordNotAdded()) {
-        badRecordLogger.addBadRecordsToBuilder(copy.getData(), logHolder.getReason());
+        badRecordLogger.addBadRecordsToBuilder(row.getRawData(), logHolder.getReason());
         if (badRecordLogger.isDataLoadFail()) {
           String error = "Data load failed due to bad record: " + logHolder.getReason();
           if (!badRecordLogger.isBadRecordLoggerEnable()) {
@@ -178,6 +167,8 @@ public class RowConverterImpl implements RowConverter {
         }
       }
     }
+    // rawData will not be required after this so reset the entry to null.
+    row.setRawData(null);
     return row;
   }
 
@@ -221,7 +212,7 @@ public class RowConverterImpl implements RowConverter {
       FieldConverter fieldConverter = null;
       try {
         fieldConverter = FieldEncoderFactory.getInstance()
-            .createFieldEncoder(fields[i], cache, configuration.getTableIdentifier(), i, nullFormat,
+            .createFieldEncoder(fields[i], configuration.getTableIdentifier(), i, nullFormat,
                 client, configuration.getUseOnePass(), localCaches[i], isEmptyBadRecord);
       } catch (IOException e) {
         throw new RuntimeException(e);
@@ -249,5 +240,10 @@ public class RowConverterImpl implements RowConverter {
       cardinality[i] = dimCardinality.get(i);
     }
     return cardinality;
+  }
+
+  @Override
+  public FieldConverter[] getFieldConverters() {
+    return fieldConverters;
   }
 }

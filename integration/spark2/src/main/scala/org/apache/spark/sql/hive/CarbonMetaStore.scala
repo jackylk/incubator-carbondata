@@ -21,14 +21,13 @@ import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.types.StructType
 
+import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.metadata.{AbsoluteTableIdentifier, CarbonTableIdentifier}
 import org.apache.carbondata.core.metadata.schema
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.util.CarbonProperties
-import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.format.{SchemaEvolutionEntry, TableInfo}
-
 
 /**
  * Interface for Carbonmetastore
@@ -68,7 +67,8 @@ trait CarbonMetaStore {
    * @param carbonStorePath
    * @param sparkSession
    */
-  def updateTableSchemaForAlter(newTableIdentifier: CarbonTableIdentifier,
+  def updateTableSchemaForAlter(
+      newTableIdentifier: CarbonTableIdentifier,
       oldTableIdentifier: CarbonTableIdentifier,
       thriftTableInfo: org.apache.carbondata.format.TableInfo,
       schemaEvolutionEntry: SchemaEvolutionEntry,
@@ -127,7 +127,8 @@ trait CarbonMetaStore {
   def removeTableFromMetadata(dbName: String, tableName: String): Unit
 
   def updateMetadataByThriftTable(schemaFilePath: String,
-      tableInfo: TableInfo, dbName: String, tableName: String, tablePath: String): Unit
+      tableInfo: org.apache.carbondata.format.TableInfo,
+      dbName: String, tableName: String, tablePath: String): Unit
 
   def isTablePathExists(tableIdentifier: TableIdentifier)(sparkSession: SparkSession): Boolean
 
@@ -142,7 +143,9 @@ trait CarbonMetaStore {
 
   def listAllTables(sparkSession: SparkSession): Seq[CarbonTable]
 
-  def getThriftTableInfo(tablePath: CarbonTablePath)(sparkSession: SparkSession): TableInfo
+  def getThriftTableInfo(
+      carbonTable: CarbonTable
+  ): org.apache.carbondata.format.TableInfo
 
   def getTableFromMetadataCache(database: String, tableName: String): Option[CarbonTable]
 
@@ -176,11 +179,15 @@ trait CarbonMetaStore {
  */
 object CarbonMetaStoreFactory {
 
+  val LOGGER = LogServiceFactory.getLogService("org.apache.spark.sql.hive.CarbonMetaStoreFactory")
+
   def createCarbonMetaStore(conf: RuntimeConfig): CarbonMetaStore = {
     val readSchemaFromHiveMetaStore = readSchemaFromHive(conf)
     if (readSchemaFromHiveMetaStore) {
+      LOGGER.info("Hive based carbon metastore is enabled")
       new CarbonHiveMetaStore()
     } else {
+      LOGGER.info("File based carbon metastore is enabled")
       new CarbonFileMetastore()
     }
   }

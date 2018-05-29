@@ -22,13 +22,13 @@ import scala.collection.JavaConverters._
 import org.apache.spark.sql.{CarbonEnv, Row, SparkSession, _}
 import org.apache.spark.sql.catalyst.analysis.TableAlreadyExistsException
 import org.apache.spark.sql.execution.SQLExecution.EXECUTION_ID_KEY
-import org.apache.spark.sql.execution.command.{Field, MetadataCommand, TableModel, TableNewProcessor}
-import org.apache.spark.sql.util.CarbonException
+import org.apache.spark.sql.execution.command.MetadataCommand
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.exception.InvalidConfigurationException
 import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier
+import org.apache.carbondata.core.metadata.encoder.Encoding
 import org.apache.carbondata.core.metadata.schema.partition.PartitionType
 import org.apache.carbondata.core.metadata.schema.table.{CarbonTable, TableInfo}
 import org.apache.carbondata.core.util.CarbonUtil
@@ -39,7 +39,9 @@ case class CarbonCreateTableCommand(
     tableInfo: TableInfo,
     ifNotExistsSet: Boolean = false,
     tableLocation: Option[String] = None,
-    createDSTable: Boolean = true)
+    isExternal : Boolean = false,
+    createDSTable: Boolean = true,
+    isVisible: Boolean = true)
   extends MetadataCommand {
 
   override def processMetadata(sparkSession: SparkSession): Seq[Row] = {
@@ -79,7 +81,7 @@ case class CarbonCreateTableCommand(
       }
 
       if (tableInfo.getFactTable.getListOfColumns.size <= 0) {
-        CarbonException.analysisException("Table should have at least one column.")
+        throwMetadataException(dbName, tableName, "Table should have at least one column.")
       }
 
       val operationContext = new OperationContext
@@ -88,6 +90,7 @@ case class CarbonCreateTableCommand(
       OperationListenerBus.getInstance.fireEvent(createTablePreExecutionEvent, operationContext)
       val catalog = CarbonEnv.getInstance(sparkSession).carbonMetastore
       val carbonSchemaString = catalog.generateTableSchemaString(tableInfo, tableIdentifier)
+      val isTransactionalTable = tableInfo.isTransactionalTable
       if (createDSTable) {
         try {
           val tablePath = tableIdentifier.getTablePath
@@ -98,34 +101,58 @@ case class CarbonCreateTableCommand(
           val partitionString =
             if (partitionInfo != null &&
                 partitionInfo.getPartitionType == PartitionType.NATIVE_HIVE) {
+              // Restrict dictionary encoding on partition columns.
+              // TODO Need to decide wherher it is required
+              val dictionaryOnPartitionColumn =
+              partitionInfo.getColumnSchemaList.asScala.exists{p =>
+                p.hasEncoding(Encoding.DICTIONARY) && !p.hasEncoding(Encoding.DIRECT_DICTIONARY)
+              }
+              if (dictionaryOnPartitionColumn) {
+                throwMetadataException(
+                  dbName,
+                  tableName,
+                  s"Dictionary include cannot be applied on partition columns")
+              }
               s" PARTITIONED BY (${partitionInfo.getColumnSchemaList.asScala.map(
                 _.getColumnName).mkString(",")})"
             } else {
               ""
             }
-          sparkSession.sql(
-            s"""CREATE TABLE $dbName.$tableName
-               |(${ rawSchema })
-               |USING org.apache.spark.sql.CarbonSource
-               |OPTIONS (
-               |  tableName "$tableName",
-               |  dbName "$dbName",
-               |  tablePath "$tablePath",
-               |  path "$tablePath"
-               |  $carbonSchemaString)
-               |  $partitionString
+          // isVisible property is added to hive table properties to differentiate between main
+          // table and datamaps(like preaggregate). It is false only for datamaps. This is added
+          // to improve the show tables performance when filtering the datamaps from main tables
+          // synchronized to prevent concurrently creation of table with same name
+          CarbonCreateTableCommand.synchronized {
+            sparkSession.sql(
+              s"""CREATE TABLE $dbName.$tableName
+                 |(${ rawSchema })
+                 |USING org.apache.spark.sql.CarbonSource
+                 |OPTIONS (
+                 |  tableName "$tableName",
+                 |  dbName "$dbName",
+                 |  tablePath "$tablePath",
+                 |  path "$tablePath",
+                 |  isExternal "$isExternal",
+                 |  isTransactional "$isTransactionalTable",
+                 |  isVisible "$isVisible"
+                 |  $carbonSchemaString)
+                 |  $partitionString
              """.stripMargin)
+          }
         } catch {
           case e: AnalysisException => throw e
           case e: Exception =>
             // call the drop table to delete the created table.
-            CarbonEnv.getInstance(sparkSession).carbonMetastore
-              .dropTable(tableIdentifier)(sparkSession)
-
-            val msg = s"Create table'$tableName' in database '$dbName' failed."
-            LOGGER.audit(msg)
+            try {
+              CarbonEnv.getInstance(sparkSession).carbonMetastore
+                .dropTable(tableIdentifier)(sparkSession)
+            } catch {
+              case _: Exception => // No operation
+            }
+            val msg = s"Create table'$tableName' in database '$dbName' failed"
+            LOGGER.audit(msg.concat(", ").concat(e.getMessage))
             LOGGER.error(e, msg)
-            CarbonException.analysisException(msg)
+            throwMetadataException(dbName, tableName, msg.concat(", ").concat(e.getMessage))
         }
       }
       val createTablePostExecutionEvent: CreateTablePostExecutionEvent =

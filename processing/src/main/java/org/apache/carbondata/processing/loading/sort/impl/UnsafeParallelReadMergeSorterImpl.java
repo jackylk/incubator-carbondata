@@ -28,7 +28,6 @@ import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.datastore.exception.CarbonDataWriterException;
 import org.apache.carbondata.core.datastore.row.CarbonRow;
-import org.apache.carbondata.core.memory.MemoryException;
 import org.apache.carbondata.core.util.CarbonProperties;
 import org.apache.carbondata.core.util.CarbonThreadFactory;
 import org.apache.carbondata.core.util.CarbonTimeStatisticsFactory;
@@ -82,7 +81,7 @@ public class UnsafeParallelReadMergeSorterImpl extends AbstractMergeSorter {
     final int batchSize = CarbonProperties.getInstance().getBatchSize();
     try {
       sortDataRow.initialize();
-    } catch (MemoryException e) {
+    } catch (Exception e) {
       throw new CarbonDataLoadingException(e);
     }
     this.executorService = Executors.newFixedThreadPool(iterators.length,
@@ -97,7 +96,9 @@ public class UnsafeParallelReadMergeSorterImpl extends AbstractMergeSorter {
       }
       executorService.shutdown();
       executorService.awaitTermination(2, TimeUnit.DAYS);
-      processRowToNextStep(sortDataRow, sortParameters);
+      if (!sortParameters.getObserver().isFailed()) {
+        processRowToNextStep(sortDataRow, sortParameters);
+      }
     } catch (Exception e) {
       checkError();
       throw new CarbonDataLoadingException("Problem while shutdown the server ", e);
@@ -166,7 +167,7 @@ public class UnsafeParallelReadMergeSorterImpl extends AbstractMergeSorter {
       CarbonTimeStatisticsFactory.getLoadStatisticsInstance()
           .recordDictionaryValuesTotalTime(parameters.getPartitionID(), System.currentTimeMillis());
       return false;
-    } catch (InterruptedException e) {
+    } catch (Exception e) {
       throw new CarbonDataLoadingException(e);
     }
   }

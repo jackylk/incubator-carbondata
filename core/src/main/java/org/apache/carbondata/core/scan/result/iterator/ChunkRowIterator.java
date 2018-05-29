@@ -18,7 +18,7 @@
 package org.apache.carbondata.core.scan.result.iterator;
 
 import org.apache.carbondata.common.CarbonIterator;
-import org.apache.carbondata.core.scan.result.BatchResult;
+import org.apache.carbondata.core.scan.result.RowBatch;
 
 /**
  * Iterator over row result
@@ -28,17 +28,17 @@ public class ChunkRowIterator extends CarbonIterator<Object[]> {
   /**
    * iterator over chunk result
    */
-  private CarbonIterator<BatchResult> iterator;
+  private CarbonIterator<RowBatch> iterator;
 
   /**
-   * currect chunk
+   * current chunk
    */
-  private BatchResult currentchunk;
+  private RowBatch currentChunk;
 
-  public ChunkRowIterator(CarbonIterator<BatchResult> iterator) {
+  public ChunkRowIterator(CarbonIterator<RowBatch> iterator) {
     this.iterator = iterator;
     if (iterator.hasNext()) {
-      currentchunk = iterator.next();
+      currentChunk = iterator.next();
     }
   }
 
@@ -50,13 +50,13 @@ public class ChunkRowIterator extends CarbonIterator<Object[]> {
    * @return {@code true} if the iteration has more elements
    */
   @Override public boolean hasNext() {
-    if (null != currentchunk) {
-      if ((currentchunk.hasNext())) {
+    if (null != currentChunk) {
+      if ((currentChunk.hasNext())) {
         return true;
-      } else if (!currentchunk.hasNext()) {
+      } else if (!currentChunk.hasNext()) {
         while (iterator.hasNext()) {
-          currentchunk = iterator.next();
-          if (currentchunk != null && currentchunk.hasNext()) {
+          currentChunk = iterator.next();
+          if (currentChunk != null && currentChunk.hasNext()) {
             return true;
           }
         }
@@ -71,7 +71,7 @@ public class ChunkRowIterator extends CarbonIterator<Object[]> {
    * @return the next element in the iteration
    */
   @Override public Object[] next() {
-    return currentchunk.next();
+    return currentChunk.next();
   }
 
 }

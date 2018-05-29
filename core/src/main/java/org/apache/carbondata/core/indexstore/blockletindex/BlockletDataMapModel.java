@@ -16,9 +16,10 @@
  */
 package org.apache.carbondata.core.indexstore.blockletindex;
 
-import java.util.List;
+import java.util.Map;
 
 import org.apache.carbondata.core.datamap.dev.DataMapModel;
+import org.apache.carbondata.core.indexstore.BlockMetaInfo;
 
 /**
  * It is the model object to keep the information to build or initialize BlockletDataMap.
@@ -27,27 +28,39 @@ public class BlockletDataMapModel extends DataMapModel {
 
   private byte[] fileData;
 
-  private List<String> partitions;
+  private Map<String, BlockMetaInfo> blockMetaInfoMap;
 
-  private boolean partitionedSegment;
+  private String segmentId;
 
-  public BlockletDataMapModel(String filePath, byte[] fileData, List<String> partitions,
-      boolean partitionedSegment) {
+  private boolean addToUnsafe = true;
+
+  public BlockletDataMapModel(String filePath, byte[] fileData,
+      Map<String, BlockMetaInfo> blockMetaInfoMap, String segmentId) {
     super(filePath);
     this.fileData = fileData;
-    this.partitions = partitions;
-    this.partitionedSegment = partitionedSegment;
+    this.blockMetaInfoMap = blockMetaInfoMap;
+    this.segmentId = segmentId;
+  }
+
+  public BlockletDataMapModel(String filePath, byte[] fileData,
+      Map<String, BlockMetaInfo> blockMetaInfoMap, String segmentId, boolean addToUnsafe) {
+    this(filePath, fileData, blockMetaInfoMap, segmentId);
+    this.addToUnsafe = addToUnsafe;
   }
 
   public byte[] getFileData() {
     return fileData;
   }
 
-  public List<String> getPartitions() {
-    return partitions;
+  public Map<String, BlockMetaInfo> getBlockMetaInfoMap() {
+    return blockMetaInfoMap;
   }
 
-  public boolean isPartitionedSegment() {
-    return partitionedSegment;
+  public String getSegmentId() {
+    return segmentId;
+  }
+
+  public boolean isAddToUnsafe() {
+    return addToUnsafe;
   }
 }

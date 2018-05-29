@@ -41,7 +41,6 @@ import org.apache.carbondata.core.scan.expression.exception.FilterUnsupportedExc
 import org.apache.carbondata.core.scan.expression.logical.BinaryLogicalExpression;
 import org.apache.carbondata.core.scan.filter.ColumnFilterInfo;
 import org.apache.carbondata.core.scan.filter.FilterUtil;
-import org.apache.carbondata.core.scan.filter.TableProvider;
 import org.apache.carbondata.core.scan.filter.intf.FilterExecuterType;
 import org.apache.carbondata.core.scan.filter.resolver.resolverinfo.DimColumnResolvedFilterInfo;
 import org.apache.carbondata.core.scan.filter.resolver.resolverinfo.MeasureColumnResolvedFilterInfo;
@@ -61,7 +60,7 @@ public class RowLevelRangeFilterResolverImpl extends ConditionalFilterResolverIm
 
   public RowLevelRangeFilterResolverImpl(Expression exp, boolean isExpressionResolve,
       boolean isIncludeFilter, AbsoluteTableIdentifier tableIdentifier) {
-    super(exp, isExpressionResolve, isIncludeFilter, tableIdentifier, false);
+    super(exp, isExpressionResolve, isIncludeFilter, false);
     dimColEvaluatorInfoList =
         new ArrayList<DimColumnResolvedFilterInfo>(CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);
     msrColEvalutorInfoList = new ArrayList<MeasureColumnResolvedFilterInfo>(
@@ -91,6 +90,8 @@ public class RowLevelRangeFilterResolverImpl extends ConditionalFilterResolverIm
       if (null != dimensionFromCurrentBlock) {
         return FilterUtil.getKeyArray(this.dimColEvaluatorInfoList.get(0).getFilterValues(),
             dimensionFromCurrentBlock, segmentProperties, false);
+      } else {
+        return FilterUtil.getKeyArray(this.dimColEvaluatorInfoList.get(0).getFilterValues(), false);
       }
     }
     return null;
@@ -226,7 +227,7 @@ public class RowLevelRangeFilterResolverImpl extends ConditionalFilterResolverIm
    * Method which will resolve the filter expression by converting the filter
    * member to its assigned dictionary values.
    */
-  public void resolve(AbsoluteTableIdentifier absoluteTableIdentifier, TableProvider tableProvider)
+  public void resolve(AbsoluteTableIdentifier absoluteTableIdentifier)
       throws FilterUnsupportedException {
     DimColumnResolvedFilterInfo dimColumnEvaluatorInfo = null;
     MeasureColumnResolvedFilterInfo msrColumnEvalutorInfo = null;

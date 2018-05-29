@@ -51,7 +51,7 @@ public class DataFileFooterConverter2 extends AbstractDataFileFooterConverter {
     List<ColumnSchema> columnSchemaList = new ArrayList<ColumnSchema>();
     List<org.apache.carbondata.format.ColumnSchema> table_columns = footer.getTable_columns();
     for (int i = 0; i < table_columns.size(); i++) {
-      columnSchemaList.add(thriftColumnSchmeaToWrapperColumnSchema(table_columns.get(i)));
+      columnSchemaList.add(thriftColumnSchemaToWrapperColumnSchema(table_columns.get(i)));
     }
     dataFileFooter.setColumnInTable(columnSchemaList);
 
@@ -141,6 +141,6 @@ public class DataFileFooterConverter2 extends AbstractDataFileFooterConverter {
   }
 
   @Override public List<ColumnSchema> getSchema(TableBlockInfo tableBlockInfo) throws IOException {
-    return null;
+    return new DataFileFooterConverter().getSchema(tableBlockInfo);
   }
 }

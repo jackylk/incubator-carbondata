@@ -31,15 +31,14 @@ import org.apache.spark.util.AlterTableUtil
 import org.apache.carbondata.common.logging.{LogService, LogServiceFactory}
 import org.apache.carbondata.core.cache.CacheProvider
 import org.apache.carbondata.core.constants.CarbonCommonConstants
-import org.apache.carbondata.core.datamap.DataMapStoreManager
+import org.apache.carbondata.core.datamap.{DataMapStoreManager, Segment}
 import org.apache.carbondata.core.locks.{ICarbonLock, LockUsage}
 import org.apache.carbondata.core.metadata.{AbsoluteTableIdentifier, CarbonMetadata}
 import org.apache.carbondata.core.metadata.converter.ThriftWrapperSchemaConverterImpl
 import org.apache.carbondata.core.metadata.schema.partition.PartitionType
 import org.apache.carbondata.core.mutate.CarbonUpdateUtil
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager
-import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
-import org.apache.carbondata.core.util.path.CarbonStorePath
+import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.processing.loading.TableProcessingOperations
 import org.apache.carbondata.processing.loading.model.{CarbonDataLoadSchema, CarbonLoadModel}
 import org.apache.carbondata.spark.partition.DropPartitionCallable
@@ -62,17 +61,13 @@ case class CarbonAlterTableDropPartitionCommand(
       .asInstanceOf[CarbonRelation]
     val tablePath = relation.carbonTable.getTablePath
     carbonMetaStore.checkSchemasModifiedTimeAndReloadTable(TableIdentifier(tableName, Some(dbName)))
-    if (relation == null) {
-      sys.error(s"Table $dbName.$tableName does not exist")
+    if (relation == null || CarbonMetadata.getInstance.getCarbonTable(dbName, tableName) == null) {
+      throwMetadataException(dbName, tableName, "table not found")
     }
-    if (null == CarbonMetadata.getInstance.getCarbonTable(dbName, tableName)) {
-      LOGGER.error(s"Alter table failed. table not found: $dbName.$tableName")
-      sys.error(s"Alter table failed. table not found: $dbName.$tableName")
-    }
-    val table = relation.carbonTable
-    val partitionInfo = table.getPartitionInfo(tableName)
+    val carbonTable = relation.carbonTable
+    val partitionInfo = carbonTable.getPartitionInfo(tableName)
     if (partitionInfo == null) {
-      sys.error(s"Table $tableName is not a partition table.")
+      throwMetadataException(dbName, tableName, "table is not a partition table")
     }
     val partitionIds = partitionInfo.getPartitionIds.asScala.map(_.asInstanceOf[Int]).toList
     // keep a copy of partitionIdList before update partitionInfo.
@@ -92,14 +87,13 @@ case class CarbonAlterTableDropPartitionCommand(
         listInfo.remove(listToRemove)
         partitionInfo.setListInfo(listInfo)
       case PartitionType.RANGE_INTERVAL =>
-        sys.error(s"Dropping range interval partition isn't support yet!")
+        throwMetadataException(dbName, tableName,
+          "Dropping range interval partition is unsupported")
     }
     partitionInfo.dropPartition(partitionIndex)
-    val carbonTablePath = CarbonStorePath.getCarbonTablePath(table.getAbsoluteTableIdentifier)
-    val schemaFilePath = carbonTablePath.getSchemaFilePath
-    // read TableInfo
-    val tableInfo = carbonMetaStore.getThriftTableInfo(carbonTablePath)(sparkSession)
 
+    // read TableInfo
+    val tableInfo = carbonMetaStore.getThriftTableInfo(carbonTable)
     val schemaConverter = new ThriftWrapperSchemaConverterImpl()
     val wrapperTableInfo = schemaConverter.fromExternalToWrapperTableInfo(tableInfo,
       dbName, tableName, tablePath)
@@ -111,9 +105,12 @@ case class CarbonAlterTableDropPartitionCommand(
       schemaConverter.fromWrapperToExternalTableInfo(wrapperTableInfo, dbName, tableName)
     thriftTable.getFact_table.getSchema_evolution.getSchema_evolution_history.get(0)
       .setTime_stamp(System.currentTimeMillis)
-    carbonMetaStore.updateMetadataByThriftTable(schemaFilePath, thriftTable,
-      dbName, tableName, tablePath)
-    CarbonUtil.writeThriftTableToSchemaFile(schemaFilePath, thriftTable)
+    carbonMetaStore.updateTableSchemaForAlter(
+      carbonTable.getAbsoluteTableIdentifier.getCarbonTableIdentifier,
+      carbonTable.getAbsoluteTableIdentifier.getCarbonTableIdentifier,
+      thriftTable,
+      null,
+      carbonTable.getAbsoluteTableIdentifier.getTablePath)(sparkSession)
     // update the schema modified time
     carbonMetaStore.updateAndTouchSchemasUpdatedTime()
     // sparkSession.catalog.refreshTable(tableName)
@@ -141,6 +138,7 @@ case class CarbonAlterTableDropPartitionCommand(
       // Need to fill dimension relation
       carbonLoadModel.setCarbonDataLoadSchema(dataLoadSchema)
       carbonLoadModel.setTableName(table.getTableName)
+      carbonLoadModel.setCarbonTransactionalTable(table.isTransactionalTable)
       carbonLoadModel.setDatabaseName(table.getDatabaseName)
       carbonLoadModel.setTablePath(table.getTablePath)
       val loadStartTime = CarbonUpdateUtil.readCurrentTime
@@ -161,7 +159,6 @@ case class CarbonAlterTableDropPartitionCommand(
       CacheProvider.getInstance().dropAllCache()
       AlterTableUtil.releaseLocks(locks)
       LOGGER.info("Locks released after alter table drop partition action.")
-      LOGGER.audit("Locks released after alter table drop partition action.")
     }
     LOGGER.info(s"Alter table drop partition is successful for table $dbName.$tableName")
     LOGGER.audit(s"Alter table drop partition is successful for table $dbName.$tableName")
@@ -205,7 +202,7 @@ case class CarbonAlterTableDropPartitionCommand(
       val validSegments = segmentStatusManager.getValidAndInvalidSegments.getValidSegments.asScala
       val threadArray: Array[Thread] = new Array[Thread](validSegments.size)
       var i = 0
-      for (segmentId: String <- validSegments) {
+      for (segmentId: Segment <- validSegments) {
         threadArray(i) = dropPartitionThread(sqlContext, carbonLoadModel, executor,
           segmentId, partitionId, dropWithData, oldPartitionIds)
         threadArray(i).start()
@@ -214,10 +211,8 @@ case class CarbonAlterTableDropPartitionCommand(
       for (thread <- threadArray) {
         thread.join()
       }
-      val identifier = AbsoluteTableIdentifier.from(carbonLoadModel.getTablePath,
-        carbonLoadModel.getDatabaseName, carbonLoadModel.getTableName)
-      val refresher = DataMapStoreManager.getInstance().getTableSegmentRefresher(identifier)
-      refresher.refreshSegments(validSegments.asJava)
+      val refresher = DataMapStoreManager.getInstance().getTableSegmentRefresher(carbonTable)
+      refresher.refreshSegments(validSegments.map(_.getSegmentNo).asJava)
     } catch {
       case e: Exception =>
         LOGGER.error(s"Exception when dropping partition: ${ e.getMessage }")
@@ -239,7 +234,7 @@ case class CarbonAlterTableDropPartitionCommand(
 case class dropPartitionThread(sqlContext: SQLContext,
     carbonLoadModel: CarbonLoadModel,
     executor: ExecutorService,
-    segmentId: String,
+    segmentId: Segment,
     partitionId: String,
     dropWithData: Boolean,
     oldPartitionIds: List[Int]) extends Thread {
@@ -260,7 +255,7 @@ case class dropPartitionThread(sqlContext: SQLContext,
   private def executeDroppingPartition(sqlContext: SQLContext,
       carbonLoadModel: CarbonLoadModel,
       executor: ExecutorService,
-      segmentId: String,
+      segmentId: Segment,
       partitionId: String,
       dropWithData: Boolean,
       oldPartitionIds: List[Int]): Unit = {

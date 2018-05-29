@@ -50,7 +50,6 @@ import org.apache.carbondata.core.util.CarbonThreadFactory;
 import org.apache.carbondata.core.util.CarbonUtil;
 import org.apache.carbondata.processing.datatypes.GenericDataType;
 import org.apache.carbondata.processing.loading.sort.SortScopeOptions;
-import org.apache.carbondata.processing.store.writer.CarbonDataWriterVo;
 import org.apache.carbondata.processing.store.writer.CarbonFactDataWriter;
 
 /**
@@ -168,12 +167,14 @@ public class CarbonFactDataHandlerColumnar implements CarbonFactHandler {
 
     blockletProcessingCount = new AtomicInteger(0);
     producerExecutorService = Executors.newFixedThreadPool(numberOfCores,
-        new CarbonThreadFactory("ProducerPool:" + model.getTableName()));
+        new CarbonThreadFactory("ProducerPool:" + model.getTableName()
+            + ", range: " + model.getBucketId()));
     producerExecutorServiceTaskList =
         new ArrayList<>(CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);
     LOGGER.info("Initializing writer executors");
     consumerExecutorService = Executors
-        .newFixedThreadPool(1, new CarbonThreadFactory("ConsumerPool:" + model.getTableName()));
+        .newFixedThreadPool(1, new CarbonThreadFactory("ConsumerPool:" + model.getTableName()
+            + ", range: " + model.getBucketId()));
     consumerExecutorServiceTaskList = new ArrayList<>(1);
     semaphore = new Semaphore(numberOfCores);
     tablePageList = new TablePageList();
@@ -460,33 +461,7 @@ public class CarbonFactDataHandlerColumnar implements CarbonFactHandler {
    * @return data writer instance
    */
   private CarbonFactDataWriter getFactDataWriter() {
-    return CarbonDataWriterFactory.getInstance()
-        .getFactDataWriter(version, getDataWriterVo());
-  }
-
-  /**
-   * Below method will be used to get the writer vo
-   *
-   * @return data writer vo object
-   */
-  private CarbonDataWriterVo getDataWriterVo() {
-    CarbonDataWriterVo carbonDataWriterVo = new CarbonDataWriterVo();
-    carbonDataWriterVo.setStoreLocation(model.getStoreLocation());
-    carbonDataWriterVo.setMeasureCount(model.getMeasureCount());
-    carbonDataWriterVo.setTableName(model.getTableName());
-    carbonDataWriterVo.setNoDictionaryCount(model.getNoDictionaryCount());
-    carbonDataWriterVo.setCarbonDataFileAttributes(model.getCarbonDataFileAttributes());
-    carbonDataWriterVo.setDatabaseName(model.getDatabaseName());
-    carbonDataWriterVo.setWrapperColumnSchemaList(model.getWrapperColumnSchema());
-    carbonDataWriterVo.setCarbonDataDirectoryPath(model.getCarbonDataDirectoryPath());
-    carbonDataWriterVo.setColCardinality(model.getColCardinality());
-    carbonDataWriterVo.setSegmentProperties(model.getSegmentProperties());
-    carbonDataWriterVo.setTableBlocksize(model.getBlockSizeInMB());
-    carbonDataWriterVo.setBucketNumber(model.getBucketId());
-    carbonDataWriterVo.setTaskExtension(model.getTaskExtension());
-    carbonDataWriterVo.setSchemaUpdatedTimeStamp(model.getSchemaUpdatedTimeStamp());
-    carbonDataWriterVo.setListener(model.getDataMapWriterlistener());
-    return carbonDataWriterVo;
+    return CarbonDataWriterFactory.getInstance().getFactDataWriter(version, model);
   }
 
   /**
@@ -585,6 +560,7 @@ public class CarbonFactDataHandlerColumnar implements CarbonFactHandler {
     @Override public Void call() throws Exception {
       try {
         TablePage tablePage = processDataRows(dataRows);
+        dataRows = null;
         tablePage.setIsLastPage(isLastPage);
         // insert the object in array according to sequence number
         int indexInNodeHolderArray = (pageId - 1) % numberOfCores;

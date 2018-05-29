@@ -18,18 +18,15 @@ package org.apache.carbondata.spark.testsuite.allqueries
 
 import java.io.File
 
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
-import org.apache.carbondata.core.util.CarbonProperties
-import org.apache.spark.sql.test.util.QueryTest
-
 import org.apache.carbondata.core.datastore.filesystem.CarbonFile
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.metadata.CarbonMetadata
-import org.apache.carbondata.core.metadata.schema.table.CarbonTable
-import org.apache.carbondata.core.util.path.CarbonStorePath
+import org.apache.carbondata.core.util.path.CarbonTablePath
+import org.apache.carbondata.core.util.CarbonProperties
 
 class InsertIntoCarbonTableTestCase extends QueryTest with BeforeAndAfterAll {
   var timeStampPropOrig: String = _
@@ -88,12 +85,9 @@ class InsertIntoCarbonTableTestCase extends QueryTest with BeforeAndAfterAll {
   test("insert->carbon column is more then hive-fails") {
      sql("drop table if exists TCarbon")
      sql("create table TCarbon (imei string,deviceInformationId int,MAC string,deviceColor string,gamePointId double,contractNumber BigInt) STORED BY 'org.apache.carbondata.format'")
-     try {
-        sql("insert into TCarbon select imei,deviceInformationId,MAC,deviceColor,gamePointId from THive")
-        assert(false)
-     } catch  {
-       case ex: Exception => assert(true)
-     }
+    intercept[Exception] {
+      sql("insert into TCarbon select imei,deviceInformationId,MAC,deviceColor,gamePointId from THive")
+    }
   }
   test("insert->insert wrong data types-pass") {
      sql("drop table if exists TCarbon")
@@ -234,8 +228,7 @@ class InsertIntoCarbonTableTestCase extends QueryTest with BeforeAndAfterAll {
     sql("insert overwrite table HiveOverwrite select * from THive")
     checkAnswer(sql("select count(*) from CarbonOverwrite"), sql("select count(*) from HiveOverwrite"))
     val carbonTable = CarbonMetadata.getInstance().getCarbonTable("default", "carbonoverwrite")
-    val partitionPath = CarbonStorePath
-      .getCarbonTablePath(carbonTable.getAbsoluteTableIdentifier).getPartitionDir("0")
+    val partitionPath = CarbonTablePath.getPartitionDir(carbonTable.getAbsoluteTableIdentifier.getTablePath)
     val folder = new File(partitionPath)
     assert(folder.isDirectory)
     assert(folder.list().length == 1)
@@ -257,8 +250,7 @@ class InsertIntoCarbonTableTestCase extends QueryTest with BeforeAndAfterAll {
     sql(s"LOAD DATA local INPATH '$resourcesPath/100_olap.csv' overwrite INTO TABLE HiveOverwrite")
     checkAnswer(sql("select count(*) from TCarbonSourceOverwrite"), sql("select count(*) from HiveOverwrite"))
     val carbonTable = CarbonMetadata.getInstance().getCarbonTable("default", "tcarbonsourceoverwrite")
-    val partitionPath = CarbonStorePath
-      .getCarbonTablePath(carbonTable.getAbsoluteTableIdentifier).getPartitionDir("0")
+    val partitionPath = CarbonTablePath.getPartitionDir(carbonTable.getAbsoluteTableIdentifier.getTablePath)
     val folder = new File(partitionPath)
 
     assert(folder.isDirectory)
@@ -387,7 +379,7 @@ class InsertIntoCarbonTableTestCase extends QueryTest with BeforeAndAfterAll {
 
 
   private def checkSegment(tableName: String) : Boolean ={
-    val storePath_t1 = metastoredb + s"/warehouse/${tableName.toLowerCase()}/Fact/Part0"
+    val storePath_t1 = s"$storeLocation/${tableName.toLowerCase()}/Fact/Part0"
     val carbonFile_t1: CarbonFile = FileFactory
       .getCarbonFile(storePath_t1, FileFactory.getFileType(storePath_t1))
     var exists: Boolean = carbonFile_t1.exists()

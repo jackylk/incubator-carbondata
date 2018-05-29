@@ -47,7 +47,7 @@ public class UnsafeMemoryManager {
           .getProperty(CarbonCommonConstants.UNSAFE_WORKING_MEMORY_IN_MB,
               CarbonCommonConstants.UNSAFE_WORKING_MEMORY_IN_MB_DEFAULT));
     } catch (Exception e) {
-      size = Long.parseLong(CarbonCommonConstants.IN_MEMORY_FOR_SORT_DATA_IN_MB_DEFAULT);
+      size = Long.parseLong(CarbonCommonConstants.UNSAFE_WORKING_MEMORY_IN_MB_DEFAULT);
       LOGGER.info("Wrong memory size given, "
           + "so setting default value to " + size);
     }
@@ -159,7 +159,8 @@ public class UnsafeMemoryManager {
   /**
    * It tries to allocate memory of `size` bytes, keep retry until it allocates successfully.
    */
-  public static MemoryBlock allocateMemoryWithRetry(long taskId, long size) throws MemoryException {
+  public static MemoryBlock allocateMemoryWithRetry(long taskId, long size)
+      throws MemoryException {
     MemoryBlock baseBlock = null;
     int tries = 0;
     while (tries < 300) {
@@ -177,8 +178,7 @@ public class UnsafeMemoryManager {
       tries++;
     }
     if (baseBlock == null) {
-      LOGGER.error(" Memory Used : " + INSTANCE.memoryUsed + " Tasks running : "
-          + taskIdToMemoryBlockMap.keySet());
+      INSTANCE.printCurrentMemoryUsage();
       throw new MemoryException("Not enough memory");
     }
     return baseBlock;
@@ -186,5 +186,10 @@ public class UnsafeMemoryManager {
 
   public static boolean isOffHeap() {
     return offHeap;
+  }
+
+  private synchronized void printCurrentMemoryUsage() {
+    LOGGER.error(
+        " Memory Used : " + memoryUsed + " Tasks running : " + taskIdToMemoryBlockMap.keySet());
   }
 }

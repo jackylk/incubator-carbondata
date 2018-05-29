@@ -29,6 +29,7 @@ import org.apache.carbondata.core.util.CarbonProperties;
 
 import com.univocity.parsers.csv.CsvParser;
 import com.univocity.parsers.csv.CsvParserSettings;
+import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.lang.BooleanUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -75,9 +76,6 @@ public class CSVInputFormat extends FileInputFormat<NullWritable, StringArrayWri
   public static final String NUMBER_OF_COLUMNS = "carbon.csvinputformat.number.of.columns";
   public static final int DEFAULT_MAX_NUMBER_OF_COLUMNS_FOR_PARSING = 2000;
   public static final int THRESHOLD_MAX_NUMBER_OF_COLUMNS_FOR_PARSING = 20000;
-  // As Short data type is used for storing the length of a column during data processing hence
-  // the maximum characters that can be supported should be less than Short max value
-  public static final int MAX_CHARS_PER_COLUMN_DEFAULT = 32000;
 
   private static LogService LOGGER =
       LogServiceFactory.getLogService(CSVInputFormat.class.toString());
@@ -207,11 +205,14 @@ public class CSVInputFormat extends FileInputFormat<NullWritable, StringArrayWri
     parserSettings.setSkipEmptyLines(
         Boolean.valueOf(job.get(SKIP_EMPTY_LINE,
             CarbonCommonConstants.CARBON_SKIP_EMPTY_LINE_DEFAULT)));
-    parserSettings.setMaxCharsPerColumn(MAX_CHARS_PER_COLUMN_DEFAULT);
+    parserSettings.setMaxCharsPerColumn(CarbonCommonConstants.MAX_CHARS_PER_COLUMN_DEFAULT);
     String maxColumns = job.get(MAX_COLUMNS, "" + DEFAULT_MAX_NUMBER_OF_COLUMNS_FOR_PARSING);
     parserSettings.setMaxColumns(Integer.parseInt(maxColumns));
     parserSettings.getFormat().setQuote(job.get(QUOTE, QUOTE_DEFAULT).charAt(0));
     parserSettings.getFormat().setQuoteEscape(job.get(ESCAPE, ESCAPE_DEFAULT).charAt(0));
+    // setting the content length to to limit the length of displayed contents being parsed/written
+    // in the exception message when an error occurs.
+    parserSettings.setErrorContentLength(CarbonCommonConstants.CARBON_ERROR_CONTENT_LENGTH);
     return parserSettings;
   }
 
@@ -274,8 +275,11 @@ public class CSVInputFormat extends FileInputFormat<NullWritable, StringArrayWri
         filePosition = fileIn;
         inputStream = boundedInputStream;
       }
-      reader = new InputStreamReader(inputStream,
+
+      //Wrap input stream with BOMInputStream to skip UTF-8 BOM characters
+      reader = new InputStreamReader(new BOMInputStream(inputStream),
           Charset.forName(CarbonCommonConstants.DEFAULT_CHARSET));
+
       CsvParserSettings settings = extractCsvParserSettings(job);
       if (start == 0) {
         settings.setHeaderExtractionEnabled(job.getBoolean(HEADER_PRESENT,

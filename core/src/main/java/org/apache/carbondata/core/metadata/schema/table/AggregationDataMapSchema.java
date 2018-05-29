@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.carbondata.core.metadata.schema.datamap.DataMapClassProvider;
 import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema;
 import org.apache.carbondata.core.metadata.schema.table.column.ParentColumnTableRelation;
 import org.apache.carbondata.core.preagg.TimeSeriesFunctionEnum;
@@ -62,7 +63,9 @@ public class AggregationDataMapSchema extends DataMapSchema {
    */
   private int ordinal = Integer.MAX_VALUE;
 
-  public AggregationDataMapSchema(String dataMapName, String className) {
+  private Set aggExpToColumnMapping;
+
+  AggregationDataMapSchema(String dataMapName, String className) {
     super(dataMapName, className);
   }
 
@@ -149,7 +152,8 @@ public class AggregationDataMapSchema extends DataMapSchema {
       List<ParentColumnTableRelation> parentColumnTableRelations =
           columnSchema.getParentColumnTableRelations();
       if (null != parentColumnTableRelations && parentColumnTableRelations.size() == 1
-          && parentColumnTableRelations.get(0).getColumnName().equals(columName)) {
+          && parentColumnTableRelations.get(0).getColumnName().equals(columName) &&
+          columnSchema.getColumnName().endsWith(columName)) {
         return columnSchema;
       }
     }
@@ -201,23 +205,6 @@ public class AggregationDataMapSchema extends DataMapSchema {
     }
     return null;
   }
-
-  /**
-   * Below method is to check if parent column with matching aggregate function
-   * @param parentColumnName
-   *                    parent column name
-   * @param aggFunction
-   *                    aggregate function
-   * @return is matching
-   */
-  public boolean isColumnWithAggFunctionExists(String parentColumnName, String aggFunction) {
-    Set<String> aggFunctions = parentColumnToAggregationsMapping.get(parentColumnName);
-    if (null != aggFunctions && aggFunctions.contains(aggFunction)) {
-      return true;
-    }
-    return false;
-  }
-
 
   /**
    * Method to prepare mapping of parent to list of aggregation function applied on that column
@@ -340,5 +327,54 @@ public class AggregationDataMapSchema extends DataMapSchema {
 
   public int getOrdinal() {
     return ordinal;
+  }
+
+  /**
+   * Below method will be used to get the aggregation column based on index
+   * It will return the first aggregation column found based on index
+   * @param searchStartIndex
+   *  start index
+   * @param sortedColumnSchema
+   * list of sorted table columns
+   * @return found column list
+   *
+   */
+  public ColumnSchema getAggColumnBasedOnIndex(int searchStartIndex,
+      List<ColumnSchema> sortedColumnSchema) {
+    ColumnSchema columnSchema = null;
+    for (int i = searchStartIndex; i < sortedColumnSchema.size(); i++) {
+      if (!sortedColumnSchema.get(i).getAggFunction().isEmpty()) {
+        columnSchema = sortedColumnSchema.get(i);
+        break;
+      }
+    }
+    return columnSchema;
+  }
+
+  public synchronized Set getAggExpToColumnMapping() {
+    return aggExpToColumnMapping;
+  }
+
+  public synchronized void setAggExpToColumnMapping(Set aggExpToColumnMapping) {
+    if (null == this.aggExpToColumnMapping) {
+      this.aggExpToColumnMapping = aggExpToColumnMapping;
+    }
+  }
+
+  public DataMapClassProvider getProvider() {
+    return isTimeseriesDataMap ?
+        DataMapClassProvider.TIMESERIES : DataMapClassProvider.PREAGGREGATE;
+  }
+
+  @Override public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    if (!super.equals(o)) return false;
+    AggregationDataMapSchema that = (AggregationDataMapSchema) o;
+    return that == this;
+  }
+
+  @Override public int hashCode() {
+    return super.hashCode();
   }
 }

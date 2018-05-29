@@ -16,12 +16,19 @@
  */
 package org.apache.carbondata.core.indexstore;
 
+import java.io.ByteArrayInputStream;
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.List;
 
+import org.apache.carbondata.common.logging.LogService;
+import org.apache.carbondata.common.logging.LogServiceFactory;
+import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMap;
 import org.apache.carbondata.core.metadata.blocklet.BlockletInfo;
+import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema;
 
 import org.apache.hadoop.io.Writable;
 
@@ -29,6 +36,14 @@ import org.apache.hadoop.io.Writable;
  * Blocklet detail information to be sent to each executor
  */
 public class BlockletDetailInfo implements Serializable, Writable {
+
+  /**
+   * LOGGER
+   */
+  private static final LogService LOGGER =
+      LogServiceFactory.getLogService(BlockletDetailInfo.class.getName());
+
+  private static final long serialVersionUID = 7957493757421513808L;
 
   private int rowCount;
 
@@ -43,6 +58,16 @@ public class BlockletDetailInfo implements Serializable, Writable {
   private long schemaUpdatedTimeStamp;
 
   private BlockletInfo blockletInfo;
+
+  private byte[] blockletInfoBinary;
+
+  private long blockFooterOffset;
+
+  private List<ColumnSchema> columnSchemas;
+
+  private byte[] columnSchemaBinary;
+
+  private long blockSize;
 
   public int getRowCount() {
     return rowCount;
@@ -69,11 +94,38 @@ public class BlockletDetailInfo implements Serializable, Writable {
   }
 
   public BlockletInfo getBlockletInfo() {
+    if (null == blockletInfo) {
+      try {
+        setBlockletInfoFromBinary();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
     return blockletInfo;
   }
 
   public void setBlockletInfo(BlockletInfo blockletInfo) {
     this.blockletInfo = blockletInfo;
+  }
+
+  private void setBlockletInfoFromBinary() throws IOException {
+    if (null == this.blockletInfo && null != blockletInfoBinary && blockletInfoBinary.length > 0) {
+      blockletInfo = new BlockletInfo();
+      ByteArrayInputStream stream = new ByteArrayInputStream(blockletInfoBinary);
+      DataInputStream inputStream = new DataInputStream(stream);
+      try {
+        blockletInfo.readFields(inputStream);
+      } catch (IOException e) {
+        LOGGER.error("Problem in reading blocklet info");
+        throw new IOException("Problem in reading blocklet info." + e.getMessage());
+      } finally {
+        try {
+          inputStream.close();
+        } catch (IOException e) {
+          LOGGER.error(e, "Problem in closing input stream of reading blocklet info.");
+        }
+      }
+    }
   }
 
   public int[] getDimLens() {
@@ -92,6 +144,14 @@ public class BlockletDetailInfo implements Serializable, Writable {
     this.schemaUpdatedTimeStamp = schemaUpdatedTimeStamp;
   }
 
+  public long getBlockSize() {
+    return blockSize;
+  }
+
+  public void setBlockSize(long blockSize) {
+    this.blockSize = blockSize;
+  }
+
   @Override public void write(DataOutput out) throws IOException {
     out.writeInt(rowCount);
     out.writeShort(pagesCount);
@@ -102,7 +162,16 @@ public class BlockletDetailInfo implements Serializable, Writable {
       out.writeInt(dimLens[i]);
     }
     out.writeLong(schemaUpdatedTimeStamp);
-    blockletInfo.write(out);
+    out.writeBoolean(blockletInfo != null);
+    if (blockletInfo != null) {
+      blockletInfo.write(out);
+    }
+    out.writeLong(blockFooterOffset);
+    out.writeInt(columnSchemaBinary.length);
+    out.write(columnSchemaBinary);
+    out.writeInt(blockletInfoBinary.length);
+    out.write(blockletInfoBinary);
+    out.writeLong(blockSize);
   }
 
   @Override public void readFields(DataInput in) throws IOException {
@@ -115,8 +184,48 @@ public class BlockletDetailInfo implements Serializable, Writable {
       dimLens[i] = in.readInt();
     }
     schemaUpdatedTimeStamp = in.readLong();
-    blockletInfo = new BlockletInfo();
-    blockletInfo.readFields(in);
+    if (in.readBoolean()) {
+      blockletInfo = new BlockletInfo();
+      blockletInfo.readFields(in);
+    }
+    blockFooterOffset = in.readLong();
+    int bytesSize = in.readInt();
+    byte[] schemaArray = new byte[bytesSize];
+    in.readFully(schemaArray);
+    readColumnSchema(schemaArray);
+    int byteSize = in.readInt();
+    blockletInfoBinary = new byte[byteSize];
+    in.readFully(blockletInfoBinary);
+    setBlockletInfoFromBinary();
+    blockSize = in.readLong();
+  }
+
+  /**
+   * Read column schema from binary
+   * @param schemaArray
+   * @throws IOException
+   */
+  public void readColumnSchema(byte[] schemaArray) throws IOException {
+    BlockletDataMap blockletDataMap = new BlockletDataMap();
+    columnSchemas = blockletDataMap.readColumnSchema(schemaArray);
+  }
+
+  /**
+   * Create copy of BlockletDetailInfo
+   */
+  public BlockletDetailInfo copy() {
+    BlockletDetailInfo detailInfo = new BlockletDetailInfo();
+    detailInfo.rowCount = rowCount;
+    detailInfo.pagesCount = pagesCount;
+    detailInfo.versionNumber = versionNumber;
+    detailInfo.blockletId = blockletId;
+    detailInfo.dimLens = dimLens;
+    detailInfo.schemaUpdatedTimeStamp = schemaUpdatedTimeStamp;
+    detailInfo.blockletInfo = blockletInfo;
+    detailInfo.blockFooterOffset = blockFooterOffset;
+    detailInfo.columnSchemas = columnSchemas;
+    detailInfo.blockSize = blockSize;
+    return detailInfo;
   }
 
   public Short getBlockletId() {
@@ -126,4 +235,32 @@ public class BlockletDetailInfo implements Serializable, Writable {
   public void setBlockletId(Short blockletId) {
     this.blockletId = blockletId;
   }
+
+  public long getBlockFooterOffset() {
+    return blockFooterOffset;
+  }
+
+  public void setBlockFooterOffset(long blockFooterOffset) {
+    this.blockFooterOffset = blockFooterOffset;
+  }
+
+  public List<ColumnSchema> getColumnSchemas() throws IOException {
+    if (columnSchemas == null && columnSchemaBinary != null) {
+      readColumnSchema(columnSchemaBinary);
+    }
+    return columnSchemas;
+  }
+
+  public void setColumnSchemaBinary(byte[] columnSchemaBinary) {
+    this.columnSchemaBinary = columnSchemaBinary;
+  }
+
+  public byte[] getColumnSchemaBinary() {
+    return columnSchemaBinary;
+  }
+
+  public void setBlockletInfoBinary(byte[] blockletInfoBinary) {
+    this.blockletInfoBinary = blockletInfoBinary;
+  }
+
 }

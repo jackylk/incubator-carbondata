@@ -17,16 +17,16 @@
 
 package org.apache.spark.sql.hive.execution.command
 
-import org.apache.spark.sql.{CarbonEnv, Row, SparkSession}
+import org.apache.spark.sql.{CarbonEnv, CarbonSession, Row, SparkSession}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.command.table.CarbonDropTableCommand
 
-import org.apache.carbondata.core.constants.CarbonCommonConstants
+import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
+import org.apache.carbondata.core.constants.{CarbonCommonConstants, CarbonCommonConstantsInternal}
 import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil, SessionParams}
-import org.apache.carbondata.spark.exception.MalformedCarbonCommandException
 
 case class CarbonDropDatabaseCommand(command: DropDatabaseCommand)
   extends RunnableCommand {
@@ -34,6 +34,7 @@ case class CarbonDropDatabaseCommand(command: DropDatabaseCommand)
   override val output: Seq[Attribute] = command.output
 
   override def run(sparkSession: SparkSession): Seq[Row] = {
+    var rows: Seq[Row] = Seq()
     val dbName = command.databaseName
     var tablesInDB: Seq[TableIdentifier] = null
     if (sparkSession.sessionState.catalog.listDatabases().exists(_.equalsIgnoreCase(dbName))) {
@@ -44,8 +45,10 @@ case class CarbonDropDatabaseCommand(command: DropDatabaseCommand)
       databaseLocation = CarbonEnv.getDatabaseLocation(dbName, sparkSession)
     } catch {
       case e: NoSuchDatabaseException =>
-        // ignore the exception as exception will be handled by hive command.run
-      databaseLocation = CarbonProperties.getStorePath
+        // if database not found and ifExists true return empty
+        if (command.ifExists) {
+          return rows
+        }
     }
     // DropHiveDB command will fail if cascade is false and one or more table exists in database
     if (command.cascade && tablesInDB != null) {
@@ -53,8 +56,8 @@ case class CarbonDropDatabaseCommand(command: DropDatabaseCommand)
         CarbonDropTableCommand(true, tableName.database, tableName.table).run(sparkSession)
       }
     }
-    CarbonUtil.dropDatabaseDirectory(dbName.toLowerCase, databaseLocation)
-    val rows = command.run(sparkSession)
+    rows = command.run(sparkSession)
+    CarbonUtil.dropDatabaseDirectory(databaseLocation)
     rows
   }
 }
@@ -69,6 +72,15 @@ case class CarbonSetCommand(command: SetCommand)
     command.kv match {
       case Some((key, Some(value))) =>
         CarbonSetCommand.validateAndSetValue(sessionParms, key, value)
+
+        // handle search mode start/stop for ThriftServer usage
+        if (key.equalsIgnoreCase(CarbonCommonConstants.CARBON_SEARCH_MODE_ENABLE)) {
+          if (value.equalsIgnoreCase("true")) {
+            sparkSession.asInstanceOf[CarbonSession].startSearchMode()
+          } else {
+            sparkSession.asInstanceOf[CarbonSession].stopSearchMode()
+          }
+        }
       case _ =>
 
     }
@@ -78,7 +90,6 @@ case class CarbonSetCommand(command: SetCommand)
 
 object CarbonSetCommand {
   def validateAndSetValue(sessionParams: SessionParams, key: String, value: String): Unit = {
-
     val isCarbonProperty: Boolean = CarbonProperties.getInstance().isCarbonProperty(key)
     if (isCarbonProperty) {
       sessionParams.addProperty(key, value)
@@ -94,6 +105,25 @@ object CarbonSetCommand {
       }
     } else if (key.startsWith(CarbonCommonConstants.VALIDATE_CARBON_INPUT_SEGMENTS)) {
       sessionParams.addProperty(key.toLowerCase(), value)
+    } else if (key.startsWith(CarbonCommonConstantsInternal.QUERY_ON_PRE_AGG_STREAMING)) {
+      sessionParams.addProperty(key.toLowerCase(), value)
+    } else if (key.startsWith(CarbonCommonConstants.CARBON_DATAMAP_VISIBLE)) {
+      if (key.split("\\.").length == 6) {
+        sessionParams.addProperty(key.toLowerCase, value)
+      } else {
+        throw new MalformedCarbonCommandException("property should be in " +
+          "\" carbon.datamap.visible.<database_name>.<table_name>.<database_name>" +
+          " = <true/false> \" format")
+      }
+    } else if (key.startsWith(CarbonCommonConstants.CARBON_LOAD_DATAMAPS_PARALLEL)) {
+      if (key.split("\\.").length == 6) {
+        sessionParams.addProperty(key.toLowerCase(), value)
+      }
+      else {
+        throw new MalformedCarbonCommandException(
+          "property should be in \" carbon.load.datamaps.parallel.<database_name>" +
+          ".<table_name>=<true/false> \" format.")
+      }
     }
   }
 

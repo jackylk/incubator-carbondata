@@ -18,28 +18,30 @@ package org.apache.carbondata.core.indexstore;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.cache.Cache;
 import org.apache.carbondata.core.cache.CarbonLRUCache;
+import org.apache.carbondata.core.constants.CarbonCommonConstants;
+import org.apache.carbondata.core.datamap.dev.DataMap;
 import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMap;
 import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMapModel;
 import org.apache.carbondata.core.indexstore.blockletindex.SegmentIndexFileStore;
 import org.apache.carbondata.core.memory.MemoryException;
-import org.apache.carbondata.core.metadata.PartitionMapFileStore;
-import org.apache.carbondata.core.util.path.CarbonTablePath;
+import org.apache.carbondata.core.util.BlockletDataMapUtil;
 
 /**
  * Class to handle loading, unloading,clearing,storing of the table
  * blocks
  */
 public class BlockletDataMapIndexStore
-    implements Cache<TableBlockIndexUniqueIdentifier, BlockletDataMap> {
+    implements Cache<TableBlockIndexUniqueIdentifier, BlockletDataMapIndexWrapper> {
   private static final LogService LOGGER =
       LogServiceFactory.getLogService(BlockletDataMapIndexStore.class.getName());
   /**
@@ -66,74 +68,90 @@ public class BlockletDataMapIndexStore
   }
 
   @Override
-  public BlockletDataMap get(TableBlockIndexUniqueIdentifier identifier)
+  public BlockletDataMapIndexWrapper get(TableBlockIndexUniqueIdentifier identifier)
       throws IOException {
     String lruCacheKey = identifier.getUniqueTableSegmentIdentifier();
-    BlockletDataMap dataMap = (BlockletDataMap) lruCache.get(lruCacheKey);
-    if (dataMap == null) {
+    BlockletDataMapIndexWrapper blockletDataMapIndexWrapper =
+        (BlockletDataMapIndexWrapper) lruCache.get(lruCacheKey);
+    List<BlockletDataMap> dataMaps = new ArrayList<>();
+    if (blockletDataMapIndexWrapper == null) {
       try {
-        String segmentPath = CarbonTablePath.getSegmentPath(
-            identifier.getAbsoluteTableIdentifier().getTablePath(),
-            identifier.getSegmentId());
         SegmentIndexFileStore indexFileStore = new SegmentIndexFileStore();
-        indexFileStore.readAllIIndexOfSegment(segmentPath);
-        PartitionMapFileStore partitionFileStore = new PartitionMapFileStore();
-        partitionFileStore.readAllPartitionsOfSegment(segmentPath);
-        dataMap = loadAndGetDataMap(identifier, indexFileStore, partitionFileStore);
-      } catch (MemoryException e) {
+        Set<String> filesRead = new HashSet<>();
+        String segmentFilePath = identifier.getIndexFilePath();
+        Map<String, BlockMetaInfo> carbonDataFileBlockMetaInfoMapping = BlockletDataMapUtil
+            .createCarbonDataFileBlockMetaInfoMapping(segmentFilePath);
+        // if the identifier is not a merge file we can directly load the datamaps
+        if (identifier.getMergeIndexFileName() == null) {
+          Map<String, BlockMetaInfo> blockMetaInfoMap = BlockletDataMapUtil
+              .getBlockMetaInfoMap(identifier, indexFileStore, filesRead,
+                  carbonDataFileBlockMetaInfoMapping);
+          BlockletDataMap blockletDataMap =
+              loadAndGetDataMap(identifier, indexFileStore, blockMetaInfoMap);
+          dataMaps.add(blockletDataMap);
+          blockletDataMapIndexWrapper = new BlockletDataMapIndexWrapper(dataMaps);
+        } else {
+          // if the identifier is a merge file then collect the index files and load the datamaps
+          List<TableBlockIndexUniqueIdentifier> tableBlockIndexUniqueIdentifiers =
+              BlockletDataMapUtil.getIndexFileIdentifiersFromMergeFile(identifier, indexFileStore);
+          for (TableBlockIndexUniqueIdentifier blockIndexUniqueIdentifier :
+              tableBlockIndexUniqueIdentifiers) {
+            Map<String, BlockMetaInfo> blockMetaInfoMap = BlockletDataMapUtil
+                .getBlockMetaInfoMap(blockIndexUniqueIdentifier, indexFileStore, filesRead,
+                    carbonDataFileBlockMetaInfoMapping);
+            BlockletDataMap blockletDataMap =
+                loadAndGetDataMap(blockIndexUniqueIdentifier, indexFileStore, blockMetaInfoMap);
+            dataMaps.add(blockletDataMap);
+          }
+          blockletDataMapIndexWrapper = new BlockletDataMapIndexWrapper(dataMaps);
+        }
+        lruCache.put(identifier.getUniqueTableSegmentIdentifier(), blockletDataMapIndexWrapper,
+            blockletDataMapIndexWrapper.getMemorySize());
+      } catch (Throwable e) {
+        // clear all the memory used by datamaps loaded
+        for (DataMap dataMap : dataMaps) {
+          dataMap.clear();
+        }
         LOGGER.error("memory exception when loading datamap: " + e.getMessage());
         throw new RuntimeException(e.getMessage(), e);
       }
     }
-    return dataMap;
+    return blockletDataMapIndexWrapper;
   }
 
   @Override
-  public List<BlockletDataMap> getAll(
+  public List<BlockletDataMapIndexWrapper> getAll(
       List<TableBlockIndexUniqueIdentifier> tableSegmentUniqueIdentifiers) throws IOException {
-    List<BlockletDataMap> blockletDataMaps = new ArrayList<>(tableSegmentUniqueIdentifiers.size());
+    List<BlockletDataMapIndexWrapper> blockletDataMapIndexWrappers =
+        new ArrayList<>(tableSegmentUniqueIdentifiers.size());
     List<TableBlockIndexUniqueIdentifier> missedIdentifiers = new ArrayList<>();
+    BlockletDataMapIndexWrapper blockletDataMapIndexWrapper = null;
     // Get the datamaps for each indexfile from cache.
     try {
       for (TableBlockIndexUniqueIdentifier identifier : tableSegmentUniqueIdentifiers) {
-        BlockletDataMap ifPresent = getIfPresent(identifier);
-        if (ifPresent != null) {
-          blockletDataMaps.add(ifPresent);
+        BlockletDataMapIndexWrapper dataMapIndexWrapper = getIfPresent(identifier);
+        if (dataMapIndexWrapper != null) {
+          blockletDataMapIndexWrappers.add(dataMapIndexWrapper);
         } else {
           missedIdentifiers.add(identifier);
         }
       }
       if (missedIdentifiers.size() > 0) {
-        Map<String, SegmentIndexFileStore> segmentIndexFileStoreMap = new HashMap<>();
-        Map<String, PartitionMapFileStore> partitionFileStoreMap = new HashMap<>();
-        for (TableBlockIndexUniqueIdentifier identifier: missedIdentifiers) {
-          SegmentIndexFileStore indexFileStore =
-              segmentIndexFileStoreMap.get(identifier.getSegmentId());
-          PartitionMapFileStore partitionFileStore =
-              partitionFileStoreMap.get(identifier.getSegmentId());
-          String segmentPath = CarbonTablePath.getSegmentPath(
-              identifier.getAbsoluteTableIdentifier().getTablePath(),
-              identifier.getSegmentId());
-          if (indexFileStore == null) {
-            indexFileStore = new SegmentIndexFileStore();
-            indexFileStore.readAllIIndexOfSegment(segmentPath);
-            segmentIndexFileStoreMap.put(identifier.getSegmentId(), indexFileStore);
-          }
-          if (partitionFileStore == null) {
-            partitionFileStore = new PartitionMapFileStore();
-            partitionFileStore.readAllPartitionsOfSegment(segmentPath);
-            partitionFileStoreMap.put(identifier.getSegmentId(), partitionFileStore);
-          }
-          blockletDataMaps.add(loadAndGetDataMap(identifier, indexFileStore, partitionFileStore));
+        for (TableBlockIndexUniqueIdentifier identifier : missedIdentifiers) {
+          blockletDataMapIndexWrapper = get(identifier);
+          blockletDataMapIndexWrappers.add(blockletDataMapIndexWrapper);
         }
       }
     } catch (Throwable e) {
-      for (BlockletDataMap dataMap : blockletDataMaps) {
-        dataMap.clear();
+      if (null != blockletDataMapIndexWrapper) {
+        List<BlockletDataMap> dataMaps = blockletDataMapIndexWrapper.getDataMaps();
+        for (DataMap dataMap : dataMaps) {
+          dataMap.clear();
+        }
       }
       throw new IOException("Problem in loading segment blocks.", e);
     }
-    return blockletDataMaps;
+    return blockletDataMapIndexWrappers;
   }
 
   /**
@@ -143,11 +161,10 @@ public class BlockletDataMapIndexStore
    * @return
    */
   @Override
-  public BlockletDataMap getIfPresent(
+  public BlockletDataMapIndexWrapper getIfPresent(
       TableBlockIndexUniqueIdentifier tableSegmentUniqueIdentifier) {
-    BlockletDataMap dataMap = (BlockletDataMap) lruCache
-        .get(tableSegmentUniqueIdentifier.getUniqueTableSegmentIdentifier());
-    return dataMap;
+    return (BlockletDataMapIndexWrapper) lruCache.get(
+        tableSegmentUniqueIdentifier.getUniqueTableSegmentIdentifier());
   }
 
   /**
@@ -159,6 +176,42 @@ public class BlockletDataMapIndexStore
   public void invalidate(TableBlockIndexUniqueIdentifier tableSegmentUniqueIdentifier) {
     lruCache.remove(tableSegmentUniqueIdentifier.getUniqueTableSegmentIdentifier());
   }
+
+  @Override
+  public void put(TableBlockIndexUniqueIdentifier tableBlockIndexUniqueIdentifier,
+      BlockletDataMapIndexWrapper wrapper) throws IOException, MemoryException {
+    String uniqueTableSegmentIdentifier =
+        tableBlockIndexUniqueIdentifier.getUniqueTableSegmentIdentifier();
+    Object lock = segmentLockMap.get(uniqueTableSegmentIdentifier);
+    if (lock == null) {
+      lock = addAndGetSegmentLock(uniqueTableSegmentIdentifier);
+    }
+    // As dataMap will use unsafe memory, it is not recommended to overwrite an existing entry
+    // as in that case clearing unsafe memory need to be taken card. If at all datamap entry
+    // in the cache need to be overwritten then use the invalidate interface
+    // and then use the put interface
+    if (null == getIfPresent(tableBlockIndexUniqueIdentifier)) {
+      synchronized (lock) {
+        if (null == getIfPresent(tableBlockIndexUniqueIdentifier)) {
+          List<BlockletDataMap> dataMaps = wrapper.getDataMaps();
+          try {
+            for (BlockletDataMap blockletDataMap: dataMaps) {
+              blockletDataMap.convertToUnsafeDMStore();
+            }
+            lruCache.put(tableBlockIndexUniqueIdentifier.getUniqueTableSegmentIdentifier(), wrapper,
+                wrapper.getMemorySize());
+          } catch (Throwable e) {
+            // clear all the memory acquired by data map in case of any failure
+            for (DataMap blockletDataMap : dataMaps) {
+              blockletDataMap.clear();
+            }
+            throw new IOException("Problem in adding datamap to cache.", e);
+          }
+        }
+      }
+    }
+  }
+
 
   /**
    * Below method will be used to load the segment of segments
@@ -172,7 +225,7 @@ public class BlockletDataMapIndexStore
   private BlockletDataMap loadAndGetDataMap(
       TableBlockIndexUniqueIdentifier identifier,
       SegmentIndexFileStore indexFileStore,
-      PartitionMapFileStore partitionFileStore)
+      Map<String, BlockMetaInfo> blockMetaInfoMap)
       throws IOException, MemoryException {
     String uniqueTableSegmentIdentifier =
         identifier.getUniqueTableSegmentIdentifier();
@@ -183,12 +236,10 @@ public class BlockletDataMapIndexStore
     BlockletDataMap dataMap;
     synchronized (lock) {
       dataMap = new BlockletDataMap();
-      dataMap.init(new BlockletDataMapModel(identifier.getFilePath(),
-          indexFileStore.getFileData(identifier.getCarbonIndexFileName()),
-          partitionFileStore.getPartitions(identifier.getCarbonIndexFileName()),
-          partitionFileStore.isPartionedSegment()));
-      lruCache.put(identifier.getUniqueTableSegmentIdentifier(), dataMap,
-          dataMap.getMemorySize());
+      dataMap.init(new BlockletDataMapModel(
+          identifier.getIndexFilePath() + CarbonCommonConstants.FILE_SEPARATOR + identifier
+              .getIndexFileName(), indexFileStore.getFileData(identifier.getIndexFileName()),
+          blockMetaInfoMap, identifier.getSegmentId()));
     }
     return dataMap;
   }
@@ -218,9 +269,9 @@ public class BlockletDataMapIndexStore
   @Override
   public void clearAccessCount(
       List<TableBlockIndexUniqueIdentifier> tableSegmentUniqueIdentifiers) {
-    for (TableBlockIndexUniqueIdentifier segmentUniqueIdentifier : tableSegmentUniqueIdentifiers) {
+    for (TableBlockIndexUniqueIdentifier identifier : tableSegmentUniqueIdentifiers) {
       BlockletDataMap cacheable =
-          (BlockletDataMap) lruCache.get(segmentUniqueIdentifier.getUniqueTableSegmentIdentifier());
+          (BlockletDataMap) lruCache.get(identifier.getUniqueTableSegmentIdentifier());
       cacheable.clear();
     }
   }

@@ -34,6 +34,7 @@ import org.apache.spark.sql.util.CarbonException
 import org.apache.spark.util.PartitionUtils
 
 import org.apache.carbondata.common.constants.LoggerAction
+import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.metadata.datatype.DataTypes
@@ -42,7 +43,6 @@ import org.apache.carbondata.core.metadata.schema.partition.PartitionType
 import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema
 import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
 import org.apache.carbondata.processing.util.CarbonLoaderUtil
-import org.apache.carbondata.spark.exception.MalformedCarbonCommandException
 import org.apache.carbondata.spark.util.{CommonUtil, DataTypeConverterUtil}
 
 /**
@@ -152,6 +152,7 @@ abstract class CarbonDDLSqlParser extends AbstractCarbonSparkSQLParser {
   protected val EXISTS = carbonKeyWord("EXISTS")
   protected val DIMENSION = carbonKeyWord("DIMENSION")
   protected val STARTTIME = carbonKeyWord("STARTTIME")
+  protected val HISTORY = carbonKeyWord("HISTORY")
   protected val SEGMENTS = carbonKeyWord("SEGMENTS")
   protected val SEGMENT = carbonKeyWord("SEGMENT")
 
@@ -168,6 +169,7 @@ abstract class CarbonDDLSqlParser extends AbstractCarbonSparkSQLParser {
   protected val SHORT = carbonKeyWord("SHORT")
   protected val INT = carbonKeyWord("INT")
   protected val BOOLEAN = carbonKeyWord("BOOLEAN")
+  protected val LONG = carbonKeyWord("LONG")
   protected val BIGINT = carbonKeyWord("BIGINT")
   protected val ARRAY = carbonKeyWord("ARRAY")
   protected val STRUCT = carbonKeyWord("STRUCT")
@@ -179,6 +181,8 @@ abstract class CarbonDDLSqlParser extends AbstractCarbonSparkSQLParser {
   protected val ON = carbonKeyWord("ON")
   protected val DMPROPERTIES = carbonKeyWord("DMPROPERTIES")
   protected val SELECT = carbonKeyWord("SELECT")
+  protected val REBUILD = carbonKeyWord("REBUILD")
+  protected val DEFERRED = carbonKeyWord("DEFERRED")
 
   protected val doubleQuotedString = "\"([^\"]+)\"".r
   protected val singleQuotedString = "'([^']+)'".r
@@ -880,7 +884,8 @@ abstract class CarbonDDLSqlParser extends AbstractCarbonSparkSQLParser {
       "SERIALIZATION_NULL_FORMAT", "BAD_RECORDS_LOGGER_ENABLE", "BAD_RECORDS_ACTION",
       "ALL_DICTIONARY_PATH", "MAXCOLUMNS", "COMMENTCHAR", "DATEFORMAT", "BAD_RECORD_PATH",
       "BATCH_SORT_SIZE_INMB", "GLOBAL_SORT_PARTITIONS", "SINGLE_PASS",
-      "IS_EMPTY_DATA_BAD_RECORD", "HEADER", "TIMESTAMPFORMAT", "SKIP_EMPTY_LINE"
+      "IS_EMPTY_DATA_BAD_RECORD", "HEADER", "TIMESTAMPFORMAT", "SKIP_EMPTY_LINE",
+      "SORT_COLUMN_BOUNDS"
     )
     var isSupported = true
     val invalidOptions = StringBuilder.newBuilder
@@ -948,7 +953,7 @@ abstract class CarbonDDLSqlParser extends AbstractCarbonSparkSQLParser {
       catch {
         case _: IllegalArgumentException =>
           throw new MalformedCarbonCommandException(
-            "option BAD_RECORDS_ACTION can have only either FORCE or IGNORE or REDIRECT")
+            "option BAD_RECORDS_ACTION can have only either FORCE or IGNORE or REDIRECT or FAIL")
       }
     }
     if (options.exists(_._1.equalsIgnoreCase("IS_EMPTY_DATA_BAD_RECORD"))) {
@@ -998,10 +1003,10 @@ abstract class CarbonDDLSqlParser extends AbstractCarbonSparkSQLParser {
       case _ => ("", "")
     }
 
-  protected lazy val partitions: Parser[(String, String)] =
-    (ident <~ "=") ~ stringLit ^^ {
+  protected lazy val partitions: Parser[(String, Option[String])] =
+    (ident <~ "=".?) ~ stringLit.? ^^ {
       case opt ~ optvalue => (opt.trim, optvalue)
-      case _ => ("", "")
+      case _ => ("", None)
     }
 
   protected lazy val valueOptions: Parser[(Int, Int)] =
@@ -1022,7 +1027,7 @@ abstract class CarbonDDLSqlParser extends AbstractCarbonSparkSQLParser {
   protected lazy val primitiveTypes =
     STRING ^^^ "string" |BOOLEAN ^^^ "boolean" | INTEGER ^^^ "integer" |
     TIMESTAMP ^^^ "timestamp" | NUMERIC ^^^ "numeric" |
-    BIGINT ^^^ "bigint" | (SHORT | SMALLINT) ^^^ "smallint" |
+    (LONG | BIGINT) ^^^ "bigint" | (SHORT | SMALLINT) ^^^ "smallint" |
     INT ^^^ "int" | DOUBLE ^^^ "double" | FLOAT ^^^ "double" | decimalType |
     DATE ^^^ "date" | charType
 
@@ -1142,6 +1147,9 @@ abstract class CarbonDDLSqlParser extends AbstractCarbonSparkSQLParser {
       case "decimal" => Field(field.column, Some("Decimal"), field.name, Some(null), field.parent,
         field.storeType, field.schemaOrdinal, field.precision, field.scale, field.rawSchema,
         field.columnComment)
+      case "boolean" => Field(field.column, Some("Boolean"), field.name, Some(null), field.parent,
+        field.storeType, field.schemaOrdinal, field.precision, field.scale, field.rawSchema,
+        field.columnComment)
       // checking if the nested data type contains the child type as decimal(10,0),
       // if it is present then extracting the precision and scale. resetting the data type
       // with Decimal.
@@ -1209,6 +1217,8 @@ abstract class CarbonDDLSqlParser extends AbstractCarbonSparkSQLParser {
       case "Decimal" => Field(parentName + "." + field.column, Some("Decimal"),
         Some(parentName + "." + field.name.getOrElse(None)), Some(null), parentName,
         field.storeType, field.schemaOrdinal, field.precision, field.scale)
+      case "Boolean" => Field(parentName + "." + field.column, Some("Boolean"),
+        Some(parentName + "." + field.name.getOrElse(None)), Some(null), parentName)
       case _ => field
     }
   }

@@ -23,12 +23,13 @@ import java.util.List;
 
 import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
-import org.apache.carbondata.core.datastore.impl.FileFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 
 public class HDFSCarbonFile extends AbstractDFSCarbonFile {
@@ -62,7 +63,8 @@ public class HDFSCarbonFile extends AbstractDFSCarbonFile {
    * @param listStatus
    * @return
    */
-  private CarbonFile[] getFiles(FileStatus[] listStatus) {
+  @Override
+  protected CarbonFile[] getFiles(FileStatus[] listStatus) {
     if (listStatus == null) {
       return new CarbonFile[0];
     }
@@ -74,20 +76,14 @@ public class HDFSCarbonFile extends AbstractDFSCarbonFile {
   }
 
   @Override
-  public CarbonFile[] listFiles() {
-    FileStatus[] listStatus = null;
-    try {
-      if (null != fileStatus && fileStatus.isDirectory()) {
-        Path path = fileStatus.getPath();
-        listStatus = path.getFileSystem(FileFactory.getConfiguration()).listStatus(path);
-      } else {
-        return new CarbonFile[0];
-      }
-    } catch (IOException e) {
-      LOGGER.error("Exception occured: " + e.getMessage());
-      return new CarbonFile[0];
+  protected List<CarbonFile> getFiles(RemoteIterator<LocatedFileStatus> listStatus)
+      throws IOException {
+    List<CarbonFile> carbonFiles = new ArrayList<>();
+    while (listStatus.hasNext()) {
+      Path filePath = listStatus.next().getPath();
+      carbonFiles.add(new HDFSCarbonFile(filePath));
     }
-    return getFiles(listStatus);
+    return carbonFiles;
   }
 
   @Override
@@ -124,8 +120,11 @@ public class HDFSCarbonFile extends AbstractDFSCarbonFile {
         ((DistributedFileSystem) fs).rename(fileStatus.getPath(), new Path(changetoName),
             org.apache.hadoop.fs.Options.Rename.OVERWRITE);
         return true;
+      } else if (fileStatus.getPath().toString().startsWith("s3n")) {
+        fs.delete(new Path(changetoName), true);
+        return fs.rename(fileStatus.getPath(), new Path(changetoName));
       } else {
-        return false;
+        return fs.rename(fileStatus.getPath(), new Path(changetoName));
       }
     } catch (IOException e) {
       LOGGER.error("Exception occured: " + e.getMessage());

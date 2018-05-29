@@ -25,7 +25,7 @@ import org.apache.spark.sql.execution.command.AlterTableRenameCommand
 import org.apache.spark.sql.execution.command.mutation.{CarbonProjectForDeleteCommand, CarbonProjectForUpdateCommand}
 import org.apache.spark.sql.execution.command.schema.{CarbonAlterTableAddColumnCommand, CarbonAlterTableDataTypeChangeCommand, CarbonAlterTableDropColumnCommand}
 
-import org.apache.carbondata.spark.exception.MalformedCarbonCommandException
+import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 
 /**
  * Strategy for streaming table, like blocking unsupported operation
@@ -42,7 +42,7 @@ private[sql] class StreamingTableStrategy(sparkSession: SparkSession) extends Sp
       case CarbonProjectForDeleteCommand(_, databaseNameOp, tableName, timestamp) =>
         rejectIfStreamingTable(
           TableIdentifier(tableName, databaseNameOp),
-          "Date delete")
+          "Data delete")
         Nil
       case CarbonAlterTableAddColumnCommand(model) =>
         rejectIfStreamingTable(
@@ -61,8 +61,7 @@ private[sql] class StreamingTableStrategy(sparkSession: SparkSession) extends Sp
         Nil
       case AlterTableRenameCommand(oldTableIdentifier, _, _) =>
         rejectIfStreamingTable(
-          oldTableIdentifier,
-          "Alter rename table")
+          oldTableIdentifier, "Alter rename table")
         Nil
       case _ => Nil
     }
@@ -72,9 +71,15 @@ private[sql] class StreamingTableStrategy(sparkSession: SparkSession) extends Sp
    * Validate whether Update operation is allowed for specified table in the command
    */
   private def rejectIfStreamingTable(tableIdentifier: TableIdentifier, operation: String): Unit = {
-    val streaming =
-      CarbonEnv.getCarbonTable(tableIdentifier.database, tableIdentifier.table)(sparkSession)
+    var streaming = false
+    try {
+      streaming = CarbonEnv.getCarbonTable(
+        tableIdentifier.database, tableIdentifier.table)(sparkSession)
         .isStreamingTable
+    } catch {
+      case e: Exception =>
+        streaming = false
+    }
     if (streaming) {
       throw new MalformedCarbonCommandException(
         s"$operation is not allowed for streaming table")

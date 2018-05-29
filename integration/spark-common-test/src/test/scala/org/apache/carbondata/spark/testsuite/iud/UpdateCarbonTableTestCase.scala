@@ -16,7 +16,10 @@
  */
 package org.apache.carbondata.spark.testsuite.iud
 
-import org.apache.spark.sql.{Row, SaveMode}
+import java.io.File
+
+import org.apache.spark.sql.test.Spark2TestQueryExecutor
+import org.apache.spark.sql.{CarbonEnv, Row, SaveMode}
 import org.scalatest.BeforeAndAfterAll
 
 import org.apache.carbondata.core.constants.{CarbonCommonConstants, CarbonLoadOptionConstants}
@@ -395,12 +398,12 @@ class UpdateCarbonTableTestCase extends QueryTest with BeforeAndAfterAll {
     sql("""drop table if exists iud.show_segment""").show
     sql("""create table iud.show_segment (c1 string,c2 int,c3 string,c5 string) STORED BY 'org.apache.carbondata.format'""")
     sql(s"""LOAD DATA LOCAL INPATH '$resourcesPath/IUD/dest.csv' INTO table iud.show_segment""")
-    val before_update = sql("""show segments for table iud.show_segment""").toDF()
+    val before_update = sql("""show segments for table iud.show_segment""").collect()
     sql("""update iud.show_segment d set (d.c3, d.c5 ) = (select s.c33,s.c55 from iud.source2 s where d.c1 = s.c11) where 1 = 1""").show()
-    val after_update = sql("""show segments for table iud.show_segment""").toDF()
+    val after_update = sql("""show segments for table iud.show_segment""")
     checkAnswer(
-      before_update,
-      after_update
+      after_update,
+      before_update
     )
     sql("""drop table if exists iud.show_segment""").show
   }
@@ -667,6 +670,39 @@ class UpdateCarbonTableTestCase extends QueryTest with BeforeAndAfterAll {
       case ex: Exception =>
         assert(ex.getMessage.contains("not allowed in column name while creating table"))
     }
+  }
+
+  test("empty folder creation after compaction and update") {
+    sql("drop table if exists t")
+    sql("create table t (c1 string, c2 string, c3 int, c4 string) stored by 'carbondata'")
+    sql("insert into t select 'asd','sdf',1,'dfg'")
+    sql("insert into t select 'asdf','sadf',2,'dafg'")
+    sql("insert into t select 'asdq','sqdf',3,'dqfg'")
+    sql("insert into t select 'aswd','sdfw',4,'dfgw'")
+    sql("insert into t select 'aesd','sdef',5,'dfge'")
+    sql("alter table t compact 'minor'")
+    sql("clean files for table t")
+    sql("delete from t where c3 = 2").show()
+    sql("update t set(c4) = ('yyy') where c3 = 3").show()
+    checkAnswer(sql("select count(*) from t where c4 = 'yyy'"), Seq(Row(1)))
+    val f = new File(dblocation + CarbonCommonConstants.FILE_SEPARATOR +
+                     CarbonCommonConstants.FILE_SEPARATOR + "t" +
+                     CarbonCommonConstants.FILE_SEPARATOR + "Fact" +
+                     CarbonCommonConstants.FILE_SEPARATOR + "Part0")
+    assert(f.list().length == 2)
+  }
+  test("test sentences func in update statement") {
+    sql("drop table if exists senten")
+    sql("create table senten(name string, comment string) stored by 'carbondata'")
+    sql("insert into senten select 'aaa','comment for aaa'")
+    sql("insert into senten select 'bbb','comment for bbb'")
+    sql("select * from senten").show()
+    val errorMessage = intercept[Exception] {
+      sql("update senten set(comment)=(sentences('Hello there! How are you?'))").show()
+    }.getMessage
+    errorMessage
+      .contains("Unsupported data type: Array")
+    sql("drop table if exists senten")
   }
 
   override def afterAll {

@@ -123,10 +123,16 @@ public class LoadMetadataDetails implements Serializable {
    */
   private FileFormat fileFormat = FileFormat.COLUMNAR_V3;
 
+  /**
+   * Segment file name where it has the information of partition information.
+   */
+  private String segmentFile;
+
   public String getPartitionCount() {
     return partitionCount;
   }
 
+  @Deprecated
   public void setPartitionCount(String partitionCount) {
     this.partitionCount = partitionCount;
   }
@@ -224,7 +230,13 @@ public class LoadMetadataDetails implements Serializable {
    * @return
    */
   public long getLoadStartTimeAsLong() {
-    return (!loadStartTime.isEmpty()) ? getTimeStamp(loadStartTime) : 0;
+    if (!loadStartTime.isEmpty()) {
+      Long time = getTimeStamp(loadStartTime);
+      if (null != time) {
+        return time;
+      }
+    }
+    return 0;
   }
 
   /**
@@ -339,15 +351,6 @@ public class LoadMetadataDetails implements Serializable {
   }
 
   /**
-   * To get isDeleted property.
-   *
-   * @return isDeleted
-   */
-  public String getIsDeleted() {
-    return isDeleted;
-  }
-
-  /**
    * To set isDeleted property.
    *
    * @param isDeleted
@@ -416,5 +419,18 @@ public class LoadMetadataDetails implements Serializable {
 
   public void setFileFormat(FileFormat fileFormat) {
     this.fileFormat = fileFormat;
+  }
+
+  public String getSegmentFile() {
+    return segmentFile;
+  }
+
+  public void setSegmentFile(String segmentFile) {
+    this.segmentFile = segmentFile;
+  }
+
+  @Override public String toString() {
+    return "LoadMetadataDetails{" + "loadStatus=" + loadStatus + ", loadName='" + loadName + '\''
+        + ", loadStartTime='" + loadStartTime + '\'' + ", segmentFile='" + segmentFile + '\'' + '}';
   }
 }

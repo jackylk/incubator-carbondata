@@ -28,6 +28,7 @@ import org.apache.spark.sql.execution.command.management.CarbonAlterTableCompact
 import org.apache.spark.sql.hive.CarbonRelation
 
 import org.apache.carbondata.common.logging.{LogService, LogServiceFactory}
+import org.apache.carbondata.core.datamap.Segment
 import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.statusmanager.SegmentUpdateStatusManager
@@ -72,7 +73,7 @@ object HorizontalCompaction {
     // SegmentUpdateStatusManager reads the Table Status File and Table Update Status
     // file and save the content in segmentDetails and updateDetails respectively.
     val segmentUpdateStatusManager: SegmentUpdateStatusManager = new SegmentUpdateStatusManager(
-      absTableIdentifier)
+      carbonTable)
 
     if (isUpdateOperation) {
 
@@ -113,7 +114,7 @@ object HorizontalCompaction {
       absTableIdentifier: AbsoluteTableIdentifier,
       segmentUpdateStatusManager: SegmentUpdateStatusManager,
       factTimeStamp: Long,
-      segLists: util.List[String]): Unit = {
+      segLists: util.List[Segment]): Unit = {
     val db = carbonTable.getDatabaseName
     val table = carbonTable.getTableName
     // get the valid segments qualified for update compaction.
@@ -163,7 +164,7 @@ object HorizontalCompaction {
       absTableIdentifier: AbsoluteTableIdentifier,
       segmentUpdateStatusManager: SegmentUpdateStatusManager,
       factTimeStamp: Long,
-      segLists: util.List[String]): Unit = {
+      segLists: util.List[Segment]): Unit = {
 
     val db = carbonTable.getDatabaseName
     val table = carbonTable.getTableName
@@ -198,7 +199,7 @@ object HorizontalCompaction {
               .substring(segmentAndBlocks.lastIndexOf("/") + 1, segmentAndBlocks.length)
 
             val result = CarbonDataMergerUtil.compactBlockDeleteDeltaFiles(segment, blockName,
-              absTableIdentifier,
+              carbonTable,
               updateStatusDetails,
               timestamp)
 

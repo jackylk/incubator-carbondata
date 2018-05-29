@@ -7821,8 +7821,9 @@ class QueriesBVATestCase extends QueryTest with BeforeAndAfterAll {
   //BVA_SPL_DATA_TIMESTAMP_212
   test("BVA_SPL_DATA_TIMESTAMP_212", Include) {
 
-    checkAnswer(s"""select histogram_numeric(c6_Timestamp,2) from Test_Boundary""",
-      s"""select histogram_numeric(c6_Timestamp,2) from Test_Boundary_hive""", "QueriesBVATestCase_BVA_SPL_DATA_TIMESTAMP_212")
+    checkAnswer(s"""select sum(y),x from (select cast(hist.x as int) as x, cast(hist.y as bigint) as y from (select histogram_numeric(c6_Timestamp,2) as hist_table from Test_Boundary ) t lateral view explode(hist_table) exploded_table as hist) group by x""",
+      s"""select sum(y),x from (select cast(hist.x as int) as x, cast(hist.y as bigint) as y from (select histogram_numeric(c6_Timestamp,2) as hist_table from Test_Boundary_hive ) t lateral view explode(hist_table) exploded_table as hist) group by x""", "QueriesBVATestCase_BVA_SPL_DATA_TIMESTAMP_212")
+
 
   }
 
@@ -9848,8 +9849,8 @@ class QueriesBVATestCase extends QueryTest with BeforeAndAfterAll {
   //PushUP_FILTER_test_boundary_TC096
   test("PushUP_FILTER_test_boundary_TC096", Include) {
 
-    checkAnswer(s"""select min(c2_Bigint),max(c2_Bigint),sum(c2_Bigint),avg(c2_Bigint) , count(c2_Bigint), variance(c2_Bigint) from (select * from Test_Boundary where exp(c1_int)=0.0 or exp(c1_int)=1.0 order by c2_Bigint)""",
-      s"""select min(c2_Bigint),max(c2_Bigint),sum(c2_Bigint),avg(c2_Bigint) , count(c2_Bigint), variance(c2_Bigint) from (select * from Test_Boundary_hive where exp(c1_int)=0.0 or exp(c1_int)=1.0 order by c2_Bigint)""", "QueriesBVATestCase_PushUP_FILTER_test_boundary_TC096")
+    checkAnswer(s"""select min(c2_Bigint),max(c2_Bigint),sum(c2_Bigint),avg(c2_Bigint) , count(c2_Bigint) from (select * from Test_Boundary where exp(c1_int)=0.0 or exp(c1_int)=1.0 order by c2_Bigint)""",
+      s"""select min(c2_Bigint),max(c2_Bigint),sum(c2_Bigint),avg(c2_Bigint) , count(c2_Bigint) from (select * from Test_Boundary_hive where exp(c1_int)=0.0 or exp(c1_int)=1.0 order by c2_Bigint)""", "QueriesBVATestCase_PushUP_FILTER_test_boundary_TC096")
 
   }
 

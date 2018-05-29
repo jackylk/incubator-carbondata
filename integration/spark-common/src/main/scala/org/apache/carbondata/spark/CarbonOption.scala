@@ -36,7 +36,7 @@ class CarbonOption(options: Map[String, String]) {
       "org.apache.carbondata.processing.partition.impl.SampleDataPartitionerImpl")
   }
 
-  def tempCSV: Boolean = options.getOrElse("tempCSV", "true").toBoolean
+  def tempCSV: Boolean = options.getOrElse("tempCSV", "false").toBoolean
 
   def compress: Boolean = options.getOrElse("compress", "false").toBoolean
 
@@ -59,6 +59,9 @@ class CarbonOption(options: Map[String, String]) {
 
   def isStreaming: Boolean =
     options.getOrElse("streaming", "false").toBoolean
+
+  def overwriteEnabled: Boolean =
+    options.getOrElse("overwrite", "false").toBoolean
 
   def toMap: Map[String, String] = options
 }

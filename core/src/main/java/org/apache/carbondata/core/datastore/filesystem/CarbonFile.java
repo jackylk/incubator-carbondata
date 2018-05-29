@@ -20,10 +20,12 @@ package org.apache.carbondata.core.datastore.filesystem;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.carbondata.core.datastore.impl.FileFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.permission.FsPermission;
 
 public interface CarbonFile {
@@ -33,6 +35,14 @@ public interface CarbonFile {
   CarbonFile[] listFiles(CarbonFileFilter fileFilter);
 
   CarbonFile[] listFiles();
+
+  List<CarbonFile> listFiles(Boolean recurssive) throws IOException;
+
+  /**
+   * It returns list of files with location details.
+   * @return
+   */
+  CarbonFile[] locationAwareListFiles(PathFilter pathFilter) throws IOException;
 
   String getName();
 
@@ -77,6 +87,18 @@ public interface CarbonFile {
   DataInputStream getDataInputStream(String path, FileFactory.FileType fileType, int bufferSize,
       Configuration configuration) throws IOException;
 
+  /**
+   * get data input stream
+   * @param path
+   * @param fileType
+   * @param bufferSize
+   * @param compressor name of compressor to write this file
+   * @return dataInputStream
+   * @throws IOException
+   */
+  DataInputStream getDataInputStream(String path, FileFactory.FileType fileType, int bufferSize,
+      String compressor) throws IOException;
+
   DataInputStream getDataInputStream(String path, FileFactory.FileType fileType, int bufferSize,
       long offset) throws IOException;
 
@@ -85,6 +107,30 @@ public interface CarbonFile {
 
   DataOutputStream getDataOutputStream(String path, FileFactory.FileType fileType, int bufferSize,
       long blockSize) throws IOException;
+
+  /**
+   * get data output stream
+   * @param path file path
+   * @param fileType file type
+   * @param bufferSize write buffer size
+   * @param blockSize block size
+   * @param replication replication for this file
+   * @return data output stream
+   * @throws IOException if error occurs
+   */
+  DataOutputStream getDataOutputStream(String path, FileFactory.FileType fileType, int bufferSize,
+      long blockSize, short replication) throws IOException;
+  /**
+   * get data output stream
+   * @param path
+   * @param fileType
+   * @param bufferSize
+   * @param compressor name of compressor to write this file
+   * @return DataOutputStream
+   * @throws IOException
+   */
+  DataOutputStream getDataOutputStream(String path, FileFactory.FileType fileType, int bufferSize,
+      String compressor) throws IOException;
 
   boolean isFileExist(String filePath, FileFactory.FileType fileType, boolean performFileCheck)
       throws IOException;
@@ -105,7 +151,27 @@ public interface CarbonFile {
 
   boolean createNewLockFile(String filePath, FileFactory.FileType fileType) throws IOException;
 
-  void setPermission(String directoryPath, FsPermission permission, String username, String group)
-      throws IOException;
+  /**
+   * Returns locations of the file
+   * @return
+   */
+  String[] getLocations() throws IOException;
 
+  /**
+   * set the replication factor for this file
+   *
+   * @param filePath file path
+   * @param replication replication
+   * @return true, if success; false, if failed
+   * @throws IOException if error occurs
+   */
+  boolean setReplication(String filePath, short replication) throws IOException;
+
+  /**
+   * get the default replication for this file
+   * @param filePath file path
+   * @return replication factor
+   * @throws IOException if error occurs
+   */
+  short getDefaultReplication(String filePath) throws IOException;
 }

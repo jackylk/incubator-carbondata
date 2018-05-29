@@ -21,6 +21,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.carbondata.common.CarbonIterator;
+import org.apache.carbondata.core.util.CarbonProperties;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -29,16 +30,16 @@ import org.apache.commons.logging.LogFactory;
  * It is wrapper class to hold the rows in batches when record writer writes the data and allows
  * to iterate on it during data load. It uses blocking queue to coordinate between read and write.
  */
-public class CarbonOutputIteratorWrapper extends CarbonIterator<String[]> {
+public class CarbonOutputIteratorWrapper extends CarbonIterator<Object[]> {
 
   private static final Log LOG = LogFactory.getLog(CarbonOutputIteratorWrapper.class);
 
-  private boolean close = false;
+  private boolean close;
 
   /**
    * Number of rows kept in memory at most will be batchSize * queue size
    */
-  private int batchSize = 1000;
+  private int batchSize = CarbonProperties.getInstance().getBatchSize();
 
   private RowBatch loadBatch = new RowBatch(batchSize);
 
@@ -46,7 +47,11 @@ public class CarbonOutputIteratorWrapper extends CarbonIterator<String[]> {
 
   private ArrayBlockingQueue<RowBatch> queue = new ArrayBlockingQueue<>(10);
 
-  public void write(String[] row) throws InterruptedException {
+  public void write(Object[] row) throws InterruptedException {
+    if (close) {
+      // already might be closed forcefully
+      return;
+    }
     if (!loadBatch.addRow(row)) {
       loadBatch.readyRead();
       queue.put(loadBatch);
@@ -78,12 +83,23 @@ public class CarbonOutputIteratorWrapper extends CarbonIterator<String[]> {
   }
 
   @Override
-  public String[] next() {
+  public Object[] next() {
     return readBatch.next();
   }
 
-  public void closeWriter() {
+  public void closeWriter(boolean isForceClose) {
+    if (close) {
+      // already might be closed forcefully
+      return;
+    }
     try {
+      if (isForceClose) {
+        // unblock the queue.put on the other thread and clear the queue.
+        queue.clear();
+        close = true;
+        return;
+      }
+      // below code will ensure that the last RowBatch is consumed properly
       loadBatch.readyRead();
       if (loadBatch.size > 0) {
         queue.put(loadBatch);
@@ -100,16 +116,16 @@ public class CarbonOutputIteratorWrapper extends CarbonIterator<String[]> {
     }
   }
 
-  private static class RowBatch extends CarbonIterator<String[]> {
+  private static class RowBatch extends CarbonIterator<Object[]> {
 
     private int counter;
 
-    private String[][] batch;
+    private Object[][] batch;
 
     private int size;
 
     private RowBatch(int size) {
-      batch = new String[size][];
+      batch = new Object[size][];
       this.size = size;
     }
 
@@ -118,7 +134,7 @@ public class CarbonOutputIteratorWrapper extends CarbonIterator<String[]> {
      * @param row
      * @return false if the row cannot be added as batch is full.
      */
-    public boolean addRow(String[] row) {
+    public boolean addRow(Object[] row) {
       batch[counter++] = row;
       return counter < size;
     }
@@ -134,7 +150,7 @@ public class CarbonOutputIteratorWrapper extends CarbonIterator<String[]> {
     }
 
     @Override
-    public String[] next() {
+    public Object[] next() {
       assert (counter < size);
       return batch[counter++];
     }

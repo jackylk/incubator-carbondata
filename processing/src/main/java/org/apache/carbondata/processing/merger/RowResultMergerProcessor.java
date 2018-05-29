@@ -24,18 +24,19 @@ import java.util.PriorityQueue;
 
 import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
+import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.block.SegmentProperties;
 import org.apache.carbondata.core.datastore.exception.CarbonDataWriterException;
 import org.apache.carbondata.core.datastore.row.CarbonRow;
 import org.apache.carbondata.core.datastore.row.WriteStepRowUtil;
+import org.apache.carbondata.core.indexstore.PartitionSpec;
 import org.apache.carbondata.core.keygenerator.KeyGenException;
 import org.apache.carbondata.core.metadata.CarbonMetadata;
-import org.apache.carbondata.core.metadata.PartitionMapFileStore;
+import org.apache.carbondata.core.metadata.SegmentFileStore;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.scan.result.iterator.RawResultIterator;
 import org.apache.carbondata.core.scan.wrappers.ByteArrayWrapper;
 import org.apache.carbondata.core.util.ByteUtil;
-import org.apache.carbondata.core.util.path.CarbonTablePath;
 import org.apache.carbondata.processing.exception.SliceMergerException;
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel;
 import org.apache.carbondata.processing.store.CarbonFactDataHandlerColumnar;
@@ -51,7 +52,7 @@ public class RowResultMergerProcessor extends AbstractResultProcessor {
   private CarbonFactHandler dataHandler;
   private SegmentProperties segprop;
   private CarbonLoadModel loadModel;
-  private List<String> partitionNames;
+  private PartitionSpec partitionSpec;
   /**
    * record holder heap
    */
@@ -62,18 +63,26 @@ public class RowResultMergerProcessor extends AbstractResultProcessor {
 
   public RowResultMergerProcessor(String databaseName,
       String tableName, SegmentProperties segProp, String[] tempStoreLocation,
-      CarbonLoadModel loadModel, CompactionType compactionType, List<String> partitionNames) {
+      CarbonLoadModel loadModel, CompactionType compactionType, PartitionSpec partitionSpec) {
     this.segprop = segProp;
-    this.partitionNames = partitionNames;
+    this.partitionSpec = partitionSpec;
     this.loadModel = loadModel;
     CarbonDataProcessorUtil.createLocations(tempStoreLocation);
 
     CarbonTable carbonTable = CarbonMetadata.getInstance().getCarbonTable(databaseName, tableName);
+    String carbonStoreLocation;
+    if (partitionSpec != null) {
+      carbonStoreLocation =
+          partitionSpec.getLocation().toString() + CarbonCommonConstants.FILE_SEPARATOR + loadModel
+              .getFactTimeStamp() + ".tmp";
+    } else {
+      carbonStoreLocation = CarbonDataProcessorUtil.createCarbonStoreLocation(
+          loadModel.getDatabaseName(), tableName, loadModel.getSegmentId());
+    }
     CarbonFactDataHandlerModel carbonFactDataHandlerModel = CarbonFactDataHandlerModel
         .getCarbonFactDataHandlerModel(loadModel, carbonTable, segProp, tableName,
-            tempStoreLocation);
-    setDataFileAttributesInModel(loadModel, compactionType, carbonTable,
-        carbonFactDataHandlerModel);
+            tempStoreLocation, carbonStoreLocation);
+    setDataFileAttributesInModel(loadModel, compactionType, carbonFactDataHandlerModel);
     carbonFactDataHandlerModel.setCompactionFlow(true);
     dataHandler = new CarbonFactDataHandlerColumnar(carbonFactDataHandlerModel);
   }
@@ -88,7 +97,7 @@ public class RowResultMergerProcessor extends AbstractResultProcessor {
    * Merge function
    *
    */
-  public boolean execute(List<RawResultIterator> resultIteratorList) {
+  public boolean execute(List<RawResultIterator> resultIteratorList) throws Exception {
     initRecordHolderHeap(resultIteratorList);
     boolean mergeStatus = false;
     int index = 0;
@@ -107,6 +116,7 @@ public class RowResultMergerProcessor extends AbstractResultProcessor {
         Object[] convertedRow = iterator.next();
         if (null == convertedRow) {
           index--;
+          iterator.close();
           continue;
         }
         if (!isDataPresent) {
@@ -119,6 +129,7 @@ public class RowResultMergerProcessor extends AbstractResultProcessor {
         // index
         if (!iterator.hasNext()) {
           index--;
+          iterator.close();
           continue;
         }
         // add record to heap
@@ -127,20 +138,23 @@ public class RowResultMergerProcessor extends AbstractResultProcessor {
       // if record holder is not empty then iterator the slice holder from
       // heap
       iterator = this.recordHolderHeap.poll();
-      while (true) {
-        Object[] convertedRow = iterator.next();
-        if (null == convertedRow) {
-          break;
-        }
-        // do it only once
-        if (!isDataPresent) {
-          dataHandler.initialise();
-          isDataPresent = true;
-        }
-        addRow(convertedRow);
-        // check if leaf contains no record
-        if (!iterator.hasNext()) {
-          break;
+      if (null != iterator) {
+        while (true) {
+          Object[] convertedRow = iterator.next();
+          if (null == convertedRow) {
+            iterator.close();
+            break;
+          }
+          // do it only once
+          if (!isDataPresent) {
+            dataHandler.initialise();
+            isDataPresent = true;
+          }
+          addRow(convertedRow);
+          // check if leaf contains no record
+          if (!iterator.hasNext()) {
+            break;
+          }
         }
       }
       if (isDataPresent)
@@ -149,27 +163,33 @@ public class RowResultMergerProcessor extends AbstractResultProcessor {
       }
       mergeStatus = true;
     } catch (Exception e) {
-      LOGGER.error(e, e.getMessage());
-      LOGGER.error("Exception in compaction merger " + e.getMessage());
       mergeStatus = false;
+      throw e;
     } finally {
       try {
         if (isDataPresent) {
           this.dataHandler.closeHandler();
         }
-        if (partitionNames != null) {
-          new PartitionMapFileStore().writePartitionMapFile(
-              CarbonTablePath.getSegmentPath(loadModel.getTablePath(), loadModel.getSegmentId()),
-              loadModel.getTaskNo(),
-              partitionNames);
+        if (partitionSpec != null) {
+          SegmentFileStore.writeSegmentFile(loadModel.getTablePath(), loadModel.getTaskNo(),
+              partitionSpec.getLocation().toString(), loadModel.getFactTimeStamp() + "",
+              partitionSpec.getPartitions());
         }
       } catch (CarbonDataWriterException | IOException e) {
-        LOGGER.error(e,"Exception in compaction merger");
         mergeStatus = false;
+        throw e;
       }
     }
 
     return mergeStatus;
+  }
+
+  @Override
+  public void close() {
+    // close data handler
+    if (null != dataHandler) {
+      dataHandler.closeHandler();
+    }
   }
 
   /**

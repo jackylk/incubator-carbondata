@@ -60,7 +60,12 @@ public abstract class AbstractDataFileFooterConverter {
    */
   private static BitSet getPresenceMeta(
       org.apache.carbondata.format.PresenceMeta presentMetadataThrift) {
-    return BitSet.valueOf(presentMetadataThrift.getPresent_bit_stream());
+    final byte[] present_bit_stream = presentMetadataThrift.getPresent_bit_stream();
+    if (null != present_bit_stream) {
+      return BitSet.valueOf(present_bit_stream);
+    } else {
+      return new BitSet(1);
+    }
   }
 
   /**
@@ -84,7 +89,7 @@ public abstract class AbstractDataFileFooterConverter {
       List<org.apache.carbondata.format.ColumnSchema> table_columns =
           readIndexHeader.getTable_columns();
       for (int i = 0; i < table_columns.size(); i++) {
-        columnSchemaList.add(thriftColumnSchmeaToWrapperColumnSchema(table_columns.get(i)));
+        columnSchemaList.add(thriftColumnSchemaToWrapperColumnSchema(table_columns.get(i)));
       }
       // get the segment info
       SegmentInfo segmentInfo = getSegmentInfo(readIndexHeader.getSegment_info());
@@ -146,7 +151,7 @@ public abstract class AbstractDataFileFooterConverter {
       List<org.apache.carbondata.format.ColumnSchema> table_columns =
           readIndexHeader.getTable_columns();
       for (int i = 0; i < table_columns.size(); i++) {
-        columnSchemaList.add(thriftColumnSchmeaToWrapperColumnSchema(table_columns.get(i)));
+        columnSchemaList.add(thriftColumnSchemaToWrapperColumnSchema(table_columns.get(i)));
       }
       // get the segment info
       SegmentInfo segmentInfo = getSegmentInfo(readIndexHeader.getSegment_info());
@@ -157,25 +162,18 @@ public abstract class AbstractDataFileFooterConverter {
         BlockIndex readBlockIndexInfo = indexReader.readBlockIndexInfo();
         blockletIndex = getBlockletIndex(readBlockIndexInfo.getBlock_index());
         dataFileFooter = new DataFileFooter();
-        TableBlockInfo tableBlockInfo = new TableBlockInfo();
-        tableBlockInfo.setBlockOffset(readBlockIndexInfo.getOffset());
-        ColumnarFormatVersion version =
-            ColumnarFormatVersion.valueOf((short) readIndexHeader.getVersion());
-        tableBlockInfo.setVersion(version);
-        int blockletSize = getBlockletSize(readBlockIndexInfo);
-        tableBlockInfo.getBlockletInfos().setNoOfBlockLets(blockletSize);
-        String fileName = readBlockIndexInfo.file_name;
-        // Take only name of file.
-        if (fileName.lastIndexOf("/") > 0) {
-          fileName = fileName.substring(fileName.lastIndexOf("/"));
-        }
-        tableBlockInfo.setFilePath(parentPath + "/" + fileName);
+        TableBlockInfo tableBlockInfo =
+            getTableBlockInfo(readBlockIndexInfo, readIndexHeader, parentPath);
         dataFileFooter.setBlockletIndex(blockletIndex);
         dataFileFooter.setColumnInTable(columnSchemaList);
         dataFileFooter.setNumberOfRows(readBlockIndexInfo.getNum_rows());
         dataFileFooter.setBlockInfo(new BlockInfo(tableBlockInfo));
         dataFileFooter.setSegmentInfo(segmentInfo);
-        dataFileFooter.setVersionId(version);
+        dataFileFooter.setVersionId(tableBlockInfo.getVersion());
+        // In case of old schema time stamp will not be found in the index header
+        if (readIndexHeader.isSetSchema_time_stamp()) {
+          dataFileFooter.setSchemaUpdatedTimeStamp(readIndexHeader.getSchema_time_stamp());
+        }
         if (readBlockIndexInfo.isSetBlocklet_info()) {
           List<BlockletInfo> blockletInfoList = new ArrayList<BlockletInfo>();
           BlockletInfo blockletInfo = new DataFileFooterConverterV3()
@@ -191,6 +189,33 @@ public abstract class AbstractDataFileFooterConverter {
       indexReader.closeThriftReader();
     }
     return dataFileFooters;
+  }
+
+  /**
+   * This method will create a table block info object from index file info
+   *
+   * @param readBlockIndexInfo
+   * @param readIndexHeader
+   * @param parentPath
+   * @return
+   */
+  public TableBlockInfo getTableBlockInfo(BlockIndex readBlockIndexInfo,
+      org.apache.carbondata.format.IndexHeader readIndexHeader, String parentPath) {
+    TableBlockInfo tableBlockInfo = new TableBlockInfo();
+    tableBlockInfo.setBlockOffset(readBlockIndexInfo.getOffset());
+    ColumnarFormatVersion version =
+        ColumnarFormatVersion.valueOf((short) readIndexHeader.getVersion());
+    tableBlockInfo.setVersion(version);
+    int blockletSize = getBlockletSize(readBlockIndexInfo);
+    tableBlockInfo.getBlockletInfos().setNoOfBlockLets(blockletSize);
+    String fileName = readBlockIndexInfo.file_name;
+    // Take only name of file.
+    if (fileName.lastIndexOf("/") > 0) {
+      fileName = fileName.substring(fileName.lastIndexOf("/"));
+    }
+    fileName = (CarbonCommonConstants.FILE_SEPARATOR + fileName).replaceAll("//", "/");
+    tableBlockInfo.setFilePath(parentPath + fileName);
+    return tableBlockInfo;
   }
 
   /**
@@ -259,7 +284,7 @@ public abstract class AbstractDataFileFooterConverter {
     return blockletIndex;
   }
 
-  protected ColumnSchema thriftColumnSchmeaToWrapperColumnSchema(
+  protected ColumnSchema thriftColumnSchemaToWrapperColumnSchema(
       org.apache.carbondata.format.ColumnSchema externalColumnSchema) {
     ColumnSchema wrapperColumnSchema = new ColumnSchema();
     wrapperColumnSchema.setColumnUniqueId(externalColumnSchema.getColumn_id());
@@ -358,7 +383,6 @@ public abstract class AbstractDataFileFooterConverter {
       cardinality[i] = segmentInfo.getColumn_cardinalities().get(i);
     }
     info.setColumnCardinality(cardinality);
-    info.setNumberOfColumns(segmentInfo.getNum_cols());
     return info;
   }
 

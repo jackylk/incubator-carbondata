@@ -18,14 +18,18 @@
 package org.apache.carbondata.processing.loading.model;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
+import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.dictionary.service.DictionaryServiceProvider;
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonDimension;
 import org.apache.carbondata.core.statusmanager.LoadMetadataDetails;
+import org.apache.carbondata.core.statusmanager.SegmentStatusManager;
 import org.apache.carbondata.core.statusmanager.SegmentUpdateStatusManager;
-
+import org.apache.carbondata.core.util.path.CarbonTablePath;
 
 public class CarbonLoadModel implements Serializable {
 
@@ -39,15 +43,18 @@ public class CarbonLoadModel implements Serializable {
 
   private String colDictFilePath;
 
-  private String partitionId;
-
   private CarbonDataLoadSchema carbonDataLoadSchema;
 
   private boolean aggLoadRequest;
 
   private String tablePath;
 
-  private boolean isRetentionRequest;
+  /*
+     This points if the carbonTable is a Non Transactional Table or not.
+     The path will be pointed by the tablePath. And there will be
+     no Metadata folder present for the Non Transactional Table.
+   */
+  private boolean carbonTransactionalTable = true;
 
   private String csvHeader;
   private String[] csvHeaderColumns;
@@ -104,7 +111,7 @@ public class CarbonLoadModel implements Serializable {
   private String defaultDateFormat;
 
   /**
-   * defines the string that should be treated as null while loadind data
+   * defines the string that should be treated as null while loading data
    */
   private String serializationNullFormat;
 
@@ -187,6 +194,24 @@ public class CarbonLoadModel implements Serializable {
   private String globalSortPartitions;
 
   private boolean isAggLoadRequest;
+  /**
+   * sort columns bounds
+   */
+  private String sortColumnsBoundsStr;
+
+  /**
+   * It directly writes data directly to nosort processor bypassing all other processors.
+   * For this method there will be no data conversion step. It writes data which is directly
+   * pushed into.
+   */
+  private boolean isLoadWithoutConverterStep;
+
+  /**
+   * Flder path to where data should be written for this load.
+   */
+  private String dataWritePath;
+
+  private List<String> mergedSegmentIds;
 
   public boolean isAggLoadRequest() {
     return isAggLoadRequest;
@@ -355,53 +380,12 @@ public class CarbonLoadModel implements Serializable {
     this.dictionaryServiceProvider = dictionaryServiceProvider;
   }
 
-  /**
-   * get copy with partition
-   *
-   * @param uniqueId
-   * @return
-   */
-  public CarbonLoadModel getCopyWithPartition(String uniqueId) {
-    CarbonLoadModel copy = new CarbonLoadModel();
-    copy.tableName = tableName;
-    copy.factFilePath = factFilePath + '/' + uniqueId;
-    copy.databaseName = databaseName;
-    copy.partitionId = uniqueId;
-    copy.aggLoadRequest = aggLoadRequest;
-    copy.loadMetadataDetails = loadMetadataDetails;
-    copy.isRetentionRequest = isRetentionRequest;
-    copy.complexDelimiterLevel1 = complexDelimiterLevel1;
-    copy.complexDelimiterLevel2 = complexDelimiterLevel2;
-    copy.carbonDataLoadSchema = carbonDataLoadSchema;
-    copy.blocksID = blocksID;
-    copy.taskNo = taskNo;
-    copy.factTimeStamp = factTimeStamp;
-    copy.segmentId = segmentId;
-    copy.serializationNullFormat = serializationNullFormat;
-    copy.badRecordsLoggerEnable = badRecordsLoggerEnable;
-    copy.badRecordsAction = badRecordsAction;
-    copy.escapeChar = escapeChar;
-    copy.quoteChar = quoteChar;
-    copy.commentChar = commentChar;
-    copy.timestampformat = timestampformat;
-    copy.dateFormat = dateFormat;
-    copy.defaultTimestampFormat = defaultTimestampFormat;
-    copy.maxColumns = maxColumns;
-    copy.tablePath = tablePath;
-    copy.useOnePass = useOnePass;
-    copy.dictionaryServerHost = dictionaryServerHost;
-    copy.dictionaryServerPort = dictionaryServerPort;
-    copy.dictionaryServerSecretKey = dictionaryServerSecretKey;
-    copy.dictionaryEncryptServerSecure = dictionaryEncryptServerSecure;
-    copy.dictionaryServiceProvider = dictionaryServiceProvider;
-    copy.preFetch = preFetch;
-    copy.isEmptyDataBadRecord = isEmptyDataBadRecord;
-    copy.skipEmptyLine = skipEmptyLine;
-    copy.sortScope = sortScope;
-    copy.batchSortSizeInMb = batchSortSizeInMb;
-    copy.badRecordsLocation = badRecordsLocation;
-    copy.isAggLoadRequest = isAggLoadRequest;
-    return copy;
+  public String getSortColumnsBoundsStr() {
+    return sortColumnsBoundsStr;
+  }
+
+  public void setSortColumnsBoundsStr(String sortColumnsBoundsStr) {
+    this.sortColumnsBoundsStr = sortColumnsBoundsStr;
   }
 
   /**
@@ -416,10 +400,8 @@ public class CarbonLoadModel implements Serializable {
     copy.tableName = tableName;
     copy.factFilePath = factFilePath;
     copy.databaseName = databaseName;
-    copy.partitionId = partitionId;
     copy.aggLoadRequest = aggLoadRequest;
     copy.loadMetadataDetails = loadMetadataDetails;
-    copy.isRetentionRequest = isRetentionRequest;
     copy.csvHeader = csvHeader;
     copy.csvHeaderColumns = csvHeaderColumns;
     copy.csvDelimiter = csvDelimiter;
@@ -441,6 +423,7 @@ public class CarbonLoadModel implements Serializable {
     copy.defaultTimestampFormat = defaultTimestampFormat;
     copy.maxColumns = maxColumns;
     copy.tablePath = tablePath;
+    copy.carbonTransactionalTable = carbonTransactionalTable;
     copy.useOnePass = useOnePass;
     copy.dictionaryServerHost = dictionaryServerHost;
     copy.dictionaryServerPort = dictionaryServerPort;
@@ -453,28 +436,26 @@ public class CarbonLoadModel implements Serializable {
     copy.sortScope = sortScope;
     copy.batchSortSizeInMb = batchSortSizeInMb;
     copy.isAggLoadRequest = isAggLoadRequest;
+    copy.badRecordsLocation = badRecordsLocation;
+    copy.isLoadWithoutConverterStep = isLoadWithoutConverterStep;
+    copy.sortColumnsBoundsStr = sortColumnsBoundsStr;
     return copy;
   }
 
   /**
    * get CarbonLoadModel with partition
    *
-   * @param uniqueId
-   * @param filesForPartition
    * @param header
    * @param delimiter
    * @return
    */
-  public CarbonLoadModel getCopyWithPartition(String uniqueId, List<String> filesForPartition,
-      String header, String delimiter) {
+  public CarbonLoadModel getCopyWithPartition(String header, String delimiter) {
     CarbonLoadModel copyObj = new CarbonLoadModel();
     copyObj.tableName = tableName;
     copyObj.factFilePath = null;
     copyObj.databaseName = databaseName;
-    copyObj.partitionId = uniqueId;
     copyObj.aggLoadRequest = aggLoadRequest;
     copyObj.loadMetadataDetails = loadMetadataDetails;
-    copyObj.isRetentionRequest = isRetentionRequest;
     copyObj.carbonDataLoadSchema = carbonDataLoadSchema;
     copyObj.csvHeader = header;
     copyObj.csvHeaderColumns = csvHeaderColumns;
@@ -496,6 +477,7 @@ public class CarbonLoadModel implements Serializable {
     copyObj.defaultTimestampFormat = defaultTimestampFormat;
     copyObj.maxColumns = maxColumns;
     copyObj.tablePath = tablePath;
+    copyObj.carbonTransactionalTable = carbonTransactionalTable;
     copyObj.useOnePass = useOnePass;
     copyObj.dictionaryServerHost = dictionaryServerHost;
     copyObj.dictionaryServerPort = dictionaryServerPort;
@@ -509,21 +491,8 @@ public class CarbonLoadModel implements Serializable {
     copyObj.batchSortSizeInMb = batchSortSizeInMb;
     copyObj.badRecordsLocation = badRecordsLocation;
     copyObj.isAggLoadRequest = isAggLoadRequest;
+    copyObj.sortColumnsBoundsStr = sortColumnsBoundsStr;
     return copyObj;
-  }
-
-  /**
-   * @return the partitionId
-   */
-  public String getPartitionId() {
-    return partitionId;
-  }
-
-  /**
-   * @param partitionId the partitionId to set
-   */
-  public void setPartitionId(String partitionId) {
-    this.partitionId = partitionId;
   }
 
   /**
@@ -538,15 +507,6 @@ public class CarbonLoadModel implements Serializable {
    */
   public String getTablePath() {
     return tablePath;
-  }
-
-  /**
-   * isRetentionRequest
-   *
-   * @return
-   */
-  public boolean isRetentionRequest() {
-    return isRetentionRequest;
   }
 
   /**
@@ -854,4 +814,50 @@ public class CarbonLoadModel implements Serializable {
   public void setSkipEmptyLine(String skipEmptyLine) {
     this.skipEmptyLine = skipEmptyLine;
   }
+
+
+  public boolean isLoadWithoutConverterStep() {
+    return isLoadWithoutConverterStep;
+  }
+
+  public void setLoadWithoutConverterStep(boolean loadWithoutConverterStep) {
+    isLoadWithoutConverterStep = loadWithoutConverterStep;
+  }
+
+  public String getDataWritePath() {
+    return dataWritePath;
+  }
+
+  public void setDataWritePath(String dataWritePath) {
+    this.dataWritePath = dataWritePath;
+  }
+
+  /**
+   * Read segments metadata from table status file and set it to this load model object
+   */
+  public void readAndSetLoadMetadataDetails() {
+    String metadataPath = CarbonTablePath.getMetadataPath(tablePath);
+    LoadMetadataDetails[] details = SegmentStatusManager.readLoadMetadata(metadataPath);
+    setLoadMetadataDetails(Arrays.asList(details));
+  }
+
+  public boolean isCarbonTransactionalTable() {
+    return carbonTransactionalTable;
+  }
+
+  public void setCarbonTransactionalTable(boolean carbonTransactionalTable) {
+    this.carbonTransactionalTable = carbonTransactionalTable;
+  }
+
+  public void setMergedSegmentIds(List<String> mergedSegmentIds) {
+    this.mergedSegmentIds = mergedSegmentIds;
+  }
+
+  public List<String> getMergedSegmentIds() {
+    if (null == mergedSegmentIds) {
+      mergedSegmentIds = new ArrayList<>(CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);
+    }
+    return mergedSegmentIds;
+  }
+
 }

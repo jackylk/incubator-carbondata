@@ -37,6 +37,7 @@ public class SafeVarLengthColumnPage extends VarLengthColumnPageBase {
 
   @Override
   public void freeMemory() {
+    byteArrayData = null;
   }
 
   @Override
@@ -75,6 +76,27 @@ public class SafeVarLengthColumnPage extends VarLengthColumnPageBase {
     DataOutputStream out = new DataOutputStream(stream);
     for (byte[] byteArrayDatum : byteArrayData) {
       out.writeInt(byteArrayDatum.length);
+      out.write(byteArrayDatum);
+    }
+    return stream.toByteArray();
+  }
+
+  @Override
+  public byte[] getComplexChildrenLVFlattenedBytePage() throws IOException {
+    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+    DataOutputStream out = new DataOutputStream(stream);
+    for (byte[] byteArrayDatum : byteArrayData) {
+      out.writeShort((short)byteArrayDatum.length);
+      out.write(byteArrayDatum);
+    }
+    return stream.toByteArray();
+  }
+
+  @Override
+  public byte[] getComplexParentFlattenedBytePage() throws IOException {
+    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+    DataOutputStream out = new DataOutputStream(stream);
+    for (byte[] byteArrayDatum : byteArrayData) {
       out.write(byteArrayDatum);
     }
     return stream.toByteArray();

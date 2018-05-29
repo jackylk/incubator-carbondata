@@ -22,6 +22,7 @@ import java.math.BigDecimal;
 import java.util.BitSet;
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
+import org.apache.carbondata.core.datastore.ColumnType;
 import org.apache.carbondata.core.datastore.TableSpec;
 import org.apache.carbondata.core.datastore.compression.Compressor;
 import org.apache.carbondata.core.datastore.compression.CompressorFactory;
@@ -61,8 +62,8 @@ public abstract class ColumnPage {
   private ColumnPageStatsCollector statsCollector;
 
   protected static final boolean unsafe = Boolean.parseBoolean(CarbonProperties.getInstance()
-      .getProperty(CarbonCommonConstants.ENABLE_UNSAFE_COLUMN_PAGE_LOADING,
-          CarbonCommonConstants.ENABLE_UNSAFE_COLUMN_PAGE_LOADING_DEFAULT));
+      .getProperty(CarbonCommonConstants.ENABLE_UNSAFE_COLUMN_PAGE,
+          CarbonCommonConstants.ENABLE_UNSAFE_COLUMN_PAGE_DEFAULT));
 
   /**
    * Create a new column page with input data type and page size.
@@ -150,6 +151,19 @@ public abstract class ColumnPage {
       }
     } else {
       return new SafeFixLengthColumnPage(columnSpec, dataType, pageSize);
+    }
+  }
+
+  private static ColumnPage createFixLengthByteArrayPage(TableSpec.ColumnSpec columnSpec,
+      DataType dataType, int pageSize, int eachValueSize) {
+    if (unsafe) {
+      try {
+        return new UnsafeFixLengthColumnPage(columnSpec, dataType, pageSize, eachValueSize);
+      } catch (MemoryException e) {
+        throw new RuntimeException(e);
+      }
+    } else {
+      return new SafeFixLengthColumnPage(columnSpec, dataType, pageSize, eachValueSize);
     }
   }
 
@@ -281,8 +295,31 @@ public abstract class ColumnPage {
   }
 
   private static ColumnPage newLVBytesPage(TableSpec.ColumnSpec columnSpec,
-      byte[] lvEncodedByteArray) throws MemoryException {
-    return VarLengthColumnPageBase.newLVBytesColumnPage(columnSpec, lvEncodedByteArray);
+      byte[] lvEncodedByteArray, int lvLength) throws MemoryException {
+    return VarLengthColumnPageBase.newLVBytesColumnPage(columnSpec, lvEncodedByteArray, lvLength);
+  }
+
+  private static ColumnPage newComplexLVBytesPage(TableSpec.ColumnSpec columnSpec,
+      byte[] lvEncodedByteArray, int lvLength) throws MemoryException {
+    return VarLengthColumnPageBase
+        .newComplexLVBytesColumnPage(columnSpec, lvEncodedByteArray, lvLength);
+  }
+
+  private static ColumnPage newFixedByteArrayPage(TableSpec.ColumnSpec columnSpec,
+      byte[] lvEncodedByteArray, int eachValueSize) throws MemoryException {
+    int pageSize = lvEncodedByteArray.length / eachValueSize;
+    ColumnPage fixLengthByteArrayPage =
+        createFixLengthByteArrayPage(columnSpec, columnSpec.getSchemaDataType(), pageSize,
+            eachValueSize);
+    byte[] data = null;
+    int offset = 0;
+    for (int i = 0; i < pageSize; i++) {
+      data = new byte[eachValueSize];
+      System.arraycopy(lvEncodedByteArray, offset, data, 0, eachValueSize);
+      fixLengthByteArrayPage.putBytes(i, data);
+      offset += eachValueSize;
+    }
+    return fixLengthByteArrayPage;
   }
 
   /**
@@ -370,6 +407,38 @@ public abstract class ColumnPage {
   }
 
   /**
+   * get value at rowId, note that the value of string&bytes is LV format
+   * @param rowId rowId
+   * @return value
+   */
+  public Object getData(int rowId) {
+    if (nullBitSet.get(rowId)) {
+      return getNull(rowId);
+    }
+    if (dataType == DataTypes.BOOLEAN || dataType == DataTypes.BYTE) {
+      byte value = getByte(rowId);
+      if (columnSpec.getSchemaDataType() == DataTypes.BOOLEAN) {
+        return BooleanConvert.byte2Boolean(value);
+      }
+      return value;
+    } else if (dataType == DataTypes.SHORT) {
+      return getShort(rowId);
+    } else if (dataType == DataTypes.INT) {
+      return getInt(rowId);
+    } else if (dataType == DataTypes.LONG) {
+      return getLong(rowId);
+    } else if (dataType == DataTypes.DOUBLE) {
+      return getDouble(rowId);
+    } else if (DataTypes.isDecimal(dataType)) {
+      return getDecimal(rowId);
+    } else if (dataType == DataTypes.STRING || dataType == DataTypes.BYTE_ARRAY) {
+      return getBytes(rowId);
+    } else {
+      throw new RuntimeException("unsupported data type: " + dataType);
+    }
+  }
+
+  /**
    * Set byte value at rowId
    */
   public abstract void putByte(int rowId, byte value);
@@ -443,6 +512,31 @@ public abstract class ColumnPage {
     } else {
       throw new IllegalArgumentException("unsupported data type: " + dataType);
     }
+  }
+
+  /**
+   * Get null at rowId
+   */
+  private Object getNull(int rowId) {
+    Object result;
+    if (dataType == DataTypes.BOOLEAN) {
+      result = getBoolean(rowId);
+    } else if (dataType == DataTypes.BYTE) {
+      result = getByte(rowId);
+    } else if (dataType == DataTypes.SHORT) {
+      result = getShort(rowId);
+    } else if (dataType == DataTypes.INT) {
+      result = getInt(rowId);
+    } else if (dataType == DataTypes.LONG) {
+      result = getLong(rowId);
+    } else if (dataType == DataTypes.DOUBLE) {
+      result = getDouble(rowId);
+    } else if (DataTypes.isDecimal(dataType)) {
+      result = getDecimal(rowId);
+    } else {
+      throw new IllegalArgumentException("unsupported data type: " + dataType);
+    }
+    return result;
   }
 
   /**
@@ -550,6 +644,20 @@ public abstract class ColumnPage {
   public abstract byte[] getLVFlattenedBytePage() throws IOException;
 
   /**
+   * For complex type columns
+   * @return
+   * @throws IOException
+   */
+  public abstract byte[] getComplexChildrenLVFlattenedBytePage() throws IOException;
+
+  /**
+   * For complex type columns
+   * @return
+   * @throws IOException
+   */
+  public abstract byte[] getComplexParentFlattenedBytePage() throws IOException;
+
+  /**
    * For decimals
    */
   public abstract byte[] getDecimalPage();
@@ -581,6 +689,13 @@ public abstract class ColumnPage {
       return compressor.compressDouble(getDoublePage());
     } else if (DataTypes.isDecimal(dataType)) {
       return compressor.compressByte(getDecimalPage());
+    } else if (dataType == DataTypes.BYTE_ARRAY
+        && columnSpec.getColumnType() == ColumnType.COMPLEX_PRIMITIVE) {
+      return compressor.compressByte(getComplexChildrenLVFlattenedBytePage());
+    } else if (dataType == DataTypes.BYTE_ARRAY && (
+        columnSpec.getColumnType() == ColumnType.COMPLEX_STRUCT
+            || columnSpec.getColumnType() == ColumnType.COMPLEX_ARRAY)) {
+      return compressor.compressByte(getComplexParentFlattenedBytePage());
     } else if (dataType == DataTypes.BYTE_ARRAY) {
       return compressor.compressByte(getLVFlattenedBytePage());
     } else {
@@ -619,12 +734,26 @@ public abstract class ColumnPage {
     } else if (storeDataType == DataTypes.DOUBLE) {
       double[] doubleData = compressor.unCompressDouble(compressedData, offset, length);
       return newDoublePage(columnSpec, doubleData);
+    } else if (storeDataType == DataTypes.BYTE_ARRAY
+        && columnSpec.getColumnType() == ColumnType.COMPLEX_PRIMITIVE) {
+      byte[] lvVarBytes = compressor.unCompressByte(compressedData, offset, length);
+      return newComplexLVBytesPage(columnSpec, lvVarBytes,
+          CarbonCommonConstants.SHORT_SIZE_IN_BYTE);
+    } else if (storeDataType == DataTypes.BYTE_ARRAY
+        && columnSpec.getColumnType() == ColumnType.COMPLEX_STRUCT) {
+      byte[] lvVarBytes = compressor.unCompressByte(compressedData, offset, length);
+      return newFixedByteArrayPage(columnSpec, lvVarBytes,
+          CarbonCommonConstants.SHORT_SIZE_IN_BYTE);
+    } else if (storeDataType == DataTypes.BYTE_ARRAY
+        && columnSpec.getColumnType() == ColumnType.COMPLEX_ARRAY) {
+      byte[] lvVarBytes = compressor.unCompressByte(compressedData, offset, length);
+      return newFixedByteArrayPage(columnSpec, lvVarBytes, CarbonCommonConstants.LONG_SIZE_IN_BYTE);
     } else if (storeDataType == DataTypes.BYTE_ARRAY) {
       byte[] lvVarBytes = compressor.unCompressByte(compressedData, offset, length);
-      return newLVBytesPage(columnSpec, lvVarBytes);
+      return newLVBytesPage(columnSpec, lvVarBytes, CarbonCommonConstants.INT_SIZE_IN_BYTE);
     } else {
-      throw new UnsupportedOperationException("unsupport uncompress column page: " +
-          meta.getStoreDataType());
+      throw new UnsupportedOperationException(
+          "unsupport uncompress column page: " + meta.getStoreDataType());
     }
   }
 

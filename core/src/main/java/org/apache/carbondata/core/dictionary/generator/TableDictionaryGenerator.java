@@ -57,6 +57,9 @@ public class TableDictionaryGenerator
       throws DictionaryGenerationException {
     CarbonDimension dimension = carbonTable.getPrimitiveDimensionByName(value.getColumnName());
 
+    if (null == dimension) {
+      throw new DictionaryGenerationException("Dictionary Generation Failed");
+    }
     DictionaryGenerator<Integer, String> generator =
             columnMap.get(dimension.getColumnId());
     return generator.generateKey(value.getData());
@@ -65,6 +68,9 @@ public class TableDictionaryGenerator
   public Integer size(DictionaryMessage key) {
     CarbonDimension dimension = carbonTable.getPrimitiveDimensionByName(key.getColumnName());
 
+    if (null == dimension) {
+      return 0;
+    }
     DictionaryGenerator<Integer, String> generator =
             columnMap.get(dimension.getColumnId());
     return ((BiDictionary) generator).size();
@@ -84,14 +90,14 @@ public class TableDictionaryGenerator
     } catch (InterruptedException e) {
       LOGGER.error("Error loading the dictionary: " + e.getMessage());
     }
-    LOGGER.audit("Total time taken to write dictionary file is: " +
+    LOGGER.info("Total time taken to write dictionary file is: " +
             (System.currentTimeMillis() - start));
   }
 
   public void updateGenerator(DictionaryMessage key) {
     CarbonDimension dimension = carbonTable
         .getPrimitiveDimensionByName(key.getColumnName());
-    if (null == columnMap.get(dimension.getColumnId())) {
+    if (null != dimension && null == columnMap.get(dimension.getColumnId())) {
       synchronized (columnMap) {
         if (null == columnMap.get(dimension.getColumnId())) {
           columnMap.put(dimension.getColumnId(),

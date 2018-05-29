@@ -24,11 +24,12 @@ import java.util.regex.{Matcher, Pattern}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.Map
+import scala.util.Random
 
 import org.apache.commons.lang3.StringUtils
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat
-import org.apache.spark.SparkContext
+import org.apache.spark.{SparkContext, SparkEnv}
 import org.apache.spark.sql.{Row, RowFactory}
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
 import org.apache.spark.sql.execution.command.{ColumnProperty, Field, PartitionerField}
@@ -36,28 +37,27 @@ import org.apache.spark.sql.types.{MetadataBuilder, StringType}
 import org.apache.spark.sql.util.CarbonException
 import org.apache.spark.util.FileUtils
 
+import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
-import org.apache.carbondata.core.datastore.filesystem.CarbonFile
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.memory.{UnsafeMemoryManager, UnsafeSortMemoryManager}
-import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier
+import org.apache.carbondata.core.metadata.{AbsoluteTableIdentifier, CarbonMetadata}
 import org.apache.carbondata.core.metadata.datatype.{DataType, DataTypes}
 import org.apache.carbondata.core.metadata.schema.PartitionInfo
 import org.apache.carbondata.core.metadata.schema.partition.PartitionType
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
-import org.apache.carbondata.core.mutate.CarbonUpdateUtil
 import org.apache.carbondata.core.scan.partition.PartitionUtil
-import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatus, SegmentStatusManager}
+import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatusManager}
 import org.apache.carbondata.core.util.{ByteUtil, CarbonProperties, CarbonUtil}
 import org.apache.carbondata.core.util.comparator.Comparator
-import org.apache.carbondata.core.util.path.CarbonStorePath
+import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.processing.loading.csvinput.CSVInputFormat
 import org.apache.carbondata.processing.loading.exception.CarbonDataLoadingException
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel
-import org.apache.carbondata.processing.util.{CarbonDataProcessorUtil, CarbonLoaderUtil}
-import org.apache.carbondata.spark.exception.MalformedCarbonCommandException
-import org.apache.carbondata.spark.rdd.CarbonMergeFilesRDD
+import org.apache.carbondata.processing.util.CarbonDataProcessorUtil
+import org.apache.carbondata.processing.util.CarbonDataProcessorUtil
+
 
 object CommonUtil {
   private val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
@@ -155,7 +155,6 @@ object CommonUtil {
   }
 
   def validateTblProperties(tableProperties: Map[String, String], fields: Seq[Field]): Boolean = {
-    val itr = tableProperties.keys
     var isValid: Boolean = true
     tableProperties.foreach {
       case (key, value) =>
@@ -635,13 +634,6 @@ object CommonUtil {
     parsedPropertyValueString
   }
 
-
-  def readLoadMetadataDetails(model: CarbonLoadModel): Unit = {
-    val metadataPath = model.getCarbonDataLoadSchema.getCarbonTable.getMetaDataFilepath
-    val details = SegmentStatusManager.readLoadMetadata(metadataPath)
-    model.setLoadMetadataDetails(new util.ArrayList[LoadMetadataDetails](details.toList.asJava))
-  }
-
   def configureCSVInputFormat(configuration: Configuration,
       carbonLoadModel: CarbonLoadModel): Unit = {
     CSVInputFormat.setCommentCharacter(configuration, carbonLoadModel.getCommentChar)
@@ -681,48 +673,6 @@ object CommonUtil {
                   s"defaultParallelism: $defaultParallelism")
       LOGGER.info(s"mapreduce.input.fileinputformat.split.maxsize: ${ newSplitSize.toString }")
     }
-  }
-
-  def getCsvHeaderColumns(
-      carbonLoadModel: CarbonLoadModel,
-      hadoopConf: Configuration): Array[String] = {
-    val delimiter = if (StringUtils.isEmpty(carbonLoadModel.getCsvDelimiter)) {
-      CarbonCommonConstants.COMMA
-    } else {
-      CarbonUtil.delimiterConverter(carbonLoadModel.getCsvDelimiter)
-    }
-    var csvFile: String = null
-    var csvHeader: String = carbonLoadModel.getCsvHeader
-    val csvColumns = if (StringUtils.isBlank(csvHeader)) {
-      // read header from csv file
-      csvFile = carbonLoadModel.getFactFilePath.split(",")(0)
-      csvHeader = CarbonUtil.readHeader(csvFile, hadoopConf)
-      if (StringUtils.isBlank(csvHeader)) {
-        throw new CarbonDataLoadingException("First line of the csv is not valid.")
-      }
-      csvHeader.toLowerCase().split(delimiter).map(_.replaceAll("\"", "").trim)
-    } else {
-      csvHeader.toLowerCase.split(CarbonCommonConstants.COMMA).map(_.trim)
-    }
-
-    if (!CarbonDataProcessorUtil.isHeaderValid(carbonLoadModel.getTableName, csvColumns,
-        carbonLoadModel.getCarbonDataLoadSchema)) {
-      if (csvFile == null) {
-        LOGGER.error("CSV header in DDL is not proper."
-                     + " Column names in schema and CSV header are not the same.")
-        throw new CarbonDataLoadingException(
-          "CSV header in DDL is not proper. Column names in schema and CSV header are "
-          + "not the same.")
-      } else {
-        LOGGER.error(
-          "CSV header in input file is not proper. Column names in schema and csv header are not "
-          + "the same. Input file : " + CarbonUtil.removeAKSK(csvFile))
-        throw new CarbonDataLoadingException(
-          "CSV header in input file is not proper. Column names in schema and csv header are not "
-          + "the same. Input file : " + CarbonUtil.removeAKSK(csvFile))
-      }
-    }
-    csvColumns
   }
 
   def validateMaxColumns(csvHeaders: Array[String], maxColumns: String): Int = {
@@ -835,7 +785,7 @@ object CommonUtil {
   }
 
   /**
-   * The in-progress segments which are left when the driver is down will be marked as deleted
+   * The in-progress segments which are in stale state will be marked as deleted
    * when driver is initializing.
    * @param databaseLocation
    * @param dbName
@@ -851,57 +801,30 @@ object CommonUtil {
       val fileType = FileFactory.getFileType(databaseLocation)
       if (FileFactory.isFileExist(databaseLocation, fileType)) {
         val file = FileFactory.getCarbonFile(databaseLocation, fileType)
-          if (file.isDirectory) {
-            val tableFolders = file.listFiles()
-            tableFolders.foreach { tableFolder =>
-              if (tableFolder.isDirectory) {
-                val tablePath = databaseLocation +
-                                CarbonCommonConstants.FILE_SEPARATOR + tableFolder.getName
-                val identifier =
-                  AbsoluteTableIdentifier.from(tablePath, dbName, tableFolder.getName)
-                val carbonTablePath = CarbonStorePath.getCarbonTablePath(identifier)
-                val tableStatusFile = carbonTablePath.getTableStatusFilePath
-                if (FileFactory.isFileExist(tableStatusFile, fileType)) {
-                  val segmentStatusManager = new SegmentStatusManager(identifier)
-                  val carbonLock = segmentStatusManager.getTableStatusLock
-                  try {
-                    if (carbonLock.lockWithRetries) {
-                      LOGGER.info("Acquired lock for table" +
-                        identifier.getCarbonTableIdentifier.getTableUniqueName
-                        + " for table status updation")
-                      val listOfLoadFolderDetailsArray =
-                        SegmentStatusManager.readLoadMetadata(
-                          carbonTablePath.getMetadataDirectoryPath)
-                      var loadInprogressExist = false
-                      val staleFolders: Seq[CarbonFile] = Seq()
-                      listOfLoadFolderDetailsArray.foreach { load =>
-                        if (load.getSegmentStatus == SegmentStatus.INSERT_IN_PROGRESS ||
-                            load.getSegmentStatus == SegmentStatus.INSERT_OVERWRITE_IN_PROGRESS) {
-                          load.setSegmentStatus(SegmentStatus.MARKED_FOR_DELETE)
-                          staleFolders :+ FileFactory.getCarbonFile(
-                            carbonTablePath.getCarbonDataDirectoryPath("0", load.getLoadName))
-                          loadInprogressExist = true
-                        }
-                      }
-                      if (loadInprogressExist) {
-                        SegmentStatusManager
-                          .writeLoadDetailsIntoFile(tableStatusFile, listOfLoadFolderDetailsArray)
-                        staleFolders.foreach(CarbonUtil.deleteFoldersAndFiles(_))
-                      }
-                    }
-                  } finally {
-                    if (carbonLock.unlock) {
-                      LOGGER.info(s"Released table status lock for table " +
-                                  s"${identifier.getCarbonTableIdentifier.getTableUniqueName}")
-                    } else {
-                      LOGGER.error(s"Error while releasing table status lock for table " +
-                                  s"${identifier.getCarbonTableIdentifier.getTableUniqueName}")
-                    }
-                  }
+        if (file.isDirectory) {
+          val tableFolders = file.listFiles()
+          tableFolders.foreach { tableFolder =>
+            if (tableFolder.isDirectory) {
+              val tablePath = databaseLocation +
+                              CarbonCommonConstants.FILE_SEPARATOR + tableFolder.getName
+              val identifier =
+                AbsoluteTableIdentifier.from(tablePath, dbName, tableFolder.getName)
+              val tableStatusFile =
+                CarbonTablePath.getTableStatusFilePath(tablePath)
+              if (FileFactory.isFileExist(tableStatusFile, fileType)) {
+                try {
+                  val carbonTable = CarbonMetadata.getInstance
+                    .getCarbonTable(identifier.getCarbonTableIdentifier.getTableUniqueName)
+                  SegmentStatusManager.deleteLoadsAndUpdateMetadata(carbonTable, true, null)
+                } catch {
+                  case _: Exception =>
+                    LOGGER.warn(s"Error while cleaning table " +
+                                s"${ identifier.getCarbonTableIdentifier.getTableUniqueName }")
                 }
               }
             }
           }
+        }
       }
     } catch {
       case s: java.io.FileNotFoundException =>
@@ -918,38 +841,42 @@ object CommonUtil {
     (Integer.parseInt(scaleAndPrecision(0).trim), Integer.parseInt(scaleAndPrecision(1).trim))
   }
 
-  /**
-   * Merge the carbonindex files with in the segment to carbonindexmerge file inside same segment
-   */
-  def mergeIndexFiles(sparkContext: SparkContext,
-      segmentIds: Seq[String],
-      tablePath: String,
-      carbonTable: CarbonTable,
-      mergeIndexProperty: Boolean): Unit = {
-    if (mergeIndexProperty) {
-      new CarbonMergeFilesRDD(sparkContext, AbsoluteTableIdentifier.from(tablePath,
-        carbonTable.getDatabaseName, carbonTable.getTableName).getTablePath,
-        segmentIds).collect()
-    } else {
-      try {
-        CarbonProperties.getInstance()
-          .getProperty(CarbonCommonConstants.CARBON_MERGE_INDEX_IN_SEGMENT).toBoolean
-        if (CarbonProperties.getInstance().getProperty(
-          CarbonCommonConstants.CARBON_MERGE_INDEX_IN_SEGMENT,
-          CarbonCommonConstants.CARBON_MERGE_INDEX_IN_SEGMENT_DEFAULT).toBoolean) {
-          new CarbonMergeFilesRDD(sparkContext, AbsoluteTableIdentifier.from(tablePath,
-            carbonTable.getDatabaseName, carbonTable.getTableName).getTablePath,
-            segmentIds).collect()
-        }
-      } catch {
-        case _: Exception =>
-          if (CarbonCommonConstants.CARBON_MERGE_INDEX_IN_SEGMENT_DEFAULT.toBoolean) {
-            new CarbonMergeFilesRDD(sparkContext, AbsoluteTableIdentifier.from(tablePath,
-              carbonTable.getDatabaseName, carbonTable.getTableName).getTablePath,
-              segmentIds).collect()
-          }
+
+  def setTempStoreLocation(
+      index: Int,
+      carbonLoadModel: CarbonLoadModel,
+      isCompactionFlow: Boolean,
+      isAltPartitionFlow: Boolean) : Unit = {
+    var storeLocation: String = null
+
+    // this property is used to determine whether temp location for carbon is inside
+    // container temp dir or is yarn application directory.
+    val carbonUseLocalDir = CarbonProperties.getInstance()
+      .getProperty("carbon.use.local.dir", "false")
+
+    if (carbonUseLocalDir.equalsIgnoreCase("true")) {
+
+      val storeLocations = Util.getConfiguredLocalDirs(SparkEnv.get.conf)
+      if (null != storeLocations && storeLocations.nonEmpty) {
+        storeLocation = storeLocations(Random.nextInt(storeLocations.length))
       }
+      if (storeLocation == null) {
+        storeLocation = System.getProperty("java.io.tmpdir")
+      }
+    } else {
+      storeLocation = System.getProperty("java.io.tmpdir")
     }
+    storeLocation = storeLocation + CarbonCommonConstants.FILE_SEPARATOR + "carbon" +
+      System.nanoTime() + CarbonCommonConstants.UNDERSCORE + index
+
+    val tempLocationKey = CarbonDataProcessorUtil
+      .getTempStoreLocationKey(carbonLoadModel.getDatabaseName,
+        carbonLoadModel.getTableName,
+        carbonLoadModel.getSegmentId,
+        carbonLoadModel.getTaskNo,
+        isCompactionFlow,
+        isAltPartitionFlow)
+    CarbonProperties.getInstance().addProperty(tempLocationKey, storeLocation)
   }
 
 }

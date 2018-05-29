@@ -45,12 +45,27 @@ public class CarbonColumn implements Serializable {
   /**
    * order in which user has created table
    */
-  protected int schemaOrdinal;
+  private int schemaOrdinal;
 
   /**
    * Column identifier
    */
   protected ColumnIdentifier columnIdentifier;
+
+  /**
+   * Date Format
+   */
+  private String dateFormat;
+
+  /**
+   * TimeStamp Format.
+   */
+  private String timestampFormat;
+
+  /**
+   * useActualData
+   */
+  private boolean useActualData;
 
   public CarbonColumn(ColumnSchema columnSchema, int ordinal, int schemaOrdinal) {
     this.columnSchema = columnSchema;
@@ -179,5 +194,29 @@ public class CarbonColumn implements Serializable {
 
   public int getSchemaOrdinal() {
     return this.schemaOrdinal;
+  }
+
+  public String getDateFormat() {
+    return dateFormat;
+  }
+
+  public void setDateFormat(String dateFormat) {
+    this.dateFormat = dateFormat;
+  }
+
+  public String getTimestampFormat() {
+    return timestampFormat;
+  }
+
+  public void setTimestampFormat(String timestampFormat) {
+    this.timestampFormat = timestampFormat;
+  }
+
+  public boolean getUseActualData() {
+    return useActualData;
+  }
+
+  public void setUseActualData(boolean useActualData) {
+    this.useActualData = useActualData;
   }
 }

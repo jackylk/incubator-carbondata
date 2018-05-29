@@ -40,9 +40,6 @@ import org.apache.carbondata.core.constants.CarbonCommonConstants
  */
 
 object CarbonReflectionUtils {
-
-  private val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
-
   private val rm = universe.runtimeMirror(getClass.getClassLoader)
 
   /**
@@ -186,8 +183,10 @@ object CarbonReflectionUtils {
       sqlParser: Object,
       sparkSession: SparkSession): AstBuilder = {
     if (SPARK_VERSION.startsWith("2.1") || SPARK_VERSION.startsWith("2.2")) {
-      createObject(
-        "org.apache.spark.sql.hive.CarbonSqlAstBuilder",
+      val className = sparkSession.sparkContext.conf.get(
+        CarbonCommonConstants.CARBON_SQLASTBUILDER_CLASSNAME,
+        "org.apache.spark.sql.hive.CarbonSqlAstBuilder")
+      createObject(className,
         conf,
         sqlParser, sparkSession)._1.asInstanceOf[AstBuilder]
     } else {
@@ -195,19 +194,30 @@ object CarbonReflectionUtils {
     }
   }
 
-  def getSessionState(sparkContext: SparkContext, carbonSession: Object): Any = {
+  def getSessionState(sparkContext: SparkContext,
+      carbonSession: Object,
+      useHiveMetaStore: Boolean): Any = {
     if (SPARK_VERSION.startsWith("2.1")) {
       val className = sparkContext.conf.get(
         CarbonCommonConstants.CARBON_SESSIONSTATE_CLASSNAME,
         "org.apache.spark.sql.hive.CarbonSessionState")
       createObject(className, carbonSession)._1
     } else if (SPARK_VERSION.startsWith("2.2")) {
-      val className = sparkContext.conf.get(
-        CarbonCommonConstants.CARBON_SESSIONSTATE_CLASSNAME,
-        "org.apache.spark.sql.hive.CarbonSessionStateBuilder")
-      val tuple = createObject(className, carbonSession, None)
-      val method = tuple._2.getMethod("build")
-      method.invoke(tuple._1)
+      if (useHiveMetaStore) {
+        val className = sparkContext.conf.get(
+          CarbonCommonConstants.CARBON_SESSIONSTATE_CLASSNAME,
+          "org.apache.spark.sql.hive.CarbonSessionStateBuilder")
+        val tuple = createObject(className, carbonSession, None)
+        val method = tuple._2.getMethod("build")
+        method.invoke(tuple._1)
+      } else {
+        val className = sparkContext.conf.get(
+          CarbonCommonConstants.CARBON_SESSIONSTATE_CLASSNAME,
+          "org.apache.spark.sql.hive.CarbonInMemorySessionStateBuilder")
+        val tuple = createObject(className, carbonSession, None)
+        val method = tuple._2.getMethod("build")
+        method.invoke(tuple._1)
+      }
     } else {
       throw new UnsupportedOperationException("Spark version not supported")
     }

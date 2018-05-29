@@ -38,13 +38,12 @@ import org.apache.carbondata.core.statusmanager.FileFormat;
 import org.apache.carbondata.core.statusmanager.LoadMetadataDetails;
 import org.apache.carbondata.core.statusmanager.SegmentStatus;
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager;
-import org.apache.carbondata.core.util.path.CarbonStorePath;
 import org.apache.carbondata.core.util.path.CarbonTablePath;
 import org.apache.carbondata.core.writer.CarbonIndexFileWriter;
 import org.apache.carbondata.format.BlockIndex;
 import org.apache.carbondata.format.BlockletIndex;
-import org.apache.carbondata.hadoop.streaming.CarbonStreamRecordWriter;
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel;
+import org.apache.carbondata.streaming.CarbonStreamRecordWriter;
 
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
@@ -60,8 +59,6 @@ public class StreamSegment {
    * get stream segment or create new stream segment if not exists
    */
   public static String open(CarbonTable table) throws IOException {
-    CarbonTablePath tablePath =
-        CarbonStorePath.getCarbonTablePath(table.getAbsoluteTableIdentifier());
     SegmentStatusManager segmentStatusManager =
         new SegmentStatusManager(table.getAbsoluteTableIdentifier());
     ICarbonLock carbonLock = segmentStatusManager.getTableStatusLock();
@@ -72,7 +69,8 @@ public class StreamSegment {
                 + " for stream table get or create segment");
 
         LoadMetadataDetails[] details =
-            SegmentStatusManager.readLoadMetadata(tablePath.getMetadataDirectoryPath());
+            SegmentStatusManager.readLoadMetadata(
+                CarbonTablePath.getMetadataPath(table.getTablePath()));
         LoadMetadataDetails streamSegment = null;
         for (LoadMetadataDetails detail : details) {
           if (FileFormat.ROW_V1 == detail.getFileFormat()) {
@@ -97,8 +95,8 @@ public class StreamSegment {
             newDetails[i] = details[i];
           }
           newDetails[i] = newDetail;
-          SegmentStatusManager
-              .writeLoadDetailsIntoFile(tablePath.getTableStatusFilePath(), newDetails);
+          SegmentStatusManager.writeLoadDetailsIntoFile(
+              CarbonTablePath.getTableStatusFilePath(table.getTablePath()), newDetails);
           return newDetail.getLoadName();
         } else {
           return streamSegment.getLoadName();
@@ -126,8 +124,6 @@ public class StreamSegment {
    */
   public static String close(CarbonTable table, String segmentId)
       throws IOException {
-    CarbonTablePath tablePath =
-        CarbonStorePath.getCarbonTablePath(table.getAbsoluteTableIdentifier());
     SegmentStatusManager segmentStatusManager =
         new SegmentStatusManager(table.getAbsoluteTableIdentifier());
     ICarbonLock carbonLock = segmentStatusManager.getTableStatusLock();
@@ -138,7 +134,8 @@ public class StreamSegment {
                 + " for stream table finish segment");
 
         LoadMetadataDetails[] details =
-            SegmentStatusManager.readLoadMetadata(tablePath.getMetadataDirectoryPath());
+            SegmentStatusManager.readLoadMetadata(
+                CarbonTablePath.getMetadataPath(table.getTablePath()));
         for (LoadMetadataDetails detail : details) {
           if (segmentId.equals(detail.getLoadName())) {
             detail.setLoadEndTime(System.currentTimeMillis());
@@ -162,7 +159,8 @@ public class StreamSegment {
         }
         newDetails[i] = newDetail;
         SegmentStatusManager
-            .writeLoadDetailsIntoFile(tablePath.getTableStatusFilePath(), newDetails);
+            .writeLoadDetailsIntoFile(CarbonTablePath.getTableStatusFilePath(
+                table.getTablePath()), newDetails);
         return newDetail.getLoadName();
       } else {
         LOGGER.error(
@@ -186,62 +184,39 @@ public class StreamSegment {
    * change the status of the segment from "streaming" to "streaming finish"
    */
   public static void finishStreaming(CarbonTable carbonTable) throws IOException {
-    ICarbonLock streamingLock = CarbonLockFactory.getCarbonLockObj(
+    ICarbonLock statusLock = CarbonLockFactory.getCarbonLockObj(
         carbonTable.getTableInfo().getOrCreateAbsoluteTableIdentifier(),
-        LockUsage.STREAMING_LOCK);
+        LockUsage.TABLE_STATUS_LOCK);
     try {
-      if (streamingLock.lockWithRetries()) {
-        ICarbonLock statusLock = CarbonLockFactory.getCarbonLockObj(
-            carbonTable.getTableInfo().getOrCreateAbsoluteTableIdentifier(),
-            LockUsage.TABLE_STATUS_LOCK);
-        try {
-          if (statusLock.lockWithRetries()) {
-            LoadMetadataDetails[] details =
-                SegmentStatusManager.readLoadMetadata(carbonTable.getMetaDataFilepath());
-            boolean updated = false;
-            for (LoadMetadataDetails detail : details) {
-              if (SegmentStatus.STREAMING == detail.getSegmentStatus()) {
-                detail.setLoadEndTime(System.currentTimeMillis());
-                detail.setSegmentStatus(SegmentStatus.STREAMING_FINISH);
-                updated = true;
-              }
-            }
-            if (updated) {
-              CarbonTablePath tablePath =
-                  CarbonStorePath.getCarbonTablePath(carbonTable.getAbsoluteTableIdentifier());
-              SegmentStatusManager.writeLoadDetailsIntoFile(
-                  tablePath.getTableStatusFilePath(), details);
-            }
-          } else {
-            String msg = "Failed to acquire table status lock of " +
-                carbonTable.getDatabaseName() + "." + carbonTable.getTableName();
-            LOGGER.error(msg);
-            throw new IOException(msg);
-          }
-        } finally {
-          if (statusLock.unlock()) {
-            LOGGER.info("Table unlocked successfully after table status updation" +
-                carbonTable.getDatabaseName() + "." + carbonTable.getTableName());
-          } else {
-            LOGGER.error("Unable to unlock Table lock for table " +
-                carbonTable.getDatabaseName() + "." + carbonTable.getTableName() +
-                " during table status updation");
+      if (statusLock.lockWithRetries()) {
+        LoadMetadataDetails[] details =
+            SegmentStatusManager.readLoadMetadata(carbonTable.getMetadataPath());
+        boolean updated = false;
+        for (LoadMetadataDetails detail : details) {
+          if (SegmentStatus.STREAMING == detail.getSegmentStatus()) {
+            detail.setLoadEndTime(System.currentTimeMillis());
+            detail.setSegmentStatus(SegmentStatus.STREAMING_FINISH);
+            updated = true;
           }
         }
+        if (updated) {
+          SegmentStatusManager.writeLoadDetailsIntoFile(
+              CarbonTablePath.getTableStatusFilePath(carbonTable.getTablePath()),
+              details);
+        }
       } else {
-        String msg = "Failed to finish streaming, because streaming is locked for table " +
-            carbonTable.getDatabaseName() + "." + carbonTable.getTableName();
+        String msg = "Failed to acquire table status lock of " + carbonTable.getDatabaseName()
+            + "." + carbonTable.getTableName();
         LOGGER.error(msg);
         throw new IOException(msg);
       }
     } finally {
-      if (streamingLock.unlock()) {
-        LOGGER.info("Table unlocked successfully after streaming finished" + carbonTable
-            .getDatabaseName() + "." + carbonTable.getTableName());
+      if (statusLock.unlock()) {
+        LOGGER.info("Table unlocked successfully after table status updation"
+            + carbonTable.getDatabaseName() + "." + carbonTable.getTableName());
       } else {
-        LOGGER.error("Unable to unlock Table lock for table " +
-            carbonTable.getDatabaseName() + "." + carbonTable.getTableName() +
-            " during streaming finished");
+        LOGGER.error("Unable to unlock Table lock for table " + carbonTable.getDatabaseName()
+            + "." + carbonTable.getTableName() + " during table status updation");
       }
     }
   }
@@ -265,10 +240,11 @@ public class StreamSegment {
         writer.write(null, inputIterators.next());
       }
       inputIterators.close();
-    } catch (Exception ex) {
+    } catch (Throwable ex) {
       if (writer != null) {
         LOGGER.error(ex, "Failed to append batch data to stream segment: " +
             writer.getSegmentDir());
+        writer.setHasException(true);
       }
       throw ex;
     } finally {
@@ -381,7 +357,7 @@ public class StreamSegment {
   }
 
   /**
-   * update carbonindex file after after a stream batch.
+   * update carbonindex file after a stream batch.
    */
   public static void updateIndexFile(String segmentDir) throws IOException {
     FileFactory.FileType fileType = FileFactory.getFileType(segmentDir);

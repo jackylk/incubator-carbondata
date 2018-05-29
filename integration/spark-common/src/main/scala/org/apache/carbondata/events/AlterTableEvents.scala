@@ -17,8 +17,10 @@
 package org.apache.carbondata.events
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.execution.command.{AlterTableAddColumnsModel, AlterTableDataTypeChangeModel, AlterTableDropColumnModel, AlterTableRenameModel, CarbonMergerMapping}
+import org.apache.spark.sql.catalyst.catalog.CatalogTypes.TablePartitionSpec
+import org.apache.spark.sql.execution.command._
 
+import org.apache.carbondata.core.indexstore.PartitionSpec
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 
@@ -80,7 +82,6 @@ case class AlterTableDropColumnAbortEvent(
     carbonTable: CarbonTable,
     alterTableDropColumnModel: AlterTableDropColumnModel,
     sparkSession: SparkSession) extends Event with AlterTableDropColumnEventInfo
-
 
 /**
  *
@@ -160,12 +161,11 @@ case class AlterTableCompactionPreEvent(sparkSession: SparkSession,
  * @param sparkSession
  * @param carbonTable
  * @param carbonMergerMapping
- * @param mergedLoadName
  */
 case class AlterTableCompactionPostEvent(sparkSession: SparkSession,
     carbonTable: CarbonTable,
     carbonMergerMapping: CarbonMergerMapping,
-    mergedLoadName: String) extends Event with AlterTableCompactionEventInfo
+    compactedLoads: java.util.List[String]) extends Event with AlterTableCompactionEventInfo
 /**
  * Compaction Event for handling pre update status file opeartions, lister has to implement this
  * event before updating the table status file
@@ -176,6 +176,16 @@ case class AlterTableCompactionPostEvent(sparkSession: SparkSession,
  * @param mergedLoadName
  */
 case class AlterTableCompactionPreStatusUpdateEvent(sparkSession: SparkSession,
+    carbonTable: CarbonTable,
+    carbonMergerMapping: CarbonMergerMapping,
+    carbonLoadModel: CarbonLoadModel,
+    mergedLoadName: String) extends Event with AlterTableCompactionStatusUpdateEventInfo
+
+/**
+ * Compaction Event for handling post update status file operations, like committing child
+ * datamaps in one transaction
+ */
+case class AlterTableCompactionPostStatusUpdateEvent(sparkSession: SparkSession,
     carbonTable: CarbonTable,
     carbonMergerMapping: CarbonMergerMapping,
     carbonLoadModel: CarbonLoadModel,
@@ -193,3 +203,42 @@ case class AlterTableCompactionAbortEvent(sparkSession: SparkSession,
     carbonTable: CarbonTable,
     carbonMergerMapping: CarbonMergerMapping,
     mergedLoadName: String) extends Event with AlterTableCompactionEventInfo
+
+
+/**
+ * Compaction Event for handling exception in compaction
+ *
+ * @param sparkSession
+ * @param carbonTable
+ * @param alterTableModel
+ */
+case class AlterTableCompactionExceptionEvent(sparkSession: SparkSession,
+    carbonTable: CarbonTable,
+    alterTableModel: AlterTableModel) extends Event with AlterTableCompactionEventInfo
+
+/**
+ * pre event for standard hive partition
+ * @param sparkSession
+ * @param carbonTable
+ */
+case class PreAlterTableHivePartitionCommandEvent(sparkSession: SparkSession,
+    carbonTable: CarbonTable) extends Event with AlterTableHivePartitionInfo
+
+/**
+ * post event for standard hive partition
+ * @param sparkSession
+ * @param carbonTable
+ */
+case class PostAlterTableHivePartitionCommandEvent(sparkSession: SparkSession,
+    carbonTable: CarbonTable) extends Event with AlterTableHivePartitionInfo
+
+case class AlterTableDropPartitionMetaEvent(parentCarbonTable: CarbonTable,
+    specs: Seq[TablePartitionSpec],
+    ifExists: Boolean,
+    purge: Boolean,
+    retainData: Boolean)
+  extends Event with AlterTableDropPartitionEventInfo
+
+case class AlterTableDropPartitionPreStatusEvent(carbonTable: CarbonTable) extends Event
+
+case class AlterTableDropPartitionPostStatusEvent(carbonTable: CarbonTable) extends Event

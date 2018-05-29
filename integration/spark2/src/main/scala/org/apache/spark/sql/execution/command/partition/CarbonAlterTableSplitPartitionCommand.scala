@@ -40,8 +40,8 @@ import org.apache.carbondata.core.metadata.schema.PartitionInfo
 import org.apache.carbondata.core.metadata.schema.partition.PartitionType
 import org.apache.carbondata.core.mutate.CarbonUpdateUtil
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager
-import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
-import org.apache.carbondata.core.util.path.CarbonStorePath
+import org.apache.carbondata.core.util.CarbonProperties
+import org.apache.carbondata.events.{OperationContext, OperationListenerBus, PostAlterTableHivePartitionCommandEvent, PreAlterTableHivePartitionCommandEvent}
 import org.apache.carbondata.processing.loading.TableProcessingOperations
 import org.apache.carbondata.processing.loading.model.{CarbonDataLoadSchema, CarbonLoadModel}
 import org.apache.carbondata.spark.partition.SplitPartitionCallable
@@ -65,33 +65,31 @@ case class CarbonAlterTableSplitPartitionCommand(
       .asInstanceOf[CarbonRelation]
     val tablePath = relation.carbonTable.getTablePath
     if (relation == null) {
-      sys.error(s"Table $dbName.$tableName does not exist")
+      throwMetadataException(dbName, tableName, "table not found")
     }
     carbonMetaStore.checkSchemasModifiedTimeAndReloadTable(TableIdentifier(tableName, Some(dbName)))
-    if (null == CarbonMetadata.getInstance.getCarbonTable(dbName, tableName)) {
+    if (null == (CarbonEnv.getCarbonTable(Some(dbName), tableName)(sparkSession))) {
       LOGGER.error(s"Alter table failed. table not found: $dbName.$tableName")
-      sys.error(s"Alter table failed. table not found: $dbName.$tableName")
+      throwMetadataException(dbName, tableName, "table not found")
     }
-    val table = relation.carbonTable
-    val partitionInfo = table.getPartitionInfo(tableName)
+    val carbonTable = relation.carbonTable
+    val partitionInfo = carbonTable.getPartitionInfo(tableName)
     val partitionIds = partitionInfo.getPartitionIds.asScala.map(_.asInstanceOf[Int]).toList
     // keep a copy of partitionIdList before update partitionInfo.
     // will be used in partition data scan
     oldPartitionIds.addAll(partitionIds.asJava)
 
     if (partitionInfo == null) {
-      sys.error(s"Table $tableName is not a partition table.")
+      throwMetadataException(dbName, tableName, "Table is not a partition table.")
     }
     if (partitionInfo.getPartitionType == PartitionType.HASH) {
-      sys.error(s"Hash partition table cannot be added or split!")
+      throwMetadataException(dbName, tableName, "Hash partition table cannot be added or split!")
     }
 
     updatePartitionInfo(partitionInfo, partitionIds)
 
-    val carbonTablePath = CarbonStorePath.getCarbonTablePath(table.getAbsoluteTableIdentifier)
-    val schemaFilePath = carbonTablePath.getSchemaFilePath
     // read TableInfo
-    val tableInfo = carbonMetaStore.getThriftTableInfo(carbonTablePath)(sparkSession)
+    val tableInfo = carbonMetaStore.getThriftTableInfo(carbonTable)
     val schemaConverter = new ThriftWrapperSchemaConverterImpl()
     val wrapperTableInfo = schemaConverter.fromExternalToWrapperTableInfo(tableInfo,
       dbName, tableName, tablePath)
@@ -101,12 +99,14 @@ case class CarbonAlterTableSplitPartitionCommand(
     wrapperTableInfo.setLastUpdatedTime(System.currentTimeMillis())
     val thriftTable =
       schemaConverter.fromWrapperToExternalTableInfo(wrapperTableInfo, dbName, tableName)
-    carbonMetaStore.updateMetadataByThriftTable(schemaFilePath, thriftTable,
-      dbName, tableName, tablePath)
-    CarbonUtil.writeThriftTableToSchemaFile(schemaFilePath, thriftTable)
+    carbonMetaStore.updateTableSchemaForAlter(
+      carbonTable.getAbsoluteTableIdentifier.getCarbonTableIdentifier,
+      carbonTable.getAbsoluteTableIdentifier.getCarbonTableIdentifier,
+      thriftTable,
+      null,
+      carbonTable.getAbsoluteTableIdentifier.getTablePath)(sparkSession)
     // update the schema modified time
     carbonMetaStore.updateAndTouchSchemasUpdatedTime()
-    sparkSession.sessionState.catalog.refreshTable(TableIdentifier(tableName, Option(dbName)))
     Seq.empty
   }
 
@@ -149,15 +149,27 @@ case class CarbonAlterTableSplitPartitionCommand(
       carbonLoadModel.setCarbonDataLoadSchema(dataLoadSchema)
       carbonLoadModel.setTableName(table.getTableName)
       carbonLoadModel.setDatabaseName(table.getDatabaseName)
+      carbonLoadModel.setCarbonTransactionalTable(table.isTransactionalTable)
       carbonLoadModel.setTablePath(tablePath)
       val loadStartTime = CarbonUpdateUtil.readCurrentTime
       carbonLoadModel.setFactTimeStamp(loadStartTime)
+      val operationContext = new OperationContext
+      val preAlterTableHivePartitionCommandEvent = PreAlterTableHivePartitionCommandEvent(
+        sparkSession,
+        table)
+      OperationListenerBus.getInstance()
+        .fireEvent(preAlterTableHivePartitionCommandEvent, operationContext)
       alterTableSplitPartition(
         sparkSession.sqlContext,
         splitPartitionModel.partitionId.toInt.toString,
         carbonLoadModel,
         oldPartitionIds.asScala.toList
       )
+      val postAlterTableHivePartitionCommandEvent = PostAlterTableHivePartitionCommandEvent(
+        sparkSession,
+        table)
+      OperationListenerBus.getInstance()
+        .fireEvent(postAlterTableHivePartitionCommandEvent, operationContext)
       success = true
     } catch {
       case e: Exception =>
@@ -168,7 +180,6 @@ case class CarbonAlterTableSplitPartitionCommand(
       CacheProvider.getInstance().dropAllCache()
       val LOGGER: LogService = LogServiceFactory.getLogService(this.getClass.getName)
       LOGGER.info("Locks released after alter table add/split partition action.")
-      LOGGER.audit("Locks released after alter table add/split partition action.")
       if (success) {
         LOGGER.info(s"Alter table add/split partition is successful for table $dbName.$tableName")
         LOGGER.audit(s"Alter table add/split partition is successful for table $dbName.$tableName")
@@ -214,17 +225,15 @@ case class CarbonAlterTableSplitPartitionCommand(
       var i = 0
       validSegments.foreach { segmentId =>
         threadArray(i) = SplitThread(sqlContext, carbonLoadModel, executor,
-          segmentId, partitionId, oldPartitionIdList)
+          segmentId.getSegmentNo, partitionId, oldPartitionIdList)
         threadArray(i).start()
         i += 1
       }
       threadArray.foreach {
         thread => thread.join()
       }
-      val identifier = AbsoluteTableIdentifier.from(carbonLoadModel.getTablePath,
-        carbonLoadModel.getDatabaseName, carbonLoadModel.getTableName)
-      val refresher = DataMapStoreManager.getInstance().getTableSegmentRefresher(identifier)
-      refresher.refreshSegments(validSegments.asJava)
+      val refresher = DataMapStoreManager.getInstance().getTableSegmentRefresher(carbonTable)
+      refresher.refreshSegments(validSegments.map(_.getSegmentNo).asJava)
     } catch {
       case e: Exception =>
         LOGGER.error(s"Exception when split partition: ${ e.getMessage }")

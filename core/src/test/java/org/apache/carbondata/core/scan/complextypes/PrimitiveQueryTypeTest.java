@@ -29,11 +29,6 @@ import org.apache.carbondata.core.util.DataTypeUtil;
 
 import mockit.Mock;
 import mockit.MockUp;
-import org.apache.spark.sql.types.BooleanType$;
-import org.apache.spark.sql.types.DoubleType$;
-import org.apache.spark.sql.types.IntegerType$;
-import org.apache.spark.sql.types.LongType$;
-import org.apache.spark.sql.types.TimestampType$;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -78,30 +73,6 @@ public class PrimitiveQueryTypeTest {
 
   }
 
-  @Test public void testGetDataTypeForDefault() {
-    assertEquals(IntegerType$.MODULE$, primitiveQueryType.getSchemaType());
-  }
-
-  @Test public void testGetDataTypeForInt() {
-    assertEquals(IntegerType$.MODULE$, primitiveQueryTypeForInt.getSchemaType());
-  }
-
-  @Test public void testGetDataTypeForDouble() {
-    assertEquals(DoubleType$.MODULE$, primitiveQueryTypeForDouble.getSchemaType());
-  }
-
-  @Test public void testGetDataTypeForBoolean() {
-    assertEquals(BooleanType$.MODULE$, primitiveQueryTypeForBoolean.getSchemaType());
-  }
-
-  @Test public void testGetDataTypeForTimeStamp() {
-    assertEquals(TimestampType$.MODULE$, primitiveQueryTypeForTimeStamp.getSchemaType());
-  }
-
-  @Test public void testGetDataTypeForLong() {
-    assertEquals(LongType$.MODULE$, primitiveQueryTypeForLong.getSchemaType());
-  }
-
   @Test public void testGetDataBasedOnDataTypeFromSurrogates() {
     ByteBuffer surrogateData = ByteBuffer.allocate(10);
     surrogateData.put(3, (byte) 1);
@@ -113,7 +84,7 @@ public class PrimitiveQueryTypeTest {
     Object expectedValue = 1313043000000L;
 
     Object actualValue =
-        primitiveQueryTypeForTimeStamp.getDataBasedOnDataTypeFromSurrogates(surrogateData);
+        primitiveQueryTypeForTimeStamp.getDataBasedOnDataType(surrogateData);
     assertEquals(expectedValue, actualValue);
   }
 
@@ -126,9 +97,9 @@ public class PrimitiveQueryTypeTest {
       }
     };
     Object expectedValue = primitiveQueryTypeForTimeStampForIsDictionaryFalse
-        .getDataBasedOnDataTypeFromSurrogates(surrogateData);
+        .getDataBasedOnDataType(surrogateData);
     Object actualValue = primitiveQueryTypeForTimeStampForIsDictionaryFalse
-        .getDataBasedOnDataTypeFromSurrogates(surrogateData);
+        .getDataBasedOnDataType(surrogateData);
     assertEquals(expectedValue, actualValue);
   }
 

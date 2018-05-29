@@ -28,18 +28,17 @@ import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.DataRefNode;
 import org.apache.carbondata.core.datastore.DataRefNodeFinder;
-import org.apache.carbondata.core.datastore.FileHolder;
+import org.apache.carbondata.core.datastore.FileReader;
 import org.apache.carbondata.core.datastore.block.AbstractIndex;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.datastore.impl.btree.BTreeDataRefNodeFinder;
-import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataRefNodeWrapper;
+import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataRefNode;
 import org.apache.carbondata.core.mutate.DeleteDeltaVo;
 import org.apache.carbondata.core.reader.CarbonDeleteFilesDataReader;
 import org.apache.carbondata.core.scan.executor.infos.BlockExecutionInfo;
 import org.apache.carbondata.core.scan.executor.infos.DeleteDeltaInfo;
 import org.apache.carbondata.core.scan.model.QueryModel;
-import org.apache.carbondata.core.scan.processor.AbstractDataBlockIterator;
-import org.apache.carbondata.core.scan.processor.impl.DataBlockIteratorImpl;
+import org.apache.carbondata.core.scan.processor.DataBlockIterator;
 import org.apache.carbondata.core.scan.result.vector.CarbonColumnarBatch;
 import org.apache.carbondata.core.stats.QueryStatistic;
 import org.apache.carbondata.core.stats.QueryStatisticsConstants;
@@ -72,9 +71,9 @@ public abstract class AbstractDetailQueryResultIterator<E> extends CarbonIterato
   /**
    * file reader which will be used to execute the query
    */
-  protected FileHolder fileReader;
+  protected FileReader fileReader;
 
-  protected AbstractDataBlockIterator dataBlockIterator;
+  DataBlockIterator dataBlockIterator;
 
   /**
    * QueryStatisticsRecorder
@@ -83,13 +82,13 @@ public abstract class AbstractDetailQueryResultIterator<E> extends CarbonIterato
   /**
    * number of cores which can be used
    */
-  private int batchSize;
+  protected int batchSize;
   /**
    * queryStatisticsModel to store query statistics object
    */
   private QueryStatisticsModel queryStatisticsModel;
 
-  public AbstractDetailQueryResultIterator(List<BlockExecutionInfo> infos, QueryModel queryModel,
+  AbstractDetailQueryResultIterator(List<BlockExecutionInfo> infos, QueryModel queryModel,
       ExecutorService execService) {
     String batchSizeString =
         CarbonProperties.getInstance().getProperty(CarbonCommonConstants.DETAIL_QUERY_BATCH_SIZE);
@@ -107,7 +106,7 @@ public abstract class AbstractDetailQueryResultIterator<E> extends CarbonIterato
     this.blockExecutionInfos = infos;
     this.fileReader = FileFactory.getFileHolder(
         FileFactory.getFileType(queryModel.getAbsoluteTableIdentifier().getTablePath()));
-    this.fileReader.setQueryId(queryModel.getQueryId());
+    this.fileReader.setReadPageByPage(queryModel.isReadPageByPage());
     this.execService = execService;
     intialiseInfos();
     initQueryStatiticsModel();
@@ -129,22 +128,26 @@ public abstract class AbstractDetailQueryResultIterator<E> extends CarbonIterato
         blockInfo.setDeletedRecordsMap(deletedRowsMap);
       }
       DataRefNode dataRefNode = blockInfo.getDataBlock().getDataRefNode();
-      if (dataRefNode instanceof BlockletDataRefNodeWrapper) {
-        BlockletDataRefNodeWrapper wrapper = (BlockletDataRefNodeWrapper) dataRefNode;
-        blockInfo.setFirstDataBlock(wrapper);
-        blockInfo.setNumberOfBlockToScan(wrapper.numberOfNodes());
-
+      if (dataRefNode instanceof BlockletDataRefNode) {
+        BlockletDataRefNode node = (BlockletDataRefNode) dataRefNode;
+        blockInfo.setFirstDataBlock(node);
+        blockInfo.setNumberOfBlockToScan(node.numberOfNodes());
       } else {
         DataRefNode startDataBlock =
             finder.findFirstDataBlock(dataRefNode, blockInfo.getStartKey());
-        while (startDataBlock.nodeNumber() < blockInfo.getStartBlockletIndex()) {
+        while ((null != startDataBlock) && (startDataBlock.nodeIndex() < blockInfo
+            .getStartBlockletIndex())) {
           startDataBlock = startDataBlock.getNextDataRefNode();
         }
         long numberOfBlockToScan = blockInfo.getNumberOfBlockletToScan();
         //if number of block is less than 0 then take end block.
         if (numberOfBlockToScan <= 0) {
           DataRefNode endDataBlock = finder.findLastDataBlock(dataRefNode, blockInfo.getEndKey());
-          numberOfBlockToScan = endDataBlock.nodeNumber() - startDataBlock.nodeNumber() + 1;
+          if (null != startDataBlock) {
+            numberOfBlockToScan = endDataBlock.nodeIndex() - startDataBlock.nodeIndex() + 1;
+          } else {
+            numberOfBlockToScan = endDataBlock.nodeIndex() + 1;
+          }
         }
         blockInfo.setFirstDataBlock(startDataBlock);
         blockInfo.setNumberOfBlockToScan(numberOfBlockToScan);
@@ -229,7 +232,8 @@ public abstract class AbstractDetailQueryResultIterator<E> extends CarbonIterato
     }
   }
 
-  @Override public boolean hasNext() {
+  @Override
+  public boolean hasNext() {
     if ((dataBlockIterator != null && dataBlockIterator.hasNext())) {
       return true;
     } else if (blockExecutionInfos.size() > 0) {
@@ -239,7 +243,7 @@ public abstract class AbstractDetailQueryResultIterator<E> extends CarbonIterato
     }
   }
 
-  protected void updateDataBlockIterator() {
+  void updateDataBlockIterator() {
     if (dataBlockIterator == null || !dataBlockIterator.hasNext()) {
       dataBlockIterator = getDataBlockIterator();
       while (dataBlockIterator != null && !dataBlockIterator.hasNext()) {
@@ -248,17 +252,17 @@ public abstract class AbstractDetailQueryResultIterator<E> extends CarbonIterato
     }
   }
 
-  private DataBlockIteratorImpl getDataBlockIterator() {
+  private DataBlockIterator getDataBlockIterator() {
     if (blockExecutionInfos.size() > 0) {
       BlockExecutionInfo executionInfo = blockExecutionInfos.get(0);
       blockExecutionInfos.remove(executionInfo);
-      return new DataBlockIteratorImpl(executionInfo, fileReader, batchSize, queryStatisticsModel,
+      return new DataBlockIterator(executionInfo, fileReader, batchSize, queryStatisticsModel,
           execService);
     }
     return null;
   }
 
-  protected void initQueryStatiticsModel() {
+  private void initQueryStatiticsModel() {
     this.queryStatisticsModel = new QueryStatisticsModel();
     this.queryStatisticsModel.setRecorder(recorder);
     QueryStatistic queryStatisticTotalBlocklet = new QueryStatistic();
@@ -295,6 +299,27 @@ public abstract class AbstractDetailQueryResultIterator<E> extends CarbonIterato
     queryStatisticsModel.getStatisticsTypeAndObjMap()
         .put(QueryStatisticsConstants.READ_BLOCKlET_TIME, readTime);
     queryStatisticsModel.getRecorder().recordStatistics(readTime);
+
+    // dimension filling time
+    QueryStatistic keyColumnFilingTime = new QueryStatistic();
+    queryStatisticsModel.getStatisticsTypeAndObjMap()
+        .put(QueryStatisticsConstants.KEY_COLUMN_FILLING_TIME, keyColumnFilingTime);
+    queryStatisticsModel.getRecorder().recordStatistics(keyColumnFilingTime);
+    // measure filling time
+    QueryStatistic measureFilingTime = new QueryStatistic();
+    queryStatisticsModel.getStatisticsTypeAndObjMap()
+        .put(QueryStatisticsConstants.MEASURE_FILLING_TIME, measureFilingTime);
+    queryStatisticsModel.getRecorder().recordStatistics(measureFilingTime);
+    // page Io Time
+    QueryStatistic pageUncompressTime = new QueryStatistic();
+    queryStatisticsModel.getStatisticsTypeAndObjMap()
+        .put(QueryStatisticsConstants.PAGE_UNCOMPRESS_TIME, pageUncompressTime);
+    queryStatisticsModel.getRecorder().recordStatistics(pageUncompressTime);
+    // result preparation time
+    QueryStatistic resultPreparationTime = new QueryStatistic();
+    queryStatisticsModel.getStatisticsTypeAndObjMap()
+        .put(QueryStatisticsConstants.RESULT_PREP_TIME, resultPreparationTime);
+    queryStatisticsModel.getRecorder().recordStatistics(resultPreparationTime);
   }
 
   public void processNextBatch(CarbonColumnarBatch columnarBatch) {

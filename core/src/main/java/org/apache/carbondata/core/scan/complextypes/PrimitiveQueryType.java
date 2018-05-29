@@ -22,21 +22,17 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.carbondata.core.cache.dictionary.Dictionary;
+import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.chunk.impl.DimensionRawColumnChunk;
 import org.apache.carbondata.core.keygenerator.directdictionary.DirectDictionaryGenerator;
 import org.apache.carbondata.core.keygenerator.directdictionary.DirectDictionaryKeyGeneratorFactory;
 import org.apache.carbondata.core.keygenerator.mdkey.Bits;
+import org.apache.carbondata.core.metadata.datatype.DataType;
+import org.apache.carbondata.core.metadata.datatype.DataTypes;
 import org.apache.carbondata.core.scan.filter.GenericQueryType;
-import org.apache.carbondata.core.scan.processor.BlocksChunkHolder;
+import org.apache.carbondata.core.scan.processor.RawBlockletColumnChunks;
+import org.apache.carbondata.core.util.ByteUtil;
 import org.apache.carbondata.core.util.DataTypeUtil;
-
-import org.apache.spark.sql.types.BooleanType$;
-import org.apache.spark.sql.types.DataType;
-import org.apache.spark.sql.types.DateType$;
-import org.apache.spark.sql.types.DoubleType$;
-import org.apache.spark.sql.types.IntegerType$;
-import org.apache.spark.sql.types.LongType$;
-import org.apache.spark.sql.types.TimestampType$;
 
 public class PrimitiveQueryType extends ComplexQueryType implements GenericQueryType {
 
@@ -51,8 +47,12 @@ public class PrimitiveQueryType extends ComplexQueryType implements GenericQuery
 
   private boolean isDirectDictionary;
 
+  private boolean isDictionary;
+
+  private DirectDictionaryGenerator directDictGenForDate;
+
   public PrimitiveQueryType(String name, String parentname, int blockIndex,
-      org.apache.carbondata.core.metadata.datatype.DataType dataType, int keySize,
+      DataType dataType, int keySize,
       Dictionary dictionary, boolean isDirectDictionary) {
     super(name, parentname, blockIndex);
     this.dataType = dataType;
@@ -61,6 +61,9 @@ public class PrimitiveQueryType extends ComplexQueryType implements GenericQuery
     this.name = name;
     this.parentname = parentname;
     this.isDirectDictionary = isDirectDictionary;
+    this.isDictionary = (dictionary != null && isDirectDictionary == false);
+    this.directDictGenForDate =
+        DirectDictionaryKeyGeneratorFactory.getDirectDictionaryGenerator(DataTypes.DATE);
   }
 
   @Override public void addChildren(GenericQueryType children) {
@@ -92,46 +95,55 @@ public class PrimitiveQueryType extends ComplexQueryType implements GenericQuery
       DimensionRawColumnChunk[] rawColumnChunks, int rowNumber,
       int pageNumber, DataOutputStream dataOutputStream) throws IOException {
     byte[] currentVal = copyBlockDataChunk(rawColumnChunks, rowNumber, pageNumber);
+    if (!this.isDictionary) {
+      dataOutputStream.writeShort(currentVal.length);
+    }
     dataOutputStream.write(currentVal);
   }
 
-  @Override public DataType getSchemaType() {
-    if (dataType == org.apache.carbondata.core.metadata.datatype.DataTypes.INT) {
-      return IntegerType$.MODULE$;
-    } else if (dataType == org.apache.carbondata.core.metadata.datatype.DataTypes.DOUBLE) {
-      return DoubleType$.MODULE$;
-    } else if (dataType == org.apache.carbondata.core.metadata.datatype.DataTypes.LONG) {
-      return LongType$.MODULE$;
-    } else if (dataType == org.apache.carbondata.core.metadata.datatype.DataTypes.BOOLEAN) {
-      return BooleanType$.MODULE$;
-    } else if (dataType == org.apache.carbondata.core.metadata.datatype.DataTypes.TIMESTAMP) {
-      return TimestampType$.MODULE$;
-    } else if (dataType == org.apache.carbondata.core.metadata.datatype.DataTypes.DATE) {
-      return DateType$.MODULE$;
-    } else {
-      return IntegerType$.MODULE$;
-    }
-  }
-
-  @Override public void fillRequiredBlockData(BlocksChunkHolder blockChunkHolder)
+  @Override public void fillRequiredBlockData(RawBlockletColumnChunks blockChunkHolder)
       throws IOException {
     readBlockDataChunk(blockChunkHolder);
   }
 
-  @Override public Object getDataBasedOnDataTypeFromSurrogates(ByteBuffer surrogateData) {
-    byte[] data = new byte[keySize];
-    surrogateData.get(data);
-    Bits bit = new Bits(new int[]{keySize * 8});
-    int surrgateValue = (int)bit.getKeyArray(data, 0)[0];
+  @Override public Object getDataBasedOnDataType(ByteBuffer dataBuffer) {
     Object actualData = null;
+
     if (isDirectDictionary) {
-      DirectDictionaryGenerator directDictionaryGenerator = DirectDictionaryKeyGeneratorFactory
-          .getDirectDictionaryGenerator(dataType);
+      // Direct Dictionary Column
+      byte[] data = new byte[keySize];
+      dataBuffer.get(data);
+      Bits bit = new Bits(new int[] { keySize * 8 });
+      int surrgateValue = (int) bit.getKeyArray(data, 0)[0];
+      DirectDictionaryGenerator directDictionaryGenerator =
+          DirectDictionaryKeyGeneratorFactory.getDirectDictionaryGenerator(dataType);
       actualData = directDictionaryGenerator.getValueFromSurrogate(surrgateValue);
+    } else if (!isDictionary) {
+      // No Dictionary Columns
+      int size = dataBuffer.getShort();
+      byte[] value = new byte[size];
+      dataBuffer.get(value, 0, size);
+      if (dataType == DataTypes.DATE) {
+        if (value.length == 0) {
+          actualData = null;
+        } else {
+          actualData = this.directDictGenForDate.getValueFromSurrogate(
+              ByteUtil.toInt(value, 0, CarbonCommonConstants.INT_SIZE_IN_BYTE));
+        }
+      } else {
+        actualData = DataTypeUtil.getDataBasedOnDataTypeForNoDictionaryColumn(value, this.dataType);
+      }
     } else {
+      // Dictionary Column
+      byte[] data = new byte[keySize];
+      dataBuffer.get(data);
+      Bits bit = new Bits(new int[] { keySize * 8 });
+      int surrgateValue = (int) bit.getKeyArray(data, 0)[0];
       String dictionaryValueForKey = dictionary.getDictionaryValueForKey(surrgateValue);
       actualData = DataTypeUtil.getDataBasedOnDataType(dictionaryValueForKey, this.dataType);
     }
+
     return actualData;
   }
+
 }

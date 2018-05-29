@@ -25,12 +25,12 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.mapred.JobConf
 import org.apache.hadoop.mapreduce.Job
 import org.apache.spark.{Partition, SparkContext}
+import org.apache.spark.deploy.SparkHadoopUtil
 import org.apache.spark.sql.execution.command.CarbonMergerMapping
 
-import org.apache.carbondata.core.datastore.block.{Distributable, TableBlockInfo}
 import org.apache.carbondata.core.metadata.{AbsoluteTableIdentifier, CarbonTableIdentifier}
 import org.apache.carbondata.hadoop.{CarbonInputSplit, CarbonMultiBlockSplit}
-import org.apache.carbondata.hadoop.api.CarbonTableInputFormat
+import org.apache.carbondata.hadoop.api.{CarbonInputFormat, CarbonTableInputFormat}
 import org.apache.carbondata.hadoop.util.CarbonInputFormatUtil
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 import org.apache.carbondata.processing.merger.CarbonDataMergerUtil
@@ -57,13 +57,17 @@ class CarbonIUDMergerRDD[K, V](
       tablePath, new CarbonTableIdentifier(databaseName, factTableName, tableId)
     )
     val jobConf: JobConf = new JobConf(new Configuration)
+    SparkHadoopUtil.get.addCredentials(jobConf)
     val job: Job = new Job(jobConf)
     val format = CarbonInputFormatUtil.createCarbonInputFormat(absoluteTableIdentifier, job)
     val defaultParallelism = sparkContext.defaultParallelism
     val noOfBlocks = 0
 
-    CarbonTableInputFormat.setSegmentsToAccess(
+    CarbonInputFormat.setSegmentsToAccess(
       job.getConfiguration, carbonMergerMapping.validSegments.toList.asJava)
+    CarbonInputFormat.setTableInfo(
+      job.getConfiguration,
+      carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable.getTableInfo)
 
     // get splits
     val splits = format.getSplits(job)
@@ -91,7 +95,7 @@ class CarbonIUDMergerRDD[K, V](
         val locations = validSplits.head.getLocations
         i += 1
         new CarbonSparkPartition(id, i,
-          new CarbonMultiBlockSplit(absoluteTableIdentifier, validSplits.asJava, locations))
+          new CarbonMultiBlockSplit(validSplits.asJava, locations))
       } else {
         null
       }

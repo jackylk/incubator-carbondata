@@ -21,6 +21,7 @@ import scala.collection.JavaConverters._
 
 import org.apache.spark.sql.{CarbonEnv, Row, SparkSession}
 import org.apache.spark.sql.catalyst.TableIdentifier
+import org.apache.spark.sql.catalyst.catalog.CatalogTypes.TablePartitionSpec
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.execution.command.MetadataCommand
@@ -35,6 +36,7 @@ import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
 private[sql] case class CarbonDescribeFormattedCommand(
     child: SparkPlan,
     override val output: Seq[Attribute],
+    partitionSpec: TablePartitionSpec,
     tblIdentifier: TableIdentifier)
   extends MetadataCommand {
 
@@ -81,18 +83,20 @@ private[sql] case class CarbonDescribeFormattedCommand(
     } else {
       colProps.toString()
     }
+    val carbonTable = relation.carbonTable
     results ++= Seq(("", "", ""), ("##Detailed Table Information", "", ""))
     results ++= Seq(("Database Name", relation.carbonTable.getDatabaseName, "")
     )
     results ++= Seq(("Table Name", relation.carbonTable.getTableName, ""))
-    results ++= Seq(("CARBON Store Path ", CarbonProperties.getStorePath, ""))
-    val carbonTable = relation.carbonTable
+    results ++= Seq(("CARBON Store Path ", carbonTable.getTablePath, ""))
+
+    val tblProps = carbonTable.getTableInfo.getFactTable.getTableProperties
+
     // Carbon table support table comment
-    val tableComment = carbonTable.getTableInfo.getFactTable.getTableProperties.asScala
-      .getOrElse(CarbonCommonConstants.TABLE_COMMENT, "")
+    val tableComment = tblProps.asScala.getOrElse(CarbonCommonConstants.TABLE_COMMENT, "")
     results ++= Seq(("Comment", tableComment, ""))
     results ++= Seq(("Table Block Size ", carbonTable.getBlockSizeInMB + " MB", ""))
-    val dataIndexSize = CarbonUtil.calculateDataIndexSize(carbonTable)
+    val dataIndexSize = CarbonUtil.calculateDataIndexSize(carbonTable, false)
     if (!dataIndexSize.isEmpty) {
       results ++= Seq((CarbonCommonConstants.TABLE_DATA_SIZE,
         dataIndexSize.get(CarbonCommonConstants.CARBON_TOTAL_DATA_SIZE).toString, ""))
@@ -101,16 +105,12 @@ private[sql] case class CarbonDescribeFormattedCommand(
       results ++= Seq((CarbonCommonConstants.LAST_UPDATE_TIME,
         dataIndexSize.get(CarbonCommonConstants.LAST_UPDATE_TIME).toString, ""))
     }
-    results ++= Seq(("SORT_SCOPE", carbonTable.getTableInfo.getFactTable
-      .getTableProperties.asScala.getOrElse("sort_scope", CarbonCommonConstants
-      .LOAD_SORT_SCOPE_DEFAULT), CarbonCommonConstants.LOAD_SORT_SCOPE_DEFAULT))
-    val isStreaming = carbonTable.getTableInfo.getFactTable.getTableProperties.asScala
-      .getOrElse("streaming", "false")
-    results ++= Seq(("Streaming", isStreaming, ""))
 
-    val tblProps = carbonTable.getTableInfo.getFactTable.getTableProperties
-    results ++= Seq(("SORT_SCOPE", tblProps.getOrDefault("sort_scope", CarbonCommonConstants
-      .LOAD_SORT_SCOPE_DEFAULT), CarbonCommonConstants.LOAD_SORT_SCOPE_DEFAULT))
+    results ++= Seq(("SORT_SCOPE", tblProps.asScala.getOrElse("sort_scope", CarbonCommonConstants
+      .LOAD_SORT_SCOPE_DEFAULT), tblProps.asScala.getOrElse("sort_scope", CarbonCommonConstants
+      .LOAD_SORT_SCOPE_DEFAULT)))
+    val isStreaming = tblProps.asScala.getOrElse("streaming", "false")
+    results ++= Seq(("Streaming", isStreaming, ""))
 
     // show table level compaction options
     if (tblProps.containsKey(CarbonCommonConstants.TABLE_MAJOR_COMPACTION_SIZE)) {
@@ -148,15 +148,29 @@ private[sql] case class CarbonDescribeFormattedCommand(
     results ++= Seq(("SORT_COLUMNS", relation.metaData.carbonTable.getSortColumns(
       relation.carbonTable.getTableName).asScala
       .map(column => column).mkString(","), ""))
-    val dimension = carbonTable
-      .getDimensionByTableName(relation.carbonTable.getTableName)
     if (carbonTable.getPartitionInfo(carbonTable.getTableName) != null) {
       results ++=
-      Seq(("Partition Columns", carbonTable.getPartitionInfo(carbonTable.getTableName)
-        .getColumnSchemaList.asScala.map(_.getColumnName).mkString(","), ""))
-      results ++=
-      Seq(("Partition Type", carbonTable.getPartitionInfo(carbonTable.getTableName)
+      Seq(("#Partition Information", "", ""),
+        ("#col_name", "data_type", "comment"))
+      results ++= carbonTable.getPartitionInfo(carbonTable.getTableName)
+        .getColumnSchemaList.asScala.map {
+        col => (col.getColumnName, col.getDataType.getName, "NULL")
+      }
+      results ++= Seq(("Partition Type", carbonTable.getPartitionInfo(carbonTable.getTableName)
         .getPartitionType.toString, ""))
+    }
+    if (partitionSpec.nonEmpty) {
+      val partitions = sparkSession.sessionState.catalog.getPartition(tblIdentifier, partitionSpec)
+      results ++=
+      Seq(("", "", ""),
+        ("##Detailed Partition Information", "", ""),
+        ("Partition Value:", partitions.spec.values.mkString("[", ",", "]"), ""),
+        ("Database:", tblIdentifier.database.getOrElse(sparkSession.catalog.currentDatabase), ""),
+        ("Table:", tblIdentifier.table, ""))
+      if (partitions.storage.locationUri.isDefined) {
+        results ++= Seq(("Location:", partitions.storage.locationUri.get.toString, ""))
+      }
+      results ++= Seq(("Partition Parameters:", partitions.parameters.mkString(", "), ""))
     }
     results.map {
       case (name, dataType, null) =>

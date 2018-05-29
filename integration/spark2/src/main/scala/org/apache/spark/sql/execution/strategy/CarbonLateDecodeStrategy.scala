@@ -35,11 +35,14 @@ import org.apache.spark.sql.sources.{BaseRelation, Filter}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.CarbonExpressions.{MatchCast => Cast}
 
+import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.core.constants.CarbonCommonConstants
+import org.apache.carbondata.core.indexstore.PartitionSpec
 import org.apache.carbondata.core.metadata.schema.BucketingInfo
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.statusmanager.SegmentUpdateStatusManager
 import org.apache.carbondata.core.util.CarbonProperties
+import org.apache.carbondata.datamap.{TextMatch, TextMatchLimit, TextMatchMaxDocUDF, TextMatchUDF}
 import org.apache.carbondata.spark.CarbonAliasDecoderRelation
 import org.apache.carbondata.spark.rdd.CarbonScanRDD
 import org.apache.carbondata.spark.util.CarbonScalaUtil
@@ -93,7 +96,7 @@ private[sql] class CarbonLateDecodeStrategy extends SparkStrategy {
   private def driverSideCountStar(logicalRelation: LogicalRelation): Boolean = {
     val relation = logicalRelation.relation.asInstanceOf[CarbonDatasourceHadoopRelation]
     val segmentUpdateStatusManager = new SegmentUpdateStatusManager(
-      relation.carbonRelation.metaData.carbonTable.getAbsoluteTableIdentifier)
+      relation.carbonRelation.metaData.carbonTable)
     val updateDeltaMetadata = segmentUpdateStatusManager.readLoadMetadata()
     if (updateDeltaMetadata != null && updateDeltaMetadata.nonEmpty) {
       false
@@ -143,20 +146,34 @@ private[sql] class CarbonLateDecodeStrategy extends SparkStrategy {
       projects: Seq[NamedExpression],
       filterPredicates: Seq[Expression],
       scanBuilder: (Seq[Attribute], Array[Filter],
-        ArrayBuffer[AttributeReference], Seq[String]) => RDD[InternalRow]) = {
-    val names = relation.catalogTable.get.partitionColumnNames
+        ArrayBuffer[AttributeReference], Seq[PartitionSpec]) => RDD[InternalRow]) = {
+    val names = relation.catalogTable match {
+      case Some(table) => table.partitionColumnNames
+      case _ => Seq.empty
+    }
     // Get the current partitions from table.
-    var partitions: Seq[String] = null
+    var partitions: Seq[PartitionSpec] = null
     if (names.nonEmpty) {
       val partitionSet = AttributeSet(names
         .map(p => relation.output.find(_.name.equalsIgnoreCase(p)).get))
       val partitionKeyFilters =
         ExpressionSet(ExpressionSet(filterPredicates).filter(_.references.subsetOf(partitionSet)))
+      // Update the name with lower case as it is case sensitive while getting partition info.
+      val updatedPartitionFilters = partitionKeyFilters.map { exp =>
+        exp.transform {
+          case attr: AttributeReference =>
+            AttributeReference(
+              attr.name.toLowerCase,
+              attr.dataType,
+              attr.nullable,
+              attr.metadata)(attr.exprId, attr.qualifier, attr.isGenerated)
+        }
+      }
       partitions =
         CarbonFilters.getPartitions(
-          partitionKeyFilters.toSeq,
+          updatedPartitionFilters.toSeq,
           SparkSession.getActiveSession.get,
-          relation.catalogTable.get.identifier)
+          relation.catalogTable.get.identifier).orNull
     }
     pruneFilterProjectRaw(
       relation,
@@ -175,10 +192,10 @@ private[sql] class CarbonLateDecodeStrategy extends SparkStrategy {
       needDecode: ArrayBuffer[AttributeReference]):
   RDD[InternalRow] = {
     if (needDecode.nonEmpty) {
-      rdd.asInstanceOf[CarbonScanRDD].setVectorReaderSupport(false)
+      rdd.asInstanceOf[CarbonScanRDD[InternalRow]].setVectorReaderSupport(false)
       getDecoderRDD(relation, needDecode, rdd, output)
     } else {
-      rdd.asInstanceOf[CarbonScanRDD]
+      rdd.asInstanceOf[CarbonScanRDD[InternalRow]]
         .setVectorReaderSupport(supportBatchedDataSource(relation.relation.sqlContext, output))
       rdd
     }
@@ -188,9 +205,9 @@ private[sql] class CarbonLateDecodeStrategy extends SparkStrategy {
       relation: LogicalRelation,
       rawProjects: Seq[NamedExpression],
       filterPredicates: Seq[Expression],
-      partitions: Seq[String],
+      partitions: Seq[PartitionSpec],
       scanBuilder: (Seq[Attribute], Seq[Expression], Seq[Filter],
-        ArrayBuffer[AttributeReference], Seq[String]) => RDD[InternalRow]) = {
+        ArrayBuffer[AttributeReference], Seq[PartitionSpec]) => RDD[InternalRow]) = {
     val projects = rawProjects.map {p =>
       p.transform {
         case CustomDeterministicExpression(exp) => exp
@@ -339,9 +356,9 @@ private[sql] class CarbonLateDecodeStrategy extends SparkStrategy {
 
   private def getDataSourceScan(relation: LogicalRelation,
       output: Seq[Attribute],
-      partitions: Seq[String],
+      partitions: Seq[PartitionSpec],
       scanBuilder: (Seq[Attribute], Seq[Expression], Seq[Filter],
-        ArrayBuffer[AttributeReference], Seq[String]) => RDD[InternalRow],
+        ArrayBuffer[AttributeReference], Seq[PartitionSpec]) => RDD[InternalRow],
       candidatePredicates: Seq[Expression],
       pushedFilters: Seq[Filter],
       metadata: Map[String, String],
@@ -422,7 +439,7 @@ private[sql] class CarbonLateDecodeStrategy extends SparkStrategy {
       val cols = info.getListOfColumns.asScala
       val sortColumn = carbonTable.
         getDimensionByTableName(carbonTable.getTableName).get(0).getColName
-      val numBuckets = info.getNumberOfBuckets
+      val numBuckets = info.getNumOfRanges
       val bucketColumns = cols.flatMap { n =>
         val attrRef = output.find(_.name.equalsIgnoreCase(n.getColumnName))
         attrRef match {
@@ -464,14 +481,29 @@ private[sql] class CarbonLateDecodeStrategy extends SparkStrategy {
 
     // For conciseness, all Catalyst filter expressions of type `expressions.Expression` below are
     // called `predicate`s, while all data source filters of type `sources.Filter` are simply called
-    // `filter`s.
+    // `filter`s. And block filters for lucene with more than one text_match udf
+    // Todo: handle when lucene and normal query filter is supported
 
-    val translated: Seq[(Expression, Filter)] =
-      for {
-        predicate <- predicatesWithoutComplex
-        filter <- translateFilter(predicate)
-      } yield predicate -> filter
-
+    var count = 0
+    val translated: Seq[(Expression, Filter)] = predicatesWithoutComplex.flatMap {
+      predicate =>
+        if (predicate.isInstanceOf[ScalaUDF]) {
+          predicate match {
+            case u: ScalaUDF if u.function.isInstanceOf[TextMatchUDF] ||
+                                u.function.isInstanceOf[TextMatchMaxDocUDF] => count = count + 1
+          }
+        }
+        if (count > 1) {
+          throw new MalformedCarbonCommandException(
+            "Specify all search filters for Lucene within a single text_match UDF")
+        }
+        val filter = translateFilter(predicate)
+        if (filter.isDefined) {
+          Some(predicate, filter.get)
+        } else {
+          None
+        }
+    }
 
     // A map from original Catalyst expressions to corresponding translated data source filters.
     val translatedMap: Map[Expression, Filter] = translated.toMap
@@ -512,6 +544,20 @@ private[sql] class CarbonLateDecodeStrategy extends SparkStrategy {
    */
   protected[sql] def translateFilter(predicate: Expression, or: Boolean = false): Option[Filter] = {
     predicate match {
+      case u: ScalaUDF if u.function.isInstanceOf[TextMatchUDF] =>
+        if (u.children.size > 1) {
+          throw new MalformedCarbonCommandException(
+            "TEXT_MATCH UDF syntax: TEXT_MATCH('luceneQuerySyntax')")
+        }
+        Some(TextMatch(u.children.head.toString()))
+
+      case u: ScalaUDF if u.function.isInstanceOf[TextMatchMaxDocUDF] =>
+        if (u.children.size > 2) {
+          throw new MalformedCarbonCommandException(
+            "TEXT_MATCH UDF syntax: TEXT_MATCH_LIMIT('luceneQuerySyntax')")
+        }
+        Some(TextMatchLimit(u.children.head.toString(), u.children.last.toString()))
+
       case or@Or(left, right) =>
 
         val leftFilter = translateFilter(left, true)
@@ -599,8 +645,14 @@ private[sql] class CarbonLateDecodeStrategy extends SparkStrategy {
         CastExpressionOptimization.checkIfCastCanBeRemove(c)
       case c@LessThanOrEqual(Literal(v, t), Cast(a: Attribute, _)) =>
         CastExpressionOptimization.checkIfCastCanBeRemove(c)
-      case StartsWith(a: Attribute, Literal(v, t)) =>
+      case s@StartsWith(a: Attribute, Literal(v, t)) =>
         Some(sources.StringStartsWith(a.name, v.toString))
+      case c@EndsWith(a: Attribute, Literal(v, t)) =>
+        Some(CarbonEndsWith(c))
+      case c@Contains(a: Attribute, Literal(v, t)) =>
+        Some(CarbonContainsWith(c))
+      case c@Literal(v, t) if (v == null) =>
+        Some(FalseExpr())
       case others => None
     }
   }

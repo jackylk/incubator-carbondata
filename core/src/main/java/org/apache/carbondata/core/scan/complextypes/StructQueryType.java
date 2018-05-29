@@ -25,13 +25,8 @@ import java.util.List;
 
 import org.apache.carbondata.core.datastore.chunk.impl.DimensionRawColumnChunk;
 import org.apache.carbondata.core.scan.filter.GenericQueryType;
-import org.apache.carbondata.core.scan.processor.BlocksChunkHolder;
-
-import org.apache.spark.sql.catalyst.expressions.GenericInternalRow;
-import org.apache.spark.sql.types.DataType;
-import org.apache.spark.sql.types.Metadata;
-import org.apache.spark.sql.types.StructField;
-import org.apache.spark.sql.types.StructType;
+import org.apache.carbondata.core.scan.processor.RawBlockletColumnChunks;
+import org.apache.carbondata.core.util.DataTypeUtil;
 
 public class StructQueryType extends ComplexQueryType implements GenericQueryType {
 
@@ -86,8 +81,8 @@ public class StructQueryType extends ComplexQueryType implements GenericQueryTyp
       int pageNumber, DataOutputStream dataOutputStream) throws IOException {
     byte[] input = copyBlockDataChunk(dimensionColumnDataChunks, rowNumber, pageNumber);
     ByteBuffer byteArray = ByteBuffer.wrap(input);
-    int childElement = byteArray.getInt();
-    dataOutputStream.writeInt(childElement);
+    int childElement = byteArray.getShort();
+    dataOutputStream.writeShort(childElement);
     if (childElement > 0) {
       for (int i = 0; i < childElement; i++) {
         children.get(i)
@@ -97,16 +92,7 @@ public class StructQueryType extends ComplexQueryType implements GenericQueryTyp
     }
   }
 
-  @Override public DataType getSchemaType() {
-    StructField[] fields = new StructField[children.size()];
-    for (int i = 0; i < children.size(); i++) {
-      fields[i] = new StructField(children.get(i).getName(), null, true,
-          Metadata.empty());
-    }
-    return new StructType(fields);
-  }
-
-  @Override public void fillRequiredBlockData(BlocksChunkHolder blockChunkHolder)
+  @Override public void fillRequiredBlockData(RawBlockletColumnChunks blockChunkHolder)
       throws IOException {
     readBlockDataChunk(blockChunkHolder);
 
@@ -115,13 +101,12 @@ public class StructQueryType extends ComplexQueryType implements GenericQueryTyp
     }
   }
 
-  @Override public Object getDataBasedOnDataTypeFromSurrogates(ByteBuffer surrogateData) {
-    int childLength = surrogateData.getInt();
+  @Override public Object getDataBasedOnDataType(ByteBuffer dataBuffer) {
+    int childLength = dataBuffer.getShort();
     Object[] fields = new Object[childLength];
     for (int i = 0; i < childLength; i++) {
-      fields[i] =  children.get(i).getDataBasedOnDataTypeFromSurrogates(surrogateData);
+      fields[i] =  children.get(i).getDataBasedOnDataType(dataBuffer);
     }
-
-    return new GenericInternalRow(fields);
+    return DataTypeUtil.getDataTypeConverter().wrapWithGenericRow(fields);
   }
 }

@@ -32,7 +32,7 @@ object PartitionDropper {
 
   def triggerPartitionDrop(dropPartitionCallableModel: DropPartitionCallableModel): Unit = {
     val alterPartitionModel = new AlterPartitionModel(dropPartitionCallableModel.carbonLoadModel,
-      dropPartitionCallableModel.segmentId,
+      dropPartitionCallableModel.segmentId.getSegmentNo,
       dropPartitionCallableModel.oldPartitionIds,
       dropPartitionCallableModel.sqlContext
     )
@@ -50,7 +50,7 @@ object PartitionDropper {
     val bucketInfo = carbonTable.getBucketingInfo(tableName)
     val bucketNumber = bucketInfo match {
       case null => 1
-      case _ => bucketInfo.getNumberOfBuckets
+      case _ => bucketInfo.getNumOfRanges
     }
     val partitionIndex = oldPartitionIds.indexOf(Integer.valueOf(partitionId))
     val targetPartitionId = partitionInfo.getPartitionType match {

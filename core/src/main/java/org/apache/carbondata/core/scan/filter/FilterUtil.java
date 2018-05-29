@@ -49,10 +49,12 @@ import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.constants.CarbonV3DataFormatConstants;
 import org.apache.carbondata.core.datastore.IndexKey;
 import org.apache.carbondata.core.datastore.block.SegmentProperties;
-import org.apache.carbondata.core.datastore.chunk.DimensionColumnDataChunk;
+import org.apache.carbondata.core.datastore.chunk.DimensionColumnPage;
 import org.apache.carbondata.core.keygenerator.KeyGenException;
 import org.apache.carbondata.core.keygenerator.KeyGenerator;
+import org.apache.carbondata.core.keygenerator.mdkey.MultiDimKeyVarLengthGenerator;
 import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier;
+import org.apache.carbondata.core.metadata.CarbonMetadata;
 import org.apache.carbondata.core.metadata.ColumnIdentifier;
 import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.metadata.datatype.DataTypes;
@@ -67,16 +69,18 @@ import org.apache.carbondata.core.scan.expression.ColumnExpression;
 import org.apache.carbondata.core.scan.expression.Expression;
 import org.apache.carbondata.core.scan.expression.ExpressionResult;
 import org.apache.carbondata.core.scan.expression.LiteralExpression;
+import org.apache.carbondata.core.scan.expression.conditional.InExpression;
 import org.apache.carbondata.core.scan.expression.conditional.ListExpression;
 import org.apache.carbondata.core.scan.expression.exception.FilterIllegalMemberException;
 import org.apache.carbondata.core.scan.expression.exception.FilterUnsupportedException;
+import org.apache.carbondata.core.scan.expression.logical.AndExpression;
+import org.apache.carbondata.core.scan.expression.logical.TrueExpression;
 import org.apache.carbondata.core.scan.filter.executer.AndFilterExecuterImpl;
 import org.apache.carbondata.core.scan.filter.executer.DimColumnExecuterFilterInfo;
-import org.apache.carbondata.core.scan.filter.executer.ExcludeColGroupFilterExecuterImpl;
 import org.apache.carbondata.core.scan.filter.executer.ExcludeFilterExecuterImpl;
+import org.apache.carbondata.core.scan.filter.executer.FalseFilterExecutor;
 import org.apache.carbondata.core.scan.filter.executer.FilterExecuter;
 import org.apache.carbondata.core.scan.filter.executer.ImplicitIncludeFilterExecutorImpl;
-import org.apache.carbondata.core.scan.filter.executer.IncludeColGroupFilterExecuterImpl;
 import org.apache.carbondata.core.scan.filter.executer.IncludeFilterExecuterImpl;
 import org.apache.carbondata.core.scan.filter.executer.MeasureColumnExecuterFilterInfo;
 import org.apache.carbondata.core.scan.filter.executer.OrFilterExecuterImpl;
@@ -84,7 +88,7 @@ import org.apache.carbondata.core.scan.filter.executer.RangeValueFilterExecuterI
 import org.apache.carbondata.core.scan.filter.executer.RestructureExcludeFilterExecutorImpl;
 import org.apache.carbondata.core.scan.filter.executer.RestructureIncludeFilterExecutorImpl;
 import org.apache.carbondata.core.scan.filter.executer.RowLevelFilterExecuterImpl;
-import org.apache.carbondata.core.scan.filter.executer.RowLevelRangeTypeExecuterFacory;
+import org.apache.carbondata.core.scan.filter.executer.RowLevelRangeTypeExecuterFactory;
 import org.apache.carbondata.core.scan.filter.executer.TrueFilterExecutor;
 import org.apache.carbondata.core.scan.filter.intf.ExpressionType;
 import org.apache.carbondata.core.scan.filter.intf.FilterExecuterType;
@@ -163,19 +167,19 @@ public final class FilterUtil {
         case ROWLEVEL_LESSTHAN_EQUALTO:
         case ROWLEVEL_GREATERTHAN_EQUALTO:
         case ROWLEVEL_GREATERTHAN:
-          return RowLevelRangeTypeExecuterFacory
+          return RowLevelRangeTypeExecuterFactory
               .getRowLevelRangeTypeExecuter(filterExecuterType, filterExpressionResolverTree,
                   segmentProperties);
         case RANGE:
           return new RangeValueFilterExecuterImpl(
-              ((ConditionalFilterResolverImpl) filterExpressionResolverTree)
-                  .getDimColResolvedFilterInfo(),
-              null, filterExpressionResolverTree.getFilterExpression(),
-              ((ConditionalFilterResolverImpl) filterExpressionResolverTree).getTableIdentifier(),
+              filterExpressionResolverTree.getDimColResolvedFilterInfo(),
+              filterExpressionResolverTree.getFilterExpression(),
               ((ConditionalFilterResolverImpl) filterExpressionResolverTree)
                   .getFilterRangeValues(segmentProperties), segmentProperties);
         case TRUE:
           return new TrueFilterExecutor();
+        case FALSE:
+          return new FalseFilterExecutor();
         case ROWLEVEL:
         default:
           return new RowLevelFilterExecuterImpl(
@@ -226,30 +230,24 @@ public final class FilterUtil {
             msrColResolvedFilterInfo, true);
       }
     }
-    if (null != dimColResolvedFilterInfo) {
-      CarbonDimension dimension = dimColResolvedFilterInfo.getDimension();
-      if (dimension.hasEncoding(Encoding.IMPLICIT)) {
-        return new ImplicitIncludeFilterExecutorImpl(dimColResolvedFilterInfo);
-      } else if (dimension.isColumnar()) {
-        CarbonDimension dimensionFromCurrentBlock =
-            segmentProperties.getDimensionFromCurrentBlock(dimColResolvedFilterInfo.getDimension());
-        if (null != dimensionFromCurrentBlock) {
-          // update dimension and column index according to the dimension position in current block
-          DimColumnResolvedFilterInfo dimColResolvedFilterInfoCopyObject =
-              dimColResolvedFilterInfo.getCopyObject();
-          dimColResolvedFilterInfoCopyObject.setDimension(dimensionFromCurrentBlock);
-          dimColResolvedFilterInfoCopyObject.setColumnIndex(dimensionFromCurrentBlock.getOrdinal());
-          return new IncludeFilterExecuterImpl(dimColResolvedFilterInfoCopyObject, null,
-              segmentProperties, false);
-        } else {
-          return new RestructureIncludeFilterExecutorImpl(dimColResolvedFilterInfo,
-              msrColResolvedFilterInfo, false);
-        }
-      } else {
-        return new IncludeColGroupFilterExecuterImpl(dimColResolvedFilterInfo, segmentProperties);
-      }
+    CarbonDimension dimension = dimColResolvedFilterInfo.getDimension();
+    if (dimension.hasEncoding(Encoding.IMPLICIT)) {
+      return new ImplicitIncludeFilterExecutorImpl(dimColResolvedFilterInfo);
     } else {
-      return new IncludeColGroupFilterExecuterImpl(null, segmentProperties);
+      CarbonDimension dimensionFromCurrentBlock =
+          segmentProperties.getDimensionFromCurrentBlock(dimColResolvedFilterInfo.getDimension());
+      if (null != dimensionFromCurrentBlock) {
+        // update dimension and column index according to the dimension position in current block
+        DimColumnResolvedFilterInfo dimColResolvedFilterInfoCopyObject =
+            dimColResolvedFilterInfo.getCopyObject();
+        dimColResolvedFilterInfoCopyObject.setDimension(dimensionFromCurrentBlock);
+        dimColResolvedFilterInfoCopyObject.setColumnIndex(dimensionFromCurrentBlock.getOrdinal());
+        return new IncludeFilterExecuterImpl(dimColResolvedFilterInfoCopyObject, null,
+            segmentProperties, false);
+      } else {
+        return new RestructureIncludeFilterExecutorImpl(dimColResolvedFilterInfo,
+            msrColResolvedFilterInfo, false);
+      }
     }
   }
 
@@ -282,24 +280,19 @@ public final class FilterUtil {
             msrColResolvedFilterInfo, true);
       }
     }
-    if ((null != dimColResolvedFilterInfo) && (dimColResolvedFilterInfo.getDimension()
-        .isColumnar())) {
-      CarbonDimension dimensionFromCurrentBlock =
-          segmentProperties.getDimensionFromCurrentBlock(dimColResolvedFilterInfo.getDimension());
-      if (null != dimensionFromCurrentBlock) {
-        // update dimension and column index according to the dimension position in current block
-        DimColumnResolvedFilterInfo dimColResolvedFilterInfoCopyObject =
-            dimColResolvedFilterInfo.getCopyObject();
-        dimColResolvedFilterInfoCopyObject.setDimension(dimensionFromCurrentBlock);
-        dimColResolvedFilterInfoCopyObject.setColumnIndex(dimensionFromCurrentBlock.getOrdinal());
-        return new ExcludeFilterExecuterImpl(dimColResolvedFilterInfoCopyObject, null,
-            segmentProperties, false);
-      } else {
-        return new RestructureExcludeFilterExecutorImpl(dimColResolvedFilterInfo,
-            msrColResolvedFilterInfo, false);
-      }
+    CarbonDimension dimensionFromCurrentBlock =
+        segmentProperties.getDimensionFromCurrentBlock(dimColResolvedFilterInfo.getDimension());
+    if (null != dimensionFromCurrentBlock) {
+      // update dimension and column index according to the dimension position in current block
+      DimColumnResolvedFilterInfo dimColResolvedFilterInfoCopyObject =
+          dimColResolvedFilterInfo.getCopyObject();
+      dimColResolvedFilterInfoCopyObject.setDimension(dimensionFromCurrentBlock);
+      dimColResolvedFilterInfoCopyObject.setColumnIndex(dimensionFromCurrentBlock.getOrdinal());
+      return new ExcludeFilterExecuterImpl(dimColResolvedFilterInfoCopyObject, null,
+          segmentProperties, false);
     } else {
-      return new ExcludeColGroupFilterExecuterImpl(dimColResolvedFilterInfo, segmentProperties);
+      return new RestructureExcludeFilterExecutorImpl(dimColResolvedFilterInfo,
+          msrColResolvedFilterInfo, false);
     }
   }
 
@@ -530,8 +523,7 @@ public final class FilterUtil {
    * @throws QueryExecutionException
    */
   public static ColumnFilterInfo getFilterValues(AbsoluteTableIdentifier tableIdentifier,
-      ColumnExpression columnExpression, List<String> evaluateResultList, boolean isIncludeFilter,
-      TableProvider tableProvider)
+      ColumnExpression columnExpression, List<String> evaluateResultList, boolean isIncludeFilter)
       throws QueryExecutionException, FilterUnsupportedException, IOException {
     Dictionary forwardDictionary = null;
     ColumnFilterInfo filterInfo = null;
@@ -540,15 +532,13 @@ public final class FilterUtil {
     try {
       // Reading the dictionary value from cache.
       forwardDictionary =
-          getForwardDictionaryCache(tableIdentifier, columnExpression.getDimension(),
-              tableProvider);
+          getForwardDictionaryCache(tableIdentifier, columnExpression.getDimension());
       sortFilterModelMembers(columnExpression, evaluateResultList);
       getDictionaryValue(evaluateResultList, forwardDictionary, surrogates);
       filterInfo =
-          getFilterValues(columnExpression, forwardDictionary, isIncludeFilter, null, surrogates);
+          getFilterValues(forwardDictionary, isIncludeFilter, surrogates);
       if (filterInfo.isOptimized()) {
-        return getDimColumnFilterInfoAfterApplyingCBO(columnExpression,
-            forwardDictionary, filterInfo);
+        return getDimColumnFilterInfoAfterApplyingCBO(forwardDictionary, filterInfo);
       }
     } finally {
       CarbonUtil.clearDictionaryCache(forwardDictionary);
@@ -560,45 +550,33 @@ public final class FilterUtil {
    * Method will prepare the  dimfilterinfo instance by resolving the filter
    * expression value to its respective surrogates.
    *
-   * @param columnExpression
    * @param forwardDictionary
    * @param isIncludeFilter
-   * @param filterInfo
    * @param surrogates
    * @return
    */
-  private static ColumnFilterInfo getFilterValues(ColumnExpression columnExpression,
-      Dictionary forwardDictionary, boolean isIncludeFilter, ColumnFilterInfo filterInfo,
-      List<Integer> surrogates) throws QueryExecutionException {
+  private static ColumnFilterInfo getFilterValues(Dictionary forwardDictionary,
+      boolean isIncludeFilter, List<Integer> surrogates) {
     // Default value has to be added
     if (surrogates.isEmpty()) {
       surrogates.add(0);
     }
     boolean isExcludeFilterNeedsToApply = false;
-    if (null == filterInfo && isIncludeFilter) {
+    if (isIncludeFilter) {
       isExcludeFilterNeedsToApply =
           isExcludeFilterNeedsToApply(forwardDictionary, surrogates.size());
     }
     Collections.sort(surrogates);
     ColumnFilterInfo columnFilterInfo = null;
-    if (surrogates.size() > 0) {
-      columnFilterInfo = new ColumnFilterInfo();
-      if (isExcludeFilterNeedsToApply) {
-        columnFilterInfo.setOptimized(true);
-      }
-      columnFilterInfo.setIncludeFilter(isIncludeFilter);
-      if (null != filterInfo) {
-        filterInfo.setIncludeFilter(isIncludeFilter);
-        filterInfo.setOptimized(true);
-        filterInfo.setExcludeFilterList(surrogates);
-        return filterInfo;
-      } else {
-        if (!isIncludeFilter) {
-          columnFilterInfo.setExcludeFilterList(surrogates);
-        } else {
-          columnFilterInfo.setFilterList(surrogates);
-        }
-      }
+    columnFilterInfo = new ColumnFilterInfo();
+    if (isExcludeFilterNeedsToApply) {
+      columnFilterInfo.setOptimized(true);
+    }
+    columnFilterInfo.setIncludeFilter(isIncludeFilter);
+    if (!isIncludeFilter) {
+      columnFilterInfo.setExcludeFilterList(surrogates);
+    } else {
+      columnFilterInfo.setFilterList(surrogates);
     }
     return columnFilterInfo;
   }
@@ -613,8 +591,7 @@ public final class FilterUtil {
   }
 
   private static ColumnFilterInfo getDimColumnFilterInfoAfterApplyingCBO(
-      ColumnExpression columnExpression, Dictionary forwardDictionary,
-      ColumnFilterInfo filterInfo) throws FilterUnsupportedException, QueryExecutionException {
+      Dictionary forwardDictionary, ColumnFilterInfo filterInfo) throws FilterUnsupportedException {
     List<Integer> excludeMemberSurrogates =
         prepareExcludeFilterMembers(forwardDictionary, filterInfo.getFilterList());
     filterInfo.setExcludeFilterList(excludeMemberSurrogates);
@@ -710,28 +687,24 @@ public final class FilterUtil {
    */
   public static ColumnFilterInfo getFilterListForAllValues(AbsoluteTableIdentifier tableIdentifier,
       Expression expression, final ColumnExpression columnExpression, boolean isIncludeFilter,
-      TableProvider tableProvider, boolean isExprEvalReqd)
-      throws FilterUnsupportedException, IOException {
+      boolean isExprEvalReqd) throws FilterUnsupportedException, IOException {
     Dictionary forwardDictionary = null;
     List<Integer> surrogates = new ArrayList<Integer>(20);
     try {
       forwardDictionary =
-          getForwardDictionaryCache(tableIdentifier, columnExpression.getDimension(),
-              tableProvider);
+          getForwardDictionaryCache(tableIdentifier, columnExpression.getDimension());
       if (isExprEvalReqd && !isIncludeFilter) {
         surrogates.add(CarbonCommonConstants.DICT_VALUE_NULL);
       }
       prepareIncludeFilterMembers(expression, columnExpression, isIncludeFilter, forwardDictionary,
           surrogates);
       ColumnFilterInfo filterInfo =
-          getFilterValues(columnExpression, forwardDictionary, isIncludeFilter, null, surrogates);
+          getFilterValues(forwardDictionary, isIncludeFilter, surrogates);
       if (filterInfo.isOptimized()) {
-        return getDimColumnFilterInfoAfterApplyingCBO(columnExpression, forwardDictionary,
+        return getDimColumnFilterInfoAfterApplyingCBO(forwardDictionary,
             filterInfo);
       }
       return filterInfo;
-    } catch (QueryExecutionException e) {
-      throw new FilterUnsupportedException(e.getMessage());
     } finally {
       CarbonUtil.clearDictionaryCache(forwardDictionary);
     }
@@ -755,21 +728,16 @@ public final class FilterUtil {
    * expression value to its respective surrogates in the scenario of restructure.
    *
    * @param expression
-   * @param columnExpression
    * @param defaultValues
    * @param defaultSurrogate
    * @return
    * @throws FilterUnsupportedException
    */
-  public static ColumnFilterInfo getFilterListForRS(Expression expression,
-      ColumnExpression columnExpression, String defaultValues, int defaultSurrogate)
-      throws FilterUnsupportedException {
+  public static ColumnFilterInfo getFilterListForRS(Expression expression, String defaultValues,
+      int defaultSurrogate) throws FilterUnsupportedException {
     List<Integer> filterValuesList = new ArrayList<Integer>(20);
     ColumnFilterInfo columnFilterInfo = null;
-    // List<byte[]> filterValuesList = new ArrayList<byte[]>(20);
     List<String> evaluateResultListFinal = new ArrayList<String>(20);
-    // KeyGenerator keyGenerator =
-    // KeyGeneratorFactory.getKeyGenerator(new int[] { defaultSurrogate });
     try {
       List<ExpressionResult> evaluateResultList = expression.evaluate(null).getList();
       for (ExpressionResult result : evaluateResultList) {
@@ -791,7 +759,7 @@ public final class FilterUtil {
         columnFilterInfo.setFilterList(filterValuesList);
       }
     } catch (FilterIllegalMemberException e) {
-      LOGGER.audit(e.getMessage());
+      LOGGER.error(e.getMessage());
     }
     return columnFilterInfo;
   }
@@ -815,8 +783,6 @@ public final class FilterUtil {
     List<String> evaluateResultListFinal = new ArrayList<String>(20);
     ColumnFilterInfo columnFilterInfo = null;
 
-    // KeyGenerator keyGenerator =
-    // KeyGeneratorFactory.getKeyGenerator(new int[] { defaultSurrogate });
     try {
       RowIntf row = new RowImpl();
       if (defaultValues.equals(CarbonCommonConstants.MEMBER_DEFAULT_VAL)) {
@@ -833,7 +799,7 @@ public final class FilterUtil {
         }
       }
     } catch (FilterIllegalMemberException e) {
-      LOGGER.audit(e.getMessage());
+      LOGGER.error(e.getMessage());
     }
 
     if (null == defaultValues) {
@@ -850,27 +816,9 @@ public final class FilterUtil {
     return columnFilterInfo;
   }
 
-  /**
-   * Below method will be used to covert the filter surrogate keys
-   * to mdkey
-   *
-   * @param columnFilterInfo
-   * @param carbonDimension
-   * @param segmentProperties
-   * @return
-   */
-  public static byte[][] getKeyArray(ColumnFilterInfo columnFilterInfo,
-      CarbonDimension carbonDimension, SegmentProperties segmentProperties,  boolean isExclude) {
-    if (!carbonDimension.hasEncoding(Encoding.DICTIONARY)) {
-      return columnFilterInfo.getNoDictionaryFilterValuesList()
-          .toArray((new byte[columnFilterInfo.getNoDictionaryFilterValuesList().size()][]));
-    }
-    KeyGenerator blockLevelKeyGenerator = segmentProperties.getDimensionKeyGenerator();
-    int[] dimColumnsCardinality = segmentProperties.getDimColumnsCardinality();
-    int[] keys = new int[blockLevelKeyGenerator.getDimCount()];
-    List<byte[]> filterValuesList = new ArrayList<byte[]>(20);
-    Arrays.fill(keys, 0);
-    int keyOrdinalOfDimensionFromCurrentBlock = carbonDimension.getKeyOrdinal();
+  private static byte[][] getFilterValuesInBytes(ColumnFilterInfo columnFilterInfo,
+      boolean isExclude, KeyGenerator blockLevelKeyGenerator, int[] dimColumnsCardinality,
+      int[] keys, List<byte[]> filterValuesList, int keyOrdinalOfDimensionFromCurrentBlock) {
     if (null != columnFilterInfo) {
       int[] rangesForMaskedByte =
           getRangesForMaskedByte(keyOrdinalOfDimensionFromCurrentBlock, blockLevelKeyGenerator);
@@ -897,7 +845,53 @@ public final class FilterUtil {
       }
     }
     return filterValuesList.toArray(new byte[filterValuesList.size()][]);
+  }
 
+  /**
+   * This method will be used to get the Filter key array list for blocks which do not contain
+   * filter column and the column Encoding is Direct Dictionary
+   *
+   * @param columnFilterInfo
+   * @param isExclude
+   * @return
+   */
+  public static byte[][] getKeyArray(ColumnFilterInfo columnFilterInfo, boolean isExclude) {
+    int[] dimColumnsCardinality = new int[] { Integer.MAX_VALUE };
+    int[] dimensionBitLength =
+        CarbonUtil.getDimensionBitLength(dimColumnsCardinality, new int[] { 1 });
+    KeyGenerator blockLevelKeyGenerator = new MultiDimKeyVarLengthGenerator(dimensionBitLength);
+    int[] keys = new int[blockLevelKeyGenerator.getDimCount()];
+    Arrays.fill(keys, 0);
+    int keyOrdinalOfDimensionFromCurrentBlock = 0;
+    List<byte[]> filterValuesList =
+        new ArrayList<byte[]>(CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);
+    return getFilterValuesInBytes(columnFilterInfo, isExclude, blockLevelKeyGenerator,
+        dimColumnsCardinality, keys, filterValuesList, keyOrdinalOfDimensionFromCurrentBlock);
+  }
+
+  /**
+   * Below method will be used to convert the filter surrogate keys
+   * to mdkey
+   *
+   * @param columnFilterInfo
+   * @param carbonDimension
+   * @param segmentProperties
+   * @return
+   */
+  public static byte[][] getKeyArray(ColumnFilterInfo columnFilterInfo,
+      CarbonDimension carbonDimension, SegmentProperties segmentProperties,  boolean isExclude) {
+    if (!carbonDimension.hasEncoding(Encoding.DICTIONARY)) {
+      return columnFilterInfo.getNoDictionaryFilterValuesList()
+          .toArray((new byte[columnFilterInfo.getNoDictionaryFilterValuesList().size()][]));
+    }
+    KeyGenerator blockLevelKeyGenerator = segmentProperties.getDimensionKeyGenerator();
+    int[] dimColumnsCardinality = segmentProperties.getDimColumnsCardinality();
+    int[] keys = new int[blockLevelKeyGenerator.getDimCount()];
+    List<byte[]> filterValuesList = new ArrayList<byte[]>(20);
+    Arrays.fill(keys, 0);
+    int keyOrdinalOfDimensionFromCurrentBlock = carbonDimension.getKeyOrdinal();
+    return getFilterValuesInBytes(columnFilterInfo, isExclude, blockLevelKeyGenerator,
+        dimColumnsCardinality, keys, filterValuesList, keyOrdinalOfDimensionFromCurrentBlock);
   }
 
   /**
@@ -1225,35 +1219,25 @@ public final class FilterUtil {
   }
 
   /**
-   * @param tableIdentifier
+   * @param dictionarySourceAbsoluteTableIdentifier
    * @param carbonDimension
-   * @return
-   */
-  public static Dictionary getForwardDictionaryCache(AbsoluteTableIdentifier tableIdentifier,
-      CarbonDimension carbonDimension) throws IOException {
-    return getForwardDictionaryCache(tableIdentifier, carbonDimension, null);
-  }
-
-  /**
-   * @param carbonDimension
-   * @param tableProvider
    * @return
    */
   public static Dictionary getForwardDictionaryCache(
       AbsoluteTableIdentifier dictionarySourceAbsoluteTableIdentifier,
-      CarbonDimension carbonDimension, TableProvider tableProvider) throws IOException {
+      CarbonDimension carbonDimension) throws IOException {
     String dictionaryPath = null;
     ColumnIdentifier columnIdentifier = carbonDimension.getColumnIdentifier();
-    if (null != tableProvider) {
-      CarbonTable carbonTable = tableProvider
-          .getCarbonTable(dictionarySourceAbsoluteTableIdentifier.getCarbonTableIdentifier());
+    CarbonTable carbonTable = CarbonMetadata.getInstance()
+        .getCarbonTable(dictionarySourceAbsoluteTableIdentifier.getDatabaseName(),
+            dictionarySourceAbsoluteTableIdentifier.getTableName());
+    if (null != carbonTable) {
       dictionaryPath = carbonTable.getTableInfo().getFactTable().getTableProperties()
           .get(CarbonCommonConstants.DICTIONARY_PATH);
-      if (null != carbonDimension.getColumnSchema().getParentColumnTableRelations() &&
-          carbonDimension.getColumnSchema().getParentColumnTableRelations().size() == 1) {
-        dictionarySourceAbsoluteTableIdentifier =
-            QueryUtil.getTableIdentifierForColumn(carbonDimension,
-                carbonTable.getAbsoluteTableIdentifier());
+      if (null != carbonDimension.getColumnSchema().getParentColumnTableRelations()
+          && carbonDimension.getColumnSchema().getParentColumnTableRelations().size() == 1) {
+        dictionarySourceAbsoluteTableIdentifier = QueryUtil
+            .getTableIdentifierForColumn(carbonDimension, carbonTable.getAbsoluteTableIdentifier());
         columnIdentifier = new ColumnIdentifier(
             carbonDimension.getColumnSchema().getParentColumnTableRelations().get(0).getColumnId(),
             carbonDimension.getColumnProperties(), carbonDimension.getDataType());
@@ -1769,14 +1753,14 @@ public final class FilterUtil {
    * This method will compare the selected data against null values and
    * flip the bitSet if any null value is found
    *
-   * @param dimensionColumnDataChunk
+   * @param dimensionColumnPage
    * @param bitSet
    */
-  public static void removeNullValues(DimensionColumnDataChunk dimensionColumnDataChunk,
+  public static void removeNullValues(DimensionColumnPage dimensionColumnPage,
       BitSet bitSet, byte[] defaultValue) {
     if (!bitSet.isEmpty()) {
       for (int i = bitSet.nextSetBit(0); i >= 0; i = bitSet.nextSetBit(i + 1)) {
-        if (dimensionColumnDataChunk.compareTo(i, defaultValue) == 0) {
+        if (dimensionColumnPage.compareTo(i, defaultValue) == 0) {
           bitSet.flip(i);
         }
       }
@@ -1784,6 +1768,10 @@ public final class FilterUtil {
   }
 
   public static void updateIndexOfColumnExpression(Expression exp, int dimOridnalMax) {
+    // if expression is null, not require to update index.
+    if (exp == null) {
+      return;
+    }
     if (exp.getChildren() == null || exp.getChildren().size() == 0) {
       if (exp instanceof ColumnExpression) {
         ColumnExpression ce = (ColumnExpression) exp;
@@ -1820,5 +1808,35 @@ public final class FilterUtil {
       columnFilterInfo.setImplicitColumnFilterList(evaluateResultListFinal);
     }
     return columnFilterInfo;
+  }
+
+  /**
+   * This method will check for ColumnExpression with column name positionID and if found will
+   * replace the InExpression with true expression. This is done to stop serialization of List
+   * expression which is right children of InExpression as it can impact the query performance
+   * as the size of list grows bigger.
+   *
+   * @param expression
+   */
+  public static void removeInExpressionNodeWithPositionIdColumn(Expression expression) {
+    ExpressionType filterExpressionType = expression.getFilterExpressionType();
+    if (ExpressionType.AND == filterExpressionType) {
+      Expression rightExpression = ((AndExpression) expression).getRight();
+      if (rightExpression instanceof InExpression) {
+        List<Expression> children = rightExpression.getChildren();
+        if (null != children && !children.isEmpty()) {
+          Expression childExpression = children.get(0);
+          // check for the positionId as the column name in ColumnExpression
+          if (childExpression instanceof ColumnExpression && ((ColumnExpression) childExpression)
+              .getColumnName().equalsIgnoreCase(CarbonCommonConstants.POSITION_ID)) {
+            // Remove the right expression node and point the expression to left node expression
+            expression
+                .findAndSetChild(((AndExpression) expression).getRight(), new TrueExpression(null));
+            LOGGER.info("In expression removed from the filter expression list to prevent it from"
+                + " serializing on executor");
+          }
+        }
+      }
+    }
   }
 }

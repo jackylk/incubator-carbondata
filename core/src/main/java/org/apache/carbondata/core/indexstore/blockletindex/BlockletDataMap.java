@@ -18,43 +18,49 @@ package org.apache.carbondata.core.indexstore.blockletindex;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Comparator;
 import java.util.List;
 
 import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
-import org.apache.carbondata.core.cache.Cacheable;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
-import org.apache.carbondata.core.datamap.dev.DataMap;
 import org.apache.carbondata.core.datamap.dev.DataMapModel;
+import org.apache.carbondata.core.datamap.dev.cgdatamap.CoarseGrainDataMap;
 import org.apache.carbondata.core.datastore.IndexKey;
 import org.apache.carbondata.core.datastore.block.SegmentProperties;
 import org.apache.carbondata.core.datastore.block.TableBlockInfo;
+import org.apache.carbondata.core.indexstore.AbstractMemoryDMStore;
+import org.apache.carbondata.core.indexstore.BlockMetaInfo;
 import org.apache.carbondata.core.indexstore.Blocklet;
 import org.apache.carbondata.core.indexstore.BlockletDetailInfo;
 import org.apache.carbondata.core.indexstore.ExtendedBlocklet;
+import org.apache.carbondata.core.indexstore.PartitionSpec;
+import org.apache.carbondata.core.indexstore.SafeMemoryDMStore;
 import org.apache.carbondata.core.indexstore.UnsafeMemoryDMStore;
 import org.apache.carbondata.core.indexstore.row.DataMapRow;
 import org.apache.carbondata.core.indexstore.row.DataMapRowImpl;
 import org.apache.carbondata.core.indexstore.schema.CarbonRowSchema;
-import org.apache.carbondata.core.keygenerator.KeyGenException;
 import org.apache.carbondata.core.memory.MemoryException;
 import org.apache.carbondata.core.metadata.blocklet.BlockletInfo;
 import org.apache.carbondata.core.metadata.blocklet.DataFileFooter;
+import org.apache.carbondata.core.metadata.blocklet.index.BlockletIndex;
 import org.apache.carbondata.core.metadata.blocklet.index.BlockletMinMaxIndex;
 import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.metadata.datatype.DataTypes;
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonMeasure;
 import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema;
+import org.apache.carbondata.core.profiler.ExplainCollector;
 import org.apache.carbondata.core.scan.filter.FilterExpressionProcessor;
 import org.apache.carbondata.core.scan.filter.FilterUtil;
 import org.apache.carbondata.core.scan.filter.executer.FilterExecuter;
@@ -64,16 +70,21 @@ import org.apache.carbondata.core.util.ByteUtil;
 import org.apache.carbondata.core.util.CarbonUtil;
 import org.apache.carbondata.core.util.DataFileFooterConverter;
 import org.apache.carbondata.core.util.DataTypeUtil;
+import org.apache.carbondata.core.util.path.CarbonTablePath;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.fs.Path;
+import org.xerial.snappy.Snappy;
 
 /**
  * Datamap implementation for blocklet.
  */
-public class BlockletDataMap implements DataMap, Cacheable {
+public class BlockletDataMap extends CoarseGrainDataMap implements Serializable {
 
   private static final LogService LOGGER =
       LogServiceFactory.getLogService(BlockletDataMap.class.getName());
 
-  public static final String NAME = "clustered.btree.blocklet";
+  private static final long serialVersionUID = -2170289352240810993L;
 
   private static int KEY_INDEX = 0;
 
@@ -93,19 +104,36 @@ public class BlockletDataMap implements DataMap, Cacheable {
 
   private static int BLOCK_INFO_INDEX = 8;
 
+  private static int BLOCK_FOOTER_OFFSET = 9;
+
+  private static int LOCATIONS = 10;
+
+  private static int BLOCKLET_ID_INDEX = 11;
+
+  private static int BLOCK_LENGTH = 12;
+
   private static int TASK_MIN_VALUES_INDEX = 0;
 
   private static int TASK_MAX_VALUES_INDEX = 1;
 
-  private UnsafeMemoryDMStore unsafeMemoryDMStore;
+  private static int SCHEMA = 2;
 
-  private UnsafeMemoryDMStore unsafeMemorySummaryDMStore;
+  private static int INDEX_PATH = 3;
 
-  private SegmentProperties segmentProperties;
+  private static int INDEX_FILE_NAME = 4;
+
+  private static int SEGMENTID = 5;
+
+  private AbstractMemoryDMStore memoryDMStore;
+
+  private AbstractMemoryDMStore summaryDMStore;
+
+  // As it is a heavy object it is not recommended to serialize this object
+  private transient SegmentProperties segmentProperties;
 
   private int[] columnCardinality;
 
-  private boolean isPartitionedSegment;
+  private long blockletSchemaTime;
 
   @Override
   public void init(DataMapModel dataMapModel) throws IOException, MemoryException {
@@ -115,45 +143,85 @@ public class BlockletDataMap implements DataMap, Cacheable {
     DataFileFooterConverter fileFooterConverter = new DataFileFooterConverter();
     List<DataFileFooter> indexInfo = fileFooterConverter
         .getIndexInfo(blockletDataMapInfo.getFilePath(), blockletDataMapInfo.getFileData());
-    isPartitionedSegment = blockletDataMapInfo.isPartitionedSegment();
+    Path path = new Path(blockletDataMapInfo.getFilePath());
+    byte[] filePath = path.getParent().toString().getBytes(CarbonCommonConstants.DEFAULT_CHARSET);
+    byte[] fileName = path.getName().toString().getBytes(CarbonCommonConstants.DEFAULT_CHARSET);
+    byte[] segmentId =
+        blockletDataMapInfo.getSegmentId().getBytes(CarbonCommonConstants.DEFAULT_CHARSET);
     DataMapRowImpl summaryRow = null;
+    byte[] schemaBinary = null;
+    // below 2 variables will be used for fetching the relative blocklet id. Relative blocklet ID
+    // is id assigned to a blocklet within a part file
+    String tempFilePath = null;
+    int relativeBlockletId = 0;
     for (DataFileFooter fileFooter : indexInfo) {
-      List<ColumnSchema> columnInTable = fileFooter.getColumnInTable();
       if (segmentProperties == null) {
+        List<ColumnSchema> columnInTable = fileFooter.getColumnInTable();
+        schemaBinary = convertSchemaToBinary(columnInTable);
+        blockletSchemaTime = fileFooter.getSchemaUpdatedTimeStamp();
         columnCardinality = fileFooter.getSegmentInfo().getColumnCardinality();
         segmentProperties = new SegmentProperties(columnInTable, columnCardinality);
-        createSchema(segmentProperties);
-        createSummarySchema(segmentProperties, blockletDataMapInfo.getPartitions());
+        createSchema(segmentProperties, ((BlockletDataMapModel) dataMapModel).isAddToUnsafe());
+        createSummarySchema(segmentProperties, schemaBinary, filePath, fileName,
+            segmentId, ((BlockletDataMapModel) dataMapModel).isAddToUnsafe());
       }
       TableBlockInfo blockInfo = fileFooter.getBlockInfo().getTableBlockInfo();
-      if (fileFooter.getBlockletList() == null || fileFooter.getBlockletList().size() == 0) {
-        LOGGER
-            .info("Reading carbondata file footer to get blocklet info " + blockInfo.getFilePath());
-        fileFooter = CarbonUtil.readMetadatFile(blockInfo);
+      BlockMetaInfo blockMetaInfo =
+          blockletDataMapInfo.getBlockMetaInfoMap().get(blockInfo.getFilePath());
+      // Here it loads info about all blocklets of index
+      // Only add if the file exists physically. There are scenarios which index file exists inside
+      // merge index but related carbondata files are deleted. In that case we first check whether
+      // the file exists physically or not
+      if (blockMetaInfo != null) {
+        if (fileFooter.getBlockletList() == null) {
+          // This is old store scenario, here blocklet information is not available in index file so
+          // load only block info
+          summaryRow =
+              loadToUnsafeBlock(fileFooter, segmentProperties, blockInfo.getFilePath(), summaryRow,
+                  blockMetaInfo);
+        } else {
+          // blocklet ID will start from 0 again only when part file path is changed
+          if (null == tempFilePath || !tempFilePath.equals(blockInfo.getFilePath())) {
+            tempFilePath = blockInfo.getFilePath();
+            relativeBlockletId = 0;
+          }
+          summaryRow =
+              loadToUnsafe(fileFooter, segmentProperties, blockInfo.getFilePath(), summaryRow,
+                  blockMetaInfo, relativeBlockletId);
+          // this is done because relative blocklet id need to be incremented based on the
+          // total number of blocklets
+          relativeBlockletId += fileFooter.getBlockletList().size();
+        }
       }
-
-      summaryRow = loadToUnsafe(fileFooter, segmentProperties, blockInfo.getFilePath(), summaryRow);
     }
-    if (unsafeMemoryDMStore != null) {
-      unsafeMemoryDMStore.finishWriting();
+    if (memoryDMStore != null) {
+      memoryDMStore.finishWriting();
     }
-    if (null != unsafeMemorySummaryDMStore) {
-      addTaskSummaryRowToUnsafeMemoryStore(summaryRow, blockletDataMapInfo.getPartitions());
-      unsafeMemorySummaryDMStore.finishWriting();
+    if (null != summaryDMStore) {
+      addTaskSummaryRowToUnsafeMemoryStore(
+          summaryRow,
+          schemaBinary,
+          filePath,
+          fileName,
+          segmentId);
+      summaryDMStore.finishWriting();
     }
-    LOGGER.info(
-        "Time taken to load blocklet datamap from file : " + dataMapModel.getFilePath() + "is " + (
-            System.currentTimeMillis() - startTime));
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug(
+          "Time taken to load blocklet datamap from file : " + dataMapModel.getFilePath() + " is "
+              + (System.currentTimeMillis() - startTime));
+    }
   }
 
   private DataMapRowImpl loadToUnsafe(DataFileFooter fileFooter,
-      SegmentProperties segmentProperties, String filePath, DataMapRowImpl summaryRow) {
+      SegmentProperties segmentProperties, String filePath, DataMapRowImpl summaryRow,
+      BlockMetaInfo blockMetaInfo, int relativeBlockletId) {
     int[] minMaxLen = segmentProperties.getColumnsValueSize();
     List<BlockletInfo> blockletList = fileFooter.getBlockletList();
-    CarbonRowSchema[] schema = unsafeMemoryDMStore.getSchema();
+    CarbonRowSchema[] schema = memoryDMStore.getSchema();
     // Add one row to maintain task level min max for segment pruning
     if (!blockletList.isEmpty() && summaryRow == null) {
-      summaryRow = new DataMapRowImpl(unsafeMemorySummaryDMStore.getSchema());
+      summaryRow = new DataMapRowImpl(summaryDMStore.getSchema());
     }
     for (int index = 0; index < blockletList.size(); index++) {
       DataMapRow row = new DataMapRowImpl(schema);
@@ -169,7 +237,7 @@ public class BlockletDataMap implements DataMap, Cacheable {
       row.setRow(addMinMax(minMaxLen, schema[ordinal], minValues), ordinal);
       // compute and set task level min values
       addTaskMinMaxValues(summaryRow, minMaxLen,
-          unsafeMemorySummaryDMStore.getSchema()[taskMinMaxOrdinal], minValues,
+          summaryDMStore.getSchema()[taskMinMaxOrdinal], minValues,
           TASK_MIN_VALUES_INDEX, true);
       ordinal++;
       taskMinMaxOrdinal++;
@@ -177,7 +245,7 @@ public class BlockletDataMap implements DataMap, Cacheable {
       row.setRow(addMinMax(minMaxLen, schema[ordinal], maxValues), ordinal);
       // compute and set task level max values
       addTaskMinMaxValues(summaryRow, minMaxLen,
-          unsafeMemorySummaryDMStore.getSchema()[taskMinMaxOrdinal], maxValues,
+          summaryDMStore.getSchema()[taskMinMaxOrdinal], maxValues,
           TASK_MAX_VALUES_INDEX, false);
       ordinal++;
 
@@ -203,8 +271,16 @@ public class BlockletDataMap implements DataMap, Cacheable {
         DataOutput dataOutput = new DataOutputStream(stream);
         blockletInfo.write(dataOutput);
         serializedData = stream.toByteArray();
-        row.setByteArray(serializedData, ordinal);
-        unsafeMemoryDMStore.addIndexRowToUnsafe(row);
+        row.setByteArray(serializedData, ordinal++);
+        // Add block footer offset, it is used if we need to read footer of block
+        row.setLong(fileFooter.getBlockInfo().getTableBlockInfo().getBlockOffset(), ordinal++);
+        setLocations(blockMetaInfo.getLocationInfo(), row, ordinal);
+        ordinal++;
+        // for relative blockelt id i.e blocklet id that belongs to a particular part file
+        row.setShort((short) relativeBlockletId++, ordinal++);
+        // Store block size
+        row.setLong(blockMetaInfo.getSize(), ordinal);
+        memoryDMStore.addIndexRow(row);
       } catch (Exception e) {
         throw new RuntimeException(e);
       }
@@ -213,24 +289,107 @@ public class BlockletDataMap implements DataMap, Cacheable {
     return summaryRow;
   }
 
-  private void addTaskSummaryRowToUnsafeMemoryStore(DataMapRow summaryRow,
-      List<String> partitions) {
+  private void setLocations(String[] locations, DataMapRow row, int ordinal)
+      throws UnsupportedEncodingException {
+    // Add location info
+    String locationStr = StringUtils.join(locations, ',');
+    row.setByteArray(locationStr.getBytes(CarbonCommonConstants.DEFAULT_CHARSET), ordinal);
+  }
+
+  /**
+   * Load information for the block.It is the case can happen only for old stores
+   * where blocklet information is not available in index file. So load only block information
+   * and read blocklet information in executor.
+   */
+  private DataMapRowImpl loadToUnsafeBlock(DataFileFooter fileFooter,
+      SegmentProperties segmentProperties, String filePath, DataMapRowImpl summaryRow,
+      BlockMetaInfo blockMetaInfo) {
+    int[] minMaxLen = segmentProperties.getColumnsValueSize();
+    BlockletIndex blockletIndex = fileFooter.getBlockletIndex();
+    CarbonRowSchema[] schema = memoryDMStore.getSchema();
+    // Add one row to maintain task level min max for segment pruning
+    if (summaryRow == null) {
+      summaryRow = new DataMapRowImpl(summaryDMStore.getSchema());
+    }
+    DataMapRow row = new DataMapRowImpl(schema);
+    int ordinal = 0;
+    int taskMinMaxOrdinal = 0;
+    // add start key as index key
+    row.setByteArray(blockletIndex.getBtreeIndex().getStartKey(), ordinal++);
+
+    BlockletMinMaxIndex minMaxIndex = blockletIndex.getMinMaxIndex();
+    byte[][] minValues = updateMinValues(minMaxIndex.getMinValues(), minMaxLen);
+    byte[][] maxValues = updateMaxValues(minMaxIndex.getMaxValues(), minMaxLen);
+    // update min max values in case of old store
+    byte[][] updatedMinValues =
+        CarbonUtil.updateMinMaxValues(fileFooter, maxValues, minValues, true);
+    byte[][] updatedMaxValues =
+        CarbonUtil.updateMinMaxValues(fileFooter, maxValues, minValues, false);
+    row.setRow(addMinMax(minMaxLen, schema[ordinal], updatedMinValues), ordinal);
+    // compute and set task level min values
+    addTaskMinMaxValues(summaryRow, minMaxLen,
+        summaryDMStore.getSchema()[taskMinMaxOrdinal], updatedMinValues,
+        TASK_MIN_VALUES_INDEX, true);
+    ordinal++;
+    taskMinMaxOrdinal++;
+    row.setRow(addMinMax(minMaxLen, schema[ordinal], updatedMaxValues), ordinal);
+    // compute and set task level max values
+    addTaskMinMaxValues(summaryRow, minMaxLen,
+        summaryDMStore.getSchema()[taskMinMaxOrdinal], updatedMaxValues,
+        TASK_MAX_VALUES_INDEX, false);
+    ordinal++;
+
+    row.setInt((int)fileFooter.getNumberOfRows(), ordinal++);
+
+    // add file path
+    byte[] filePathBytes = filePath.getBytes(CarbonCommonConstants.DEFAULT_CHARSET_CLASS);
+    row.setByteArray(filePathBytes, ordinal++);
+
+    // add pages
+    row.setShort((short) 0, ordinal++);
+
+    // add version number
+    row.setShort(fileFooter.getVersionId().number(), ordinal++);
+
+    // add schema updated time
+    row.setLong(fileFooter.getSchemaUpdatedTimeStamp(), ordinal++);
+
+    // add blocklet info
+    row.setByteArray(new byte[0], ordinal++);
+
+    row.setLong(fileFooter.getBlockInfo().getTableBlockInfo().getBlockOffset(), ordinal++);
+    try {
+      setLocations(blockMetaInfo.getLocationInfo(), row, ordinal);
+      ordinal++;
+      // for relative blocklet id. Value is -1 because in case of old store blocklet info will
+      // not be present in the index file and in that case we will not knwo the total number of
+      // blocklets
+      row.setShort((short) -1, ordinal++);
+
+      // store block size
+      row.setLong(blockMetaInfo.getSize(), ordinal);
+      memoryDMStore.addIndexRow(row);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+
+    return summaryRow;
+  }
+
+  private void addTaskSummaryRowToUnsafeMemoryStore(DataMapRow summaryRow, byte[] schemaBinary,
+      byte[] filePath, byte[] fileName, byte[] segmentId) {
     // write the task summary info to unsafe memory store
     if (null != summaryRow) {
-      if (partitions != null && partitions.size() > 0) {
-        CarbonRowSchema[] minSchemas =
-            ((CarbonRowSchema.StructCarbonRowSchema) unsafeMemorySummaryDMStore.getSchema()[2])
-                .getChildSchemas();
-        DataMapRow partitionRow = new DataMapRowImpl(minSchemas);
-        for (int i = 0; i < partitions.size(); i++) {
-          partitionRow
-              .setByteArray(partitions.get(i).getBytes(CarbonCommonConstants.DEFAULT_CHARSET_CLASS),
-                  i);
-        }
-        summaryRow.setRow(partitionRow, 2);
+      // Add column schema , it is useful to generate segment properties in executor.
+      // So we no need to read footer again there.
+      if (schemaBinary != null) {
+        summaryRow.setByteArray(schemaBinary, SCHEMA);
       }
+      summaryRow.setByteArray(filePath, INDEX_PATH);
+      summaryRow.setByteArray(fileName, INDEX_FILE_NAME);
+      summaryRow.setByteArray(segmentId, SEGMENTID);
       try {
-        unsafeMemorySummaryDMStore.addIndexRowToUnsafe(summaryRow);
+        summaryDMStore.addIndexRow(summaryRow);
       } catch (Exception e) {
         throw new RuntimeException(e);
       }
@@ -368,7 +527,8 @@ public class BlockletDataMap implements DataMap, Cacheable {
     taskMinMaxRow.setRow(row, ordinal);
   }
 
-  private void createSchema(SegmentProperties segmentProperties) throws MemoryException {
+  private void createSchema(SegmentProperties segmentProperties, boolean addToUnsafe)
+      throws MemoryException {
     List<CarbonRowSchema> indexSchemas = new ArrayList<>();
 
     // Index key
@@ -393,8 +553,20 @@ public class BlockletDataMap implements DataMap, Cacheable {
     //for blocklet info
     indexSchemas.add(new CarbonRowSchema.VariableCarbonRowSchema(DataTypes.BYTE_ARRAY));
 
-    unsafeMemoryDMStore =
-        new UnsafeMemoryDMStore(indexSchemas.toArray(new CarbonRowSchema[indexSchemas.size()]));
+    // for block footer offset.
+    indexSchemas.add(new CarbonRowSchema.FixedCarbonRowSchema(DataTypes.LONG));
+
+    // for locations
+    indexSchemas.add(new CarbonRowSchema.VariableCarbonRowSchema(DataTypes.BYTE_ARRAY));
+
+    // for relative blocklet id i.e. blocklet id that belongs to a particular part file.
+    indexSchemas.add(new CarbonRowSchema.FixedCarbonRowSchema(DataTypes.SHORT));
+
+    // for storing block length.
+    indexSchemas.add(new CarbonRowSchema.FixedCarbonRowSchema(DataTypes.LONG));
+
+    CarbonRowSchema[] schema = indexSchemas.toArray(new CarbonRowSchema[indexSchemas.size()]);
+    memoryDMStore = getMemoryDMStore(schema, addToUnsafe);
   }
 
   /**
@@ -402,25 +574,28 @@ public class BlockletDataMap implements DataMap, Cacheable {
    * once per datamap. It stores datamap level max/min of each column and partition information of
    * datamap
    * @param segmentProperties
-   * @param partitions
    * @throws MemoryException
    */
-  private void createSummarySchema(SegmentProperties segmentProperties, List<String> partitions)
+  private void createSummarySchema(SegmentProperties segmentProperties, byte[] schemaBinary,
+      byte[] filePath, byte[] fileName, byte[] segmentId, boolean addToUnsafe)
       throws MemoryException {
-    List<CarbonRowSchema> taskMinMaxSchemas = new ArrayList<>(2);
+    List<CarbonRowSchema> taskMinMaxSchemas = new ArrayList<>();
     getMinMaxSchema(segmentProperties, taskMinMaxSchemas);
-    if (partitions != null && partitions.size() > 0) {
-      CarbonRowSchema[] mapSchemas = new CarbonRowSchema[partitions.size()];
-      for (int i = 0; i < mapSchemas.length; i++) {
-        mapSchemas[i] = new CarbonRowSchema.VariableCarbonRowSchema(DataTypes.BYTE_ARRAY);
-      }
-      CarbonRowSchema mapSchema =
-          new CarbonRowSchema.StructCarbonRowSchema(DataTypes.createDefaultStructType(),
-              mapSchemas);
-      taskMinMaxSchemas.add(mapSchema);
-    }
-    unsafeMemorySummaryDMStore = new UnsafeMemoryDMStore(
-        taskMinMaxSchemas.toArray(new CarbonRowSchema[taskMinMaxSchemas.size()]));
+    // for storing column schema
+    taskMinMaxSchemas.add(
+        new CarbonRowSchema.FixedCarbonRowSchema(DataTypes.BYTE_ARRAY, schemaBinary.length));
+    // for storing file path
+    taskMinMaxSchemas.add(
+        new CarbonRowSchema.FixedCarbonRowSchema(DataTypes.BYTE_ARRAY, filePath.length));
+    // for storing file name
+    taskMinMaxSchemas.add(
+        new CarbonRowSchema.FixedCarbonRowSchema(DataTypes.BYTE_ARRAY, fileName.length));
+    // for storing segmentid
+    taskMinMaxSchemas.add(
+        new CarbonRowSchema.FixedCarbonRowSchema(DataTypes.BYTE_ARRAY, segmentId.length));
+    CarbonRowSchema[] schema =
+        taskMinMaxSchemas.toArray(new CarbonRowSchema[taskMinMaxSchemas.size()]);
+    summaryDMStore = getMemoryDMStore(schema, addToUnsafe);
   }
 
   private void getMinMaxSchema(SegmentProperties segmentProperties,
@@ -449,11 +624,11 @@ public class BlockletDataMap implements DataMap, Cacheable {
   public boolean isScanRequired(FilterResolverIntf filterExp) {
     FilterExecuter filterExecuter =
         FilterUtil.getFilterExecuterTree(filterExp, segmentProperties, null);
-    for (int i = 0; i < unsafeMemorySummaryDMStore.getRowCount(); i++) {
-      DataMapRow unsafeRow = unsafeMemorySummaryDMStore.getUnsafeRow(i);
-      boolean isScanRequired = FilterExpressionProcessor
-          .isScanRequired(filterExecuter, getMinMaxValue(unsafeRow, TASK_MAX_VALUES_INDEX),
-              getMinMaxValue(unsafeRow, TASK_MIN_VALUES_INDEX));
+    for (int i = 0; i < summaryDMStore.getRowCount(); i++) {
+      DataMapRow unsafeRow = summaryDMStore.getDataMapRow(i);
+      boolean isScanRequired = FilterExpressionProcessor.isScanRequired(
+          filterExecuter, getMinMaxValue(unsafeRow, TASK_MAX_VALUES_INDEX),
+          getMinMaxValue(unsafeRow, TASK_MIN_VALUES_INDEX));
       if (isScanRequired) {
         return true;
       }
@@ -461,93 +636,92 @@ public class BlockletDataMap implements DataMap, Cacheable {
     return false;
   }
 
-  @Override
-  public List<Blocklet> prune(FilterResolverIntf filterExp) {
-
-    // getting the start and end index key based on filter for hitting the
-    // selected block reference nodes based on filter resolver tree.
-    if (LOGGER.isDebugEnabled()) {
-      LOGGER.debug("preparing the start and end key for finding"
-          + "start and end block as per filter resolver");
+  private List<Blocklet> prune(FilterResolverIntf filterExp, SegmentProperties segmentProperties) {
+    if (memoryDMStore.getRowCount() == 0) {
+      return new ArrayList<>();
     }
     List<Blocklet> blocklets = new ArrayList<>();
-    Comparator<DataMapRow> comparator =
-        new BlockletDMComparator(segmentProperties.getColumnsValueSize(),
-            segmentProperties.getNumberOfSortColumns(),
-            segmentProperties.getNumberOfNoDictSortColumns());
-    List<IndexKey> listOfStartEndKeys = new ArrayList<IndexKey>(2);
-    FilterUtil
-        .traverseResolverTreeAndGetStartAndEndKey(segmentProperties, filterExp, listOfStartEndKeys);
-    // reading the first value from list which has start key
-    IndexKey searchStartKey = listOfStartEndKeys.get(0);
-    // reading the last value from list which has end key
-    IndexKey searchEndKey = listOfStartEndKeys.get(1);
-    if (null == searchStartKey && null == searchEndKey) {
-      try {
-        // TODO need to handle for no dictionary dimensions
-        searchStartKey = FilterUtil.prepareDefaultStartIndexKey(segmentProperties);
-        // TODO need to handle for no dictionary dimensions
-        searchEndKey = FilterUtil.prepareDefaultEndIndexKey(segmentProperties);
-      } catch (KeyGenException e) {
-        return null;
-      }
-    }
-    if (LOGGER.isDebugEnabled()) {
-      LOGGER.debug(
-          "Successfully retrieved the start and end key" + "Dictionary Start Key: " + Arrays
-              .toString(searchStartKey.getDictionaryKeys()) + "No Dictionary Start Key " + Arrays
-              .toString(searchStartKey.getNoDictionaryKeys()) + "Dictionary End Key: " + Arrays
-              .toString(searchEndKey.getDictionaryKeys()) + "No Dictionary End Key " + Arrays
-              .toString(searchEndKey.getNoDictionaryKeys()));
-    }
+    int numBlocklets = 0;
     if (filterExp == null) {
-      int rowCount = unsafeMemoryDMStore.getRowCount();
-      for (int i = 0; i < rowCount; i++) {
-        DataMapRow unsafeRow = unsafeMemoryDMStore.getUnsafeRow(i);
-        blocklets.add(createBlocklet(unsafeRow, i));
+      numBlocklets = memoryDMStore.getRowCount();
+      for (int i = 0; i < numBlocklets; i++) {
+        DataMapRow safeRow = memoryDMStore.getDataMapRow(i).convertToSafeRow();
+        blocklets.add(createBlocklet(safeRow, safeRow.getShort(BLOCKLET_ID_INDEX)));
       }
     } else {
-      int startIndex = findStartIndex(convertToRow(searchStartKey), comparator);
-      int endIndex = findEndIndex(convertToRow(searchEndKey), comparator);
+      // Remove B-tree jump logic as start and end key prepared is not
+      // correct for old store scenarios
+      int startIndex = 0;
+      numBlocklets = memoryDMStore.getRowCount();
       FilterExecuter filterExecuter =
           FilterUtil.getFilterExecuterTree(filterExp, segmentProperties, null);
-      while (startIndex <= endIndex) {
-        DataMapRow unsafeRow = unsafeMemoryDMStore.getUnsafeRow(startIndex);
-        String filePath = new String(unsafeRow.getByteArray(FILE_PATH_INDEX),
+      while (startIndex < numBlocklets) {
+        DataMapRow safeRow = memoryDMStore.getDataMapRow(startIndex).convertToSafeRow();
+        int blockletId = safeRow.getShort(BLOCKLET_ID_INDEX);
+        String filePath = new String(safeRow.getByteArray(FILE_PATH_INDEX),
             CarbonCommonConstants.DEFAULT_CHARSET_CLASS);
         boolean isValid =
-            addBlockBasedOnMinMaxValue(filterExecuter, getMinMaxValue(unsafeRow, MAX_VALUES_INDEX),
-                getMinMaxValue(unsafeRow, MIN_VALUES_INDEX), filePath);
+            addBlockBasedOnMinMaxValue(filterExecuter, getMinMaxValue(safeRow, MAX_VALUES_INDEX),
+                getMinMaxValue(safeRow, MIN_VALUES_INDEX), filePath, blockletId);
         if (isValid) {
-          blocklets.add(createBlocklet(unsafeRow, startIndex));
+          blocklets.add(createBlocklet(safeRow, blockletId));
         }
         startIndex++;
       }
     }
-
+    ExplainCollector.addTotalBlocklets(numBlocklets);
     return blocklets;
   }
 
-  @Override public List<Blocklet> prune(FilterResolverIntf filterExp, List<String> partitions) {
-    // First get the partitions which are stored inside datamap.
-    List<String> storedPartitions = getPartitions();
-    // if it has partitioned datamap but there is no partitioned information stored, it means
-    // partitions are dropped so return empty list.
-    if (isPartitionedSegment && (storedPartitions == null || storedPartitions.size() == 0)) {
+  @Override
+  public List<Blocklet> prune(FilterResolverIntf filterExp, SegmentProperties segmentProperties,
+      List<PartitionSpec> partitions) {
+    if (memoryDMStore.getRowCount() == 0) {
       return new ArrayList<>();
     }
-    if (storedPartitions != null && storedPartitions.size() > 0) {
+    // if it has partitioned datamap but there is no partitioned information stored, it means
+    // partitions are dropped so return empty list.
+    if (partitions != null) {
+      // First get the partitions which are stored inside datamap.
+      String[] fileDetails = getFileDetails();
       // Check the exact match of partition information inside the stored partitions.
       boolean found = false;
-      if (partitions != null && partitions.size() > 0) {
-        found = partitions.containsAll(storedPartitions);
+      Path folderPath = new Path(fileDetails[0]);
+      for (PartitionSpec spec : partitions) {
+        if (folderPath.equals(spec.getLocation()) && isCorrectUUID(fileDetails, spec)) {
+          found = true;
+          break;
+        }
       }
       if (!found) {
         return new ArrayList<>();
       }
     }
     // Prune with filters if the partitions are existed in this datamap
-    return prune(filterExp);
+    // changed segmentProperties to this.segmentProperties to make sure the pruning with its own
+    // segmentProperties.
+    // Its a temporary fix. The Interface DataMap.prune(FilterResolverIntf filterExp,
+    // SegmentProperties segmentProperties, List<PartitionSpec> partitions) should be corrected
+    return prune(filterExp, this.segmentProperties);
+  }
+
+  @Override
+  public void finish() {
+
+  }
+
+  private boolean isCorrectUUID(String[] fileDetails, PartitionSpec spec) {
+    boolean needToScan = false;
+    if (spec.getUuid() != null) {
+      String[] split = spec.getUuid().split("_");
+      if (split[0].equals(fileDetails[2]) && CarbonTablePath.DataFileUtil
+          .getTimeStampFromFileName(fileDetails[1]).equals(split[1])) {
+        needToScan = true;
+      }
+    } else {
+      needToScan = true;
+    }
+    return needToScan;
   }
 
   /**
@@ -557,13 +731,19 @@ public class BlockletDataMap implements DataMap, Cacheable {
    * @param maxValue
    * @param minValue
    * @param filePath
+   * @param blockletId
    * @return
    */
   private boolean addBlockBasedOnMinMaxValue(FilterExecuter filterExecuter, byte[][] maxValue,
-      byte[][] minValue, String filePath) {
+      byte[][] minValue, String filePath, int blockletId) {
     BitSet bitSet = null;
     if (filterExecuter instanceof ImplicitColumnFilterExecutor) {
       String uniqueBlockPath = filePath.substring(filePath.lastIndexOf("/Part") + 1);
+      // this case will come in case of old store where index file does not contain the
+      // blocklet information
+      if (blockletId != -1) {
+        uniqueBlockPath = uniqueBlockPath + CarbonCommonConstants.FILE_SEPARATOR + blockletId;
+      }
       bitSet = ((ImplicitColumnFilterExecutor) filterExecuter)
           .isFilterValuesPresentInBlockOrBlocklet(maxValue, minValue, uniqueBlockPath);
     } else {
@@ -578,8 +758,24 @@ public class BlockletDataMap implements DataMap, Cacheable {
 
   public ExtendedBlocklet getDetailedBlocklet(String blockletId) {
     int index = Integer.parseInt(blockletId);
-    DataMapRow unsafeRow = unsafeMemoryDMStore.getUnsafeRow(index);
-    return createBlocklet(unsafeRow, index);
+    DataMapRow safeRow = memoryDMStore.getDataMapRow(index).convertToSafeRow();
+    return createBlocklet(safeRow, safeRow.getShort(BLOCKLET_ID_INDEX));
+  }
+
+  /**
+   * Get the index file name of the blocklet data map
+   *
+   * @return
+   */
+  public String getIndexFileName() {
+    DataMapRow unsafeRow = summaryDMStore.getDataMapRow(0);
+    try {
+      return new String(unsafeRow.getByteArray(INDEX_FILE_NAME),
+          CarbonCommonConstants.DEFAULT_CHARSET);
+    } catch (UnsupportedEncodingException e) {
+      // should never happen!
+      throw new IllegalArgumentException("UTF8 encoding is not supported", e);
+    }
   }
 
   private byte[][] getMinMaxValue(DataMapRow row, int index) {
@@ -602,20 +798,37 @@ public class BlockletDataMap implements DataMap, Cacheable {
     detailInfo.setBlockletId((short) blockletId);
     detailInfo.setDimLens(columnCardinality);
     detailInfo.setSchemaUpdatedTimeStamp(row.getLong(SCHEMA_UPADATED_TIME_INDEX));
-    BlockletInfo blockletInfo = new BlockletInfo();
+    detailInfo.setBlockletInfoBinary(row.getByteArray(BLOCK_INFO_INDEX));
     try {
-      byte[] byteArray = row.getByteArray(BLOCK_INFO_INDEX);
-      ByteArrayInputStream stream = new ByteArrayInputStream(byteArray);
-      DataInputStream inputStream = new DataInputStream(stream);
-      blockletInfo.readFields(inputStream);
-      inputStream.close();
+      blocklet.setLocation(
+          new String(row.getByteArray(LOCATIONS), CarbonCommonConstants.DEFAULT_CHARSET)
+              .split(","));
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
-    detailInfo.setBlockletInfo(blockletInfo);
     blocklet.setDetailInfo(detailInfo);
+    detailInfo.setBlockFooterOffset(row.getLong(BLOCK_FOOTER_OFFSET));
+    detailInfo.setColumnSchemaBinary(getColumnSchemaBinary());
+    detailInfo.setBlockSize(row.getLong(BLOCK_LENGTH));
     return blocklet;
   }
+
+  private String[] getFileDetails() {
+    try {
+      String[] fileDetails = new String[3];
+      DataMapRow unsafeRow = summaryDMStore.getDataMapRow(0);
+      fileDetails[0] =
+          new String(unsafeRow.getByteArray(INDEX_PATH), CarbonCommonConstants.DEFAULT_CHARSET);
+      fileDetails[1] = new String(unsafeRow.getByteArray(INDEX_FILE_NAME),
+          CarbonCommonConstants.DEFAULT_CHARSET);
+      fileDetails[2] = new String(unsafeRow.getByteArray(SEGMENTID),
+          CarbonCommonConstants.DEFAULT_CHARSET);
+      return fileDetails;
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
 
   /**
    * Binary search used to get the first tentative index row based on
@@ -627,14 +840,14 @@ public class BlockletDataMap implements DataMap, Cacheable {
   private int findStartIndex(DataMapRow key, Comparator<DataMapRow> comparator) {
     int childNodeIndex;
     int low = 0;
-    int high = unsafeMemoryDMStore.getRowCount() - 1;
+    int high = memoryDMStore.getRowCount() - 1;
     int mid = 0;
     int compareRes = -1;
     //
     while (low <= high) {
       mid = (low + high) >>> 1;
       // compare the entries
-      compareRes = comparator.compare(key, unsafeMemoryDMStore.getUnsafeRow(mid));
+      compareRes = comparator.compare(key, memoryDMStore.getDataMapRow(mid));
       if (compareRes < 0) {
         high = mid - 1;
       } else if (compareRes > 0) {
@@ -643,7 +856,7 @@ public class BlockletDataMap implements DataMap, Cacheable {
         // if key is matched then get the first entry
         int currentPos = mid;
         while (currentPos - 1 >= 0
-            && comparator.compare(key, unsafeMemoryDMStore.getUnsafeRow(currentPos - 1)) == 0) {
+            && comparator.compare(key, memoryDMStore.getDataMapRow(currentPos - 1)) == 0) {
           currentPos--;
         }
         mid = currentPos;
@@ -675,14 +888,14 @@ public class BlockletDataMap implements DataMap, Cacheable {
   private int findEndIndex(DataMapRow key, Comparator<DataMapRow> comparator) {
     int childNodeIndex;
     int low = 0;
-    int high = unsafeMemoryDMStore.getRowCount() - 1;
+    int high = memoryDMStore.getRowCount() - 1;
     int mid = 0;
     int compareRes = -1;
     //
     while (low <= high) {
       mid = (low + high) >>> 1;
       // compare the entries
-      compareRes = comparator.compare(key, unsafeMemoryDMStore.getUnsafeRow(mid));
+      compareRes = comparator.compare(key, memoryDMStore.getDataMapRow(mid));
       if (compareRes < 0) {
         high = mid - 1;
       } else if (compareRes > 0) {
@@ -690,8 +903,8 @@ public class BlockletDataMap implements DataMap, Cacheable {
       } else {
         int currentPos = mid;
         // if key is matched then get the first entry
-        while (currentPos + 1 < unsafeMemoryDMStore.getRowCount()
-            && comparator.compare(key, unsafeMemoryDMStore.getUnsafeRow(currentPos + 1)) == 0) {
+        while (currentPos + 1 < memoryDMStore.getRowCount()
+            && comparator.compare(key, memoryDMStore.getDataMapRow(currentPos + 1)) == 0) {
           currentPos++;
         }
         mid = currentPos;
@@ -719,59 +932,122 @@ public class BlockletDataMap implements DataMap, Cacheable {
     buffer.putInt(key.getNoDictionaryKeys().length);
     buffer.put(key.getDictionaryKeys());
     buffer.put(key.getNoDictionaryKeys());
-    DataMapRowImpl dataMapRow = new DataMapRowImpl(unsafeMemoryDMStore.getSchema());
+    DataMapRowImpl dataMapRow = new DataMapRowImpl(memoryDMStore.getSchema());
     dataMapRow.setByteArray(buffer.array(), 0);
     return dataMapRow;
   }
 
-  private List<String> getPartitions() {
-    DataMapRow unsafeRow = unsafeMemorySummaryDMStore.getUnsafeRow(0);
-    if (unsafeRow.getColumnCount() > 2) {
-      List<String> partitions = new ArrayList<>();
-      DataMapRow row = unsafeRow.getRow(2);
-      for (int i = 0; i < row.getColumnCount(); i++) {
-        partitions.add(
-            new String(row.getByteArray(i), CarbonCommonConstants.DEFAULT_CHARSET_CLASS));
+  public byte[] getColumnSchemaBinary() {
+    DataMapRow unsafeRow = summaryDMStore.getDataMapRow(0);
+    return unsafeRow.getByteArray(SCHEMA);
+  }
+
+  /**
+   * Convert schema to binary
+   */
+  private byte[] convertSchemaToBinary(List<ColumnSchema> columnSchemas) throws IOException {
+    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+    DataOutput dataOutput = new DataOutputStream(stream);
+    dataOutput.writeShort(columnSchemas.size());
+    for (ColumnSchema columnSchema : columnSchemas) {
+      if (columnSchema.getColumnReferenceId() == null) {
+        columnSchema.setColumnReferenceId(columnSchema.getColumnUniqueId());
       }
-      return partitions;
+      columnSchema.write(dataOutput);
     }
-    return null;
+    byte[] byteArray = stream.toByteArray();
+    // Compress with snappy to reduce the size of schema
+    return Snappy.rawCompress(byteArray, byteArray.length);
   }
 
   @Override
   public void clear() {
-    if (unsafeMemoryDMStore != null) {
-      unsafeMemoryDMStore.freeMemory();
-      unsafeMemoryDMStore = null;
+    if (memoryDMStore != null) {
+      memoryDMStore.freeMemory();
+      memoryDMStore = null;
       segmentProperties = null;
     }
     // clear task min/max unsafe memory
-    if (null != unsafeMemorySummaryDMStore) {
-      unsafeMemorySummaryDMStore.freeMemory();
-      unsafeMemorySummaryDMStore = null;
+    if (null != summaryDMStore) {
+      summaryDMStore.freeMemory();
+      summaryDMStore = null;
     }
   }
 
-  @Override
-  public long getFileTimeStamp() {
-    return 0;
-  }
-
-  @Override
-  public int getAccessCount() {
-    return 0;
-  }
-
-  @Override
   public long getMemorySize() {
     long memoryUsed = 0L;
-    if (unsafeMemoryDMStore != null) {
-      memoryUsed += unsafeMemoryDMStore.getMemoryUsed();
+    if (memoryDMStore != null) {
+      memoryUsed += memoryDMStore.getMemoryUsed();
     }
-    if (null != unsafeMemorySummaryDMStore) {
-      memoryUsed += unsafeMemorySummaryDMStore.getMemoryUsed();
+    if (null != summaryDMStore) {
+      memoryUsed += summaryDMStore.getMemoryUsed();
     }
     return memoryUsed;
+  }
+
+  public SegmentProperties getSegmentProperties() {
+    return segmentProperties;
+  }
+
+  public void setSegmentProperties(SegmentProperties segmentProperties) {
+    this.segmentProperties = segmentProperties;
+  }
+
+  public int[] getColumnCardinality() {
+    return columnCardinality;
+  }
+
+  private AbstractMemoryDMStore getMemoryDMStore(CarbonRowSchema[] schema, boolean addToUnsafe)
+      throws MemoryException {
+    AbstractMemoryDMStore memoryDMStore;
+    if (addToUnsafe) {
+      memoryDMStore = new UnsafeMemoryDMStore(schema);
+    } else {
+      memoryDMStore = new SafeMemoryDMStore(schema);
+    }
+    return memoryDMStore;
+  }
+
+  /**
+   * This method will ocnvert safe to unsafe memory DM store
+   *
+   * @throws MemoryException
+   */
+  public void convertToUnsafeDMStore() throws MemoryException {
+    if (memoryDMStore instanceof SafeMemoryDMStore) {
+      UnsafeMemoryDMStore unsafeMemoryDMStore = memoryDMStore.convertToUnsafeDMStore();
+      memoryDMStore.freeMemory();
+      memoryDMStore = unsafeMemoryDMStore;
+    }
+    if (summaryDMStore instanceof SafeMemoryDMStore) {
+      UnsafeMemoryDMStore unsafeSummaryMemoryDMStore = summaryDMStore.convertToUnsafeDMStore();
+      summaryDMStore.freeMemory();
+      summaryDMStore = unsafeSummaryMemoryDMStore;
+    }
+  }
+
+  /**
+   * Read column schema from binary
+   * @param schemaArray
+   * @throws IOException
+   */
+  public List<ColumnSchema> readColumnSchema(byte[] schemaArray) throws IOException {
+    // uncompress it.
+    schemaArray = Snappy.uncompress(schemaArray);
+    ByteArrayInputStream schemaStream = new ByteArrayInputStream(schemaArray);
+    DataInput schemaInput = new DataInputStream(schemaStream);
+    List<ColumnSchema> columnSchemas = new ArrayList<>();
+    int size = schemaInput.readShort();
+    for (int i = 0; i < size; i++) {
+      ColumnSchema columnSchema = new ColumnSchema();
+      columnSchema.readFields(schemaInput);
+      columnSchemas.add(columnSchema);
+    }
+    return columnSchemas;
+  }
+
+  public long getBlockletSchemaTime() {
+    return blockletSchemaTime;
   }
 
 }

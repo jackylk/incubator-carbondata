@@ -34,7 +34,8 @@ import org.apache.spark.sql.optimizer.CarbonFilters
 import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.mutate.CarbonUpdateUtil
-import org.apache.carbondata.hadoop.api.CarbonTableInputFormat
+import org.apache.carbondata.hadoop.api.{CarbonInputFormat, CarbonTableInputFormat}
+import org.apache.carbondata.hadoop.util.CarbonInputFormatUtil
 
 case class CarbonCountStar(
     attributesRaw: Seq[Attribute],
@@ -45,18 +46,20 @@ case class CarbonCountStar(
   override def doExecute(): RDD[InternalRow] = {
     val absoluteTableIdentifier = carbonTable.getAbsoluteTableIdentifier
     val (job, tableInputFormat) = createCarbonInputFormat(absoluteTableIdentifier)
-    CarbonTableInputFormat.setQuerySegment(job.getConfiguration, absoluteTableIdentifier)
+    CarbonInputFormat.setQuerySegment(job.getConfiguration, absoluteTableIdentifier)
 
     // get row count
     val rowCount = CarbonUpdateUtil.getRowCount(
       tableInputFormat.getBlockRowCount(
         job,
-        absoluteTableIdentifier,
+        carbonTable,
         CarbonFilters.getPartitions(
           Seq.empty,
           sparkSession,
-          TableIdentifier(carbonTable.getTableName, Some(carbonTable.getDatabaseName))).asJava),
-      absoluteTableIdentifier)
+          TableIdentifier(
+            carbonTable.getTableName,
+            Some(carbonTable.getDatabaseName))).map(_.asJava).orNull),
+      carbonTable)
     val value = new GenericInternalRow(Seq(Long.box(rowCount)).toArray.asInstanceOf[Array[Any]])
     val unsafeProjection = UnsafeProjection.create(output.map(_.dataType).toArray)
     val row = if (outUnsafeRows) unsafeProjection(value) else value
@@ -72,8 +75,13 @@ case class CarbonCountStar(
     val carbonInputFormat = new CarbonTableInputFormat[Array[Object]]()
     val jobConf: JobConf = new JobConf(new Configuration)
     SparkHadoopUtil.get.addCredentials(jobConf)
+    CarbonInputFormat.setTableInfo(jobConf, carbonTable.getTableInfo)
     val job = new Job(jobConf)
     FileInputFormat.addInputPath(job, new Path(absoluteTableIdentifier.getTablePath))
+    CarbonInputFormat
+      .setTransactionalTable(job.getConfiguration,
+        carbonTable.getTableInfo.isTransactionalTable)
+    CarbonInputFormatUtil.setDataMapJobIfConfigured(job.getConfiguration)
     (job, carbonInputFormat)
   }
 }

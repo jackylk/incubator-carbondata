@@ -30,12 +30,13 @@ import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CarbonException
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
+import org.apache.carbondata.core.indexstore.PartitionSpec
 import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.scan.expression.Expression
 import org.apache.carbondata.core.scan.expression.logical.AndExpression
 import org.apache.carbondata.hadoop.CarbonProjection
-import org.apache.carbondata.spark.rdd.CarbonScanRDD
+import org.apache.carbondata.spark.rdd.{CarbonScanRDD, SparkReadSupport}
 
 case class CarbonDatasourceHadoopRelation(
     sparkSession: SparkSession,
@@ -45,7 +46,7 @@ case class CarbonDatasourceHadoopRelation(
     isSubquery: ArrayBuffer[Boolean] = new ArrayBuffer[Boolean]())
   extends BaseRelation with InsertableRelation {
 
-  var caseInsensitiveMap = parameters.map(f => (f._1.toLowerCase, f._2))
+  val caseInsensitiveMap: Map[String, String] = parameters.map(f => (f._1.toLowerCase, f._2))
   lazy val identifier: AbsoluteTableIdentifier = AbsoluteTableIdentifier.from(
     paths.head,
     CarbonEnv.getDatabaseName(caseInsensitiveMap.get("dbname"))(sparkSession),
@@ -67,13 +68,14 @@ case class CarbonDatasourceHadoopRelation(
 
   def buildScan(requiredColumns: Array[String],
       filters: Array[Filter],
-      partitions: Seq[String]): RDD[InternalRow] = {
+      partitions: Seq[PartitionSpec]): RDD[InternalRow] = {
     val filterExpression: Option[Expression] = filters.flatMap { filter =>
       CarbonFilters.createCarbonFilter(schema, filter)
     }.reduceOption(new AndExpression(_, _))
 
     val projection = new CarbonProjection
     requiredColumns.foreach(projection.addColumn)
+    CarbonSession.threadUnset(CarbonCommonConstants.SUPPORT_DIRECT_QUERY_ON_DATAMAP)
     val inputMetricsStats: CarbonInputMetrics = new CarbonInputMetrics
     new CarbonScanRDD(
       sparkSession,

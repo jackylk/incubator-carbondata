@@ -23,14 +23,14 @@ import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.sql.{CarbonEnv, SparkSession}
 import org.scalatest.BeforeAndAfterAll
 
+import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.util.CarbonProperties
-import org.apache.carbondata.core.util.path.CarbonStorePath
+import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.processing.exception.DataLoadingException
-import org.apache.carbondata.processing.loading.model.{CarbonDataLoadSchema, CarbonLoadModel}
+import org.apache.carbondata.processing.loading.model.{CarbonDataLoadSchema, CarbonLoadModel, CarbonLoadModelBuilder, LoadOption}
 import org.apache.carbondata.processing.util.TableOptionConstant
-import org.apache.carbondata.spark.exception.MalformedCarbonCommandException
 
 /**
  * test case for external column dictionary generation
@@ -158,13 +158,14 @@ class ExternalColumnDictionaryTestCase extends Spark2QueryTest with BeforeAndAft
     val carbonSchema = new CarbonDataLoadSchema(table)
     carbonLoadModel.setDatabaseName(table.getDatabaseName)
     carbonLoadModel.setTableName(table.getTableName)
+    carbonLoadModel.setCarbonTransactionalTable(table.isTransactionalTable)
     carbonLoadModel.setTablePath(relation.carbonTable.getTablePath)
     carbonLoadModel.setCarbonDataLoadSchema(carbonSchema)
     carbonLoadModel.setFactFilePath(filePath)
     carbonLoadModel.setCsvHeader(header)
     carbonLoadModel.setCsvDelimiter(csvDelimiter)
-    carbonLoadModel.setComplexDelimiterLevel1("\\$")
-    carbonLoadModel.setComplexDelimiterLevel2("\\:")
+    carbonLoadModel.setComplexDelimiterLevel1("$")
+    carbonLoadModel.setComplexDelimiterLevel2(":")
     carbonLoadModel.setColDictFilePath(extColFilePath)
     carbonLoadModel.setQuoteChar("\"");
     carbonLoadModel.setSerializationNullFormat(
@@ -176,12 +177,10 @@ class ExternalColumnDictionaryTestCase extends Spark2QueryTest with BeforeAndAft
       CarbonCommonConstants.CARBON_DATE_FORMAT,
       CarbonCommonConstants.CARBON_DATE_DEFAULT_FORMAT))
     carbonLoadModel.setCsvHeaderColumns(
-      CommonUtil.getCsvHeaderColumns(carbonLoadModel, FileFactory.getConfiguration))
+      LoadOption.getCsvHeaderColumns(carbonLoadModel, FileFactory.getConfiguration))
     carbonLoadModel.setMaxColumns("100")
     // Create table and metadata folders if not exist
-    val carbonTablePath = CarbonStorePath
-      .getCarbonTablePath(table.getTablePath, table.getCarbonTableIdentifier)
-    val metadataDirectoryPath = carbonTablePath.getMetadataDirectoryPath
+    val metadataDirectoryPath = CarbonTablePath.getMetadataPath(table.getTablePath)
     val fileType = FileFactory.getFileType(metadataDirectoryPath)
     if (!FileFactory.isFileExist(metadataDirectoryPath, fileType)) {
       FileFactory.mkdirs(metadataDirectoryPath, fileType)
@@ -263,37 +262,29 @@ class ExternalColumnDictionaryTestCase extends Spark2QueryTest with BeforeAndAft
   }
 
   test("COLUMNDICT and ALL_DICTIONARY_PATH can not be used together") {
-    try {
+    val ex = intercept[MalformedCarbonCommandException] {
       sql(
         s"""
         LOAD DATA LOCAL INPATH "$complexFilePath1" INTO TABLE loadSqlTest
         OPTIONS('COLUMNDICT'='$extColDictFilePath1',"ALL_DICTIONARY_PATH"='$extColDictFilePath1')
         """)
-      assert(false)
-    } catch {
-      case ex: MalformedCarbonCommandException =>
-        assertResult(ex.getMessage)(
-          "Error: COLUMNDICT and ALL_DICTIONARY_PATH can not be used together " +
-          "in options")
-      case _: Throwable => assert(false)
     }
+    assertResult(ex.getMessage)(
+      "Error: COLUMNDICT and ALL_DICTIONARY_PATH can not be used together " +
+        "in options")
   }
 
   test("Measure can not use COLUMNDICT") {
-    try {
+    val ex = intercept[DataLoadingException] {
       sql(
         s"""
       LOAD DATA LOCAL INPATH "$complexFilePath1" INTO TABLE loadSqlTest
       OPTIONS('single_pass'='true','FILEHEADER'='$header', 'COLUMNDICT'='gamePointId:$filePath')
       """)
-      assert(false)
-    } catch {
-      case ex: DataLoadingException =>
-        assertResult(ex.getMessage)(
-          "Column gamePointId is not a key column. Only key column can be part " +
-          "of dictionary and used in COLUMNDICT option.")
-      case _: Throwable => assert(false)
     }
+    assertResult(ex.getMessage)(
+      "Column gamePointId is not a key column. Only key column can be part " +
+        "of dictionary and used in COLUMNDICT option.")
   }
 
   def cleanAllTables: Unit = {

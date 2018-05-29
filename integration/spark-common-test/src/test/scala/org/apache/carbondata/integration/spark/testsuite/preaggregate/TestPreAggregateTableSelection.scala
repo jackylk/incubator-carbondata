@@ -16,17 +16,24 @@
  */
 package org.apache.carbondata.integration.spark.testsuite.preaggregate
 
+import java.io.File
+
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.sql.{CarbonDatasourceHadoopRelation, Row}
-import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
 
-class TestPreAggregateTableSelection extends QueryTest with BeforeAndAfterAll {
+import org.apache.carbondata.core.metadata.schema.datamap.DataMapClassProvider.TIMESERIES
+import org.apache.carbondata.spark.util.SparkQueryTest
+
+class TestPreAggregateTableSelection extends SparkQueryTest with BeforeAndAfterAll {
+
+  val timeSeries = TIMESERIES.toString
 
   override def beforeAll: Unit = {
     sql("drop table if exists mainTable")
+    sql("drop table if exists mainTableavg")
     sql("drop table if exists agg0")
     sql("drop table if exists agg1")
     sql("drop table if exists agg2")
@@ -35,6 +42,7 @@ class TestPreAggregateTableSelection extends QueryTest with BeforeAndAfterAll {
     sql("drop table if exists agg5")
     sql("drop table if exists agg6")
     sql("drop table if exists agg7")
+    sql("DROP TABLE IF EXISTS maintabledict")
     sql("CREATE TABLE mainTable(id int, name string, city string, age string) STORED BY 'org.apache.carbondata.format'")
     sql("create datamap agg0 on table mainTable using 'preaggregate' as select name from mainTable group by name")
     sql("create datamap agg1 on table mainTable using 'preaggregate' as select name,sum(age) from mainTable group by name")
@@ -45,18 +53,21 @@ class TestPreAggregateTableSelection extends QueryTest with BeforeAndAfterAll {
     sql("create datamap agg6 on table mainTable using 'preaggregate' as select name,min(age) from mainTable group by name")
     sql("create datamap agg7 on table mainTable using 'preaggregate' as select name,max(age) from mainTable group by name")
     sql("create datamap agg8 on table maintable using 'preaggregate' as select name, sum(id), avg(id) from maintable group by name")
+    sql("create datamap agg9 on table maintable using 'preaggregate' as select name, count(*) from maintable group by name")
+    sql("CREATE TABLE mainTableavg(id int, name string, city string, age bigint) STORED BY 'org.apache.carbondata.format'")
+    sql("create datamap agg0 on table mainTableavg using 'preaggregate' as select name,sum(age), avg(age) from mainTableavg group by name")
     sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/measureinsertintotest.csv' into table mainTable")
+    sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/measureinsertintotest.csv' into table mainTableavg")
   }
-
-  test("test sum and avg on same column should give proper results") {
-    val df = sql("select name, sum(id), avg(id) from maintable group by name")
-    checkAnswer(df, Seq(Row("david",1,1.0), Row("jarry",6,3.0), Row("kunal",4,4.0), Row("eason",2,2.0), Row("vishal",4,4.0)))
-  }
-
 
   test("test PreAggregate table selection 1") {
     val df = sql("select name from mainTable group by name")
     preAggTableValidator(df.queryExecution.analyzed, "maintable_agg0")
+  }
+
+  test("test PreAggregate table selection with count(*)") {
+    val df = sql("select name, count(*) from mainTable group by name")
+    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg9")
   }
 
   test("test PreAggregate table selection 2") {
@@ -76,6 +87,11 @@ class TestPreAggregateTableSelection extends QueryTest with BeforeAndAfterAll {
 
   test("test PreAggregate table selection 5") {
     val df = sql("select name, sum(age) from mainTable group by name")
+    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg1")
+  }
+
+  test("test PreAggregate table selection with table alias") {
+    val df = sql("select name, sum(age) from mainTable as t1 group by name")
     preAggTableValidator(df.queryExecution.analyzed, "maintable_agg1")
   }
 
@@ -143,7 +159,14 @@ class TestPreAggregateTableSelection extends QueryTest with BeforeAndAfterAll {
     val df = sql("select count(id) from mainTable")
     preAggTableValidator(df.queryExecution.analyzed, "maintable_agg3")
   }
-  
+
+  test("test PreAggregate table selection 19: test sum and avg on same column should give proper results") {
+    val df = sql("select name, sum(id), avg(id) from maintable group by name")
+    checkAnswer(df, Seq(Row("david",1,1.0), Row("jarry",6,3.0), Row("kunal",4,4.0), Row("eason",2,2.0), Row("vishal",4,4.0)))
+    checkPreAggTable(df, false, "maintable_agg5", "maintable_agg1")
+    checkPreAggTable(df, true, "maintable_agg8")
+  }
+
   test("test PreAggregate table selection 20") {
     val df = sql("select name from mainTable group by name order by name")
     preAggTableValidator(df.queryExecution.analyzed, "maintable_agg0")
@@ -189,7 +212,6 @@ class TestPreAggregateTableSelection extends QueryTest with BeforeAndAfterAll {
     preAggTableValidator(df.queryExecution.analyzed, "maintable")
   }
 
-
   def preAggTableValidator(plan: LogicalPlan, actualTableName: String) : Unit ={
     var isValidPlan = false
     plan.transform {
@@ -219,20 +241,219 @@ class TestPreAggregateTableSelection extends QueryTest with BeforeAndAfterAll {
     }
   }
 
-  test("test if pre-agg table is hit with filter condition") {
-    sql("drop table if exists filtertable")
-    sql("CREATE TABLE filtertable(id int, name string, city string, age string) STORED BY" +
-        " 'org.apache.carbondata.format' TBLPROPERTIES('dictionary_include'='name,age')")
+
+  test("test PreAggregate table selection 29") {
+    val df = sql("select sum(id) from mainTable group by name")
+    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg2")
+  }
+
+  test("test PreAggregate table selection 30") {
+    val df = sql("select a.name from mainTable a group by a.name")
+    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg0")
+  }
+
+  test("test PreAggregate table selection 31") {
+    val df = sql("select a.name as newName from mainTable a group by a.name")
+    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg0")
+  }
+
+  test("test PreAggregate table selection 32") {
+    val df = sql("select a.name as newName from mainTable a  where a.name='vishal' group by a.name")
+    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg0")
+  }
+
+ test("test PreAggregate table selection 33: Test query with math operation hitting fact table") {
+    val df =  sql("select sum(id)+count(id) from maintable")
+    preAggTableValidator(df.queryExecution.analyzed, "maintable")
+  }
+
+  test("test PreAggregate table selection 34: test if pre-agg table is hit with filter condition") {
+    sql("DROP TABLE IF EXISTS filtertable")
+    sql(
+      """
+        | CREATE TABLE filtertable(
+        |     id INT,
+        |     name STRING,
+        |     city STRING,
+        |     age STRING)
+        | STORED BY 'org.apache.carbondata.format'
+        | TBLPROPERTIES('dictionary_include'='name,age')
+      """.stripMargin)
     sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/measureinsertintotest.csv' into table filtertable")
-    sql("create datamap agg9 on table filtertable using 'preaggregate' as select name, age, sum(age) from filtertable group by name, age")
-    val df = sql("select name, sum(age) from filtertable where age = '29' group by name, age")
+    sql(
+      """
+        | CREATE DATAMAP agg9
+        | ON TABLE filtertable
+        | USING 'preaggregate'
+        | AS SELECT name, age, SUM(age)
+        |     FROM filtertable
+        |     GROUP BY name, age
+      """.stripMargin)
+    val df = sql("SELECT name, SUM(age) FROM filtertable WHERE age = '29' GROUP BY name, age")
     preAggTableValidator(df.queryExecution.analyzed, "filtertable_agg9")
     checkAnswer(df, Row("vishal", 29))
   }
 
+  test("test PreAggregate table selection 35: test pre-agg table with group by condition") {
+    sql("DROP TABLE IF EXISTS grouptable")
+    sql(
+      """
+        | CREATE TABLE grouptable(
+        |     id INT,
+        |     name STRING,
+        |     city STRING,
+        |     age STRING)
+        | STORED BY 'org.apache.carbondata.format'
+        | TBLPROPERTIES('dictionary_include'='name,age')
+      """.stripMargin)
+    sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/measureinsertintotest.csv' into table grouptable")
+    sql(
+      """
+        | CREATE DATAMAP agg9
+        | ON TABLE grouptable
+        | USING 'preaggregate'
+        | AS SELECT SUM(id)
+        |     FROM grouptable
+        |     GROUP BY city
+      """.stripMargin)
+    val df = sql("SELECT SUM(id) FROM grouptable GROUP BY city")
+    preAggTableValidator(df.queryExecution.analyzed, "grouptable_agg9")
+    checkAnswer(df, Seq(Row(3), Row(3), Row(4), Row(7)))
+  }
+
+  test("test PreAggregate table selection 36: test PreAggregate table selection with timeseries and normal together") {
+    sql("drop table if exists maintabletime")
+    sql(
+      "create table maintabletime(year int,month int,name string,salary int,dob timestamp) stored" +
+      " by 'carbondata' tblproperties('sort_scope'='Global_sort','table_blocksize'='23'," +
+      "'sort_columns'='month,year,name')")
+    sql("insert into maintabletime select 10,11,'babu',12,'2014-01-01 00:00:00'")
+    sql(
+      "create datamap agg0 on table maintabletime using 'preaggregate' as select dob,name from " +
+      "maintabletime group by dob,name")
+
+  sql(
+    s"""
+       | CREATE DATAMAP agg1_year ON TABLE maintabletime
+       | USING '$timeSeries'
+       | DMPROPERTIES (
+       | 'EVENT_TIME'='dob',
+       | 'YEAR_GRANULARITY'='1')
+       | AS SELECT dob, name FROM maintabletime
+       | GROUP BY dob,name
+       """.stripMargin)
+
+  val df = sql("SELECT timeseries(dob,'year') FROM maintabletime GROUP BY timeseries(dob,'year')")
+  preAggTableValidator(df.queryExecution.analyzed, "maintabletime_agg1_year")
+  sql("DROP TABLE IF EXISTS maintabletime")
+
+  }
+
+  test("test table selection when unsupported aggregate function is present") {
+    sql("DROP TABLE IF EXISTS maintabletime")
+    sql(
+      "create table maintabletime(year int,month int,name string,salary int,dob string) stored" +
+      " by 'carbondata' tblproperties('sort_scope'='Global_sort','table_blocksize'='23'," +
+      "'sort_columns'='month,year,name')")
+    sql("insert into maintabletime select 10,11,'x',12,'2014-01-01 00:00:00'")
+    sql(
+      "create datamap agg0 on table maintabletime using 'preaggregate' as select name,sum(salary) from " +
+      "maintabletime group by name")
+
+    sql("select var_samp(name) from maintabletime  where name='Mikka' ")
+  }
+
+  test("test PreAggregate table selection 38: for sum and avg in aggregate table with bigint") {
+    val df = sql("select avg(age) from mainTableavg")
+    preAggTableValidator(df.queryExecution.analyzed, "mainTableavg_agg0")
+  }
+
+  test("test PreAggregate table selection for avg with maintable containing dictionary include for group by column") {
+    sql(
+      "create table maintabledict(year int,month int,name string,salary int,dob string) stored" +
+      " by 'carbondata' tblproperties('DICTIONARY_INCLUDE'='year')")
+    sql("insert into maintabledict select 10,11,'x',12,'2014-01-01 00:00:00'")
+    sql("insert into maintabledict select 10,11,'x',12,'2014-01-01 00:00:00'")
+    sql(
+      "create datamap aggdict on table maintabledict using 'preaggregate' as select year,avg(year) from " +
+      "maintabledict group by year")
+    val df = sql("select year,avg(year) from maintabledict group by year")
+    checkAnswer(df, Seq(Row(10,10.0)))
+  }
+
+  test("explain projection query") {
+    val rows = sql("explain select name, age from mainTable").collect()
+    assertResult(
+      """== CarbonData Profiler ==
+        |Table Scan on maintable
+        | - total blocklets: 1
+        | - filter: none
+        | - pruned by Main DataMap
+        |    - skipped blocklets: 0
+        |""".stripMargin)(rows(0).getString(0))
+  }
+
+  test("explain projection query hit datamap") {
+    val rows = sql("explain select name,sum(age) from mainTable group by name").collect()
+    assertResult(
+      """== CarbonData Profiler ==
+        |Query rewrite based on DataMap:
+        | - agg1 (preaggregate)
+        |Table Scan on maintable_agg1
+        | - total blocklets: 1
+        | - filter: none
+        | - pruned by Main DataMap
+        |    - skipped blocklets: 0
+        |""".stripMargin)(rows(0).getString(0))
+  }
+
+  test("explain filter query") {
+    sql("explain select name,sum(age) from mainTable where name = 'a' group by name").show(false)
+    val rows = sql("explain select name,sum(age) from mainTable where name = 'a' group by name").collect()
+    assertResult(
+      """== CarbonData Profiler ==
+        |Query rewrite based on DataMap:
+        | - agg1 (preaggregate)
+        |Table Scan on maintable_agg1
+        | - total blocklets: 1
+        | - filter: (maintable_name <> null and maintable_name = a)
+        | - pruned by Main DataMap
+        |    - skipped blocklets: 1
+        |""".stripMargin)(rows(0).getString(0))
+
+  }
+
+  test("explain query with multiple table") {
+    val query = "explain select t1.city,sum(t1.age) from mainTable t1, mainTableavg t2 " +
+                "where t1.name = t2.name and t1.id < 3 group by t1.city"
+    sql(query).show(false)
+    val rows = sql(query).collect()
+    assert(rows(0).getString(0).contains(
+      """
+        |Table Scan on maintable
+        | - total blocklets: 1
+        | - filter: ((id <> null and id < 3) and name <> null)
+        | - pruned by Main DataMap
+        |    - skipped blocklets: 0""".stripMargin))
+    assert(rows(0).getString(0).contains(
+      """
+        |Table Scan on maintableavg
+        | - total blocklets: 1
+        | - filter: name <> null
+        | - pruned by Main DataMap
+        |    - skipped blocklets: 0""".stripMargin))
+
+  }
+
   override def afterAll: Unit = {
     sql("drop table if exists mainTable")
+    sql("drop table if exists mainTable_avg")
     sql("drop table if exists lineitem")
+    sql("DROP TABLE IF EXISTS maintabletime")
+    sql("DROP TABLE IF EXISTS maintabledict")
+    sql("DROP TABLE IF EXISTS mainTableavg")
+    sql("DROP TABLE IF EXISTS filtertable")
+    sql("DROP TABLE IF EXISTS grouptable")
   }
 
 }

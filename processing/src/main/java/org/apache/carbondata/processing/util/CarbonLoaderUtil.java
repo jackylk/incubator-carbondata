@@ -23,7 +23,6 @@ import java.io.OutputStreamWriter;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 import org.apache.carbondata.common.logging.LogService;
@@ -34,7 +33,9 @@ import org.apache.carbondata.core.cache.CacheType;
 import org.apache.carbondata.core.cache.dictionary.Dictionary;
 import org.apache.carbondata.core.cache.dictionary.DictionaryColumnUniqueIdentifier;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
+import org.apache.carbondata.core.datamap.Segment;
 import org.apache.carbondata.core.datastore.block.Distributable;
+import org.apache.carbondata.core.datastore.block.TableBlockInfo;
 import org.apache.carbondata.core.datastore.filesystem.CarbonFile;
 import org.apache.carbondata.core.datastore.filesystem.CarbonFileFilter;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
@@ -45,7 +46,6 @@ import org.apache.carbondata.core.fileoperations.FileWriteOperation;
 import org.apache.carbondata.core.locks.CarbonLockUtil;
 import org.apache.carbondata.core.locks.ICarbonLock;
 import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier;
-import org.apache.carbondata.core.metadata.CarbonTableIdentifier;
 import org.apache.carbondata.core.metadata.ColumnIdentifier;
 import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
@@ -54,15 +54,15 @@ import org.apache.carbondata.core.statusmanager.LoadMetadataDetails;
 import org.apache.carbondata.core.statusmanager.SegmentStatus;
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager;
 import org.apache.carbondata.core.util.CarbonUtil;
-import org.apache.carbondata.core.util.path.CarbonStorePath;
 import org.apache.carbondata.core.util.path.CarbonTablePath;
+import org.apache.carbondata.core.writer.CarbonIndexFileMergeWriter;
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel;
-import org.apache.carbondata.processing.merger.NodeBlockRelation;
 import org.apache.carbondata.processing.merger.NodeMultiBlockRelation;
+
 import static org.apache.carbondata.core.enums.EscapeSequences.*;
 
 import com.google.gson.Gson;
-
+import org.apache.commons.lang3.StringUtils;
 
 public final class CarbonLoaderUtil {
 
@@ -72,15 +72,27 @@ public final class CarbonLoaderUtil {
   private CarbonLoaderUtil() {
   }
 
-  public static void deleteSegment(CarbonLoadModel loadModel, int currentLoad) {
-    CarbonTable carbonTable = loadModel.getCarbonDataLoadSchema().getCarbonTable();
-    CarbonTablePath carbonTablePath = CarbonStorePath
-        .getCarbonTablePath(loadModel.getTablePath(), carbonTable.getCarbonTableIdentifier());
-
-    for (int i = 0; i < carbonTable.getPartitionCount(); i++) {
-      String segmentPath = carbonTablePath.getCarbonDataDirectoryPath(i + "", currentLoad + "");
-      deleteStorePath(segmentPath);
+  /**
+   * strategy for assign blocks to nodes/executors
+   */
+  public enum BlockAssignmentStrategy {
+    BLOCK_NUM_FIRST("Assign blocks to node base on number of blocks"),
+    BLOCK_SIZE_FIRST("Assign blocks to node base on data size of blocks");
+    private String name;
+    BlockAssignmentStrategy(String name) {
+      this.name = name;
     }
+
+    @Override
+    public String toString() {
+      return this.getClass().getSimpleName() + ':' + this.name;
+    }
+  }
+
+  public static void deleteSegment(CarbonLoadModel loadModel, int currentLoad) {
+    String segmentPath = CarbonTablePath.getSegmentPath(
+        loadModel.getTablePath(), currentLoad + "");
+    deleteStorePath(segmentPath);
   }
 
   /**
@@ -92,33 +104,26 @@ public final class CarbonLoaderUtil {
    */
   public static boolean isValidSegment(CarbonLoadModel loadModel,
       int currentLoad) {
-    CarbonTable carbonTable = loadModel.getCarbonDataLoadSchema()
-        .getCarbonTable();
-    CarbonTablePath carbonTablePath = CarbonStorePath.getCarbonTablePath(
-        loadModel.getTablePath(), carbonTable.getCarbonTableIdentifier());
 
     int fileCount = 0;
-    int partitionCount = carbonTable.getPartitionCount();
-    for (int i = 0; i < partitionCount; i++) {
-      String segmentPath = carbonTablePath.getCarbonDataDirectoryPath(i + "",
-          currentLoad + "");
-      CarbonFile carbonFile = FileFactory.getCarbonFile(segmentPath,
-          FileFactory.getFileType(segmentPath));
-      CarbonFile[] files = carbonFile.listFiles(new CarbonFileFilter() {
+    String segmentPath = CarbonTablePath.getSegmentPath(
+        loadModel.getTablePath(), currentLoad + "");
+    CarbonFile carbonFile = FileFactory.getCarbonFile(segmentPath,
+        FileFactory.getFileType(segmentPath));
+    CarbonFile[] files = carbonFile.listFiles(new CarbonFileFilter() {
 
-        @Override
-        public boolean accept(CarbonFile file) {
-          return file.getName().endsWith(
-              CarbonTablePath.getCarbonIndexExtension())
-              || file.getName().endsWith(
-              CarbonTablePath.getCarbonDataExtension());
-        }
-
-      });
-      fileCount += files.length;
-      if (files.length > 0) {
-        return true;
+      @Override
+      public boolean accept(CarbonFile file) {
+        return file.getName().endsWith(
+            CarbonTablePath.getCarbonIndexExtension())
+            || file.getName().endsWith(
+            CarbonTablePath.getCarbonDataExtension());
       }
+
+    });
+    fileCount += files.length;
+    if (files.length > 0) {
+      return true;
     }
     if (fileCount == 0) {
       return false;
@@ -150,17 +155,86 @@ public final class CarbonLoaderUtil {
   public static boolean recordNewLoadMetadata(LoadMetadataDetails newMetaEntry,
       CarbonLoadModel loadModel, boolean loadStartEntry, boolean insertOverwrite)
       throws IOException {
-    boolean status = false;
-    AbsoluteTableIdentifier absoluteTableIdentifier =
-        loadModel.getCarbonDataLoadSchema().getCarbonTable().getAbsoluteTableIdentifier();
-    CarbonTablePath carbonTablePath = CarbonStorePath.getCarbonTablePath(absoluteTableIdentifier);
-    String metadataPath = carbonTablePath.getMetadataDirectoryPath();
-    FileType fileType = FileFactory.getFileType(metadataPath);
-    if (!FileFactory.isFileExist(metadataPath, fileType)) {
-      FileFactory.mkdirs(metadataPath, fileType);
+    return recordNewLoadMetadata(newMetaEntry, loadModel, loadStartEntry, insertOverwrite, "");
+  }
+
+  /**
+   * This API deletes the content of the non Transactional Tables when insert overwrite is set true.
+   *
+   * @param loadModel
+   * @throws IOException
+   */
+  public static void deleteNonTransactionalTableForInsertOverwrite(final CarbonLoadModel loadModel)
+      throws IOException {
+    // We need to delete the content of the Table Path Folder except the
+    // Newly added file.
+    List<String> filesToBeDeleted = new ArrayList<>();
+    CarbonFile carbonFile = FileFactory.getCarbonFile(loadModel.getTablePath());
+    CarbonFile[] filteredList = carbonFile.listFiles(new CarbonFileFilter() {
+      @Override public boolean accept(CarbonFile file) {
+        return !file.getName().contains(loadModel.getFactTimeStamp() + "");
+      }
+    });
+    for (CarbonFile file : filteredList) {
+      filesToBeDeleted.add(file.getAbsolutePath());
     }
-    String tableStatusPath = carbonTablePath.getTableStatusFilePath();
-    SegmentStatusManager segmentStatusManager = new SegmentStatusManager(absoluteTableIdentifier);
+
+    deleteFiles(filesToBeDeleted);
+  }
+
+  /**
+   * This API will write the load level metadata for the loadmanagement module inorder to
+   * manage the load and query execution management smoothly.
+   *
+   * @param newMetaEntry
+   * @param loadModel
+   * @param uuid
+   * @return boolean which determines whether status update is done or not.
+   * @throws IOException
+   */
+  public static boolean recordNewLoadMetadata(LoadMetadataDetails newMetaEntry,
+      final CarbonLoadModel loadModel, boolean loadStartEntry, boolean insertOverwrite, String uuid)
+      throws IOException {
+    // For Non Transactional tables no need to update the the Table Status file.
+    if (!loadModel.isCarbonTransactionalTable()) {
+      return true;
+    }
+
+    return recordNewLoadMetadata(newMetaEntry, loadModel, loadStartEntry, insertOverwrite, uuid,
+        new ArrayList<Segment>(), new ArrayList<Segment>());
+  }
+
+  /**
+   * This API will write the load level metadata for the loadmanagement module inorder to
+   * manage the load and query execution management smoothly.
+   *
+   * @param newMetaEntry
+   * @param loadModel
+   * @param uuid
+   * @return boolean which determines whether status update is done or not.
+   * @throws IOException
+   */
+  public static boolean recordNewLoadMetadata(LoadMetadataDetails newMetaEntry,
+      CarbonLoadModel loadModel, boolean loadStartEntry, boolean insertOverwrite, String uuid,
+      List<Segment> segmentsToBeDeleted, List<Segment> segmentFilesTobeUpdated) throws IOException {
+    boolean status = false;
+    AbsoluteTableIdentifier identifier =
+        loadModel.getCarbonDataLoadSchema().getCarbonTable().getAbsoluteTableIdentifier();
+    if (loadModel.isCarbonTransactionalTable()) {
+      String metadataPath = CarbonTablePath.getMetadataPath(identifier.getTablePath());
+      FileType fileType = FileFactory.getFileType(metadataPath);
+      if (!FileFactory.isFileExist(metadataPath, fileType)) {
+        FileFactory.mkdirs(metadataPath, fileType);
+      }
+    }
+    String tableStatusPath;
+    if (loadModel.getCarbonDataLoadSchema().getCarbonTable().isChildDataMap() && !uuid.isEmpty()) {
+      tableStatusPath = CarbonTablePath.getTableStatusFilePathWithUUID(
+          identifier.getTablePath(), uuid);
+    } else {
+      tableStatusPath = CarbonTablePath.getTableStatusFilePath(identifier.getTablePath());
+    }
+    SegmentStatusManager segmentStatusManager = new SegmentStatusManager(identifier);
     ICarbonLock carbonLock = segmentStatusManager.getTableStatusLock();
     int retryCount = CarbonLockUtil
         .getLockProperty(CarbonCommonConstants.NUMBER_OF_TRIES_FOR_CONCURRENT_LOCK,
@@ -174,7 +248,8 @@ public final class CarbonLoaderUtil {
             "Acquired lock for table" + loadModel.getDatabaseName() + "." + loadModel.getTableName()
                 + " for table status updation");
         LoadMetadataDetails[] listOfLoadFolderDetailsArray =
-            SegmentStatusManager.readLoadMetadata(carbonTablePath.getMetadataDirectoryPath());
+            SegmentStatusManager.readLoadMetadata(
+                CarbonTablePath.getMetadataPath(identifier.getTablePath()));
         List<LoadMetadataDetails> listOfLoadFolderDetails =
             new ArrayList<>(CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);
         List<CarbonFile> staleFolders = new ArrayList<>();
@@ -199,10 +274,14 @@ public final class CarbonLoaderUtil {
           // 2. If load or insert into operation is in progress and insert overwrite operation
           // is triggered
           for (LoadMetadataDetails entry : listOfLoadFolderDetails) {
-            if (entry.getSegmentStatus() == SegmentStatus.INSERT_OVERWRITE_IN_PROGRESS) {
+            if (entry.getSegmentStatus() == SegmentStatus.INSERT_OVERWRITE_IN_PROGRESS
+                && SegmentStatusManager.isLoadInProgress(
+                    identifier, entry.getLoadName())) {
               throw new RuntimeException("Already insert overwrite is in progress");
             } else if (newMetaEntry.getSegmentStatus() == SegmentStatus.INSERT_OVERWRITE_IN_PROGRESS
-                && entry.getSegmentStatus() == SegmentStatus.INSERT_IN_PROGRESS) {
+                && entry.getSegmentStatus() == SegmentStatus.INSERT_IN_PROGRESS
+                && SegmentStatusManager.isLoadInProgress(
+                    identifier, entry.getLoadName())) {
               throw new RuntimeException("Already insert into or load is in progress");
             }
           }
@@ -212,20 +291,14 @@ public final class CarbonLoaderUtil {
           // existing entry needs to be overwritten as the entry will exist with some
           // intermediate status
           int indexToOverwriteNewMetaEntry = 0;
-          Boolean anyLoadInProgress = false;
+          boolean found = false;
           for (LoadMetadataDetails entry : listOfLoadFolderDetails) {
-            if (entry.getSegmentStatus().equals(SegmentStatus.INSERT_OVERWRITE_IN_PROGRESS)) {
-              anyLoadInProgress = true;
-            }
             if (entry.getLoadName().equals(newMetaEntry.getLoadName())
                 && entry.getLoadStartTime() == newMetaEntry.getLoadStartTime()) {
+              found = true;
               break;
             }
             indexToOverwriteNewMetaEntry++;
-          }
-          if (listOfLoadFolderDetails.get(indexToOverwriteNewMetaEntry).getSegmentStatus() ==
-              SegmentStatus.MARKED_FOR_DELETE && anyLoadInProgress) {
-            throw new RuntimeException("It seems insert overwrite has been issued during load");
           }
           if (insertOverwrite) {
             for (LoadMetadataDetails entry : listOfLoadFolderDetails) {
@@ -233,16 +306,33 @@ public final class CarbonLoaderUtil {
                 entry.setSegmentStatus(SegmentStatus.MARKED_FOR_DELETE);
                 // For insert overwrite, we will delete the old segment folder immediately
                 // So collect the old segments here
-                addToStaleFolders(carbonTablePath, staleFolders, entry);
+                addToStaleFolders(identifier, staleFolders, entry);
               }
             }
+          }
+          if (!found) {
+            LOGGER.error("Entry not found to update " + newMetaEntry + " From list :: "
+                + listOfLoadFolderDetails);
+            throw new IOException("Entry not found to update in the table status file");
           }
           listOfLoadFolderDetails.set(indexToOverwriteNewMetaEntry, newMetaEntry);
         }
         // when no records are inserted then newSegmentEntry will be SegmentStatus.MARKED_FOR_DELETE
         // so empty segment folder should be deleted
         if (newMetaEntry.getSegmentStatus() == SegmentStatus.MARKED_FOR_DELETE) {
-          addToStaleFolders(carbonTablePath, staleFolders, newMetaEntry);
+          addToStaleFolders(identifier, staleFolders, newMetaEntry);
+        }
+
+        for (LoadMetadataDetails detail: listOfLoadFolderDetails) {
+          // if the segments is in the list of marked for delete then update the status.
+          if (segmentsToBeDeleted.contains(new Segment(detail.getLoadName(), null))) {
+            detail.setSegmentStatus(SegmentStatus.MARKED_FOR_DELETE);
+          } else if (segmentFilesTobeUpdated
+              .contains(Segment.toSegment(detail.getLoadName(), null))) {
+            detail.setSegmentFile(
+                detail.getLoadName() + "_" + newMetaEntry.getUpdateStatusFileName()
+                    + CarbonTablePath.SEGMENT_EXT);
+          }
         }
 
         SegmentStatusManager.writeLoadDetailsIntoFile(tableStatusPath, listOfLoadFolderDetails
@@ -276,9 +366,10 @@ public final class CarbonLoaderUtil {
     return status;
   }
 
-  private static void addToStaleFolders(CarbonTablePath carbonTablePath,
+  private static void addToStaleFolders(AbsoluteTableIdentifier identifier,
       List<CarbonFile> staleFolders, LoadMetadataDetails entry) throws IOException {
-    String path = carbonTablePath.getCarbonDataDirectoryPath("0", entry.getLoadName());
+    String path = CarbonTablePath.getSegmentPath(
+        identifier.getTablePath(), entry.getLoadName());
     // add to the deletion list only if file exist else HDFS file system will throw
     // exception while deleting the file if file path does not exist
     if (FileFactory.isFileExist(path, FileFactory.getFileType(path))) {
@@ -304,11 +395,9 @@ public final class CarbonLoaderUtil {
     loadMetadataDetails.setLoadStartTime(loadStartTime);
   }
 
-  public static void writeLoadMetadata(AbsoluteTableIdentifier absoluteTableIdentifier,
+  public static void writeLoadMetadata(AbsoluteTableIdentifier identifier,
       List<LoadMetadataDetails> listOfLoadFolderDetails) throws IOException {
-    CarbonTablePath carbonTablePath =
-        CarbonStorePath.getCarbonTablePath(absoluteTableIdentifier);
-    String dataLoadLocation = carbonTablePath.getTableStatusFilePath();
+    String dataLoadLocation = CarbonTablePath.getTableStatusFilePath(identifier.getTablePath());
 
     DataOutputStream dataOutputStream;
     Gson gsonObjectToWrite = new Gson();
@@ -318,7 +407,6 @@ public final class CarbonLoaderUtil {
         new AtomicFileOperationsImpl(dataLoadLocation, FileFactory.getFileType(dataLoadLocation));
 
     try {
-
       dataOutputStream = writeOperation.openForWrite(FileWriteOperation.OVERWRITE);
       brWriter = new BufferedWriter(new OutputStreamWriter(dataOutputStream,
               Charset.forName(CarbonCommonConstants.DEFAULT_CHARSET)));
@@ -338,15 +426,6 @@ public final class CarbonLoaderUtil {
       writeOperation.close();
     }
 
-  }
-
-  public static String readCurrentTime() {
-    SimpleDateFormat sdf = new SimpleDateFormat(CarbonCommonConstants.CARBON_TIMESTAMP);
-    String date = null;
-
-    date = sdf.format(new Date());
-
-    return date;
   }
 
   public static boolean isValidEscapeSequence(String escapeChar) {
@@ -371,7 +450,7 @@ public final class CarbonLoaderUtil {
 
 
   public static void readAndUpdateLoadProgressInTableMeta(CarbonLoadModel model,
-      boolean insertOverwrite) throws IOException {
+      boolean insertOverwrite, String uuid) throws IOException {
     LoadMetadataDetails newLoadMetaEntry = new LoadMetadataDetails();
     SegmentStatus status = SegmentStatus.INSERT_IN_PROGRESS;
     if (insertOverwrite) {
@@ -379,22 +458,30 @@ public final class CarbonLoaderUtil {
     }
 
     // reading the start time of data load.
-    long loadStartTime = CarbonUpdateUtil.readCurrentTime();
-    model.setFactTimeStamp(loadStartTime);
+    if (model.getFactTimeStamp() == 0) {
+      long loadStartTime = CarbonUpdateUtil.readCurrentTime();
+      model.setFactTimeStamp(loadStartTime);
+    }
     CarbonLoaderUtil
         .populateNewLoadMetaEntry(newLoadMetaEntry, status, model.getFactTimeStamp(), false);
-    boolean entryAdded =
-        CarbonLoaderUtil.recordNewLoadMetadata(newLoadMetaEntry, model, true, insertOverwrite);
+
+    boolean entryAdded = CarbonLoaderUtil
+        .recordNewLoadMetadata(newLoadMetaEntry, model, true, insertOverwrite, uuid);
     if (!entryAdded) {
       throw new IOException("Dataload failed due to failure in table status updation for "
           + model.getTableName());
     }
   }
 
+  public static void readAndUpdateLoadProgressInTableMeta(CarbonLoadModel model,
+      boolean insertOverwrite) throws IOException {
+    readAndUpdateLoadProgressInTableMeta(model, insertOverwrite, "");
+  }
+
   /**
    * This method will update the load failure entry in the table status file
    */
-  public static void updateTableStatusForFailure(CarbonLoadModel model)
+  public static void updateTableStatusForFailure(CarbonLoadModel model, String uuid)
       throws IOException {
     // in case if failure the load status should be "Marked for delete" so that it will be taken
     // care during clean up
@@ -406,12 +493,20 @@ public final class CarbonLoaderUtil {
     }
     CarbonLoaderUtil
         .populateNewLoadMetaEntry(loadMetaEntry, loadStatus, model.getFactTimeStamp(), true);
-    boolean entryAdded =
-        CarbonLoaderUtil.recordNewLoadMetadata(loadMetaEntry, model, false, false);
+    boolean entryAdded = CarbonLoaderUtil.recordNewLoadMetadata(
+        loadMetaEntry, model, false, false, uuid);
     if (!entryAdded) {
       throw new IOException(
           "Failed to update failure entry in table status for " + model.getTableName());
     }
+  }
+
+  /**
+   * This method will update the load failure entry in the table status file with empty uuid.
+   */
+  public static void updateTableStatusForFailure(CarbonLoadModel model)
+      throws IOException {
+    updateTableStatusForFailure(model, "");
   }
 
   public static Dictionary getDictionary(DictionaryColumnUniqueIdentifier columnIdentifier)
@@ -440,9 +535,9 @@ public final class CarbonLoaderUtil {
   public static Map<String, List<List<Distributable>>> nodeBlockTaskMapping(
       List<Distributable> blockInfos, int noOfNodesInput, int parallelism,
       List<String> activeNode) {
-
     Map<String, List<Distributable>> mapOfNodes =
-        CarbonLoaderUtil.nodeBlockMapping(blockInfos, noOfNodesInput, activeNode);
+        CarbonLoaderUtil.nodeBlockMapping(blockInfos, noOfNodesInput, activeNode,
+            BlockAssignmentStrategy.BLOCK_NUM_FIRST);
     int taskPerNode = parallelism / mapOfNodes.size();
     //assigning non zero value to noOfTasksPerNode
     int noOfTasksPerNode = taskPerNode == 0 ? 1 : taskPerNode;
@@ -458,7 +553,8 @@ public final class CarbonLoaderUtil {
    */
   public static Map<String, List<Distributable>> nodeBlockMapping(List<Distributable> blockInfos,
       int noOfNodesInput) {
-    return nodeBlockMapping(blockInfos, noOfNodesInput, null);
+    return nodeBlockMapping(blockInfos, noOfNodesInput, null,
+        BlockAssignmentStrategy.BLOCK_NUM_FIRST);
   }
 
   /**
@@ -473,82 +569,59 @@ public final class CarbonLoaderUtil {
   }
 
   /**
-   * the method returns the number of required executors
-   *
-   * @param blockInfos
-   * @return
-   */
-  public static Map<String, List<Distributable>> getRequiredExecutors(
-      List<Distributable> blockInfos) {
-    List<NodeBlockRelation> flattenedList =
-        new ArrayList<NodeBlockRelation>(CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);
-    for (Distributable blockInfo : blockInfos) {
-      try {
-        for (String eachNode : blockInfo.getLocations()) {
-          NodeBlockRelation nbr = new NodeBlockRelation(blockInfo, eachNode);
-          flattenedList.add(nbr);
-        }
-      } catch (IOException e) {
-        throw new RuntimeException("error getting location of block: " + blockInfo.toString(), e);
-      }
-    }
-    // sort the flattened data.
-    Collections.sort(flattenedList);
-    Map<String, List<Distributable>> nodeAndBlockMapping =
-        new LinkedHashMap<String, List<Distributable>>(
-            CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);
-    // from the flattened list create a mapping of node vs Data blocks.
-    createNodeVsBlockMapping(flattenedList, nodeAndBlockMapping);
-    return nodeAndBlockMapping;
-  }
-
-  /**
    * This method will divide the blocks among the nodes as per the data locality
    *
-   * @param blockInfos
+   * @param blockInfos blocks
    * @param noOfNodesInput -1 if number of nodes has to be decided
    *                       based on block location information
-   * @return
+   * @param blockAssignmentStrategy strategy used to assign blocks
+   * @return a map that maps node to blocks
    */
-  public static Map<String, List<Distributable>> nodeBlockMapping(List<Distributable> blockInfos,
-      int noOfNodesInput, List<String> activeNodes) {
+  public static Map<String, List<Distributable>> nodeBlockMapping(
+      List<Distributable> blockInfos, int noOfNodesInput, List<String> activeNodes,
+      BlockAssignmentStrategy blockAssignmentStrategy) {
+    ArrayList<NodeMultiBlockRelation> rtnNode2Blocks = new ArrayList<>();
 
-    Map<String, List<Distributable>> nodeBlocksMap =
-        new HashMap<String, List<Distributable>>(CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);
-
-    List<NodeBlockRelation> flattenedList =
-        new ArrayList<NodeBlockRelation>(CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);
-
-    Set<Distributable> uniqueBlocks =
-        new HashSet<Distributable>(CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);
-    Set<String> nodes = new HashSet<String>(CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);
-
-    createFlattenedListFromMap(blockInfos, flattenedList, uniqueBlocks, nodes);
+    Set<Distributable> uniqueBlocks = new HashSet<>(blockInfos);
+    ArrayList<NodeMultiBlockRelation> originNode2Blocks = createNode2BlocksMapping(blockInfos);
+    Set<String> nodes = new HashSet<>(originNode2Blocks.size());
+    for (NodeMultiBlockRelation relation : originNode2Blocks) {
+      nodes.add(relation.getNode());
+    }
 
     int noofNodes = (-1 == noOfNodesInput) ? nodes.size() : noOfNodesInput;
     if (null != activeNodes) {
       noofNodes = activeNodes.size();
     }
-    int blocksPerNode = blockInfos.size() / noofNodes;
-    blocksPerNode = blocksPerNode <= 0 ? 1 : blocksPerNode;
 
-    // sort the flattened data.
-    Collections.sort(flattenedList);
+    // calculate the average expected size for each node
+    long sizePerNode = 0;
+    if (BlockAssignmentStrategy.BLOCK_NUM_FIRST == blockAssignmentStrategy) {
+      sizePerNode = blockInfos.size() / noofNodes;
+      sizePerNode = sizePerNode <= 0 ? 1 : sizePerNode;
+    } else if (BlockAssignmentStrategy.BLOCK_SIZE_FIRST == blockAssignmentStrategy) {
+      long totalFileSize = 0;
+      for (Distributable blockInfo : uniqueBlocks) {
+        totalFileSize += ((TableBlockInfo) blockInfo).getBlockLength();
+      }
+      sizePerNode = totalFileSize / noofNodes;
+    }
 
-    Map<String, List<Distributable>> nodeAndBlockMapping =
-        new LinkedHashMap<String, List<Distributable>>(
-            CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);
-
-    // from the flattened list create a mapping of node vs Data blocks.
-    createNodeVsBlockMapping(flattenedList, nodeAndBlockMapping);
-
-    // so now we have a map of node vs blocks. allocate the block as per the order
-    createOutputMap(nodeBlocksMap, blocksPerNode, uniqueBlocks, nodeAndBlockMapping, activeNodes);
+    // assign blocks to each node
+    assignBlocksByDataLocality(rtnNode2Blocks, sizePerNode, uniqueBlocks, originNode2Blocks,
+        activeNodes, blockAssignmentStrategy);
 
     // if any blocks remain then assign them to nodes in round robin.
-    assignLeftOverBlocks(nodeBlocksMap, uniqueBlocks, blocksPerNode, activeNodes);
+    assignLeftOverBlocks(rtnNode2Blocks, uniqueBlocks, sizePerNode, activeNodes,
+        blockAssignmentStrategy);
 
-    return nodeBlocksMap;
+    // convert
+    Map<String, List<Distributable>> rtnNodeBlocksMap =
+        new HashMap<String, List<Distributable>>(CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);
+    for (NodeMultiBlockRelation relation : rtnNode2Blocks) {
+      rtnNodeBlocksMap.put(relation.getNode(), relation.getBlocks());
+    }
+    return rtnNodeBlocksMap;
   }
 
   /**
@@ -623,92 +696,207 @@ public final class CarbonLoaderUtil {
   }
 
   /**
-   * If any left over data blocks are present then assign those to nodes in round robin way.
-   *
-   * @param outputMap
-   * @param uniqueBlocks
+   * If any left over data blocks are present then assign those to nodes in round robin way. This
+   * will not obey the data locality.
    */
-  private static void assignLeftOverBlocks(Map<String, List<Distributable>> outputMap,
-      Set<Distributable> uniqueBlocks, int noOfBlocksPerNode, List<String> activeNodes) {
+  private static void assignLeftOverBlocks(ArrayList<NodeMultiBlockRelation> outputMap,
+      Set<Distributable> leftOverBlocks, long expectedSizePerNode, List<String> activeNodes,
+      BlockAssignmentStrategy blockAssignmentStrategy) {
+    Map<String, Integer> node2Idx = new HashMap<>(outputMap.size());
+    for (int idx = 0; idx < outputMap.size(); idx++) {
+      node2Idx.put(outputMap.get(idx).getNode(), idx);
+    }
 
+    // iterate all the nodes and try to allocate blocks to the nodes
     if (activeNodes != null) {
       for (String activeNode : activeNodes) {
-        List<Distributable> blockLst = outputMap.get(activeNode);
-        if (null == blockLst) {
+        if (LOGGER.isDebugEnabled()) {
+          LOGGER.debug("Second assignment iteration: assign for executor: " + activeNode);
+        }
+
+        Integer idx;
+        List<Distributable> blockLst;
+        if (node2Idx.containsKey(activeNode)) {
+          idx = node2Idx.get(activeNode);
+          blockLst = outputMap.get(idx).getBlocks();
+        } else {
+          idx = node2Idx.size();
           blockLst = new ArrayList<Distributable>(CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);
         }
-        populateBlocks(uniqueBlocks, noOfBlocksPerNode, blockLst);
-        if (blockLst.size() > 0) {
-          outputMap.put(activeNode, blockLst);
+        populateBlocks(leftOverBlocks, expectedSizePerNode, blockLst, blockAssignmentStrategy);
+
+        if (!node2Idx.containsKey(activeNode) && blockLst.size() > 0) {
+          outputMap.add(idx, new NodeMultiBlockRelation(activeNode, blockLst));
+          node2Idx.put(activeNode, idx);
         }
       }
     } else {
-      for (Map.Entry<String, List<Distributable>> entry : outputMap.entrySet()) {
-        List<Distributable> blockLst = entry.getValue();
-        populateBlocks(uniqueBlocks, noOfBlocksPerNode, blockLst);
+      for (NodeMultiBlockRelation entry : outputMap) {
+        List<Distributable> blockLst = entry.getBlocks();
+        populateBlocks(leftOverBlocks, expectedSizePerNode, blockLst, blockAssignmentStrategy);
       }
-
     }
 
-    for (Map.Entry<String, List<Distributable>> entry : outputMap.entrySet()) {
-      Iterator<Distributable> blocks = uniqueBlocks.iterator();
-      if (blocks.hasNext()) {
-        Distributable block = blocks.next();
-        List<Distributable> blockLst = entry.getValue();
-        blockLst.add(block);
-        blocks.remove();
-      }
+    // if there is still blocks left, allocate them in round robin manner to each nodes
+    assignBlocksUseRoundRobin(outputMap, leftOverBlocks, blockAssignmentStrategy);
+  }
+
+  /**
+   * assign remaining blocks to nodes
+   *
+   * @param remainingBlocks blocks to be allocated
+   * @param expectedSizePerNode expected size for each node
+   * @param blockLst destination for the blocks to be allocated
+   * @param blockAssignmentStrategy block assignment stretegy
+   */
+  private static void populateBlocks(Set<Distributable> remainingBlocks,
+      long expectedSizePerNode, List<Distributable> blockLst,
+      BlockAssignmentStrategy blockAssignmentStrategy) {
+    switch (blockAssignmentStrategy) {
+      case BLOCK_NUM_FIRST:
+        populateBlocksByNum(remainingBlocks, expectedSizePerNode, blockLst);
+        break;
+      case BLOCK_SIZE_FIRST:
+        populateBlocksBySize(remainingBlocks, expectedSizePerNode, blockLst);
+        break;
+      default:
+        throw new IllegalArgumentException(
+            "Unsupported block assignment strategy: " + blockAssignmentStrategy);
     }
   }
 
   /**
-   * The method populate the blockLst to be allocate to a specific node.
-   * @param uniqueBlocks
-   * @param noOfBlocksPerNode
-   * @param blockLst
+   * Taken N number of distributable blocks from {@param remainingBlocks} and add them to output
+   * {@param blockLst}. After added, the total number of {@param blockLst} is less
+   * than {@param expectedSizePerNode}.
    */
-  private static void populateBlocks(Set<Distributable> uniqueBlocks, int noOfBlocksPerNode,
-      List<Distributable> blockLst) {
-    Iterator<Distributable> blocks = uniqueBlocks.iterator();
-    //if the node is already having the per block nodes then avoid assign the extra blocks
-    if (blockLst.size() == noOfBlocksPerNode) {
+  private static void populateBlocksByNum(Set<Distributable> remainingBlocks,
+      long expectedSizePerNode, List<Distributable> blockLst) {
+    Iterator<Distributable> blocks = remainingBlocks.iterator();
+    // if the node is already having the per block nodes then avoid assign the extra blocks
+    if (blockLst.size() == expectedSizePerNode) {
       return;
     }
     while (blocks.hasNext()) {
       Distributable block = blocks.next();
       blockLst.add(block);
       blocks.remove();
-      if (blockLst.size() >= noOfBlocksPerNode) {
+      if (blockLst.size() >= expectedSizePerNode) {
         break;
       }
     }
   }
 
   /**
-   * To create the final output of the Node and Data blocks
-   *
-   * @param outputMap
-   * @param blocksPerNode
-   * @param uniqueBlocks
-   * @param nodeAndBlockMapping
-   * @param activeNodes
+   * Taken N number of distributable blocks from {@param remainingBlocks} and add them to output
+   * {@param blockLst}. After added, the total accumulated block size of {@param blockLst}
+   * is less than {@param expectedSizePerNode}.
    */
-  private static void createOutputMap(Map<String, List<Distributable>> outputMap, int blocksPerNode,
-      Set<Distributable> uniqueBlocks, Map<String, List<Distributable>> nodeAndBlockMapping,
-      List<String> activeNodes) {
-
-    ArrayList<NodeMultiBlockRelation> multiBlockRelations =
-        new ArrayList<>(nodeAndBlockMapping.size());
-    for (Map.Entry<String, List<Distributable>> entry : nodeAndBlockMapping.entrySet()) {
-      multiBlockRelations.add(new NodeMultiBlockRelation(entry.getKey(), entry.getValue()));
+  private static void populateBlocksBySize(Set<Distributable> remainingBlocks,
+      long expectedSizePerNode, List<Distributable> blockLst) {
+    Iterator<Distributable> blocks = remainingBlocks.iterator();
+    //if the node is already having the avg node size then avoid assign the extra blocks
+    long fileSize = 0;
+    for (Distributable block : blockLst) {
+      fileSize += ((TableBlockInfo) block).getBlockLength();
     }
-    // sort nodes based on number of blocks per node, so that nodes having lesser blocks
-    // are assigned first
-    Collections.sort(multiBlockRelations);
+    if (fileSize >= expectedSizePerNode) {
+      LOGGER.debug("Capacity is full, skip allocate blocks on this node");
+      return;
+    }
 
-    for (NodeMultiBlockRelation nodeMultiBlockRelation : multiBlockRelations) {
+    while (blocks.hasNext()) {
+      Distributable block = blocks.next();
+      long thisBlockSize = ((TableBlockInfo) block).getBlockLength();
+      if (fileSize < expectedSizePerNode) {
+        // `fileSize==0` means there are no blocks assigned to this node before
+        if (fileSize == 0 || fileSize + thisBlockSize <= expectedSizePerNode * 1.1D) {
+          blockLst.add(block);
+          if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Second Assignment iteration: "
+                + ((TableBlockInfo) block).getFilePath() + "-"
+                + ((TableBlockInfo) block).getBlockLength() + "-->currentNode");
+          }
+          fileSize += thisBlockSize;
+          blocks.remove();
+        }
+      } else {
+        break;
+      }
+    }
+  }
+
+  /**
+   * allocate the blocks in round robin manner
+   */
+  private static void assignBlocksUseRoundRobin(ArrayList<NodeMultiBlockRelation> node2Blocks,
+      Set<Distributable> remainingBlocks, BlockAssignmentStrategy blockAssignmentStrategy) {
+    switch (blockAssignmentStrategy) {
+      case BLOCK_NUM_FIRST:
+        roundRobinAssignBlocksByNum(node2Blocks, remainingBlocks);
+        break;
+      case BLOCK_SIZE_FIRST:
+        roundRobinAssignBlocksBySize(node2Blocks, remainingBlocks);
+        break;
+      default:
+        throw new IllegalArgumentException("Unsupported block assignment strategy: "
+            + blockAssignmentStrategy);
+    }
+  }
+
+  private static void roundRobinAssignBlocksByNum(ArrayList<NodeMultiBlockRelation> outputMap,
+      Set<Distributable> remainingBlocks) {
+    for (NodeMultiBlockRelation relation: outputMap) {
+      Iterator<Distributable> blocks = remainingBlocks.iterator();
+      if (blocks.hasNext()) {
+        Distributable block = blocks.next();
+        List<Distributable> blockLst = relation.getBlocks();
+        blockLst.add(block);
+        blocks.remove();
+      }
+    }
+  }
+
+  private static void roundRobinAssignBlocksBySize(ArrayList<NodeMultiBlockRelation> outputMap,
+      Set<Distributable> remainingBlocks) {
+    Iterator<Distributable> blocks = remainingBlocks.iterator();
+    while (blocks.hasNext()) {
+      // sort the allocated node-2-blocks in ascending order, the total data size of first one is
+      // the smallest, so we assign this block to it.
+      Collections.sort(outputMap, NodeMultiBlockRelation.DATA_SIZE_ASC_COMPARATOR);
+      Distributable block = blocks.next();
+      List<Distributable> blockLst = outputMap.get(0).getBlocks();
+      blockLst.add(block);
+      if (LOGGER.isDebugEnabled()) {
+        LOGGER.debug("RoundRobin assignment iteration: "
+            + ((TableBlockInfo) block).getFilePath() + "-"
+            + ((TableBlockInfo) block).getBlockLength() + "-->" + outputMap.get(0).getNode());
+      }
+      blocks.remove();
+    }
+  }
+  /**
+   * allocate distributable blocks to nodes based on data locality
+   */
+  private static void assignBlocksByDataLocality(
+      ArrayList<NodeMultiBlockRelation> outputNode2Blocks,
+      long expectedSizePerNode, Set<Distributable> remainingBlocks,
+      List<NodeMultiBlockRelation> inputNode2Blocks, List<String> activeNodes,
+      BlockAssignmentStrategy blockAssignmentStrategy) {
+    if (BlockAssignmentStrategy.BLOCK_SIZE_FIRST == blockAssignmentStrategy) {
+      // sort nodes based on data size of all blocks per node, so that nodes having bigger size
+      // are assigned first
+      Collections.sort(inputNode2Blocks, NodeMultiBlockRelation.DATA_SIZE_DESC_COMPARATOR);
+    } else {
+      // sort nodes based on number of blocks per node, so that nodes having lesser blocks
+      // are assigned first
+      Collections.sort(inputNode2Blocks);
+    }
+
+    Map<String, Integer> executor2Idx = new HashMap<>();
+    for (NodeMultiBlockRelation nodeMultiBlockRelation : inputNode2Blocks) {
       String nodeName = nodeMultiBlockRelation.getNode();
-      //assign the block to the node only if the node is active
+      // assign the block to the node only if the node is active
       String activeExecutor = nodeName;
       if (null != activeNodes) {
         activeExecutor = getActiveExecutor(activeNodes, nodeName);
@@ -716,29 +904,79 @@ public final class CarbonLoaderUtil {
           continue;
         }
       }
-      // this loop will be for each NODE
-      int nodeCapacity = 0;
+      if (LOGGER.isDebugEnabled()) {
+        LOGGER.debug("First Assignment iteration: assign for executor: " + activeExecutor);
+      }
+
+      List<Distributable> blocksInThisNode = nodeMultiBlockRelation.getBlocks();
+      if (BlockAssignmentStrategy.BLOCK_SIZE_FIRST == blockAssignmentStrategy) {
+        // sort blocks based on block size, so that bigger blocks will be assigned first
+        Collections.sort(blocksInThisNode, TableBlockInfo.DATA_SIZE_DESC_COMPARATOR);
+      }
+
+      long nodeCapacity = 0;
       // loop thru blocks of each Node
       for (Distributable block : nodeMultiBlockRelation.getBlocks()) {
+        if (!remainingBlocks.contains(block)) {
+          // this block has been added before
+          continue;
+        }
+        // this is the first time to add block to this node, initialize it
+        if (!executor2Idx.containsKey(activeExecutor)) {
+          Integer idx = executor2Idx.size();
+          outputNode2Blocks.add(idx, new NodeMultiBlockRelation(activeExecutor,
+              new ArrayList<Distributable>(CarbonCommonConstants.DEFAULT_COLLECTION_SIZE)));
+          executor2Idx.put(activeExecutor, idx);
+        }
 
-        // check if this is already assigned.
-        if (uniqueBlocks.contains(block)) {
-
-          if (null == outputMap.get(activeExecutor)) {
-            List<Distributable> list =
-                new ArrayList<Distributable>(CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);
-            outputMap.put(activeExecutor, list);
-          }
-          // assign this block to this node if node has capacity left
-          if (nodeCapacity < blocksPerNode) {
-            List<Distributable> infos = outputMap.get(activeExecutor);
+        // assign this block to this node if node has capacity left
+        if (BlockAssignmentStrategy.BLOCK_NUM_FIRST == blockAssignmentStrategy) {
+          if (nodeCapacity < expectedSizePerNode) {
+            Integer idx = executor2Idx.get(activeExecutor);
+            List<Distributable> infos = outputNode2Blocks.get(idx).getBlocks();
             infos.add(block);
             nodeCapacity++;
-            uniqueBlocks.remove(block);
+            if (LOGGER.isDebugEnabled()) {
+              try {
+                LOGGER.debug("First Assignment iteration: block("
+                    + StringUtils.join(block.getLocations(), ", ")
+                    + ")-->" + activeExecutor);
+              } catch (IOException e) {
+                LOGGER.error(e);
+              }
+            }
+            remainingBlocks.remove(block);
           } else {
             // No need to continue loop as node is full
             break;
           }
+        } else if (BlockAssignmentStrategy.BLOCK_SIZE_FIRST == blockAssignmentStrategy) {
+          long thisBlockSize = ((TableBlockInfo) block).getBlockLength();
+          // `nodeCapacity == 0` means that there is a huge block that already exceed the
+          // `expectedSize` of the node, so we have to assign it to some node, otherwise it will
+          // be assigned in the last RoundRobin iteration.
+          if (nodeCapacity == 0 || nodeCapacity < expectedSizePerNode) {
+            if (nodeCapacity == 0 || nodeCapacity + thisBlockSize <= expectedSizePerNode * 1.05D) {
+              Integer idx = executor2Idx.get(activeExecutor);
+              List<Distributable> blocks = outputNode2Blocks.get(idx).getBlocks();
+              blocks.add(block);
+              nodeCapacity += thisBlockSize;
+              if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug(
+                    "First Assignment iteration: " + ((TableBlockInfo) block).getFilePath() + '-'
+                        + ((TableBlockInfo) block).getBlockLength() + "-->" + activeExecutor);
+              }
+              remainingBlocks.remove(block);
+            }
+            // this block is too big for current node and there are still capacity left
+            // for small files, so continue to allocate block on this node in next iteration.
+          } else {
+            // No need to continue loop as node is full
+            break;
+          }
+        } else {
+          throw new IllegalArgumentException(
+              "Unsupported block assignment strategy: " + blockAssignmentStrategy);
         }
       }
     }
@@ -782,90 +1020,46 @@ public final class CarbonLoaderUtil {
   }
 
   /**
-   * Create the Node and its related blocks Mapping and put in a Map
+   * Create node to blocks mapping
    *
-   * @param flattenedList
-   * @param nodeAndBlockMapping
+   * @param blockInfos input block info
    */
-  private static void createNodeVsBlockMapping(List<NodeBlockRelation> flattenedList,
-      Map<String, List<Distributable>> nodeAndBlockMapping) {
-    for (NodeBlockRelation nbr : flattenedList) {
-      String node = nbr.getNode();
-      List<Distributable> list;
+  private static ArrayList<NodeMultiBlockRelation> createNode2BlocksMapping(
+      List<Distributable> blockInfos) {
+    Map<String, Integer> node2Idx = new HashMap<>();
+    ArrayList<NodeMultiBlockRelation> node2Blocks = new ArrayList<>();
 
-      if (null == nodeAndBlockMapping.get(node)) {
-        list = new ArrayList<>(CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);
-        list.add(nbr.getBlock());
-        nodeAndBlockMapping.put(node, list);
-      } else {
-        list = nodeAndBlockMapping.get(node);
-        list.add(nbr.getBlock());
-      }
-    }
-    /*for resolving performance issue, removed values() with entrySet () iterating the values and
-    sorting it.entrySet will give the logical view for hashMap and we dont query the map twice for
-    each key whereas values () iterate twice*/
-    Iterator<Map.Entry<String, List<Distributable>>> iterator =
-        nodeAndBlockMapping.entrySet().iterator();
-    while (iterator.hasNext()) {
-      Collections.sort(iterator.next().getValue());
-    }
-  }
-
-  /**
-   * Create the flat List i.e flattening of the Map.
-   *
-   * @param blockInfos
-   * @param flattenedList
-   * @param uniqueBlocks
-   */
-  private static void createFlattenedListFromMap(List<Distributable> blockInfos,
-      List<NodeBlockRelation> flattenedList, Set<Distributable> uniqueBlocks,
-      Set<String> nodeList) {
     for (Distributable blockInfo : blockInfos) {
-      // put the blocks in the set
-      uniqueBlocks.add(blockInfo);
-
       try {
-        for (String eachNode : blockInfo.getLocations()) {
-          NodeBlockRelation nbr = new NodeBlockRelation(blockInfo, eachNode);
-          flattenedList.add(nbr);
-          nodeList.add(eachNode);
+        for (final String eachNode : blockInfo.getLocations()) {
+          if (node2Idx.containsKey(eachNode)) {
+            Integer idx = node2Idx.get(eachNode);
+            List<Distributable> blocks = node2Blocks.get(idx).getBlocks();
+            blocks.add(blockInfo);
+          } else {
+            // add blocks to this node for the first time
+            Integer idx = node2Idx.size();
+            List<Distributable> blocks = new ArrayList<>();
+            blocks.add(blockInfo);
+            node2Blocks.add(idx, new NodeMultiBlockRelation(eachNode, blocks));
+            node2Idx.put(eachNode, idx);
+          }
         }
       } catch (IOException e) {
         throw new RuntimeException("error getting location of block: " + blockInfo.toString(), e);
       }
     }
+
+    return node2Blocks;
   }
 
   /**
    * This method will get the store location for the given path, segment id and partition id
    */
   public static void checkAndCreateCarbonDataLocation(String segmentId, CarbonTable carbonTable) {
-    CarbonTableIdentifier carbonTableIdentifier = carbonTable.getCarbonTableIdentifier();
-    CarbonTablePath carbonTablePath =
-        CarbonStorePath.getCarbonTablePath(carbonTable.getTablePath(), carbonTableIdentifier);
-    String segmentFolder = carbonTablePath.getCarbonDataDirectoryPath("0", segmentId);
+    String segmentFolder = CarbonTablePath.getSegmentPath(
+        carbonTable.getTablePath(), segmentId);
     CarbonUtil.checkAndCreateFolder(segmentFolder);
-  }
-
-  /**
-   * This will update the old table status details before clean files to the latest table status.
-   * @param oldList
-   * @param newList
-   * @return
-   */
-  public static List<LoadMetadataDetails> updateLoadMetadataFromOldToNew(
-      LoadMetadataDetails[] oldList, LoadMetadataDetails[] newList) {
-
-    List<LoadMetadataDetails> newListMetadata =
-        new ArrayList<LoadMetadataDetails>(Arrays.asList(newList));
-    for (LoadMetadataDetails oldSegment : oldList) {
-      if ("false".equalsIgnoreCase(oldSegment.getVisibility())) {
-        newListMetadata.get(newListMetadata.indexOf(oldSegment)).setVisibility("false");
-      }
-    }
-    return newListMetadata;
   }
 
   /*
@@ -874,14 +1068,33 @@ public final class CarbonLoaderUtil {
    */
   public static Long addDataIndexSizeIntoMetaEntry(LoadMetadataDetails loadMetadataDetails,
       String segmentId, CarbonTable carbonTable) throws IOException {
-    CarbonTablePath carbonTablePath =
-        CarbonStorePath.getCarbonTablePath((carbonTable.getAbsoluteTableIdentifier()));
-    Map<String, Long> dataIndexSize =
-        CarbonUtil.getDataSizeAndIndexSize(carbonTablePath, segmentId);
+    Map<String, Long> dataIndexSize = CarbonUtil.getDataSizeAndIndexSize(
+        carbonTable.getTablePath(),
+        new Segment(segmentId, loadMetadataDetails.getSegmentFile()));
     Long dataSize = dataIndexSize.get(CarbonCommonConstants.CARBON_TOTAL_DATA_SIZE);
     loadMetadataDetails.setDataSize(String.valueOf(dataSize));
     Long indexSize = dataIndexSize.get(CarbonCommonConstants.CARBON_TOTAL_INDEX_SIZE);
     loadMetadataDetails.setIndexSize(String.valueOf(indexSize));
     return dataSize + indexSize;
+  }
+
+  /**
+   * Merge index files with in the segment of partitioned table
+   * @param segmentId
+   * @param table
+   * @return
+   * @throws IOException
+   */
+  public static String mergeIndexFilesinPartitionedSegment(String segmentId, CarbonTable table)
+      throws IOException {
+    String tablePath = table.getTablePath();
+    return new CarbonIndexFileMergeWriter(table)
+        .mergeCarbonIndexFilesOfSegment(segmentId, tablePath);
+  }
+
+  private static void deleteFiles(List<String> filesToBeDeleted) throws IOException {
+    for (String filePath : filesToBeDeleted) {
+      FileFactory.deleteFile(filePath, FileFactory.getFileType(filePath));
+    }
   }
 }

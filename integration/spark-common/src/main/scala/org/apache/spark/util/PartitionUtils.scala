@@ -21,20 +21,26 @@ import java.text.SimpleDateFormat
 import java.util
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.mapred.JobConf
 import org.apache.hadoop.mapreduce.Job
-import org.apache.spark.sql.execution.command.AlterPartitionModel
+import org.apache.spark.sql.execution.command.{AlterPartitionModel, DataMapField, Field, PartitionerField}
 
+import org.apache.carbondata.core.datamap.Segment
 import org.apache.carbondata.core.datastore.block.{SegmentProperties, TableBlockInfo}
-import org.apache.carbondata.core.metadata.{AbsoluteTableIdentifier, CarbonTableIdentifier}
+import org.apache.carbondata.core.metadata.{AbsoluteTableIdentifier, CarbonTableIdentifier, SegmentFileStore}
 import org.apache.carbondata.core.metadata.schema.PartitionInfo
 import org.apache.carbondata.core.metadata.schema.partition.PartitionType
+import org.apache.carbondata.core.metadata.schema.table.CarbonTable
+import org.apache.carbondata.core.mutate.CarbonUpdateUtil
+import org.apache.carbondata.core.readcommitter.TableStatusReadCommittedScope
 import org.apache.carbondata.core.util.CarbonUtil
 import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.hadoop.CarbonInputSplit
+import org.apache.carbondata.hadoop.api.{CarbonInputFormat, CarbonTableInputFormat}
 import org.apache.carbondata.hadoop.util.CarbonInputFormatUtil
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 import org.apache.carbondata.spark.util.CommonUtil
@@ -128,9 +134,16 @@ object PartitionUtils {
    */
   def getSegmentProperties(identifier: AbsoluteTableIdentifier, segmentId: String,
       partitionIds: List[String], oldPartitionIdList: List[Int],
-      partitionInfo: PartitionInfo): SegmentProperties = {
+      partitionInfo: PartitionInfo,
+      carbonTable: CarbonTable): SegmentProperties = {
     val tableBlockInfoList =
-      getPartitionBlockList(identifier, segmentId, partitionIds, oldPartitionIdList, partitionInfo)
+      getPartitionBlockList(
+        identifier,
+        segmentId,
+        partitionIds,
+        oldPartitionIdList,
+        partitionInfo,
+        carbonTable)
     val footer = CarbonUtil.readMetadatFile(tableBlockInfoList.get(0))
     val segmentProperties = new SegmentProperties(footer.getColumnInTable,
       footer.getSegmentInfo.getColumnCardinality)
@@ -139,13 +152,15 @@ object PartitionUtils {
 
   def getPartitionBlockList(identifier: AbsoluteTableIdentifier, segmentId: String,
       partitionIds: List[String], oldPartitionIdList: List[Int],
-      partitionInfo: PartitionInfo): java.util.List[TableBlockInfo] = {
+      partitionInfo: PartitionInfo,
+      carbonTable: CarbonTable): java.util.List[TableBlockInfo] = {
     val jobConf = new JobConf(new Configuration)
     val job = new Job(jobConf)
     val format = CarbonInputFormatUtil
       .createCarbonTableInputFormat(identifier, partitionIds.asJava, job)
+    CarbonInputFormat.setTableInfo(job.getConfiguration, carbonTable.getTableInfo)
     val splits = format.getSplitsOfOneSegment(job, segmentId,
-      oldPartitionIdList.map(_.asInstanceOf[Integer]).asJava, partitionInfo)
+        oldPartitionIdList.map(_.asInstanceOf[Integer]).asJava, partitionInfo)
     val blockList = splits.asScala.map(_.asInstanceOf[CarbonInputSplit])
     val tableBlockInfoList = CarbonInputSplit.createBlocks(blockList.asJava)
     tableBlockInfoList
@@ -163,10 +178,8 @@ object PartitionUtils {
     val tablePath = carbonLoadModel.getTablePath
     val tableBlockInfoList =
       getPartitionBlockList(identifier, segmentId, partitionIds, oldPartitionIds,
-        partitionInfo).asScala
+        partitionInfo, carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable).asScala
     val pathList: util.List[String] = new util.ArrayList[String]()
-    val carbonTableIdentifier = new CarbonTableIdentifier(dbName, tableName, "")
-    val carbonTablePath = new CarbonTablePath(carbonTableIdentifier, tablePath)
     tableBlockInfoList.foreach{ tableBlockInfo =>
       val path = tableBlockInfo.getFilePath
       val timestamp = CarbonTablePath.DataFileUtil.getTimeStampFromFileName(path)
@@ -179,8 +192,9 @@ object PartitionUtils {
         val batchNo = CarbonTablePath.DataFileUtil.getBatchNoFromTaskNo(taskNo)
         val taskId = CarbonTablePath.DataFileUtil.getTaskIdFromTaskNo(taskNo)
         val bucketNumber = CarbonTablePath.DataFileUtil.getBucketNo(path)
-        val indexFilePath = carbonTablePath.getCarbonIndexFilePath(String.valueOf(taskId), "0",
-          segmentId, batchNo, String.valueOf(bucketNumber), timestamp, version)
+        val indexFilePath = CarbonTablePath.getCarbonIndexFilePath(
+          tablePath, String.valueOf(taskId), segmentId, batchNo, String.valueOf(bucketNumber),
+          timestamp, version)
         // indexFilePath could be duplicated when multiple data file related to one index file
         if (indexFilePath != null && !pathList.contains(indexFilePath)) {
           pathList.add(indexFilePath)
@@ -193,5 +207,80 @@ object PartitionUtils {
       files.add(file)
     }
     CarbonUtil.deleteFiles(files.asScala.toArray)
+    if (!files.isEmpty) {
+      val carbonTable = alterPartitionModel.carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable
+      val file = SegmentFileStore.writeSegmentFile(
+        identifier.getTablePath,
+        alterPartitionModel.segmentId,
+        alterPartitionModel.carbonLoadModel.getFactTimeStamp.toString)
+      val segmentFiles = Seq(new Segment(alterPartitionModel.segmentId, file, null))
+        .asJava
+      if (!CarbonUpdateUtil.updateTableMetadataStatus(
+        new util.HashSet[Segment](Seq(new Segment(alterPartitionModel.segmentId,
+          null, null)).asJava),
+        carbonTable,
+        alterPartitionModel.carbonLoadModel.getFactTimeStamp.toString,
+        true,
+        new util.ArrayList[Segment](0),
+        new util.ArrayList[Segment](segmentFiles), "")) {
+        throw new IOException("Data update failed due to failure in table status updation.")
+      }
+    }
   }
+
+  /**
+   * Used to extract PartitionerFields for aggregation datamaps.
+   * This method will keep generating partitionerFields until the sequence of
+   * partition column is broken.
+   *
+   * For example: if x,y,z are partition columns in main table then child tables will be
+   * partitioned only if the child table has List("x,y,z", "x,y", "x") as the projection columns.
+   *
+   *
+   */
+  def getPartitionerFields(allPartitionColumn: Seq[String],
+      fieldRelations: mutable.LinkedHashMap[Field, DataMapField]): Seq[PartitionerField] = {
+
+    def generatePartitionerField(partitionColumn: List[String],
+        partitionerFields: Seq[PartitionerField]): Seq[PartitionerField] = {
+      partitionColumn match {
+        case head :: tail =>
+          // Collect the first relation which matched the condition
+          val validRelation = fieldRelations.zipWithIndex.collectFirst {
+            case ((field, dataMapField), index) if
+            dataMapField.columnTableRelationList.getOrElse(Seq()).nonEmpty &&
+            head.equals(dataMapField.columnTableRelationList.get.head.parentColumnName) &&
+            dataMapField.aggregateFunction.isEmpty =>
+              (PartitionerField(field.name.get,
+                field.dataType,
+                field.columnComment), allPartitionColumn.indexOf(head))
+          }
+          if (validRelation.isDefined) {
+            val (partitionerField, index) = validRelation.get
+            // if relation is found then check if the partitionerFields already found are equal
+            // to the index of this element.
+            // If x with index 1 is found then there should be exactly 1 element already found.
+            // If z with index 2 comes directly after x then this check will be false are 1
+            // element is skipped in between and index would be 2 and number of elements found
+            // would be 1. In that case return empty sequence so that the aggregate table is not
+            // partitioned on any column.
+            if (index == partitionerFields.length) {
+              generatePartitionerField(tail, partitionerFields :+ partitionerField)
+            } else {
+              Seq.empty
+            }
+          } else {
+            // if not found then countinue search for the rest of the elements. Because the rest
+            // of the elements can also decide if the table has to be partitioned or not.
+            generatePartitionerField(tail, partitionerFields)
+          }
+        case Nil =>
+          // if end of list then return fields.
+          partitionerFields
+      }
+    }
+
+    generatePartitionerField(allPartitionColumn.toList, Seq.empty)
+  }
+
 }
