@@ -118,8 +118,10 @@ public class TablePage {
       } else {
         page = ColumnPage.newPage(spec, dataTypes[i], pageSize);
       }
-      page.setStatsCollector(
-          PrimitivePageStatsCollector.newInstance(dataTypes[i]));
+      if (dataTypes[i] != DataTypes.BINARY) {
+        page.setStatsCollector(
+            PrimitivePageStatsCollector.newInstance(dataTypes[i]));
+      }
       measurePages[i] = page;
     }
     boolean hasNoDictionary = noDictDimensionPages.length > 0;

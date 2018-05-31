@@ -41,6 +41,7 @@ public abstract class VarLengthColumnPageBase extends ColumnPage {
   static final int longBits = DataTypes.LONG.getSizeBits();
   // default size for each row, grows as needed
   static final int DEFAULT_ROW_SIZE = 8;
+  static final int DEFAULT_BINARY_SIZE = 288;
 
   static final double FACTOR = 1.25;
 
@@ -138,6 +139,12 @@ public abstract class VarLengthColumnPageBase extends ColumnPage {
   static ColumnPage newComplexLVBytesColumnPage(TableSpec.ColumnSpec columnSpec,
       byte[] lvEncodedBytes, int lvLength) throws MemoryException {
     return getComplexLVBytesColumnPage(columnSpec, lvEncodedBytes, DataTypes.BYTE_ARRAY, lvLength);
+  }
+
+  static ColumnPage newBinaryColumnPage(TableSpec.ColumnSpec columnSpec, byte[] lvEncodedBytes,
+      int offset, int length)
+      throws MemoryException {
+    return getBinaryColumnPage(columnSpec, lvEncodedBytes, DataTypes.BINARY, offset, length);
   }
 
   private static ColumnPage getDecimalColumnPage(TableSpec.ColumnSpec columnSpec,
@@ -251,6 +258,53 @@ public abstract class VarLengthColumnPageBase extends ColumnPage {
       length = rowLength.get(i);
       page.putBytes(i, lvEncodedBytes, lvEncodedOffset + lvLength, length);
       lvEncodedOffset += lvLength + length;
+    }
+    return page;
+  }
+
+  private static ColumnPage getBinaryColumnPage(TableSpec.ColumnSpec columnSpec,
+      byte[] lvEncodedBytes, DataType dataType, int start, int len)
+      throws MemoryException {
+    // extract length and data, set them to rowOffset and unsafe memory correspondingly
+    int rowId = 0;
+    List<Integer> rowOffset = new ArrayList<>();
+    List<Integer> rowLength = new ArrayList<>();
+    int length;
+    int offset;
+    int lvEncodedOffset = start;
+
+    // extract Length field in input and calculate total length
+    for (offset = 0; lvEncodedOffset < len; offset += length) {
+      length = ByteUtil.toInt(lvEncodedBytes, lvEncodedOffset);
+      rowOffset.add(offset);
+      rowLength.add(length);
+      lvEncodedOffset += 4 + length;
+      rowId++;
+    }
+    rowOffset.add(offset);
+
+    int numRows = rowId;
+
+    VarLengthColumnPageBase page;
+    if (unsafe) {
+      page = new UnsafeVarLengthColumnPage(columnSpec, dataType, numRows);
+    } else {
+      page = new SafeVarLengthColumnPage(columnSpec, dataType, numRows);
+    }
+
+    // set total length and rowOffset in page
+    page.totalLength = offset;
+    page.rowOffset = new int[rowId + 1];
+    for (int i = 0; i < rowId + 1; i++) {
+      page.rowOffset[i] = rowOffset.get(i);
+    }
+
+    // set data in page
+    lvEncodedOffset = start;
+    for (int i = 0; i < numRows; i++) {
+      length = rowLength.get(i);
+      page.putBytes(i, lvEncodedBytes, lvEncodedOffset + 4, length);
+      lvEncodedOffset += 4 + length;
     }
     return page;
   }

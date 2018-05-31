@@ -44,6 +44,7 @@ object DataTypeConverterUtil {
       case FIXED_DECIMAL(_, _) => DataTypes.createDefaultDecimalType
       case "timestamp" => DataTypes.TIMESTAMP
       case "date" => DataTypes.DATE
+      case "binary" => DataTypes.BINARY
       case "array" => DataTypes.createDefaultArrayType
       case "struct" => DataTypes.createDefaultStructType
       case _ => convertToCarbonTypeForSpark2(dataType)
@@ -67,6 +68,7 @@ object DataTypeConverterUtil {
       case FIXED_DECIMALTYPE(_, _) => DataTypes.createDefaultDecimalType
       case "timestamptype" => DataTypes.TIMESTAMP
       case "datetype" => DataTypes.DATE
+      case "binarytype" => DataTypes.BINARY
       case others =>
         if (others != null && others.startsWith("arraytype")) {
           DataTypes.createDefaultArrayType()
@@ -100,6 +102,7 @@ object DataTypeConverterUtil {
         case DataTypes.FLOAT => "double"
         case DataTypes.TIMESTAMP => "timestamp"
         case DataTypes.DATE => "date"
+        case DataTypes.BINARY => "binary"
       }
     }
   }
@@ -124,6 +127,7 @@ object DataTypeConverterUtil {
       case "decimal" => ThriftDataType.DECIMAL
       case "date" => ThriftDataType.DATE
       case "timestamp" => ThriftDataType.TIMESTAMP
+      case "binary" => ThriftDataType.BINARY
       case "array" => ThriftDataType.ARRAY
       case "struct" => ThriftDataType.STRUCT
       case _ => ThriftDataType.STRING

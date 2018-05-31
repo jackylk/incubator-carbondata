@@ -367,6 +367,8 @@ public class CarbonMetadataUtil {
       firstBuffer.flip();
       secondBuffer.flip();
       return (int) (firstBuffer.getLong() - secondBuffer.getLong());
+    } else if (dataType == DataTypes.BINARY) {
+      return 0;
     } else if (DataTypes.isDecimal(dataType)) {
       return DataTypeUtil.byteToBigDecimal(first).compareTo(DataTypeUtil.byteToBigDecimal(second));
     } else {

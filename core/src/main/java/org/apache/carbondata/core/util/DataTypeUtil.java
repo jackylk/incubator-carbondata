@@ -912,6 +912,8 @@ public final class DataTypeUtil {
       return DataTypes.BYTE_ARRAY;
     } else if (dataType.getName().equalsIgnoreCase("decimal")) {
       return DataTypes.createDecimalType(precision, scale);
+    } else if (DataTypes.BINARY.getName().equalsIgnoreCase(dataType.getName())) {
+      return DataTypes.BINARY;
     } else if (dataType.getName().equalsIgnoreCase("array")) {
       return DataTypes.createDefaultArrayType();
     } else if (dataType.getName().equalsIgnoreCase("struct")) {

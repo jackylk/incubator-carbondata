@@ -293,6 +293,8 @@ public class CarbonFactDataHandlerColumnar implements CarbonFactHandler {
     } catch (InterruptedException e) {
       LOGGER.error(e, e.getMessage());
       throw new CarbonDataWriterException(e.getMessage(), e);
+    } catch (Exception e) {
+      e.printStackTrace();
     }
   }
 

@@ -458,6 +458,10 @@ public class SortStepRowHandler implements Serializable {
         byte[] decimalBytes = DataTypeUtil.bigDecimalToByte((BigDecimal) tmpValue);
         rowBuffer.putShort((short) decimalBytes.length);
         rowBuffer.put(decimalBytes);
+      } else if (DataTypes.BINARY == tmpDataType) {
+        byte[] bytes = (byte[]) tmpValue;
+        rowBuffer.putInt(bytes.length);
+        rowBuffer.put(bytes);
       } else {
         throw new IllegalArgumentException("Unsupported data type: " + tmpDataType);
       }

@@ -628,12 +628,14 @@ public final class CarbonCommonConstants {
   public static final String BYTE_TYPE = "ByteType";
   public static final String SHORT_TYPE = "ShortType";
   public static final String DECIMAL_TYPE = "DecimalType";
+  public static final String BINARY_TYPE = "BinaryType";
   public static final String STRING = "String";
 
   public static final String INTEGER = "Integer";
   public static final String SHORT = "Short";
   public static final String NUMERIC = "Numeric";
   public static final String TIMESTAMP = "Timestamp";
+  public static final String BINARY = "Binary";
   public static final String ARRAY = "array";
   public static final String STRUCT = "struct";
   public static final String FROM = "from";
@@ -1568,6 +1570,8 @@ public final class CarbonCommonConstants {
   // As Short data type is used for storing the length of a column during data processing hence
   // the maximum characters that can be supported should be less than Short max value
   public static final int MAX_CHARS_PER_COLUMN_DEFAULT = 32000;
+
+  public static final int MAX_CHARS_PER_COLUMN_INFINITY = -1;
 
   /**
    * Enabling page level reader for compaction reduces the memory usage while compacting more

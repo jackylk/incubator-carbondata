@@ -111,6 +111,9 @@ public class DefaultEncodingFactory extends EncodingFactory {
   }
 
   private ColumnPageEncoder createEncoderForMeasure(ColumnPage columnPage) {
+    if (columnPage.getDataType() == DataTypes.BINARY) {
+      new DirectCompressCodec(columnPage.getDataType()).createEncoder(null);
+    }
     SimpleStatsResult stats = columnPage.getStatistics();
     DataType dataType = stats.getDataType();
     if (dataType == DataTypes.BOOLEAN) {

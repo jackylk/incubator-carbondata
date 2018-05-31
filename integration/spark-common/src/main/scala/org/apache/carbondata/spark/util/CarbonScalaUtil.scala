@@ -67,6 +67,7 @@ object CarbonScalaUtil {
       case DateType => CarbonDataTypes.DATE
       case BooleanType => CarbonDataTypes.BOOLEAN
       case TimestampType => CarbonDataTypes.TIMESTAMP
+      case BinaryType => CarbonDataTypes.BINARY
       case ArrayType(elementType, _) =>
         CarbonDataTypes.createArrayType(CarbonScalaUtil.convertSparkToCarbonDataType(elementType))
       case StructType(fields) =>
@@ -98,6 +99,7 @@ object CarbonScalaUtil {
       case CarbonCommonConstants.DATE_TYPE => CarbonCommonConstants.STRING
       case CarbonCommonConstants.BOOLEAN_TYPE => CarbonCommonConstants.STRING
       case CarbonCommonConstants.TIMESTAMP_TYPE => CarbonCommonConstants.TIMESTAMP
+      case CarbonCommonConstants.BINARY_TYPE => CarbonCommonConstants.BINARY
       case anyType => anyType
     }
   }
@@ -115,6 +117,7 @@ object CarbonScalaUtil {
         case CarbonDataTypes.BOOLEAN => BooleanType
         case CarbonDataTypes.TIMESTAMP => TimestampType
         case CarbonDataTypes.DATE => DateType
+        case CarbonDataTypes.BINARY => BinaryType
       }
     }
   }
