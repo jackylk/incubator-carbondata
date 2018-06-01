@@ -100,7 +100,7 @@ public class CarbonInputSplit extends FileSplit
     version = CarbonProperties.getInstance().getFormatVersion();
   }
 
-  private CarbonInputSplit(String segmentId, String blockletId, Path path, long start, long length,
+  public CarbonInputSplit(String segmentId, String blockletId, Path path, long start, long length,
       String[] locations, ColumnarFormatVersion version, String[] deleteDeltaFiles,
       String dataMapWritePath) {
     super(path, start, length, locations);
@@ -434,5 +434,9 @@ public class CarbonInputSplit extends FileSplit
 
   public Blocklet makeBlocklet() {
     return new Blocklet(getPath().getName(), blockletId);
+  }
+
+  public String getDataMapWritePath() {
+    return dataMapWritePath;
   }
 }

@@ -367,7 +367,7 @@ class FilterProcessorTestCase extends QueryTest with BeforeAndAfterAll {
     sql(s"LOAD DATA LOCAL INPATH '$file1' INTO TABLE like_filter OPTIONS('header'='false')")
     sql(
       "ALTER TABLE like_filter ADD COLUMNS(filter STRING) TBLPROPERTIES ('DEFAULT.VALUE" +
-      ".FILTER'='altered column')")
+      ".SELECT_FILTER'='altered column')")
     checkAnswer(sql("select count(*) from like_filter where filter like '%column'"), Row(500000))
   }
 

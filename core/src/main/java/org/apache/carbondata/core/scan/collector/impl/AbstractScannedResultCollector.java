@@ -152,6 +152,8 @@ public abstract class AbstractScannedResultCollector implements ScannedResultCol
         // convert data type as per the computing engine
         return DataTypeUtil.getDataTypeConverter().convertFromBigDecimalToDecimal(
             bigDecimalMsrValue);
+      } else if (dataType == DataTypes.BINARY) {
+        return dataChunk.getBytes(index);
       } else {
         return dataChunk.getDouble(index);
       }

@@ -33,12 +33,12 @@ import org.apache.carbondata.core.util.path.CarbonTablePath;
  * A CarbonStore base class that caches CarbonTable object
  */
 @InterfaceAudience.Internal
-abstract class MetaCachedCarbonStore implements CarbonStore {
+public abstract class MetaCachedCarbonStore implements CarbonStore {
 
   // mapping of table path to CarbonTable object
   private Map<String, CarbonTable> cache = new HashMap<>();
 
-  CarbonTable getTable(String path) throws IOException {
+  public CarbonTable getTable(String path) throws IOException {
     if (cache.containsKey(path)) {
       return cache.get(path);
     }

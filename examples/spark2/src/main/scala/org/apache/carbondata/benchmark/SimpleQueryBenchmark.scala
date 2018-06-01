@@ -111,7 +111,7 @@ object SimpleQueryBenchmark {
       "top N on low card column"
     ),
     // ===========================================================================
-    // ==                  FILTER SCAN GROUP BY AGGREGATION                     ==
+    // ==                  SELECT_FILTER SCAN GROUP BY AGGREGATION                     ==
     // ===========================================================================
     Query(
       "select country, sum(m1) as metric from $table where city='city8' group by country " +
@@ -132,7 +132,7 @@ object SimpleQueryBenchmark {
       "group by on medium data, small result set"
     ),
     // ===========================================================================
-    // ==                             FILTER SCAN                               ==
+    // ==                             SELECT_FILTER SCAN                               ==
     // ===========================================================================
     Query(
       "select * from $table where city = 'city3' limit 10000",

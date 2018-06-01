@@ -104,6 +104,8 @@
     <module>datamap/examples</module>
     <module>store/sdk</module>
     <module>store/search</module>
+    <module>select/vision</module>
+    <module>select/service</module>
     <module>assembly</module>
   </modules>
 

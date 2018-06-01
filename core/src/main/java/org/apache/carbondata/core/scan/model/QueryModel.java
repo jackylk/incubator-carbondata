@@ -39,6 +39,7 @@ import org.apache.carbondata.core.scan.filter.resolver.FilterResolverIntf;
 import org.apache.carbondata.core.stats.QueryStatisticsRecorder;
 import org.apache.carbondata.core.util.CarbonUtil;
 import org.apache.carbondata.core.util.DataTypeConverter;
+import org.apache.carbondata.vision.predict.PredictContext;
 
 /**
  * Query model which will have all the detail
@@ -108,6 +109,8 @@ public class QueryModel {
    * whether it require to output the row id
    */
   private boolean requiredRowId;
+
+  private PredictContext predictContext;
 
   private QueryModel(CarbonTable carbonTable) {
     tableBlockInfos = new ArrayList<TableBlockInfo>();
@@ -368,6 +371,14 @@ public class QueryModel {
 
   public void setRequiredRowId(boolean requiredRowId) {
     this.requiredRowId = requiredRowId;
+  }
+
+  public PredictContext getPredictContext() {
+    return predictContext;
+  }
+
+  public void setPredictContext(PredictContext predictContext) {
+    this.predictContext = predictContext;
   }
 
   @Override

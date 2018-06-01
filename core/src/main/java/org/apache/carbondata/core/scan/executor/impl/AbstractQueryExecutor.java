@@ -440,6 +440,7 @@ public abstract class AbstractQueryExecutor<E> implements QueryExecutor<E> {
         .toArray(new ProjectionMeasure[queryModel.getProjectionMeasures().size()]));
     DataTypeUtil.setDataTypeConverter(queryModel.getConverter());
     blockExecutionInfo.setRequiredRowId(queryModel.isRequiredRowId());
+    blockExecutionInfo.setPredictContext(queryModel.getPredictContext());
     return blockExecutionInfo;
   }
 

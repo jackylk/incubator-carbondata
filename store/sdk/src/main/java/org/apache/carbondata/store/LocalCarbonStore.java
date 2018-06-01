@@ -49,7 +49,7 @@ import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
  * Note that this class is experimental, it is not intended to be used in production.
  */
 @InterfaceAudience.Internal
-class LocalCarbonStore extends MetaCachedCarbonStore {
+public class LocalCarbonStore extends MetaCachedCarbonStore {
 
   private static final LogService LOGGER =
       LogServiceFactory.getLogService(LocalCarbonStore.class.getName());

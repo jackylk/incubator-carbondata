@@ -60,6 +60,8 @@ object ExampleUtils {
       .config("spark.sql.warehouse.dir", warehouse)
       .config("spark.driver.host", "localhost")
       .config("spark.sql.crossJoin.enabled", "true")
+      .config("spark.executor.heartbeatInterval", 500000)
+      .config("spark.network.timeout", 1000000)
       .getOrCreateCarbonSession(storeLocation, metastoredb)
 
     spark.sparkContext.setLogLevel("ERROR")

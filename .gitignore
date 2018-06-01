@@ -16,3 +16,7 @@ target/
 .classpath
 metastore_db/
 derby.log
+thirdlib/
+cmake-build-debug/
+*.so
+*.bin
