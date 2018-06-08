@@ -30,6 +30,7 @@ import org.apache.carbondata.vision.table.Table;
 
 public class CarbonClientExample {
 
+  // program args: /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/client/log4j.properties /home/david/Documents/code/carbonstore/select/vision-native/thirdlib/intellifData /home/david/Documents/code/carbonstore/examples/spark2/src/main/resources/result.bin /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/client/carbonselect.properties
   public static void main(String[] args) throws VisionException, IOException {
 
     if (args.length != 4) {

@@ -150,4 +150,17 @@ public class VisionUtil {
       }
     }
   }
+
+  public static String printlnTime(long... times) {
+    if (times.length >= 2) {
+      StringBuilder builder = new StringBuilder();
+      int i = 1;
+      for (; i < times.length; i++) {
+        builder.append("t" + i + "~(").append(times[i] - times[i - 1]).append("ms)~");
+      }
+      builder.append("t" + i);
+      return builder.toString();
+    }
+    return "need more than a time";
+  }
 }

@@ -33,6 +33,7 @@ import org.apache.carbondata.service.schedule.CarbonScheduler;
 import org.apache.carbondata.vision.cache.CacheLevel;
 import org.apache.carbondata.vision.common.VisionConfiguration;
 import org.apache.carbondata.vision.common.VisionException;
+import org.apache.carbondata.vision.common.VisionUtil;
 import org.apache.carbondata.vision.model.Model;
 import org.apache.carbondata.vision.predict.PredictContext;
 import org.apache.carbondata.vision.table.Record;
@@ -87,6 +88,7 @@ public class CarbonClient {
     long t1 = System.currentTimeMillis();
     CarbonTable carbonTable = cache.get(context.getTable());
     if (carbonTable == null) {
+      LOGGER.audit("need cache table at first");
       carbonTable = cacheTable(context.getTable());
     }
     List<InputSplit> splits = CarbonMaster.getSplit(carbonTable, null);
@@ -96,8 +98,8 @@ public class CarbonClient {
     ServiceUtil.sortRecords(result, context.getConf().projection().length);
 
     long t3 = System.currentTimeMillis();
-    LOGGER.audit("Search taken time: " + (t3 - t1) + " ms, detail: " +
-        "t1~(" + (t2 - t1) + ")~t2~(" + (t3 - t2) + ")~t3");
+    LOGGER.audit("Search taken time: " + (t3 - t1) + " ms, " +
+        VisionUtil.printlnTime(t1, t2, t3));
     return result;
   }
 

@@ -24,7 +24,8 @@ import org.apache.carbondata.vision.common.VisionConfiguration;
 
 public class CarbonServerExample {
 
-  // vm argument: -Djava.library.path=/home/david/Documents/code/carbonstore/ai/vision-native/build/lib
+  // vm argument: -Djava.library.path=/home/david/Documents/code/carbonstore/select/vision-native/build/lib
+  // program args: /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/server/log4j.properties /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/server/carbonselect.properties
   public static void main(String[] args) throws IOException {
     if (args.length != 2) {
       System.err.println("Usage: CarbonServerExample <log4j file> <properties file>");

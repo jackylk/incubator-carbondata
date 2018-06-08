@@ -635,4 +635,8 @@ public class CarbonTableInputFormat<T> extends CarbonInputFormat<T> {
     }
     return readCommittedScope;
   }
+
+  public void setCarbonTable(CarbonTable carbonTable) {
+    this.carbonTable = carbonTable;
+  }
 }

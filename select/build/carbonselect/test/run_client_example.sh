@@ -1,0 +1,1 @@
+java -cp "/data1/carbonselect/jars/*" org.apache.carbondata.service.client.CarbonClientExample /data1/carbonselect/conf/client/log4j.properties /data1/carbonselect/lib/third/intellifData /data1/carbonselect/test/result.bin /data1/carbonselect/conf/client/carbonselect.properties

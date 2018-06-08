@@ -28,7 +28,9 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
@@ -65,6 +67,9 @@ public class SegmentStatusManager {
       LogServiceFactory.getLogService(SegmentStatusManager.class.getName());
 
   private AbsoluteTableIdentifier identifier;
+
+  private static Map<String, LoadMetadataDetails[]> cache = new HashMap<>();
+
 
   public SegmentStatusManager(AbsoluteTableIdentifier identifier) {
     this.identifier = identifier;
@@ -234,11 +239,15 @@ public class SegmentStatusManager {
 
   public static LoadMetadataDetails[] readTableStatusFile(String tableStatusPath)
       throws IOException {
+    LoadMetadataDetails[] listOfLoadFolderDetailsArray = cache.get(tableStatusPath);
+    if (listOfLoadFolderDetailsArray != null) {
+      return listOfLoadFolderDetailsArray;
+    }
     Gson gsonObjectToRead = new Gson();
     DataInputStream dataInputStream = null;
     BufferedReader buffReader = null;
     InputStreamReader inStream = null;
-    LoadMetadataDetails[] listOfLoadFolderDetailsArray;
+
     AtomicFileOperations fileOperation =
         new AtomicFileOperationsImpl(tableStatusPath, FileFactory.getFileType(tableStatusPath));
 
@@ -263,6 +272,8 @@ public class SegmentStatusManager {
     if (null == listOfLoadFolderDetailsArray) {
       return new LoadMetadataDetails[0];
     }
+
+    cache.put(tableStatusPath, listOfLoadFolderDetailsArray);
 
     return listOfLoadFolderDetailsArray;
   }

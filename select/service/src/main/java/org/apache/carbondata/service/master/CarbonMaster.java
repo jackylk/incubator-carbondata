@@ -35,9 +35,9 @@ import org.apache.carbondata.service.common.ServiceUtil;
 import org.apache.carbondata.store.CarbonRowReadSupport;
 import org.apache.carbondata.vision.common.VisionConfiguration;
 import org.apache.carbondata.vision.common.VisionException;
+import org.apache.carbondata.vision.common.VisionUtil;
 import org.apache.carbondata.vision.table.Table;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
@@ -59,10 +59,12 @@ public class CarbonMaster {
 
   public static List<InputSplit> getSplit(CarbonTable table, Expression filter)
       throws VisionException {
+    long t1 = 0, t2 = 0;
     try {
+      t1 = System.currentTimeMillis();
       final CarbonTableInputFormat format = new CarbonTableInputFormat();
-      final Job job = new Job(new Configuration());
-      CarbonInputFormat.setTableInfo(job.getConfiguration(), table.getTableInfo());
+      format.setCarbonTable(table);
+      final Job job = new Job(FileFactory.getConfiguration());
       CarbonInputFormat.setTablePath(job.getConfiguration(), table.getTablePath());
       CarbonInputFormat.setTableName(job.getConfiguration(), table.getTableName());
       CarbonInputFormat.setDatabaseName(job.getConfiguration(), table.getDatabaseName());
@@ -71,12 +73,15 @@ public class CarbonMaster {
       if (filter != null) {
         CarbonInputFormat.setFilterPredicates(job.getConfiguration(), filter);
       }
-
+      t2 = System.currentTimeMillis();
       return format.getSplits(new JobContextImpl(job.getConfiguration(), new JobID()));
     } catch (IOException e) {
       String message = "Failed to getSplit";
       LOGGER.error(e, message);
       throw new VisionException(message);
+    } finally {
+      long t3 = System.currentTimeMillis();
+      LOGGER.audit("CarbonMaster.getSplit " + VisionUtil.printlnTime(t1, t2, t3));
     }
   }
 

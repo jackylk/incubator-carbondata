@@ -71,6 +71,8 @@ public class SegmentUpdateStatusManager {
   private Map<String, SegmentUpdateDetails> blockAndDetailsMap;
   private boolean isPartitionTable;
 
+  private static Map<String, SegmentUpdateDetails[]> cache = new HashMap<>();
+
   public SegmentUpdateStatusManager(CarbonTable table,
       LoadMetadataDetails[] segmentDetails) {
     this.identifier = table.getAbsoluteTableIdentifier();
@@ -633,22 +635,27 @@ public class SegmentUpdateStatusManager {
    * @return
    */
   public SegmentUpdateDetails[] readLoadMetadata() {
-    Gson gsonObjectToRead = new Gson();
-    DataInputStream dataInputStream = null;
-    BufferedReader buffReader = null;
-    InputStreamReader inStream = null;
-    SegmentUpdateDetails[] listOfSegmentUpdateDetailsArray;
-
     // get the updated status file identifier from the table status.
     String tableUpdateStatusIdentifier = getUpdatedStatusIdentifier();
 
-    if (null == tableUpdateStatusIdentifier) {
+    if (null == tableUpdateStatusIdentifier || tableUpdateStatusIdentifier.isEmpty()) {
       return new SegmentUpdateDetails[0];
     }
 
     String tableUpdateStatusPath =
         CarbonTablePath.getMetadataPath(identifier.getTablePath()) +
             CarbonCommonConstants.FILE_SEPARATOR + tableUpdateStatusIdentifier;
+
+    SegmentUpdateDetails[] listOfSegmentUpdateDetailsArray = cache.get(tableUpdateStatusPath);
+    if (listOfSegmentUpdateDetailsArray != null) {
+      return listOfSegmentUpdateDetailsArray;
+    }
+
+    Gson gsonObjectToRead = new Gson();
+    DataInputStream dataInputStream = null;
+    BufferedReader buffReader = null;
+    InputStreamReader inStream = null;
+
     AtomicFileOperations fileOperation = new AtomicFileOperationsImpl(tableUpdateStatusPath,
         FileFactory.getFileType(tableUpdateStatusPath));
 
@@ -664,11 +671,13 @@ public class SegmentUpdateStatusManager {
       listOfSegmentUpdateDetailsArray =
           gsonObjectToRead.fromJson(buffReader, SegmentUpdateDetails[].class);
     } catch (IOException e) {
+      cache.put(tableUpdateStatusPath, new SegmentUpdateDetails[0]);
       return new SegmentUpdateDetails[0];
     } finally {
       closeStreams(buffReader, inStream, dataInputStream);
     }
 
+    cache.put(tableUpdateStatusPath, listOfSegmentUpdateDetailsArray);
     return listOfSegmentUpdateDetailsArray;
   }
 
