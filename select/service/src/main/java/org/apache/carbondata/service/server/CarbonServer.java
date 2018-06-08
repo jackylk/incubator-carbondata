@@ -20,12 +20,11 @@ package org.apache.carbondata.service.server;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
+import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.util.path.CarbonTablePath;
 import org.apache.carbondata.hadoop.CarbonInputSplit;
@@ -49,8 +48,6 @@ public class CarbonServer {
   private static LogService LOGGER = LogServiceFactory.getLogService(CarbonServer.class.getName());
 
   private MetaCachedCarbonStore store;
-
-  private Configuration storeConf;
 
   private VisionConfiguration conf;
 
@@ -87,7 +84,8 @@ public class CarbonServer {
     if (CacheLevel.Memory == level) {
       cacheManager.cacheTableInMemory(table);
     } else if (CacheLevel.Disk == level) {
-      cacheManager.cacheTableToDisk(table, getTableFolder(table), getCacheFolder(table), storeConf);
+      cacheManager.cacheTableToDisk(table, getTableFolder(table), getCacheFolder(table),
+          FileFactory.getConfiguration());
     }
   }
 
@@ -130,15 +128,9 @@ public class CarbonServer {
   }
 
   public void start() throws IOException {
-    storeConf = new Configuration();
-    Iterator<Map.Entry<String, Object>> iterator = conf.iterator();
-    while (iterator.hasNext()) {
-      Map.Entry<String, Object> entry = iterator.next();
-      if (entry.getValue() instanceof String) {
-        storeConf.set(entry.getKey(), (String) entry.getValue());
-      }
-    }
-    RPC.Builder builder = new RPC.Builder(storeConf);
+    Configuration hadoopConf = FileFactory.getConfiguration();
+    hadoopConf.addResource(new Path(conf.configHadoop()));
+    RPC.Builder builder = new RPC.Builder(hadoopConf);
     RPC.Server server =
         builder.setNumHandlers(conf.serverCoreNum()).setBindAddress(conf.serverHost())
             .setPort(conf.serverPort()).setProtocol(PredictService.class)

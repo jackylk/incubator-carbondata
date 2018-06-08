@@ -25,6 +25,7 @@ import java.util.Map;
 
 import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
+import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.scan.expression.Expression;
 import org.apache.carbondata.hadoop.api.CarbonInputFormat;
@@ -37,6 +38,7 @@ import org.apache.carbondata.vision.common.VisionException;
 import org.apache.carbondata.vision.table.Table;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobID;
@@ -51,7 +53,8 @@ public class CarbonMaster {
   private static final Map<Table, ServerInfo> dataCacheMap = new HashMap<Table, ServerInfo>();
 
   public static void init(VisionConfiguration conf) {
-     ServiceUtil.parserServerList(conf.serverList(), serverList);
+    FileFactory.getConfiguration().addResource(new Path(conf.configHadoop()));
+    ServiceUtil.parserServerList(conf.serverList(), serverList);
   }
 
   public static List<InputSplit> getSplit(CarbonTable table, Expression filter)

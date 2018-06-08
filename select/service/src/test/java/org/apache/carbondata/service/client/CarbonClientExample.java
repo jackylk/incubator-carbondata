@@ -33,7 +33,8 @@ public class CarbonClientExample {
   public static void main(String[] args) throws VisionException, IOException {
 
     if (args.length != 4) {
-      System.err.println("Usage: CarbonClientExample <log4j> <model path> <result.bin> <properties file>");
+      System.err.println(
+          "Usage: CarbonClientExample <log4j> <model path> <result.bin> <properties file>");
       return;
     }
 
@@ -55,42 +56,40 @@ public class CarbonClientExample {
     Table table = new Table("default", "frs_table", "feature");
     CarbonTable carbonTable = client.cacheTable(table);
     if (table == null) {
-      throw new VisionException("can not found the table: "+ table.getPresentName());
+      throw new VisionException("can not found the table: " + table.getPresentName());
     }
 
     Table table1 = new Table("default", "frs_table1", "feature");
     CarbonTable carbonTable1 = client.cacheTable(table1);
     if (table1 == null) {
-      throw new VisionException("can not found the table: "+ table1.getPresentName());
+      throw new VisionException("can not found the table: " + table1.getPresentName());
     }
 
     Table table2 = new Table("default", "frs_table2", "feature");
     CarbonTable carbonTable2 = client.cacheTable(table2);
     if (table2 == null) {
-      throw new VisionException("can not found the table: "+ table2.getPresentName());
+      throw new VisionException("can not found the table: " + table2.getPresentName());
     }
 
     // choose algorithm
-    Algorithm algorithm = new Algorithm(
-        "org.apache.carbondata.vision.algorithm.impl.KNNSearch",
-        "1.0");
+    Algorithm algorithm =
+        new Algorithm("org.apache.carbondata.vision.algorithm.impl.KNNSearch", "1.0");
 
     // create PredictContext
     String featureSetFile = args[2];
     byte[] searchFeature = ExampleUtils.generateFeatureSetExample(featureSetFile, 1, 0);
 
-    PredictContext context =
-        PredictContext
-          .builder()
-          .algorithm(algorithm)
-          .model(model)
-          .table(table)
-          .conf(VisionConfiguration.SELECT_SEARCH_VECTOR, searchFeature)
-          .conf(VisionConfiguration.SELECT_TOP_N, 10)
-          .conf(VisionConfiguration.SELECT_VECTOR_SIZE, 288)
-          .conf(VisionConfiguration.SELECT_PROJECTION, new String[] { "id" })
-          .conf(VisionConfiguration.SELECT_BATCH_SIZE, 100000)
-          .create();
+    PredictContext context = PredictContext
+        .builder()
+        .algorithm(algorithm)
+        .model(model)
+        .table(table)
+        .conf(VisionConfiguration.SELECT_SEARCH_VECTOR, searchFeature)
+        .conf(VisionConfiguration.SELECT_TOP_N, 10)
+        .conf(VisionConfiguration.SELECT_VECTOR_SIZE, 288)
+        .conf(VisionConfiguration.SELECT_PROJECTION, new String[] { "id" })
+        .conf(VisionConfiguration.SELECT_BATCH_SIZE, 100000)
+        .create();
 
     // search
     Record[] result = client.search(context);

@@ -48,6 +48,8 @@ public class VisionConfiguration implements Serializable, Writable {
   public static final String STORE_LOCATION = "carbon.store.location";
   public static final String STORE_CACHE = "carbon.store.cache.location";
 
+  public static final String CONFIG_HADOOP = "carbon.hadoop.configuration";
+
   private Map<String, Object> conf = new HashMap<>(10);
 
   public VisionConfiguration() {
@@ -117,6 +119,10 @@ public class VisionConfiguration implements Serializable, Writable {
 
   public int scheduleCoreNum() {
     return intValue(SCHEDULE_CORE_NUM);
+  }
+
+  public String configHadoop() {
+    return stringValue(CONFIG_HADOOP);
   }
 
   private String stringValue(String key) {

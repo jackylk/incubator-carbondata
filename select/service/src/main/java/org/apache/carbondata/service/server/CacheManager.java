@@ -68,10 +68,12 @@ public class CacheManager {
 
       FileSystem fs = null;
       try {
-        fs = FileSystem.get(configuration);
-        fs.copyToLocalFile(false, new Path(sourcePath), new Path(targetPath), true);
-      } catch (IOException e) {
-        String message = "Failed to copy the table to local cache store";
+        Path source = new Path(sourcePath);
+        fs = source.getFileSystem(configuration);
+        fs.copyToLocalFile(false, source, new Path(targetPath), false);
+      } catch (Exception e) {
+        String message = "Failed to copy the table to local cache store " + sourcePath + " -> " +
+            targetPath;
         LOGGER.error(e);
         throw new VisionException(message);
       }

@@ -23,17 +23,25 @@ import org.apache.log4j.PropertyConfigurator
 import org.apache.spark.sql.SparkSession
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
-import org.apache.carbondata.core.util.{ByteUtil, CarbonProperties}
+import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.examples.util.ExampleUtils
 
 object CarbonSessionExample {
 
   def main(args: Array[String]) {
-    val intValue = 12992
-    val bytes = new Array[Byte](4)
-    ByteUtil.setInt(bytes, 0, intValue)
-    val result = ByteUtil.toInt(bytes, 0)
-    System.out.println(result);
+    val rootPath = new File(this.getClass.getResource("/").getPath
+                            + "../../../..").getCanonicalPath
+    System.setProperty("path.target", s"$rootPath/examples/spark2/target")
+    // print profiler log to a separated file: target/profiler.log
+    PropertyConfigurator.configure(
+      s"$rootPath/examples/spark2/src/main/resources/log4j.properties")
+
+    CarbonProperties.getInstance()
+      .addProperty(CarbonCommonConstants.ENABLE_QUERY_STATISTICS, "true")
+    val spark = ExampleUtils.createCarbonSession("CarbonSessionExample")
+    spark.sparkContext.setLogLevel("INFO")
+    exampleBody(spark)
+    spark.close()
   }
 
   def exampleBody(spark : SparkSession): Unit = {
