@@ -18,6 +18,10 @@
 package org.apache.carbondata.service.client;
 
 import java.io.IOException;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.*;
 
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.vision.algorithm.Algorithm;
@@ -55,19 +59,19 @@ public class CarbonClientExample {
 
     // cache table
     Table table = new Table("default", "frs_table", "feature");
-    CarbonTable carbonTable = client.cacheTable(table);
+    CarbonTable carbonTable = client.cacheTable(table, true);
     if (table == null) {
       throw new VisionException("can not found the table: " + table.getPresentName());
     }
 
     Table table1 = new Table("default", "frs_table1", "feature");
-    CarbonTable carbonTable1 = client.cacheTable(table1);
+    CarbonTable carbonTable1 = client.cacheTable(table1, false);
     if (table1 == null) {
       throw new VisionException("can not found the table: " + table1.getPresentName());
     }
 
     Table table2 = new Table("default", "frs_table2", "feature");
-    CarbonTable carbonTable2 = client.cacheTable(table2);
+    CarbonTable carbonTable2 = client.cacheTable(table2, false);
     if (table2 == null) {
       throw new VisionException("can not found the table: " + table2.getPresentName());
     }
@@ -96,6 +100,34 @@ public class CarbonClientExample {
     Record[] result = client.search(context);
     ExampleUtils.printRecords(result);
 
+    ArrayList<Callable<Record[]>> tasks = new ArrayList<Callable<Record[]>>();
+
+    int threadNum = 10;
+    for (int i = 0; i < threadNum; i++) {
+      tasks.add(new QueryTask(client, context));
+    }
+    ExecutorService executorService = Executors.newFixedThreadPool(threadNum);
+    List<Future<Record[]>> results = null;
+    try {
+      results = executorService.invokeAll(tasks);
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
+    executorService.shutdown();
+    try {
+      executorService.awaitTermination(600, TimeUnit.SECONDS);
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
+    for (int i = 0; i < results.size(); i++) {
+      try {
+        System.out.println("result length is:" + results.get(i).get().length);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      } catch (ExecutionException e) {
+        e.printStackTrace();
+      }
+    }
     context.setTable(table1);
     result = client.search(context);
     ExampleUtils.printRecords(result);
@@ -104,6 +136,25 @@ public class CarbonClientExample {
     result = client.search(context);
     ExampleUtils.printRecords(result);
 
+  }
+
+  static class QueryTask implements Callable<Record[]>, Serializable {
+    CarbonClient client;
+    PredictContext context;
+
+    public QueryTask(CarbonClient client, PredictContext context) {
+      this.client = client;
+      this.context = context;
+    }
+
+    @Override
+    public Record[] call() throws Exception {
+      Long startTime = System.nanoTime();
+      Record[] result = client.search(context);
+      Long endTime = System.nanoTime();
+      System.out.println("search time:" + (endTime - startTime) / 1000000.0 + "ms");
+      return result;
+    }
   }
 
   public static CarbonClient createClient(String filePath) throws VisionException {

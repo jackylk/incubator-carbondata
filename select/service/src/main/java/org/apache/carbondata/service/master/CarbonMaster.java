@@ -18,10 +18,7 @@
 package org.apache.carbondata.service.master;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
@@ -32,6 +29,7 @@ import org.apache.carbondata.hadoop.api.CarbonInputFormat;
 import org.apache.carbondata.hadoop.api.CarbonTableInputFormat;
 import org.apache.carbondata.service.common.ServerInfo;
 import org.apache.carbondata.service.common.ServiceUtil;
+import org.apache.carbondata.service.common.TableCacheInfo;
 import org.apache.carbondata.store.CarbonRowReadSupport;
 import org.apache.carbondata.vision.common.VisionConfiguration;
 import org.apache.carbondata.vision.common.VisionException;
@@ -50,7 +48,7 @@ public class CarbonMaster {
 
   private static final List<ServerInfo> serverList = new ArrayList<ServerInfo>();
 
-  private static final Map<Table, ServerInfo> dataCacheMap = new HashMap<Table, ServerInfo>();
+  private static final Map<Table, TableCacheInfo> dataCacheMap = new HashMap<Table, TableCacheInfo>();
 
   public static void init(VisionConfiguration conf) {
     FileFactory.getConfiguration().addResource(new Path(conf.configHadoop()));
@@ -89,11 +87,17 @@ public class CarbonMaster {
     return serverList;
   }
 
-  public static synchronized void addCacheInfo(Table table, ServerInfo serverInfo) {
-    dataCacheMap.put(table, serverInfo);
+  public static synchronized void addCacheInfo(Table table, TableCacheInfo serverInfos) {
+    TableCacheInfo treeSet = dataCacheMap.get(table);
+    if (null == treeSet) {
+      treeSet = serverInfos;
+    } else {
+      treeSet.addAll(serverInfos.getServerInfoSet());
+    }
+    dataCacheMap.put(table, treeSet);
   }
 
-  public static ServerInfo getCacheInfo(Table table) {
+  public static TableCacheInfo getCacheInfo(Table table) {
     return dataCacheMap.get(table);
   }
 

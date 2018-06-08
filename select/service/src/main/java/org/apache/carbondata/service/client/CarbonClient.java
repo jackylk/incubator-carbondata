@@ -67,11 +67,11 @@ public class CarbonClient {
     return scheduler.loadModel(modelPath);
   }
 
-  public CarbonTable cacheTable(Table table) throws VisionException {
+  public CarbonTable cacheTable(Table table, boolean allNode) throws VisionException {
     try {
       // CacheLevel Disk
       TableInfo tableInfo = TableInfo.deserialize(
-          scheduler.cacheTable(table, CacheLevel.Disk.getIndex()));
+          scheduler.cacheTable(table, CacheLevel.Disk.getIndex(), allNode, cache.keySet()));
       CarbonTable carbonTable = CarbonTable.buildFromTableInfo(tableInfo);
       // cache metadata and index
       CarbonMaster.getSplit(carbonTable, null);
@@ -89,7 +89,7 @@ public class CarbonClient {
     CarbonTable carbonTable = cache.get(context.getTable());
     if (carbonTable == null) {
       LOGGER.audit("need cache table at first");
-      carbonTable = cacheTable(context.getTable());
+      carbonTable = cacheTable(context.getTable(), false);
     }
     List<InputSplit> splits = CarbonMaster.getSplit(carbonTable, null);
 

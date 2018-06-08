@@ -18,15 +18,24 @@
 package org.apache.carbondata.service.common;
 
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ServerInfo {
 
   private String host;
   private int port;
+  private int cores;
+  private AtomicInteger workload;
 
   public ServerInfo(String host, int port) {
     this.host = host;
     this.port = port;
+    this.workload = new AtomicInteger(0);
+  }
+
+  public ServerInfo(String host, int port, int cores) {
+    this(host, port);
+    this.cores = cores;
   }
 
   public String getHost() {
@@ -45,10 +54,6 @@ public class ServerInfo {
     this.port = port;
   }
 
-  @Override public String toString() {
-    return "ServerInfo{" + "host='" + host + '\'' + ", port=" + port + '}';
-  }
-
   @Override public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
@@ -58,5 +63,31 @@ public class ServerInfo {
 
   @Override public int hashCode() {
     return Objects.hash(host, port);
+  }
+
+  public int getCores() {
+    return cores;
+  }
+
+  public void setCores(int cores) {
+    this.cores = cores;
+  }
+
+  public AtomicInteger getWorkload() {
+    return workload;
+  }
+
+  public void setWorkload(AtomicInteger workload) {
+    this.workload = workload;
+  }
+
+  @Override
+  public String toString() {
+    return "ServerInfo{" +
+            "host='" + host + '\'' +
+            ", port=" + port +
+            ", cores=" + cores +
+            ", workload=" + workload +
+            '}';
   }
 }

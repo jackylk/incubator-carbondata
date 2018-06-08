@@ -17,23 +17,23 @@
 
 package org.apache.carbondata.service.schedule;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.carbondata.hadoop.CarbonMultiBlockSplit;
 import org.apache.carbondata.service.common.ServerInfo;
+import org.apache.carbondata.service.common.TableCacheInfo;
 import org.apache.carbondata.service.master.CarbonMaster;
 import org.apache.carbondata.service.service.PredictService;
 import org.apache.carbondata.service.service.PredictServiceFactory;
+import org.apache.carbondata.vision.cache.ServerCacheInfo;
 import org.apache.carbondata.vision.common.VisionConfiguration;
 import org.apache.carbondata.vision.common.VisionException;
 import org.apache.carbondata.vision.model.Model;
 import org.apache.carbondata.vision.predict.PredictContext;
 import org.apache.carbondata.vision.table.Record;
 import org.apache.carbondata.vision.table.Table;
+import org.mortbay.log.Log;
 
 public class CarbonScheduler {
 
@@ -82,32 +82,116 @@ public class CarbonScheduler {
     return model;
   }
 
-  public byte[] cacheTable(Table table, int cacheLevel) throws VisionException {
-    int serverCount = CarbonMaster.serverList().size();
-    int serverIndex = (int) (cacheCount.getAndIncrement() % serverCount);
-    ServerInfo chooseServer = CarbonMaster.serverList().get(serverIndex);
+  public byte[] cacheTable(Table table, int cacheLevel, boolean allNode, Set<Table> tableSet) throws VisionException {
+    List<ServerInfo> serverInfoList = CarbonMaster.serverList();
+    int serverCount = serverInfoList.size();
+    TableCacheInfo tableCacheInfo = CarbonMaster.getCacheInfo(table);
+    if (tableCacheInfo == null) {
+      tableCacheInfo = new TableCacheInfo(serverInfoList);
+    }
+    if (allNode) {
+      for (int i = 0; i < serverCount; i++) {
+        tableCacheInfo.add(serverInfoList.get(i), cacheLevel);
+      }
+    } else {
+      ServerInfo chooseServer = chooseCacheServer(tableSet, cacheLevel);
+      tableCacheInfo.add(chooseServer, cacheLevel);
+    }
     byte[] serializedTable = null;
     try {
-      serializedTable = serviceMap.get(chooseServer).get().cacheTable(table, cacheLevel);
+      Iterator<ServerInfo> itor = tableCacheInfo.getServerInfoSet().iterator();
+      while (itor.hasNext()) {
+        serializedTable = serviceMap.get(itor.next()).get().cacheTable(table, cacheLevel);
+      }
       return serializedTable;
     } finally {
       if (serializedTable != null) {
-        CarbonMaster.addCacheInfo(table, chooseServer);
+        CarbonMaster.addCacheInfo(table, tableCacheInfo);
       }
     }
   }
 
-  public Record[] search(CarbonMultiBlockSplit split, PredictContext context)
-      throws VisionException {
-    ServerInfo chooseServer = CarbonMaster.getCacheInfo(context.getTable());
+  /**
+   * Choose server for caching
+   *
+   * @param tableSet   table set
+   * @param cacheLevel cache level
+   * @return ServerInfo object of cache server
+   */
+  public ServerInfo chooseCacheServer(Set<Table> tableSet, int cacheLevel) {
+    ServerInfo chooseServerInfo = null;
+    Iterator<Table> itor = tableSet.iterator();
+    Map<ServerInfo, ServerCacheInfo> map = new HashMap<>();
+    while (itor.hasNext()) {
+      Table table = itor.next();
+      TableCacheInfo tableCacheInfo = CarbonMaster.getCacheInfo(table);
+      Iterator<ServerInfo> serverInfoIterator = tableCacheInfo.getServerInfoSet().iterator();
+      while (serverInfoIterator.hasNext()) {
+        ServerInfo serverInfo = serverInfoIterator.next();
+        ServerCacheInfo serverCacheInfo = tableCacheInfo.getServerCacheInfo(serverInfo);
+        ServerCacheInfo serverCacheInfoAll = map.get(serverInfo);
+        if (serverCacheInfoAll == null) {
+          map.put(serverInfo, serverCacheInfo);
+        } else {
+          serverCacheInfoAll.merge(serverCacheInfo);
+          map.put(serverInfo, serverCacheInfoAll);
+        }
+      }
+    }
+    Set<ServerInfo> serverInfoSet = map.keySet();
+    int min = Integer.MAX_VALUE;
+    for (ServerInfo serverInfo : serverInfoSet) {
+      int number = map.get(serverInfo).getNumber(cacheLevel);
+      if (number < min) {
+        min = number;
+        chooseServerInfo = serverInfo;
+      }
+    }
+    Log.info("Choose Cache Server:" +
+            chooseServerInfo + "\t The min value is " + min + "\t");
+    return chooseServerInfo;
+  }
 
+  /**
+   * Choose server for searching
+   *
+   * @param serverInfos Table cache info
+   * @return ServerInfo of search server
+   */
+  public ServerInfo chooseSearchServer(TableCacheInfo serverInfos) {
+    Iterator<ServerInfo> itor = serverInfos.getServerInfoSet().iterator();
+    ServerInfo chooseServerInfo = null;
+    int max = Integer.MIN_VALUE;
+    while (itor.hasNext()) {
+      ServerInfo serverInfo = itor.next();
+      int value = serverInfo.getCores() - Integer.parseInt(serverInfo.getWorkload().toString());
+      Log.info("Search server status:" + serverInfo + "\tThe available value is " + value);
+      if (max < value) {
+        max = value;
+        chooseServerInfo = serverInfo;
+      }
+    }
+    return chooseServerInfo;
+  }
+
+  public Record[] search(CarbonMultiBlockSplit split, PredictContext context) throws VisionException {
+    ServerInfo chooseServer = chooseSearchServer(CarbonMaster.getCacheInfo(context.getTable()));
+    Log.info("Choose search server is " + chooseServer);
     if (chooseServer == null) {
       int serverCount = CarbonMaster.serverList().size();
       int serverIndex = (int) (cacheCount.getAndIncrement() % serverCount);
       chooseServer = CarbonMaster.serverList().get(serverIndex);
     }
-
-    return serviceMap.get(chooseServer).get().search(split, context);
+    chooseServer.getWorkload().incrementAndGet();
+    Record[] records = null;
+    try {
+      records = serviceMap.get(chooseServer).get().search(split, context);
+    } catch (Exception e) {
+      throw e;
+    } finally {
+      chooseServer.getWorkload().decrementAndGet();
+    }
+    return records;
   }
 
 }

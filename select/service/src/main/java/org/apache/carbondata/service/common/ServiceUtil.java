@@ -38,9 +38,10 @@ public class ServiceUtil {
   public static void parserServerList(String serverList, List<ServerInfo> serverInfos) {
     String[] hostWithPorts = serverList.split(",", -1);
     for (String hostWithPort : hostWithPorts) {
-      String[] splits =  hostWithPort.split(":", -1);
+      String[] splits = hostWithPort.split(":", -1);
       if (splits.length == 2) {
-        serverInfos.add(new ServerInfo(splits[0].trim(), Integer.parseInt(splits[1].trim())));
+        int cores = Runtime.getRuntime().availableProcessors();
+        serverInfos.add(new ServerInfo(splits[0].trim(), Integer.parseInt(splits[1].trim()), cores));
       }
     }
   }
