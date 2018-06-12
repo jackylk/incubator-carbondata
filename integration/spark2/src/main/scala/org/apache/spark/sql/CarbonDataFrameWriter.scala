@@ -87,7 +87,7 @@ class CarbonDataFrameWriter(sqlContext: SQLContext, val dataFrame: DataFrame) {
       "DICTIONARY_INCLUDE" -> options.dictionaryInclude,
       "DICTIONARY_EXCLUDE" -> options.dictionaryExclude,
       "TABLE_BLOCKSIZE" -> options.tableBlockSize,
-      "STREAMING" -> Option(options.isStreaming.toString)
+      "STREAMING" -> Option(options.streaming)
     ).filter(_._2.isDefined)
       .map(property => s"'${property._1}' = '${property._2.get}'").mkString(",")
 

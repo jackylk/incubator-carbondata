@@ -19,23 +19,59 @@ package org.apache.carbondata.stream
 
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.streaming.StreamingQuery
+import org.apache.spark.sql.types.{StructField, StructType}
 
+import org.apache.carbondata.common.exceptions.sql.{MalformedCarbonCommandException, NoSuchStreamException}
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.spark.StreamingOption
+import org.apache.carbondata.spark.util.CarbonScalaUtil
 import org.apache.carbondata.streaming.CarbonStreamException
 
 object StreamJobManager {
   private val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
   private val jobs = mutable.Map[String, StreamJobDesc]()
 
+
+  private def validateStreamName(streamName: String): Unit = {
+    if (StreamJobManager.getAllJobs.exists(_.streamName.equalsIgnoreCase(streamName))) {
+      throw new MalformedCarbonCommandException(s"Stream Name $streamName already exists")
+    }
+  }
+
+  private def validateSourceTable(source: CarbonTable): Unit = {
+    if (!source.isStreamingSource) {
+      throw new MalformedCarbonCommandException(s"Table ${source.getTableName} is not " +
+                                                "streaming source table " +
+                                                "('streaming' tblproperty is not 'source')")
+    }
+  }
+
+  private def validateSinkTable(querySchema: StructType, sink: CarbonTable): Unit = {
+    if (!sink.isStreamingSink) {
+      throw new MalformedCarbonCommandException(s"Table ${sink.getTableName} is not " +
+                                                "streaming sink table " +
+                                                "('streaming' tblproperty is not 'sink' or 'true')")
+    }
+    val fields = sink.getCreateOrderColumn(sink.getTableName).asScala.map { column =>
+      StructField(column.getColName,
+        CarbonScalaUtil.convertCarbonToSparkDataType(column.getDataType))
+    }
+    if (!querySchema.equals(StructType(fields))) {
+      throw new MalformedCarbonCommandException(s"Schema of table ${sink.getTableName} " +
+                                                s"does not match query output")
+    }
+  }
+
   /**
    * Start a spark streaming query
    * @param sparkSession session instance
+   * @param streamName stream name that user specified
    * @param sourceTable stream source table
    * @param sinkTable sink table to insert to
    * @param query query string
@@ -43,13 +79,19 @@ object StreamJobManager {
    * @param options options provided by user
    * @return Job ID
    */
-  def startJob(
+  def startStream(
       sparkSession: SparkSession,
+      streamName: String,
       sourceTable: CarbonTable,
       sinkTable: CarbonTable,
       query: String,
       streamDf: DataFrame,
       options: StreamingOption): String = {
+
+    validateStreamName(streamName)
+    validateSourceTable(sourceTable)
+    validateSinkTable(streamDf.schema, sinkTable)
+
     val latch = new CountDownLatch(1)
     var exception: Throwable = null
     var job: StreamingQuery = null
@@ -62,7 +104,7 @@ object StreamJobManager {
           job = streamDf.writeStream
             .format("carbondata")
             .trigger(options.trigger)
-            .options(options.userInputMap)
+//            .options(options.userInputMap)
             .option("checkpointLocation", options.checkpointLocation(sinkTable.getTablePath))
             .option("dateformat", options.dateFormat)
             .option("timestampformat", options.timeStampFormat)
@@ -89,8 +131,12 @@ object StreamJobManager {
       }
 
       jobs(job.id.toString) =
-        StreamJobDesc(job, sourceTable.getDatabaseName, sourceTable.getTableName,
+        StreamJobDesc(job, streamName, sourceTable.getDatabaseName, sourceTable.getTableName,
           sinkTable.getDatabaseName, sinkTable.getTableName, query, thread)
+
+      LOGGER.audit(s"STREAM $streamName started with job id '${job.id.toString}', " +
+                   s"from ${sourceTable.getDatabaseName}.${sourceTable.getTableName} " +
+                   s"to ${sinkTable.getDatabaseName}.${sinkTable.getTableName}")
       job.id.toString
     } else {
       thread.interrupt()
@@ -98,29 +144,33 @@ object StreamJobManager {
     }
   }
 
-  def killJob(jobId: String): Unit = {
+  def stopStream(streamName: String): Unit = {
+    val jobId = StreamJobManager.getJobId(streamName).getOrElse {
+      throw new NoSuchStreamException(streamName)
+    }
     if (jobs.contains(jobId)) {
       val jobDesc = jobs(jobId)
       jobDesc.streamingQuery.stop()
       jobDesc.thread.interrupt()
       jobs.remove(jobId)
+      LOGGER.audit(s"STREAM $streamName stopped, job id '$jobId', " +
+                   s"from ${jobDesc.sourceDb}.${jobDesc.sourceTable} " +
+                   s"to ${jobDesc.sinkDb}.${jobDesc.sinkTable}")
     }
   }
 
   def getAllJobs: Set[StreamJobDesc] = jobs.values.toSet
 
-  def getJobIdOnTable(carbonTable: CarbonTable): Option[String] = {
-    val jobs = StreamJobManager.getAllJobs.filter { job =>
-      job.sinkTable.equalsIgnoreCase(carbonTable.getTableName) &&
-      job.sinkDb.equalsIgnoreCase(carbonTable.getDatabaseName)
-    }.toSeq
-    if (jobs.isEmpty) None else Some(jobs.head.streamingQuery.id.toString)
+  def getJobId(streamName: String): Option[String] = {
+    val job = getAllJobs.filter(_.streamName.equalsIgnoreCase(streamName))
+    if (job.nonEmpty) Some(job.head.streamingQuery.id.toString) else None
   }
 
 }
 
 private[stream] case class StreamJobDesc(
     streamingQuery: StreamingQuery,
+    streamName: String,
     sourceDb: String,
     sourceTable: String,
     sinkDb: String,

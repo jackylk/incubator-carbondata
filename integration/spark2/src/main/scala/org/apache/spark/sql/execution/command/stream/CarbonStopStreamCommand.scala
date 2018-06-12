@@ -17,34 +17,19 @@
 
 package org.apache.spark.sql.execution.command.stream
 
-import scala.collection.mutable
-
+import org.apache.spark.sql.execution.command.MetadataCommand
 import org.apache.spark.sql.{Row, SparkSession}
-import org.apache.spark.sql.execution.command.{Field, MetadataCommand, TableNewProcessor}
-import org.apache.spark.sql.execution.command.table.CarbonCreateTableCommand
-import org.apache.spark.sql.parser.CarbonSpark2SqlParser
+
+import org.apache.carbondata.stream.StreamJobManager
 
 /**
- * This command is used to create Stream Source, which is implemented as a Carbon Table
+ * Stop the stream for specified sink table
  */
-case class CarbonCreateStreamSourceCommand(
-    dbName: Option[String],
-    tableName: String,
-    fields: Seq[Field],
-    tblProperties: Map[String, String]
+case class CarbonStopStreamCommand(
+    streamName: String
 ) extends MetadataCommand {
   override def processMetadata(sparkSession: SparkSession): Seq[Row] = {
-    val tableModel = new CarbonSpark2SqlParser().prepareTableModel(
-      ifNotExistPresent = false,
-      dbName,
-      tableName,
-      fields,
-      Seq.empty,
-      mutable.Map[String, String](tblProperties.toSeq: _*),
-      None
-    )
-    val tableInfo = TableNewProcessor.apply(tableModel)
-    val command = CarbonCreateTableCommand(tableInfo)
-    command.run(sparkSession)
+    StreamJobManager.stopStream(streamName)
+    Seq.empty
   }
 }

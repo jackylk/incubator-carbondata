@@ -33,7 +33,7 @@ import org.apache.spark.sql.execution.command.table.CarbonCreateTableCommand
 import org.apache.spark.sql.types.StructField
 import org.apache.spark.sql.CarbonExpressions.CarbonUnresolvedRelation
 import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
-import org.apache.spark.sql.execution.command.stream.{CarbonCreateStreamCommand, CarbonCreateStreamSourceCommand, CarbonKillStreamCommand, CarbonShowStreamsCommand}
+import org.apache.spark.sql.execution.command.stream.{CarbonStartStreamCommand, CarbonShowStreamsCommand, CarbonStopStreamCommand}
 import org.apache.spark.sql.util.CarbonException
 import org.apache.spark.util.CarbonReflectionUtils
 
@@ -91,7 +91,7 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
     createDataMap | dropDataMap | showDataMap | refreshDataMap
 
   protected lazy val stream: Parser[LogicalPlan] =
-    createStream | createStreamSource | killStream | showStreams
+    startStream | stopStream | showStreams
 
   protected lazy val alterAddPartition: Parser[LogicalPlan] =
     ALTER ~> TABLE ~> (ident <~ ".").? ~ ident ~ (ADD ~> PARTITION ~>
@@ -150,42 +150,28 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
     }
 
   /**
-   * The syntax of CREATE STREAM SOURCE
-   * CREATE STREAM SOURCE [dbName.]tableName (schema list)
-   * [TBLPROPERTIES('KEY'='VALUE')]
-   */
-  protected lazy val createStreamSource: Parser[LogicalPlan] =
-    CREATE ~> STREAM ~> SOURCE ~> (ident <~ ".").? ~ ident ~
-    ("(" ~> repsep(anyFieldDef, ",") <~ ")") ~
-    (TBLPROPERTIES ~> "(" ~> repsep(loadOptions, ",") <~ ")").? <~ opt(";") ^^ {
-      case dbName ~ tableName ~ fields ~ map =>
-        val tblProperties = map.getOrElse(List[(String, String)]()).toMap[String, String]
-        CarbonCreateStreamSourceCommand(dbName, tableName, fields, tblProperties)
-    }
-
-  /**
-   * The syntax of CREATE STREAM
-   * CREATE STREAM ON TABLE [dbName.]tableName
+   * The syntax of START STREAM
+   * START STREAM streamName ON TABLE [dbName.]tableName
    * [STMPROPERTIES('KEY'='VALUE')]
    * AS SELECT COUNT(COL1) FROM tableName
    */
-  protected lazy val createStream: Parser[LogicalPlan] =
-    CREATE ~> STREAM ~> ON ~> TABLE ~> (ident <~ ".").? ~ ident ~
+  protected lazy val startStream: Parser[LogicalPlan] =
+    START ~> STREAM ~> ident ~ (ON ~> TABLE ~> (ident <~ ".").?) ~ ident ~
     (STMPROPERTIES ~> "(" ~> repsep(loadOptions, ",") <~ ")").? ~
     (AS ~> restInput) <~ opt(";") ^^ {
-      case dbName ~ tableName ~ options ~ query =>
+      case streamName ~ dbName ~ tableName ~ options ~ query =>
         val optionMap = options.getOrElse(List[(String, String)]()).toMap[String, String]
-        CarbonCreateStreamCommand(dbName, tableName, optionMap, query)
+        CarbonStartStreamCommand(streamName, dbName, tableName, optionMap, query)
     }
 
   /**
-   * The syntax of KILL STREAM
-   * KILL STREAM ON TABLE [dbName].tableName
+   * The syntax of STOP STREAM
+   * STOP STREAM streamName
    */
-  protected lazy val killStream: Parser[LogicalPlan] =
-    KILL ~> STREAM ~> ON ~> TABLE ~> (ident <~ ".").? ~ ident <~ opt(";") ^^ {
-      case dbName ~ tableName =>
-        CarbonKillStreamCommand(dbName, tableName)
+  protected lazy val stopStream: Parser[LogicalPlan] =
+    STOP ~> STREAM ~> ident <~ opt(";") ^^ {
+      case streamName =>
+        CarbonStopStreamCommand(streamName)
     }
 
   /**

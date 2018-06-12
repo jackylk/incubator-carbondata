@@ -253,7 +253,7 @@ class CarbonHelperSqlAstBuilder(conf: SQLConf,
       case _ =>
         // ignore this case
     }
-    if (partitionFields.nonEmpty && options.isStreaming) {
+    if (partitionFields.nonEmpty && options.isStreamSink) {
       operationNotAllowed("Streaming is not allowed on partitioned table", partitionColumns)
     }
     // validate tblProperties
@@ -326,12 +326,13 @@ class CarbonHelperSqlAstBuilder(conf: SQLConf,
   }
 
   private def validateStreamingProperty(carbonOption: CarbonOption): Unit = {
-    try {
-      carbonOption.isStreaming
-    } catch {
-      case _: IllegalArgumentException =>
-        throw new MalformedCarbonCommandException(
-          "Table property 'streaming' should be either 'true' or 'false'")
+    carbonOption.streaming match {
+      case "true" =>
+      case "false" =>
+      case "source" =>
+      case "sink" =>
+      case others =>
+        throw new MalformedCarbonCommandException("Table property 'streaming' is invalid")
     }
   }
 
