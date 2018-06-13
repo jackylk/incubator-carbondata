@@ -28,7 +28,7 @@ import org.apache.spark.sql.SparkSession
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.metadata.CarbonTableIdentifier
-import org.apache.carbondata.core.util.path.{CarbonStorePath, CarbonTablePath}
+import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.events.{CreateTablePostExecutionEvent, CreateTablePreExecutionEvent, Event, OperationEventListener}
 import org.apache.carbondata.events.OperationContext
 import org.apache.carbondata.spark.acl.CarbonUserGroupInformation
@@ -47,7 +47,6 @@ object ACLCreateTableEventListener {
         .getCarbonTableIdentifier
       val sparkSession: SparkSession = createTablePreExecutionEvent.sparkSession
       val tablePath: String = createTablePreExecutionEvent.identifier.getTablePath
-      val carbonTablePath = CarbonStorePath.getCarbonTablePath(tablePath, carbonTableIdentifier)
       CarbonUserGroupInformation.getInstance.getCurrentUser
         .doAs(new PrivilegedExceptionAction[Unit]() {
           override def run(): Unit = {
@@ -70,7 +69,7 @@ object ACLCreateTableEventListener {
 //      operationContext.setProperty(folderListBeforeOperation, folderListbeforeCreate)
 //      operationContext.setProperty(pathArrBeforeOperation, pathArrBeforeCreateOperation)
       ACLFileUtils
-        .takeSnapshotBeforeOpeartion(operationContext, sparkSession, carbonTablePath, null)
+        .takeSnapshotBeforeOpeartion(operationContext, sparkSession, tablePath, null)
     }
   }
 

@@ -27,11 +27,9 @@ import java.util.Set;
 import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
-import org.apache.carbondata.core.datamap.DataMapChooser;
 import org.apache.carbondata.core.datamap.DataMapStoreManager;
 import org.apache.carbondata.core.datamap.Segment;
 import org.apache.carbondata.core.datamap.TableDataMap;
-import org.apache.carbondata.core.datamap.dev.expr.DataMapExprWrapper;
 import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.readcommitter.ReadCommittedScope;
@@ -124,8 +122,7 @@ public class CarbonTableInputFormatExtended {
     // If filter is null then return all segments.
     if (filter != null) {
       List<Segment> setSegID = isSegmentValidAfterFilter(carbonTable, filterInterface,
-          Arrays.asList(carbonTableInputFormat.getSegmentsToAccess(job, readCommittedScope)),
-          carbonTableInputFormat);
+          Arrays.asList(carbonTableInputFormat.getSegmentsToAccess(job, readCommittedScope)));
       filteredSegments.addAll(setSegID);
     } else {
       filteredSegments =
@@ -138,11 +135,8 @@ public class CarbonTableInputFormatExtended {
    * @return true if the filter expression lies between any one of the AbstractIndex min max values.
    */
   public static List<Segment> isSegmentValidAfterFilter(CarbonTable carbonTable,
-      FilterResolverIntf filterResolverIntf, List<Segment> segmentIds,
-      CarbonTableInputFormat carbonTableInputFormat) throws IOException {
+      FilterResolverIntf filterResolverIntf, List<Segment> segmentIds) throws IOException {
     TableDataMap blockletMap = DataMapStoreManager.getInstance().getDefaultDataMap(carbonTable);
-    DataMapExprWrapper dataMapExprWrapper = DataMapChooser.getDefaultDataMap(carbonTable, null);
-    carbonTableInputFormat.loadDataMaps(carbonTable, dataMapExprWrapper, segmentIds, null);
     return blockletMap.pruneSegments(segmentIds, filterResolverIntf);
   }
 

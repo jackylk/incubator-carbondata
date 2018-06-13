@@ -65,8 +65,8 @@ object Utils {
    * @return
    */
   def getIndexTablePathList(databaseName: String, tableName: String,
-      carbonTable: CarbonTable): List[CarbonTablePath] = {
-    List[CarbonTablePath]()
+      carbonTable: CarbonTable): List[String] = {
+    List[String]()
   }
 
 //  val indexTables = carbonTable.getIndexTables

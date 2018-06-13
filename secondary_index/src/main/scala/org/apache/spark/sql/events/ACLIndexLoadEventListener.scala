@@ -22,7 +22,6 @@ import org.apache.spark.sql.acl.ACLFileUtils
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.metadata.CarbonTableIdentifier
-import org.apache.carbondata.core.util.path.CarbonStorePath
 import org.apache.carbondata.events._
 
 object ACLIndexLoadEventListener {
@@ -39,10 +38,9 @@ object ACLIndexLoadEventListener {
       val tablePath: String = createSITablePreExecutionEvent.tablePath
       val carbonTableIdentifier: CarbonTableIdentifier = createSITablePreExecutionEvent
         .carbonTableIdentifier
-      val carbonTablePath = CarbonStorePath.getCarbonTablePath(tablePath, carbonTableIdentifier)
       val sparkSession: SparkSession = createSITablePreExecutionEvent.sparkSession
       ACLFileUtils
-        .takeSnapshotBeforeOpeartion(operationContext, sparkSession, carbonTablePath, null)
+        .takeSnapshotBeforeOpeartion(operationContext, sparkSession, tablePath, null)
     }
   }
 

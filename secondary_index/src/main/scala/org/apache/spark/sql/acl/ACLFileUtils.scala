@@ -241,7 +241,7 @@ object ACLFileUtils {
    * @param tablePath
    * @return
    */
-  def getTablePathListForSnapshot(tablePath: CarbonTablePath,
+  def getTablePathListForSnapshot(tablePath: String,
       partitionInfo: PartitionInfo): List[String] = {
     // e.g 1. dbName/tableName/Fact/Part0/Segment_0/carbondata_files
     // e.g 2. dbName/tableName/Metadata/{
@@ -254,7 +254,7 @@ object ACLFileUtils {
       4
     }
 
-    var path = tablePath.getPath
+    var path = tablePath
     List.tabulate(depth) {
       p =>
         path = path + "/*"
@@ -470,7 +470,7 @@ object ACLFileUtils {
 
   def takeSnapshotBeforeOpeartion(operationContext: OperationContext,
       sparkSession: SparkSession,
-      carbonTablePath: CarbonTablePath, partitionInfo: PartitionInfo): Unit = {
+      carbonTablePath: String, partitionInfo: PartitionInfo): Unit = {
 
     val folderListbeforeCreate: List[String] = ACLFileUtils
       .getTablePathListForSnapshot(carbonTablePath, partitionInfo)

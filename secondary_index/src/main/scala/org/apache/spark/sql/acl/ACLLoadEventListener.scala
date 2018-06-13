@@ -36,7 +36,7 @@ import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.metadata.CarbonTableIdentifier
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
-import org.apache.carbondata.core.util.path.{CarbonStorePath, CarbonTablePath}
+import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.events._
 import org.apache.carbondata.events.exception.PreEventException
 import org.apache.carbondata.processing.loading.events.LoadEvents.{LoadTablePostExecutionEvent, LoadTablePreExecutionEvent}
@@ -198,7 +198,7 @@ object ACLLoadEventListener {
         carbonBadRecordTablePath = ACLFileUtils.createBadRecordsTablePath(sqlContext,
           carbonTableIdentifier, badRecordLocation)
       }
-      val tablePath = CarbonStorePath.getCarbonTablePath(carbonTable.getAbsoluteTableIdentifier)
+      val tablePath = carbonTable.getTablePath
       val currentUser = CarbonUserGroupInformation.getInstance.getCurrentUser
       var list = ACLFileUtils
         .getTablePathListForSnapshot(tablePath,
