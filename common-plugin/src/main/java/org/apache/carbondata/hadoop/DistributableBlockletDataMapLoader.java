@@ -60,6 +60,7 @@ public class DistributableBlockletDataMapLoader
   private static final LogService LOGGER =
       LogServiceFactory.getLogService(DistributableBlockletDataMapLoader.class.getName());
 
+  private static final long serialVersionUID = 1;
 
   private CarbonTable table;
 

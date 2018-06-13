@@ -20,18 +20,19 @@ package org.apache.carbondata.datamap.lucene
 import java.io.{File, PrintWriter}
 
 import scala.util.Random
-
 import org.apache.spark.SparkException
 import org.apache.spark.sql.test.util.QueryTest
 import org.apache.spark.sql.Row
 import org.scalatest.BeforeAndAfterAll
 
+import org.scalatest.{BeforeAndAfterAll, Ignore}
 import org.apache.carbondata.common.exceptions.sql.{MalformedCarbonCommandException, MalformedDataMapCommandException}
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.core.datamap.DataMapStoreManager
 import org.apache.carbondata.core.datamap.status.DataMapStatusManager
 
+@Ignore
 class LuceneFineGrainDataMapSuite extends QueryTest with BeforeAndAfterAll {
 
   val originDistributedDatamapStatus = CarbonProperties.getInstance().getProperty(

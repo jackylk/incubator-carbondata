@@ -45,8 +45,8 @@ import org.apache.spark.sql.parser._
 import org.apache.spark.sql.types.DecimalType
 import org.apache.spark.util.SparkUtil
 
+import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.spark.acl.CarbonUserGroupInformation
-import org.apache.carbondata.spark.exception.MalformedCarbonCommandException
 import org.apache.carbondata.spark.util.CarbonScalaUtil
 
 /**
