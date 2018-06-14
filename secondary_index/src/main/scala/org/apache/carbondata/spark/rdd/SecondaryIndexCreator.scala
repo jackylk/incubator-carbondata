@@ -162,7 +162,7 @@ object SecondaryIndexCreator {
               segId, execInstance, indexCarbonTable, forceAccessSegment).collect()
             val segmentFileName =
               SegmentFileStore
-                .writeSegmentFile(indexCarbonTable.getTablePath,
+                .writeSegmentFile(indexCarbonTable,
                   segId,
                   String.valueOf(carbonLoadModel.getFactTimeStamp))
             segmentToSegmentFileNameMap.put(segId, segmentFileName)
