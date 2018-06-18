@@ -248,7 +248,8 @@ object ACLFileUtils {
     //                dictionary_files, tableStatus, schema, segments/partition_segment_files }
     // e.g 3. dbName/tableName/partCol1=val1/partCol2=val2/partCol3=val3/partCol4=val4 ....
 
-    val depth: Integer = if (partitionInfo != null) {
+    val depth: Integer = if (partitionInfo != null &&
+                             partitionInfo.getColumnSchemaList.size() > 4) {
       partitionInfo.getColumnSchemaList.size()
     } else {
       4
