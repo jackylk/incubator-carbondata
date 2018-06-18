@@ -135,31 +135,20 @@ class TestNIQueryWithSecondaryIndex extends QueryTest with BeforeAndAfterAll{
       sql("set carbon.si.lookup.partialstring=true")
       val ch21 = sql("select * from seccust where c_phone like '25%989-741-2988'")
       //startsWith & endsWith so SI -yes
-      if (SPARK_VERSION.startsWith("2.1")) {
-        assert(checkSIColumnsSize(ch21, 3)) // size = length, startsWith and EndsWith
-      } else {
-        assert(checkSIColumnsSize(ch21, 4))
-      }
+      assert(checkSIColumnsSize(ch21, 3)) // size = length, startsWith and EndsWith
+
       val ch22 = sql("select count(*) from seccust where c_phone like '%989-741-2988'")
       // endsWith so, SI - Yes
-      if (SPARK_VERSION.startsWith("2.1")) {
-        assert(checkSIColumnsSize(ch22, 1)) // size = EndsWith
-      } else {
-        assert(checkSIColumnsSize(ch22, 2)) // size = EndsWith
-      }
+      assert(checkSIColumnsSize(ch22, 1)) // size = EndsWith
 
       val ch23 = sql("select count(*) from seccust where c_phone like '25%989-741%2988'")
       // Query startsWith & Contains & endsWith so SI - Yes (his is combined with Like, hence SI
       // - YES)
-      if (SPARK_VERSION.startsWith("2.1")) {
-        assert(checkSIColumnsSize(ch23, 1)) // size = LIKE
-      } else {
-        assert(checkSIColumnsSize(ch23, 2)) // size = LIKE
-      }
+      assert(checkSIColumnsSize(ch23, 1))
 
       val ch24 = sql("select * from seccust where c_phone='25-989-741-2988'")
       // Query has EqualTo - So SI = Yes
-      assert(checkSIColumnsSize(ch24, 2)) // size = IsNotNull & EqualTo
+      assert(checkSIColumnsSize(ch24, 1)) // EqualTo
 
     }finally{
       sql(s"set carbon.si.lookup.partialstring=${CarbonInternalCommonConstants.ENABLE_SI_LOOKUP_PARTIALSTRING_DEFAULT}")
@@ -170,11 +159,8 @@ class TestNIQueryWithSecondaryIndex extends QueryTest with BeforeAndAfterAll{
     try {
       sql("set carbon.si.lookup.partialstring=false")
       val ch11 = sql("select count(*) from seccust where c_phone like '25%989-741-2988'")
-      if (SPARK_VERSION.startsWith("2.1")) {
-        assert(checkSIColumnsSize(ch11, 3)) // size = length, startsWith and EndsWith
-      } else {
-        assert(checkSIColumnsSize(ch11, 4))
-      }
+      assert(checkSIColumnsSize(ch11, 2)) // pushed filter = length, startsWith
+
       val ch12 = sql("select count(*) from seccust where c_phone like '%989-741-2988'")
       // endsWith so SI - No
       assert(!isIndexTablePresent(ch12))
@@ -189,15 +175,11 @@ class TestNIQueryWithSecondaryIndex extends QueryTest with BeforeAndAfterAll{
 
       val ch15 = sql("select count(*) from seccust where c_phone='25-989-741-2988' and c_mktsegment like 'BUI%LDING'")
       // equals on c_phone of I1, I2 & (length & startsWith & endswith) on c_mktsegment of I2 so SI - Yes
+      assert(checkSIColumnsSize(ch15, 3)) //size = EqualTo on c_phone, length, StartsWith
 
-      if (SPARK_VERSION.startsWith("2.1")) {
-        assert(checkSIColumnsSize(ch15, 5)) //size = IsNotNull, EqualTo on c_phone & length, StartsWith, EndsWith on c_mktsegment
-      } else {
-        assert(checkSIColumnsSize(ch15, 6)) //size = IsNotNull, EqualTo on c_phone & length, StartsWith, EndsWith on c_mktsegment
-      }
       val ch16 = sql("select * from seccust where c_phone='25-989-741-2988'")
       // Query has EqualTo so SI - Yes
-      assert(checkSIColumnsSize(ch16, 2)) // size = IsNotNull & EqualTo
+      assert(checkSIColumnsSize(ch16, 1)) // size = EqualTo
 
     } finally{
       sql(s"set carbon.si.lookup.partialstring=${CarbonInternalCommonConstants.ENABLE_SI_LOOKUP_PARTIALSTRING_DEFAULT}")
