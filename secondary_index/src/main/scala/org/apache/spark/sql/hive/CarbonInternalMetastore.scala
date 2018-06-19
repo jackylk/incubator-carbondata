@@ -26,6 +26,7 @@ import scala.language.implicitConversions
 import org.apache.spark.sql.{SparkSession, _}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.catalog.CatalogTable
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
@@ -70,12 +71,11 @@ object CarbonInternalMetastore {
         deleteTableDirectory(indexCarbonTable.getCarbonTableIdentifier, sparkSession)
         if (removeEntryFromParentTable && parentCarbonTable != null) {
           val parentTableName = parentCarbonTable.getTableName
-          val relation = sparkSession.sessionState.catalog
-            .lookupRelation(TableIdentifier(parentTableName, Some(dbName)))
+          val relation: LogicalPlan = CarbonEnv.getInstance(sparkSession).carbonMetastore
+            .lookupRelation(Some(dbName), parentTableName)(sparkSession)
           val indexInfo = if (relation != null) {
-            val datasourceHadoopRelation =
-              CarbonInternalMetaUtil.retrieveRelation(relation)(sparkSession)
-            CarbonInternalScalaUtil.getIndexInfo(datasourceHadoopRelation)
+            CarbonInternalScalaUtil
+              .getIndexInfo(relation.asInstanceOf[CarbonRelation].metaData.carbonTable)
           } else {
             sys.error(s"Table $dbName.$parentTableName does not exists")
           }

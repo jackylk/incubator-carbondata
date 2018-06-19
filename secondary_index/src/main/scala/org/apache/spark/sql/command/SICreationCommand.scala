@@ -24,8 +24,9 @@ import scala.language.implicitConversions
 
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.TableIdentifier
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.command.RunnableCommand
-import org.apache.spark.sql.hive.{CarbonInternalHiveMetadataUtil, CarbonInternalMetastore, CarbonInternalMetaUtil, CarbonRelation}
+import org.apache.spark.sql.hive.{CarbonInternalHiveMetadataUtil, CarbonInternalMetastore, CarbonRelation}
 import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
@@ -37,7 +38,6 @@ import org.apache.carbondata.core.metadata.encoder.Encoding
 import org.apache.carbondata.core.metadata.schema.{SchemaEvolution, SchemaEvolutionEntry, SchemaReader}
 import org.apache.carbondata.core.metadata.schema.table.{CarbonTable, TableInfo, TableSchema}
 import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema
-import org.apache.carbondata.core.service.CarbonCommonFactory
 import org.apache.carbondata.core.service.impl.ColumnUniqueIdGenerator
 import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
 import org.apache.carbondata.events.{CreateTablePostExecutionEvent, CreateTablePreExecutionEvent, OperationContext, OperationListenerBus}
@@ -211,18 +211,14 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
         throw new ErrorMessage(
           s"Index table column indexing order is same as Parent table column start order")
       }
-      val parentTableRelation = CarbonInternalMetaUtil
-        .retrieveRelation(sparkSession.sessionState.catalog.
-          lookupRelation(identifier))(sparkSession)
-      val parentCarbonTable = parentTableRelation.carbonTable
       // Should not allow to create index on an index table
-      val isIndexTable = CarbonInternalScalaUtil.isIndexTable(parentCarbonTable)
+      val isIndexTable = CarbonInternalScalaUtil.isIndexTable(carbonTable)
       if (isIndexTable) {
         throw new ErrorMessage(
           s"Table [$tableName] under database [$databaseName] is already an index table")
       }
       // Check whether index table column order is same as another index table column order
-      oldIndexInfo = CarbonInternalScalaUtil.getIndexInfo(parentTableRelation)
+      oldIndexInfo = CarbonInternalScalaUtil.getIndexInfo(carbonTable)
       if (null == oldIndexInfo) {
         oldIndexInfo = ""
       }
@@ -239,7 +235,7 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
        if (!isCreateSIndex && indexTableExists) {
          tableInfo = SchemaReader.getTableInfo(absoluteTableIdentifier)
        } else {
-         tableInfo = prepareTableInfo(carbonTable, parentCarbonTable, databaseName,
+         tableInfo = prepareTableInfo(carbonTable, databaseName,
            tableName, indexTableName, absoluteTableIdentifier)
        }
       if (isCreateSIndex && indexTableExists) {
@@ -333,6 +329,8 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
         // clear parent table from meta store cache as it is also required to be
         // refreshed when SI table is created
         CarbonInternalMetastore.removeTableFromMetadataCache(databaseName, tableName)(sparkSession)
+        // refersh the parent table relation
+        sparkSession.sessionState.catalog.refreshTable(identifier)
         val createTablePostExecutionEvent: CreateTablePostExecutionEvent =
           new CreateTablePostExecutionEvent(sparkSession, tableIdentifier)
         OperationListenerBus.getInstance.fireEvent(createTablePostExecutionEvent, operationContext)
@@ -377,7 +375,7 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
     Seq.empty
   }
 
-  def prepareTableInfo(carbonTable: CarbonTable, parentCarbonTable: CarbonTable,
+  def prepareTableInfo(carbonTable: CarbonTable,
     databaseName: String, tableName: String, indexTableName: String,
     absoluteTableIdentifier: AbsoluteTableIdentifier): TableInfo = {
     var schemaOrdinal = -1

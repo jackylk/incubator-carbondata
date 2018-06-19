@@ -32,9 +32,6 @@ class TestNIQueryWithSecondaryIndex extends QueryTest with BeforeAndAfterAll{
     sql("create index sc_indx6 on table seccust(c_phone,c_mktsegment) as 'org.apache.carbondata.format'")
     sql("create index sc_indx5 on table seccust(c_phone) as 'org.apache.carbondata.format'")
     sql("set carbon.si.lookup.partialstring=true")
-    sql("select * from sc_indx6").show(false)
-    sql("select * from sc_indx5").show(false)
-    sql("select * from seccust where c_phone like '25%989-741-2988'").show
   }
 
   test("Test NI UDF") {
@@ -45,15 +42,12 @@ class TestNIQueryWithSecondaryIndex extends QueryTest with BeforeAndAfterAll{
     val df1 = sql("select count(*) from seccust where NI(c_phone = '25-989-741-2988')")
     assert(!isIndexTablePresent(df1)) // Index Table should't present
 
-    println("Comparing SI and Non SI")
-
     checkAnswer(sql("select count(*) from seccust where NI(c_phone = '25-989-741-2988')"), count1BeforeIndex)
     checkAnswer(sql("select count(*) from seccust where NI(c_mktsegment ='BUILDING' and c_phone ='25-989-741-2989')"), count2BeforeIndex)
   }
 
   test("With partialstring=true for starts with") {
   try {
-    println("For Starts With when partialstring=true\n")
     sql("set carbon.lookup.partialstring=true")
 
     val dfT = sql("select count(*) from seccust where c_phone like '25-989-741-2988%'")
@@ -68,8 +62,6 @@ class TestNIQueryWithSecondaryIndex extends QueryTest with BeforeAndAfterAll{
 
   test("With partialstring=true for Ends With") {
   try {
-    println("\nFor Ends with when partialstring=true\n")
-
     sql("set carbon.lookup.partialstring=true")
 
     val dfET1 = sql("select count(*) from seccust where c_phone like '%25-989-741-2988'")
@@ -84,7 +76,6 @@ class TestNIQueryWithSecondaryIndex extends QueryTest with BeforeAndAfterAll{
 
   test("With partialstring=true for Contains") {
     try {
-      println("\nFor Contains when partialstring=true\n")
       sql("set carbon.lookup.partialstring=true")
 
       val dfCT1 = sql("select count(*) from seccust where c_phone like '%25-989-741-2988%'")
@@ -99,8 +90,6 @@ class TestNIQueryWithSecondaryIndex extends QueryTest with BeforeAndAfterAll{
 
   test("With partialstring=false for starts with") {
     try {
-      println("\nFor Starts With when partialstring=false\n")
-
       sql("set carbon.si.lookup.partialstring=false")
 
       val dfSF1 = sql("select count(*) from seccust where c_phone like '25-989-741-2988%'")
@@ -115,8 +104,6 @@ class TestNIQueryWithSecondaryIndex extends QueryTest with BeforeAndAfterAll{
 
   test("With partialstring=false for Ends With") {
     try {
-      println("\nFor Ends with when partialstring=false\n")
-
       sql("set carbon.si.lookup.partialstring=false")
 
       val dfEF1 = sql("select count(*) from seccust where c_phone like '%25-989-741-2988'")
@@ -131,8 +118,6 @@ class TestNIQueryWithSecondaryIndex extends QueryTest with BeforeAndAfterAll{
 
   test("With partialstring=false for Contains") {
     try {
-      println("\nFor Contains when partialstring=false\n")
-
       sql("set carbon.si.lookup.partialstring=false")
 
       val dfCF1 = sql("select count(*) from seccust where c_phone like '%25-989-741-2988%'")
@@ -147,10 +132,7 @@ class TestNIQueryWithSecondaryIndex extends QueryTest with BeforeAndAfterAll{
 
   test("Check SI Pushing or Not when partialstring=True") {
     try {
-      println("\nCheck SI Pushing or Not when partialstring=True\n")
-
       sql("set carbon.si.lookup.partialstring=true")
-      sql("select * from seccust where c_phone like '25%989-741-2988'").show
       val ch21 = sql("select * from seccust where c_phone like '25%989-741-2988'")
       //startsWith & endsWith so SI -yes
       if (SPARK_VERSION.startsWith("2.1")) {
@@ -160,7 +142,6 @@ class TestNIQueryWithSecondaryIndex extends QueryTest with BeforeAndAfterAll{
       }
       val ch22 = sql("select count(*) from seccust where c_phone like '%989-741-2988'")
       // endsWith so, SI - Yes
-
       if (SPARK_VERSION.startsWith("2.1")) {
         assert(checkSIColumnsSize(ch22, 1)) // size = EndsWith
       } else {
@@ -170,7 +151,6 @@ class TestNIQueryWithSecondaryIndex extends QueryTest with BeforeAndAfterAll{
       val ch23 = sql("select count(*) from seccust where c_phone like '25%989-741%2988'")
       // Query startsWith & Contains & endsWith so SI - Yes (his is combined with Like, hence SI
       // - YES)
-
       if (SPARK_VERSION.startsWith("2.1")) {
         assert(checkSIColumnsSize(ch23, 1)) // size = LIKE
       } else {
@@ -188,10 +168,7 @@ class TestNIQueryWithSecondaryIndex extends QueryTest with BeforeAndAfterAll{
 
   test("Check SI Pushing or Not when partialstring=False") {
     try {
-      println("\nCheck SI Pushing or Not when partialstring=False\n")
-
       sql("set carbon.si.lookup.partialstring=false")
-      sql("select count(*) from seccust where c_phone like '25%989-741-2988'").show()
       val ch11 = sql("select count(*) from seccust where c_phone like '25%989-741-2988'")
       if (SPARK_VERSION.startsWith("2.1")) {
         assert(checkSIColumnsSize(ch11, 3)) // size = length, startsWith and EndsWith

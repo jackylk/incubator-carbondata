@@ -98,13 +98,10 @@ object CarbonInternalScalaUtil {
     indexesTables
   }
 
-  def getIndexInfo(relation: CarbonDatasourceHadoopRelation): String = {
-    if (!isIndexTable(relation.carbonTable)) {
-      val databaseName = relation.carbonRelation.carbonTable.getCarbonTableIdentifier
-        .getDatabaseName
-      val carbonTable = relation.carbonRelation.carbonTable
+  def getIndexInfo(carbonTable: CarbonTable): String = {
+    if (!isIndexTable(carbonTable)) {
       IndexTableUtil.toGson(CarbonInternalScalaUtil.getIndexesMap(carbonTable).asScala.map(
-        entry => new IndexTableInfo(databaseName, entry._1, entry._2)).toArray)
+        entry => new IndexTableInfo(carbonTable.getDatabaseName, entry._1, entry._2)).toArray)
     } else {
       IndexTableUtil.toGson(new Array[IndexTableInfo](0))
     }
@@ -113,7 +110,8 @@ object CarbonInternalScalaUtil {
   def getIndexes(relation: CarbonDatasourceHadoopRelation): scala.collection.mutable.Map[String,
     Array[String]] = {
     val indexes = scala.collection.mutable.Map[String, Array[String]]()
-    IndexTableUtil.fromGson(getIndexInfo(relation)).foreach { indexTableInfo =>
+    val carbonTable = relation.carbonRelation.carbonTable
+    IndexTableUtil.fromGson(getIndexInfo(carbonTable)).foreach { indexTableInfo =>
       indexes.put(indexTableInfo.getTableName, indexTableInfo.getIndexCols.asScala.toArray)
     }
     indexes
