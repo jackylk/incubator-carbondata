@@ -90,7 +90,7 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
         throw new ErrorMessage(s"Parent Table $databaseName.$tableName is not found")
       }
 
-      if (carbonTable.isStreamingTable) {
+      if (carbonTable.isStreamingSink) {
         throw new ErrorMessage(
           s"Parent Table  ${ carbonTable.getDatabaseName }." +
           s"${ carbonTable.getTableName }" +

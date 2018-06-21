@@ -29,6 +29,7 @@ import org.apache.carbondata.core.datastore.exception.CarbonDataWriterException;
 import org.apache.carbondata.core.datastore.row.CarbonRow;
 import org.apache.carbondata.core.metadata.CarbonMetadata;
 import org.apache.carbondata.core.metadata.datatype.DataType;
+import org.apache.carbondata.core.metadata.datatype.DataTypes;
 import org.apache.carbondata.core.metadata.encoder.Encoding;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonDimension;
@@ -149,6 +150,10 @@ public class SecondaryIndexQueryResultProcessor {
    * whether the allocated tasks has any record
    */
   private boolean isRecordFound;
+  /**
+   * boolean mapping for long string dimension
+   */
+  private boolean[] isVarcharDimMapping;
 
   private SortIntermediateFileMerger intermediateFileMerger;
 
@@ -416,13 +421,18 @@ public class SecondaryIndexQueryResultProcessor {
     implicitColumnCount = indexTable.getImplicitDimensionByTableName(indexTableName).size();
     List<CarbonDimension> dimensions = indexTable.getDimensionByTableName(indexTableName);
     noDictionaryColMapping = new boolean[dimensions.size()];
+    isVarcharDimMapping = new boolean[dimensions.size()];
     int i = 0;
     for (CarbonDimension dimension : dimensions) {
       if (CarbonUtil.hasEncoding(dimension.getEncoder(), Encoding.DICTIONARY)) {
         i++;
         continue;
       }
-      noDictionaryColMapping[i++] = true;
+      noDictionaryColMapping[i] = true;
+      if (dimension.getColumnSchema().getDataType() == DataTypes.VARCHAR) {
+        isVarcharDimMapping[i] = true;
+      }
+      i++;
       noDictionaryCount++;
     }
     dimensionColumnCount = dimensions.size();
@@ -450,7 +460,7 @@ public class SecondaryIndexQueryResultProcessor {
         .createSortParameters(indexTable, databaseName, indexTableName, dimensionColumnCount,
             complexDimensionCount, measureCount, noDictionaryCount,
             segmentId, carbonLoadModel.getTaskNo(),
-            noDictionaryColMapping, false);
+            noDictionaryColMapping, isVarcharDimMapping, false);
     return parameters;
   }
 
