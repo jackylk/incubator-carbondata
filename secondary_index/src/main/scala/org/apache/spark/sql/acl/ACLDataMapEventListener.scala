@@ -53,10 +53,6 @@ object ACLDataMapEventListener {
                     ACLFileUtils.getPermissionsOnDatabase())
                 }
               })
-            val path = new Path(systemDirectoryPath)
-            val hdfs = path.getFileSystem(sparkSession.sqlContext.sparkContext.hadoopConfiguration)
-            setPermissions(hdfs, path)
-            setACLGroupRights(CarbonUserGroupInformation.getInstance.getCurrentUser, hdfs, path)
           }
           val folderListBeforeReBuild = List[String](systemDirectoryPath)
           val pathArrBeforeLoadOperation = ACLFileUtils
@@ -66,10 +62,11 @@ object ACLDataMapEventListener {
         case updateDataMapStatusPreExecutionEvent: UpdateDataMapStatusPreExecutionEvent =>
           val sparkSession: SparkSession = updateDataMapStatusPreExecutionEvent.sparkSession
           val systemDirectoryPath: String = updateDataMapStatusPreExecutionEvent.storePah
-          val path = new Path(systemDirectoryPath)
-          val hdfs = path.getFileSystem(sparkSession.sqlContext.sparkContext.hadoopConfiguration)
-          setPermissions(hdfs, path)
-          setACLGroupRights(CarbonUserGroupInformation.getInstance.getCurrentUser, hdfs, path)
+          val folderListBeforeReBuild = List[String](systemDirectoryPath)
+          val pathArrBeforeLoadOperation = ACLFileUtils
+            .takeRecurTraverseSnapshot(sparkSession.sqlContext, folderListBeforeReBuild)
+          operationContext.setProperty(folderListBeforeOperation, folderListBeforeReBuild)
+          operationContext.setProperty(pathArrBeforeOperation, pathArrBeforeLoadOperation)
       }
     }
   }
