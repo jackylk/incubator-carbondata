@@ -27,7 +27,7 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.command.{CreateIndexTable, DropIndex}
 import org.apache.spark.sql.execution.command._
-import org.apache.spark.sql.execution.command.datamap.{CarbonCreateDataMapCommand, CarbonDataMapShowCommand, CarbonDropDataMapCommand}
+import org.apache.spark.sql.execution.command.datamap.{CarbonCreateDataMapCommand, CarbonDataMapRebuildCommand, CarbonDataMapShowCommand, CarbonDropDataMapCommand}
 import org.apache.spark.sql.execution.command.management._
 import org.apache.spark.sql.execution.command.partition.{CarbonAlterTableAddHivePartitionCommand, CarbonAlterTableDropHivePartitionCommand, CarbonAlterTableSplitPartitionCommand}
 import org.apache.spark.sql.execution.command.schema.{CarbonAlterTableAddColumnCommand, CarbonAlterTableDataTypeChangeCommand, CarbonAlterTableDropColumnCommand, CarbonAlterTableRenameCommand}
@@ -186,6 +186,13 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
             CarbonEnv.getDatabaseName(table.get.database)(sparkSession)),
             table.get.table,
             PrivType.SELECT_NOGRANT)
+        case c@CarbonDataMapRebuildCommand(
+        dataMapName: String,
+        table: Option[TableIdentifier]) =>
+          checkPrivilegeRecursively(c, Some(
+            CarbonEnv.getDatabaseName(table.get.database)(sparkSession)),
+            table.get.table,
+            PrivType.INSERT_NOGRANT)
 
         case c@DescribeTableCommand(identifier, _, _) =>
           checkPrivilege(c, Set(new PrivObject(

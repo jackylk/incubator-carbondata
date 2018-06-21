@@ -274,6 +274,33 @@ object CarbonCommonInitializer {
         .addListener(classOf[LoadTableSIPostExecutionEvent],
           new ACLIndexLoadEventListener.ACLPostCreateIndexEventListener
         )
+      // create datamap
+      operationListenerBus
+        .addListener(classOf[CreateDataMapPreExecutionEvent],
+          new ACLDataMapEventListener.ACLPreDataMapEventListener
+        )
+      operationListenerBus
+        .addListener(classOf[CreateDataMapPostExecutionEvent],
+          new ACLDataMapEventListener.ACLPostDataMapEventListener
+        )
+      // uodate datamap status
+      operationListenerBus
+        .addListener(classOf[UpdateDataMapStatusPreExecutionEvent],
+          new ACLDataMapEventListener.ACLPreDataMapEventListener
+        )
+      operationListenerBus
+        .addListener(classOf[UpdateDataMapStatusPostExecutionEvent],
+          new ACLDataMapEventListener.ACLPostDataMapEventListener
+        )
+      // rebuild datamap
+      operationListenerBus
+        .addListener(classOf[BuildDataMapPreExecutionEvent],
+          new ACLBuildDataMapEventListener.ACLPreBuildDataMapEventListener
+        )
+      operationListenerBus
+        .addListener(classOf[BuildDataMapPostExecutionEvent],
+          new ACLBuildDataMapEventListener.ACLPostBuildDataMapEventListener
+        )
       initialized = true
     }
   }

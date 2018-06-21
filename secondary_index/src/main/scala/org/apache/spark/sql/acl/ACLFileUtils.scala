@@ -37,7 +37,6 @@ import org.apache.carbondata.core.locks.LockUsage
 import org.apache.carbondata.core.metadata.CarbonTableIdentifier
 import org.apache.carbondata.core.metadata.schema.PartitionInfo
 import org.apache.carbondata.core.util.CarbonProperties
-import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.events.OperationContext
 import org.apache.carbondata.spark.acl.{CarbonBadRecordStorePath, CarbonUserGroupInformation, InternalCarbonConstant, UserGroupUtils}
 
@@ -55,7 +54,8 @@ object ACLFileUtils {
   }
 
   def takeRecurTraverseSnapshot(sqlContext: SQLContext,
-      folderPaths: List[String], delimiter: String = "#~#"): ArrayBuffer[String] = {
+      folderPaths: List[String], delimiter: String = "#~#",
+      recursive: Boolean = false): ArrayBuffer[String] = {
     val loginUser = CarbonUserGroupInformation.getInstance.getLoginUser
     val currentUser = CarbonUserGroupInformation.getInstance.getCurrentUser
     val oriPathArr = new ArrayBuffer[String]()
@@ -72,7 +72,8 @@ object ACLFileUtils {
           oriPathArr,
           loginUser.getShortUserName,
           None,
-          delimiter
+          delimiter,
+          recursive
         )
       }
     }
@@ -145,7 +146,7 @@ object ACLFileUtils {
       pathArr: ArrayBuffer[String],
       owner: String,
       pathToFilter: Option[String] = None,
-      delimiter: String = "#~#"): Unit = {
+      delimiter: String = "#~#", recursive: Boolean = false): Unit = {
     if (fs.isInstanceOf[DistributedFileSystem] || fs.isInstanceOf[ViewFileSystem]) {
       val pathFilter = new PathFilter() {
         override def accept(path: Path): Boolean = {
@@ -154,8 +155,6 @@ object ACLFileUtils {
       }
       val fileStatuses: Seq[FileStatus] = fs match {
         case dfs: DistributedFileSystem =>
-          // TODO: globLocatedStatus is not working for hadoop version 2.8.3
-           dfs.globLocatedStatus(path, pathFilter, false)
           dfs.globStatus(path, pathFilter)
         case vfs: ViewFileSystem =>
           vfs.globStatus(path, pathFilter)
@@ -164,7 +163,14 @@ object ACLFileUtils {
       if (null != fileStatuses) {
         fileStatuses.foreach { fileStatus =>
           if (null != fileStatus) {
-            addFilePathToPathList(path, pathArr, owner, delimiter, fileStatus)
+            addFilePathToPathList(path,
+              pathArr,
+              owner,
+              delimiter,
+              fileStatus,
+              recursive,
+              fs,
+              pathToFilter)
           }
         }
       }
@@ -224,12 +230,26 @@ object ACLFileUtils {
       pathArr: ArrayBuffer[String],
       owner: String,
       delimiter: String,
-      fileStatus: FileStatus): Any = {
+      fileStatus: FileStatus,
+      recursive: Boolean = false,
+      fs: FileSystem = null,
+      pathToFilter: Option[String] = None): Any = {
 //    if (fileStatus.getOwner == owner) {
       if (fileStatus.isFile) {
         pathArr += (fileStatus.getPath.toString + delimiter + fileStatus.getModificationTime)
       } else {
         pathArr += (fileStatus.getPath.toString + delimiter + 1234567890L)
+        if (recursive) {
+          recurTraverse(
+            fs,
+            new Path(fileStatus.getPath.toString + "/*"),
+            pathArr,
+            owner,
+            pathToFilter,
+            delimiter,
+            recursive
+          )
+        }
       }
 //    }
   }
