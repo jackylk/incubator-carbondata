@@ -70,11 +70,9 @@ object ACLBuildDataMapEventListener {
           throw PreEventException(s"CarbonDataLoad Group: $carbonDataLoadGroup " +
                                   s"is not set for the user $currentUser", false)
         }
-        val folderListBeforeReBuild = List[String]()
-        dataMapNames.map(dataMapName => {
-          folderListBeforeReBuild :::
-          List(tableIdentifier.getTablePath + CarbonCommonConstants.FILE_SEPARATOR + dataMapName)
-        })
+        val folderListBeforeReBuild = dataMapNames.map(dataMapName => {
+          tableIdentifier.getTablePath + CarbonCommonConstants.FILE_SEPARATOR + dataMapName
+        }).toList
         val pathArrBeforeLoadOperation = ACLFileUtils
           .takeRecurTraverseSnapshot(sparkSession.sqlContext, folderListBeforeReBuild,
             recursive = true)
