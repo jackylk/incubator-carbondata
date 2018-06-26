@@ -285,11 +285,11 @@ object CarbonCommonInitializer {
         )
       // uodate datamap status
       operationListenerBus
-        .addListener(classOf[UpdateDataMapStatusPreExecutionEvent],
+        .addListener(classOf[UpdateDataMapPreExecutionEvent],
           new ACLDataMapEventListener.ACLPreDataMapEventListener
         )
       operationListenerBus
-        .addListener(classOf[UpdateDataMapStatusPostExecutionEvent],
+        .addListener(classOf[UpdateDataMapPostExecutionEvent],
           new ACLDataMapEventListener.ACLPostDataMapEventListener
         )
       // rebuild datamap

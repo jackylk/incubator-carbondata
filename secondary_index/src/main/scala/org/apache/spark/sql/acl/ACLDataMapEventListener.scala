@@ -44,7 +44,7 @@ object ACLDataMapEventListener {
       event match {
         case createDataMapPreExecutionEvent: CreateDataMapPreExecutionEvent =>
           val sparkSession: SparkSession = createDataMapPreExecutionEvent.sparkSession
-          val systemDirectoryPath: String = createDataMapPreExecutionEvent.storePah
+          val systemDirectoryPath: String = createDataMapPreExecutionEvent.storePath
           if (!FileFactory.isFileExist(systemDirectoryPath)) {
             CarbonUserGroupInformation.getInstance.getCurrentUser
               .doAs(new PrivilegedExceptionAction[Unit]() {
@@ -59,9 +59,9 @@ object ACLDataMapEventListener {
             .takeRecurTraverseSnapshot(sparkSession.sqlContext, folderListBeforeReBuild)
           operationContext.setProperty(folderListBeforeOperation, folderListBeforeReBuild)
           operationContext.setProperty(pathArrBeforeOperation, pathArrBeforeLoadOperation)
-        case updateDataMapStatusPreExecutionEvent: UpdateDataMapStatusPreExecutionEvent =>
-          val sparkSession: SparkSession = updateDataMapStatusPreExecutionEvent.sparkSession
-          val systemDirectoryPath: String = updateDataMapStatusPreExecutionEvent.storePah
+        case updateDataMapPreExecutionEvent: UpdateDataMapPreExecutionEvent =>
+          val sparkSession: SparkSession = updateDataMapPreExecutionEvent.sparkSession
+          val systemDirectoryPath: String = updateDataMapPreExecutionEvent.storePath
           val folderListBeforeReBuild = List[String](systemDirectoryPath)
           val pathArrBeforeLoadOperation = ACLFileUtils
             .takeRecurTraverseSnapshot(sparkSession.sqlContext, folderListBeforeReBuild)
@@ -78,8 +78,8 @@ object ACLDataMapEventListener {
         case createDataMapPostExecutionEvent : CreateDataMapPostExecutionEvent =>
           val sparkSession = createDataMapPostExecutionEvent.sparkSession
           ACLFileUtils.takeSnapAfterOperationAndApplyACL(sparkSession, operationContext)
-        case updateDataMapStatusPostExecutionEvent : UpdateDataMapStatusPostExecutionEvent =>
-          val sparkSession = updateDataMapStatusPostExecutionEvent.sparkSession
+        case updateDataMapPostExecutionEvent : UpdateDataMapPostExecutionEvent =>
+          val sparkSession = updateDataMapPostExecutionEvent.sparkSession
           ACLFileUtils.takeSnapAfterOperationAndApplyACL(sparkSession, operationContext)
       }
     }
