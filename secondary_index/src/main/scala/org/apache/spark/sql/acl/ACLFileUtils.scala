@@ -17,6 +17,7 @@
 
 package org.apache.spark.sql.acl
 
+import java.io.FileNotFoundException
 import java.security.PrivilegedExceptionAction
 
 import scala.collection.mutable.ArrayBuffer
@@ -106,7 +107,6 @@ object ACLFileUtils {
 
   def changeOwnerRecursivelyAfterOperation(sqlContext: SQLContext,
       oriPathArr: ArrayBuffer[String], curPathArr: ArrayBuffer[String], delimiter: String = "#~#") {
-    try {
       val loginUser = CarbonUserGroupInformation.getInstance.getLoginUser
       val currentUser = CarbonUserGroupInformation.getInstance.getCurrentUser
       Utils.proxyOperate(loginUser, currentUser,
@@ -124,6 +124,7 @@ object ACLFileUtils {
         var hdfs: FileSystem = null
         diffPathArr.foreach { pathStr =>
           val path = new Path(pathStr.split(delimiter)(0))
+        try {
           hdfs = path.getFileSystem(sqlContext.sparkContext.hadoopConfiguration)
           if (!path.getName.contains(LockUsage.LOCK) && hdfs.exists(path)) {
             if (hdfs.getFileStatus(path).getOwner != user) {
@@ -132,6 +133,10 @@ object ACLFileUtils {
             setPermissions(hdfs, path)
             setACLGroupRights(currentUser, hdfs, path)
           }
+        } catch {
+          case e: FileNotFoundException =>
+            LOGGER.warn("The file might be cleaned by other process," +
+                        s" skipping applying acl for file ${ path.toString }")
         }
       }
     }
