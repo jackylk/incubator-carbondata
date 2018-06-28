@@ -48,10 +48,14 @@ object CarbonThriftServer {
       System.exit(0)
     }
 
+    val randomAppName = java.util.UUID.randomUUID().toString
+    if (!sparkConf.contains("spark.app.name")) {
+      sparkConf.setAppName(randomAppName)
+    }
+
     val builder = SparkSession
       .builder()
       .config(sparkConf)
-      .appName("Carbon Thrift Server(uses CarbonSession)")
       .enableHiveSupport()
 
     if (!sparkConf.contains("carbon.properties.filepath")) {
