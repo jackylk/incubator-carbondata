@@ -194,7 +194,7 @@ public class CarbonWriterBuilder {
    * @return CarbonWriterBuilder
    */
   public CarbonWriterBuilder setEndPoint(String value) {
-    FileFactory.getConfiguration().set(Constants.ENDPOINT, value);
+    FileFactory.getConfiguration().set("fs.s3a.endpoint", value);
     return this;
   }
 
