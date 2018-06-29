@@ -146,14 +146,14 @@ public class HDFSACLCarbonFile extends HDFSCarbonFile {
     }
   }
 
-  @Override public boolean mkdirs(String filePath, final FileFactory.FileType fileType)
+  @Override public boolean mkdirs(String filePath)
       throws IOException {
     final String localFilePath = filePath.replace("\\", "/");
     final boolean doAs = true;
     try {
       PrivilegedExceptionAction<Boolean> privObject = new PrivilegedExceptionAction<Boolean>() {
         @Override public Boolean run() throws Exception {
-          return HDFSACLCarbonFile.super.mkdirs(localFilePath, fileType);
+          return HDFSACLCarbonFile.super.mkdirs(localFilePath);
         }
       };
       if (doAs) {
