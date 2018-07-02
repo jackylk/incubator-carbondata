@@ -38,8 +38,10 @@ import org.apache.spark.sql.hive.execution.command.CarbonDropDatabaseCommand
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
+import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.scan.expression.{ColumnExpression, Expression}
 import org.apache.carbondata.spark.rdd.CarbonScanRDD
+import org.apache.carbondata.spark.util.CarbonSparkUtil
 
 private[sql] case class CarbonPrivCheck(sparkSession: SparkSession,
     hCatalog: SessionCatalog,
@@ -57,8 +59,13 @@ private[sql] case class CarbonPrivCheck(sparkSession: SparkSession,
 
   private def isSameTable(relation: CarbonRelation,
       carbonInternalProject: Option[CarbonInternalProject]): Boolean = {
+    isSameTable(relation.carbonTable, carbonInternalProject)
+  }
+
+  private def isSameTable(carbonTable: CarbonTable,
+      carbonInternalProject: Option[CarbonInternalProject]): Boolean = {
     carbonInternalProject.isDefined &&
-    (TableIdentifier(relation.tableName, Some(relation.databaseName)) ==
+    (TableIdentifier(carbonTable.getTableName, Some(carbonTable.getDatabaseName)) ==
      getTableIdentifier(carbonInternalProject.get.tableIdentifier))
   }
 
@@ -165,10 +172,12 @@ private[sql] case class CarbonPrivCheck(sparkSession: SparkSession,
                 relation.carbonRelation,
                 rdd.prev.asInstanceOf[CarbonScanRDD[InternalRow]])
               scan
-            //            case countStar@CarbonCountStar(_, relation: CarbonRelation, _, needPrev)
-            //              if !isSameTable(relation, internalTable) && needPrev =>
-            //              checkPrivilege(Seq.empty, relation, null)
-            //              countStar
+            case countStar@CarbonCountStar(_, carbonTable: CarbonTable, _, needPrev)
+              if !isSameTable(carbonTable, internalTable) && needPrev =>
+              checkPrivilege(Seq.empty,
+                carbonTable,
+                null)
+              countStar
             case others => others
           }
       }
@@ -202,9 +211,9 @@ private[sql] case class CarbonPrivCheck(sparkSession: SparkSession,
 
   private def checkPrivilege(
       projectList: Seq[Attribute],
-      relation: CarbonRelation,
+      carbonTable: CarbonTable,
       carbonScanRDD: CarbonScanRDD[InternalRow]): Unit = {
-    val (dbName, tblName) = (relation.databaseName, relation.tableName)
+    val (dbName, tblName) = (carbonTable.getDatabaseName, carbonTable.getTableName)
     LOGGER.info("Start Select query Acl privilege table level")
     if (!aclInterface.checkPrivilege(
       Set(new PrivObject(ObjectType.TABLE, dbName, tblName, null,
@@ -238,6 +247,13 @@ private[sql] case class CarbonPrivCheck(sparkSession: SparkSession,
       }
     }
     LOGGER.info("End Select query Acl privilege table level")
+  }
+
+  private def checkPrivilege(
+      projectList: Seq[Attribute],
+      relation: CarbonRelation,
+      carbonScanRDD: CarbonScanRDD[InternalRow]): Unit = {
+    checkPrivilege(projectList, relation.carbonTable, carbonScanRDD)
   }
 
   private def getAllColumns(expression: Expression, projectSet: Set[String]): Set[String] = {
