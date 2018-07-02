@@ -19,7 +19,7 @@ package org.apache.carbondata.spark.thriftserver
 
 import java.io.File
 
-import org.apache.hadoop.fs.s3a.Constants.{ACCESS_KEY, ENDPOINT, SECRET_KEY}
+import org.apache.hadoop.fs.s3a.Constants.{ACCESS_KEY, SECRET_KEY}
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.hive.thriftserver.HiveThriftServer2
@@ -48,10 +48,14 @@ object CarbonThriftServer {
       System.exit(0)
     }
 
+    val randomAppName = java.util.UUID.randomUUID().toString
+    if (!sparkConf.contains("spark.app.name")) {
+      sparkConf.setAppName(randomAppName)
+    }
+
     val builder = SparkSession
       .builder()
       .config(sparkConf)
-      .appName("Carbon Thrift Server(uses CarbonSession)")
       .enableHiveSupport()
 
     if (!sparkConf.contains("carbon.properties.filepath")) {
@@ -94,7 +98,7 @@ object CarbonThriftServer {
   }
 
   def getKeyOnPrefix(path: String): (String, String, String) = {
-    val endPoint = "spark.hadoop." + ENDPOINT
+    val endPoint = "spark.hadoop." + "fs.s3a.endpoint"
     if (path.startsWith(CarbonCommonConstants.S3A_PREFIX)) {
       ("spark.hadoop." + ACCESS_KEY, "spark.hadoop." + SECRET_KEY, endPoint)
     } else if (path.startsWith(CarbonCommonConstants.S3N_PREFIX)) {
