@@ -29,11 +29,10 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl
 import org.apache.spark.{Partition, SparkContext, TaskContext, TaskKilledException}
 
-import org.apache.carbondata.core.datamap.{AbstractDataMapJob, DataMapChooser, DataMapStoreManager}
-import org.apache.carbondata.core.datamap.dev.{CacheableDataMap, DataMap, DataMapFactory}
-import org.apache.carbondata.core.datamap.dev.expr.DataMapExprWrapper
-import org.apache.carbondata.core.indexstore.{Blocklet, BlockletDataMapIndexWrapper, TableBlockIndexUniqueIdentifier, TableBlockIndexUniqueIdentifierWrapper}
-import org.apache.carbondata.core.indexstore.blockletindex.{BlockletDataMap, BlockletDataMapDistributable}
+import org.apache.carbondata.core.datamap.{AbstractDataMapJob, DataMapStoreManager}
+import org.apache.carbondata.core.datamap.dev.CacheableDataMap
+import org.apache.carbondata.core.indexstore.{BlockletDataMapIndexWrapper, TableBlockIndexUniqueIdentifierWrapper}
+import org.apache.carbondata.core.indexstore.blockletindex.{BlockletDataMap, BlockletDataMapDistributable, BlockletDataMapFactory}
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema
 import org.apache.carbondata.core.util.CarbonUtil
@@ -43,9 +42,8 @@ class SparkBlockletDataMapLoaderJob extends AbstractDataMapJob {
 
   override def execute(carbonTable: CarbonTable,
     dataMapFormat: FileInputFormat[Void, BlockletDataMapIndexWrapper]): Unit = {
-    val dataMapExprWrapper: DataMapExprWrapper = DataMapChooser.getDefaultDataMap(carbonTable, null)
     val dataMapFactory = DataMapStoreManager.getInstance()
-      .getDataMapFactoryClass(carbonTable, dataMapExprWrapper.getDataMapSchema)
+      .getDataMapFactoryClass(carbonTable, BlockletDataMapFactory.DATA_MAP_SCHEMA)
     val cacheableDataMap = dataMapFactory.asInstanceOf[CacheableDataMap]
     var startTime = System.currentTimeMillis()
     val dataMapIndexWrappers = new DataMapLoaderRDD(SparkContext.getOrCreate(),

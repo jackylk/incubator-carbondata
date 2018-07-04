@@ -518,4 +518,8 @@ object ACLFileUtils {
     ACLFileUtils.changeOwnerRecursivelyAfterOperation(sparkSession.sqlContext,
       pathArrBeforeCreate, pathArrAfterCreate)
   }
+
+  def isACLSupported(tablePath: String): Boolean = {
+    !tablePath.startsWith("s3")
+  }
 }

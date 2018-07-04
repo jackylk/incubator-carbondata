@@ -37,8 +37,10 @@ import org.apache.carbondata.core.indexstore.PartitionSpec;
 import org.apache.carbondata.core.indexstore.TableBlockIndexUniqueIdentifier;
 import org.apache.carbondata.core.indexstore.TableBlockIndexUniqueIdentifierWrapper;
 import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMapDistributable;
+import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMapFactory;
 import org.apache.carbondata.core.memory.MemoryException;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
+import org.apache.carbondata.core.metadata.schema.table.DataMapSchema;
 import org.apache.carbondata.core.util.BlockletDataMapLoader;
 
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -85,8 +87,9 @@ public class DistributableBlockletDataMapLoader
     }
     List<DataMapDistributable> validDistributables = new ArrayList<>();
     try {
+      DataMapSchema dataMapSchema = BlockletDataMapFactory.DATA_MAP_SCHEMA;
       DataMapFactory dataMapFactory = DataMapStoreManager.getInstance()
-          .getDataMapFactoryClass(table, dataMapExprWrapper.getDataMapSchema());
+          .getDataMapFactoryClass(table, dataMapSchema);
       CacheableDataMap factory = (CacheableDataMap) dataMapFactory;
       validDistributables = factory.getAllUncachedDistributables(distributableList);
     } catch (MalformedDataMapCommandException e) {

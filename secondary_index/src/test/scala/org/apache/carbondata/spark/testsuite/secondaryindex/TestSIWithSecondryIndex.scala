@@ -42,11 +42,26 @@ class TestSIWithSecondryIndex extends QueryTest with BeforeAndAfterAll {
     sql("alter table delete_records compact 'minor'")
     sql("create index index1 on table delete_records(b) as 'carbondata'")
     checkAnswer(sql("select count(*) from index1"), Row(0))
+    sql("drop table if exists delete_records")
+  }
+
+  test("test secondary index data after parent table rename") {
+    sql("drop table if exists maintable")
+    sql("drop table if exists maintableeee")
+    sql("create table maintable (a string,b string, c int) stored by 'carbondata'")
+    sql("insert into maintable values('k','x',2)")
+    sql("insert into maintable values('k','r',1)")
+    sql("create index index21 on table maintable(b) as 'carbondata'")
+    checkAnswer(sql("select * from maintable where c>1"), Seq(Row("k","x",2)))
+    sql("ALTER TABLE maintable RENAME TO maintableeee")
+    checkAnswer(sql("select * from maintableeee where c>1"), Seq(Row("k","x",2)))
   }
 
   override def afterAll {
     sql("drop index si_altercolumn on table_WithSIAndAlter")
     sql("drop table if exists table_WithSIAndAlter")
+    sql("drop table if exists maintable")
+    sql("drop table if exists maintableeee")
   }
 
 }

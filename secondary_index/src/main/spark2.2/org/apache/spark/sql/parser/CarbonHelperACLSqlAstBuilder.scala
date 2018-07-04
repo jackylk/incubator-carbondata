@@ -244,6 +244,7 @@ class CarbonHelperACLSqlAstBuilder(conf: SQLConf,
       tableProperties,
       bucketFields,
       isAlterFlow = false,
+      isPreAggFlow = false,
       tableComment
     )
 

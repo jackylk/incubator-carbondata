@@ -111,6 +111,11 @@ object ACLLoadEventListener {
         throw PreEventException(s"CarbonDataLoad Group: $carbonDataLoadGroup is not set for the " +
                                 s"user $currentUser", false)
       }
+      val dbName = carbonLoadModel.getDatabaseName
+      val carbonTable = carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable
+      val bad_records_logger_enable = optionsFinal.get("bad_records_logger_enable")
+      val bad_records_action = optionsFinal.get("bad_records_action")
+      var bad_record_path = optionsFinal.get("bad_record_path")
 
       // loadPre2
       if (ACLFileUtils.isSecureModeEnabled) {
@@ -118,8 +123,9 @@ object ACLLoadEventListener {
         val files: java.util.List[String] =
           new java.util.ArrayList[String](CarbonCommonConstants.CONSTANT_SIZE_TEN)
         CarbonQueryUtil.splitFilePath(factPath, files, CarbonCommonConstants.COMMA)
-        val objSet = files.asScala.map { filePath =>
-          new PrivObject(ObjectType.FILE, null, filePath, null, Set(PrivType.SELECT_NOGRANT))
+        val objSet = files.asScala.collect {
+          case filePath if ACLFileUtils.isACLSupported(filePath) =>
+            new PrivObject(ObjectType.FILE, null, filePath, null, Set(PrivType.SELECT_NOGRANT))
         }.toSet
         if (!isDataFrameDefined && !aclInterface.checkPrivilege(objSet)) {
           throw PreEventException(
@@ -127,29 +133,57 @@ object ACLLoadEventListener {
         }
       }
 
-      // loadPre3
+      if (ACLFileUtils
+        .isACLSupported(carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable.getTablePath)) {
+        // loadPre3
+        bad_record_path = checkACLForBadRecordPath(bad_records_logger_enable,
+          bad_records_action,
+          bad_record_path)(sparkSession)
 
-      val dbName = carbonLoadModel.getDatabaseName
-      val carbonTable = carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable
-      val bad_records_logger_enable = optionsFinal.get("bad_records_logger_enable")
-      val bad_records_action = optionsFinal.get("bad_records_action")
-      var bad_record_path = optionsFinal.get("bad_record_path")
+        //      carbonLoadModel.setBadRecordsLocation(bad_record_path)
+        val partitionDirectoryPath = if (carbonTable.isHivePartitionTable) {
+          createPartitionDirectory(carbonLoadModel)(sparkSession)
+        } else {
+          ""
+        }
 
-      // loadPre4
+        // loadPre4
 
+        val folderListBeforLoad = takeSnapshotBeforeLoad(sparkSession.sqlContext,
+          carbonTable.getCarbonTableIdentifier,
+          bad_records_logger_enable,
+          bad_records_action,
+          dbName,
+          carbonTable,
+          bad_record_path,
+          partitionDirectoryPath)
+        val pathArrBeforeLoadOperation = ACLFileUtils
+          .takeRecurTraverseSnapshot(sparkSession.sqlContext, folderListBeforLoad)
+        operationContext.setProperty(folderListBeforeOperation, folderListBeforLoad)
+        operationContext.setProperty(pathArrBeforeOperation, pathArrBeforeLoadOperation)
+      } else if (ACLFileUtils.isACLSupported(bad_record_path)) {
+        checkACLForBadRecordPath(bad_records_logger_enable, bad_records_action, bad_record_path)(
+          sparkSession)
+      }
+    }
+
+    def checkACLForBadRecordPath(bad_records_logger_enable: String,
+        bad_records_action: String,
+        bad_records_path: String)
+      (sparkSession: SparkSession): String = {
       if (bad_records_logger_enable.toBoolean ||
           LoggerAction.REDIRECT.name().equalsIgnoreCase(bad_records_action)) {
-        bad_record_path = CarbonUtil.checkAndAppendHDFSUrl(bad_record_path)
+        val badRecordPath = CarbonUtil.checkAndAppendHDFSUrl(bad_records_path)
         //        if (!CarbonUtil.isValidBadStorePath(bad_record_path)) {
         //          sys.error("Invalid bad records location.")
         //        } else
-        if (CarbonUtil.isValidBadStorePath(bad_record_path) && ACLFileUtils.isSecureModeEnabled) {
+        if (CarbonUtil.isValidBadStorePath(badRecordPath) && ACLFileUtils.isSecureModeEnabled) {
           val aclInterface: ACLInterface = CarbonInternalMetaUtil.getACLInterface(sparkSession)
           if (!aclInterface.checkPrivilege(Set(new PrivObject(ObjectType.FILE,
-              null,
-              bad_record_path,
-              null,
-              Set(PrivType.INSERT_NOGRANT))))) {
+            null,
+            badRecordPath,
+            null,
+            Set(PrivType.INSERT_NOGRANT))))) {
             throw PreEventException(
               "User does not have privileges for configured bad records folder path", false)
           }
@@ -157,28 +191,10 @@ object ACLLoadEventListener {
         //        bad_record_path = FileFactory
         //          .getCarbonFile(bad_record_path, FileFactory.getFileType(bad_record_path))
         //          .getCanonicalPath
-      }
-      //      carbonLoadModel.setBadRecordsLocation(bad_record_path)
-      val partitionDirectoryPath = if (carbonTable.isHivePartitionTable) {
-        createPartitionDirectory(carbonLoadModel)(sparkSession)
+        badRecordPath
       } else {
-        ""
+        bad_records_path
       }
-
-      // loadPre3
-
-      val folderListBeforLoad = takeSnapshotBeforeLoad(sparkSession.sqlContext,
-        carbonTable.getCarbonTableIdentifier,
-        bad_records_logger_enable,
-        bad_records_action,
-        dbName,
-        carbonTable,
-        bad_record_path,
-        partitionDirectoryPath)
-      val pathArrBeforeLoadOperation = ACLFileUtils
-        .takeRecurTraverseSnapshot(sparkSession.sqlContext, folderListBeforLoad)
-      operationContext.setProperty(folderListBeforeOperation, folderListBeforLoad)
-      operationContext.setProperty(pathArrBeforeOperation, pathArrBeforeLoadOperation)
 
     }
 
@@ -229,18 +245,21 @@ object ACLLoadEventListener {
         operationContext: OperationContext): Unit = {
       val loadTablePostExecutionEvent = event.asInstanceOf[LoadTablePostExecutionEvent]
       val carbonLoadModel = loadTablePostExecutionEvent.getCarbonLoadModel
-      val folderPathsBeforeLoad = operationContext
-        .getProperty(ACLLoadEventListener.folderListBeforeOperation)
-        .asInstanceOf[List[String]]
-      val pathArrBeforeLoad = operationContext
-        .getProperty(ACLLoadEventListener.pathArrBeforeOperation)
-        .asInstanceOf[ArrayBuffer[String]]
-      val sparkSession = SparkSession.getActiveSession.get
-      val pathArrAfterLoad = ACLFileUtils
-        .takeRecurTraverseSnapshot(sparkSession.sqlContext, folderPathsBeforeLoad)
+      if (ACLFileUtils.isACLSupported(carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable
+        .getTablePath)) {
+        val folderPathsBeforeLoad = operationContext
+          .getProperty(ACLLoadEventListener.folderListBeforeOperation)
+          .asInstanceOf[List[String]]
+        val pathArrBeforeLoad = operationContext
+          .getProperty(ACLLoadEventListener.pathArrBeforeOperation)
+          .asInstanceOf[ArrayBuffer[String]]
+        val sparkSession = SparkSession.getActiveSession.get
+        val pathArrAfterLoad = ACLFileUtils
+          .takeRecurTraverseSnapshot(sparkSession.sqlContext, folderPathsBeforeLoad)
 
-      ACLFileUtils.changeOwnerRecursivelyAfterOperation(sparkSession.sqlContext,
-        pathArrBeforeLoad, pathArrAfterLoad)
+        ACLFileUtils.changeOwnerRecursivelyAfterOperation(sparkSession.sqlContext,
+          pathArrBeforeLoad, pathArrAfterLoad)
+      }
     }
   }
 

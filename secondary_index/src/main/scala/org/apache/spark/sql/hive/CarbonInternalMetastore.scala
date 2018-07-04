@@ -192,11 +192,8 @@ object CarbonInternalMetastore {
    */
   private def setDictionaryPathInCarbonTable(carbonTable: CarbonTable,
       indexMetadata: IndexMetadata): Unit = {
-    val indexTablePath = carbonTable.getAbsoluteTableIdentifier.getTablePath
-    val newTablePath: String = CarbonTablePath
-      .getNewTablePath(indexTablePath, indexMetadata.getParentTableName)
     val parentTableAbsoluteTableIdentifier = AbsoluteTableIdentifier
-      .from(newTablePath,
+      .from(indexMetadata.getParentTablePath,
         carbonTable.getDatabaseName,
         indexMetadata.getParentTableName,
         indexMetadata.getParentTableId)

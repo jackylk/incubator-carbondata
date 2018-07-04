@@ -19,6 +19,7 @@ package org.apache.carbondata.spark.acl;
 import org.apache.carbondata.core.datastore.FileReader;
 import org.apache.carbondata.core.datastore.filesystem.CarbonFile;
 import org.apache.carbondata.core.datastore.filesystem.LocalCarbonFile;
+import org.apache.carbondata.core.datastore.filesystem.S3CarbonFile;
 import org.apache.carbondata.core.datastore.impl.DFSFileReaderImpl;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.datastore.impl.FileReaderImpl;
@@ -54,8 +55,9 @@ public class ACLFileFactory implements FileTypeInterface {
     switch (fileType) {
       case LOCAL:
         return new LocalCarbonFile(FileFactory.getUpdatedFilePath(path, fileType));
-      case HDFS:
       case S3:
+        return new S3CarbonFile(path);
+      case HDFS:
         return new HDFSACLCarbonFile(path);
       case ALLUXIO:
         return new AlluxioACLCarbonFile(path);
@@ -70,8 +72,9 @@ public class ACLFileFactory implements FileTypeInterface {
     switch (fileType) {
       case LOCAL:
         return new LocalCarbonFile(FileFactory.getUpdatedFilePath(path, fileType));
-      case HDFS:
       case S3:
+        return new S3CarbonFile(path, conf);
+      case HDFS:
         return new HDFSACLCarbonFile(path, conf);
       case ALLUXIO:
         return new AlluxioACLCarbonFile(path);
