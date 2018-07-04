@@ -23,7 +23,7 @@ import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.SparkSession
 
 import org.apache.carbondata.common.logging.LogServiceFactory
-import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier
+import org.apache.carbondata.core.metadata.{AbsoluteTableIdentifier, CarbonTableIdentifier}
 import org.apache.carbondata.events._
 import org.apache.carbondata.spark.acl.CarbonUserGroupInformation
 
@@ -33,8 +33,6 @@ import org.apache.carbondata.spark.acl.CarbonUserGroupInformation
 object ACLRefreshTableEventListener {
 
   val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
-  val FOLDER_LIST_BEFORE_OPERATION = "folderListBeforeOperation"
-  val PATH_ARR_BEFORE_OPERATION = "pathArrBeforeOperation"
 
   /**
    * This is to apply table permission on table folder and take snapshot
@@ -47,8 +45,7 @@ object ACLRefreshTableEventListener {
       val absoluteTableIdentifier: AbsoluteTableIdentifier = refreshTablePreExecutionEvent
         .identifier
       val sparkSession: SparkSession = refreshTablePreExecutionEvent.sparkSession
-      val carbonTablePath = absoluteTableIdentifier.getTablePath
-      takeSnapshotBeforeOperation(operationContext, sparkSession, carbonTablePath)
+      takeSnapshotBeforeOperation(operationContext, sparkSession, absoluteTableIdentifier)
     }
 
     /**
@@ -57,27 +54,33 @@ object ACLRefreshTableEventListener {
      *
      * @param operationContext
      * @param sparkSession
-     * @param carbonTablePath
+     * @param absoluteTableIdentifier
      */
     def takeSnapshotBeforeOperation(operationContext: OperationContext,
-      sparkSession: SparkSession,
-        carbonTablePath: String): Unit = {
-     val currentUser = CarbonUserGroupInformation.getInstance.getCurrentUser
+        sparkSession: SparkSession,
+        absoluteTableIdentifier: AbsoluteTableIdentifier): Unit = {
+      val carbonTablePath = absoluteTableIdentifier.getTablePath
+      val currentUser = CarbonUserGroupInformation.getInstance.getCurrentUser
       currentUser.doAs(new PrivilegedExceptionAction[Unit]() {
-          override def run(): Unit = {
-            // Set permission on the table permission on table folder
-            org.apache.carbondata.spark.acl.ACLFileUtils.setPermission(carbonTablePath,
-              ACLFileUtils.getPermissionsOnTable())
-          }
-        })
+        override def run(): Unit = {
+          // Set permission on the table permission on table folder
+          org.apache.carbondata.spark.acl.ACLFileUtils.setPermission(carbonTablePath,
+            ACLFileUtils.getPermissionsOnTable())
+        }
+      })
       // get path of all possible depths
       val folderListBeforeCreate: List[String] = ACLFileUtils
         .getTablePathListForSnapshot(carbonTablePath, null)
       // get the snapshot of the table folder
+      val carbonTableIdentifier = new CarbonTableIdentifier(absoluteTableIdentifier.getDatabaseName,
+        absoluteTableIdentifier.getTableName, "")
       val pathArrBeforeCreateOperation = ACLFileUtils
-          .takeNonRecursiveSnapshot(sparkSession.sqlContext, new Path(carbonTablePath))
-      operationContext.setProperty(FOLDER_LIST_BEFORE_OPERATION, folderListBeforeCreate)
-      operationContext.setProperty(PATH_ARR_BEFORE_OPERATION, pathArrBeforeCreateOperation)
+        .takeNonRecursiveSnapshot(sparkSession.sqlContext, new Path(carbonTablePath))
+      operationContext
+        .setProperty(ACLFileUtils.getFolderListKey(carbonTableIdentifier), folderListBeforeCreate)
+      operationContext
+        .setProperty(ACLFileUtils.getPathListKey(carbonTableIdentifier),
+          pathArrBeforeCreateOperation)
     }
   }
 
@@ -89,7 +92,10 @@ object ACLRefreshTableEventListener {
       val refreshTablePostExecutionEvent = event.asInstanceOf[RefreshTablePostExecutionEvent]
       val sparkSession = refreshTablePostExecutionEvent.sparkSession
       // take the snapshot post refresh table event and apply acl
-      ACLFileUtils.takeSnapAfterOperationAndApplyACL(sparkSession, operationContext)
+      ACLFileUtils
+        .takeSnapAfterOperationAndApplyACL(sparkSession,
+          operationContext,
+          refreshTablePostExecutionEvent.identifier.getCarbonTableIdentifier)
     }
   }
 

@@ -19,20 +19,16 @@ package org.apache.spark.sql.acl
 
 import java.security.PrivilegedExceptionAction
 
-import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.acl.ACLFileUtils.{setACLGroupRights, setPermissions}
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.datastore.impl.FileFactory
-import org.apache.carbondata.events.{CreateDataMapPostExecutionEvent,
-  CreateDataMapPreExecutionEvent, _}
+import org.apache.carbondata.core.metadata.CarbonTableIdentifier
+import org.apache.carbondata.events.{CreateDataMapPostExecutionEvent, CreateDataMapPreExecutionEvent, _}
 import org.apache.carbondata.spark.acl.CarbonUserGroupInformation
 
 object ACLDataMapEventListener {
   val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
-  val folderListBeforeOperation = "folderListBeforeOperation"
-  val pathArrBeforeOperation = "pathArrBeforeOperation"
 
   /**
    * The class will handle the Create DataMap Events, to apply he file permission
@@ -45,6 +41,9 @@ object ACLDataMapEventListener {
         case createDataMapPreExecutionEvent: CreateDataMapPreExecutionEvent =>
           val sparkSession: SparkSession = createDataMapPreExecutionEvent.sparkSession
           val systemDirectoryPath: String = createDataMapPreExecutionEvent.storePath
+          val tableIdentifier = createDataMapPreExecutionEvent.tableIdentifier
+          val carbonTableIdentifier = new CarbonTableIdentifier(tableIdentifier.database
+            .getOrElse("default"), tableIdentifier.table, "")
           if (!FileFactory.isFileExist(systemDirectoryPath)) {
             CarbonUserGroupInformation.getInstance.getCurrentUser
               .doAs(new PrivilegedExceptionAction[Unit]() {
@@ -57,16 +56,27 @@ object ACLDataMapEventListener {
           val folderListBeforeReBuild = List[String](systemDirectoryPath)
           val pathArrBeforeLoadOperation = ACLFileUtils
             .takeRecurTraverseSnapshot(sparkSession.sqlContext, folderListBeforeReBuild)
-          operationContext.setProperty(folderListBeforeOperation, folderListBeforeReBuild)
-          operationContext.setProperty(pathArrBeforeOperation, pathArrBeforeLoadOperation)
+          operationContext.setProperty(ACLFileUtils.getFolderListKey(carbonTableIdentifier),
+            folderListBeforeReBuild)
+          operationContext.setProperty(ACLFileUtils.getPathListKey(carbonTableIdentifier),
+            pathArrBeforeLoadOperation)
         case updateDataMapPreExecutionEvent: UpdateDataMapPreExecutionEvent =>
           val sparkSession: SparkSession = updateDataMapPreExecutionEvent.sparkSession
           val systemDirectoryPath: String = updateDataMapPreExecutionEvent.storePath
-          val folderListBeforeReBuild = List[String](systemDirectoryPath)
-          val pathArrBeforeLoadOperation = ACLFileUtils
-            .takeRecurTraverseSnapshot(sparkSession.sqlContext, folderListBeforeReBuild)
-          operationContext.setProperty(folderListBeforeOperation, folderListBeforeReBuild)
-          operationContext.setProperty(pathArrBeforeOperation, pathArrBeforeLoadOperation)
+          val tableIdentifier = updateDataMapPreExecutionEvent.tableIdentifier
+          if (tableIdentifier != null) {
+            val carbonTableIdentifier = new CarbonTableIdentifier(tableIdentifier.database
+              .getOrElse("default"), tableIdentifier.table, "")
+            val folderListBeforeReBuild = List[String](systemDirectoryPath)
+            val pathArrBeforeLoadOperation = ACLFileUtils
+              .takeRecurTraverseSnapshot(sparkSession.sqlContext, folderListBeforeReBuild)
+            operationContext
+              .setProperty(ACLFileUtils.getFolderListKey(carbonTableIdentifier),
+                folderListBeforeReBuild)
+            operationContext
+              .setProperty(ACLFileUtils.getPathListKey(carbonTableIdentifier),
+                pathArrBeforeLoadOperation)
+          }
       }
     }
   }
@@ -75,13 +85,28 @@ object ACLDataMapEventListener {
 
     override def onEvent(event: Event, operationContext: OperationContext): Unit = {
       event match {
-        case createDataMapPostExecutionEvent : CreateDataMapPostExecutionEvent =>
+        case createDataMapPostExecutionEvent: CreateDataMapPostExecutionEvent =>
           val sparkSession = createDataMapPostExecutionEvent.sparkSession
-          ACLFileUtils.takeSnapAfterOperationAndApplyACL(sparkSession, operationContext)
-        case updateDataMapPostExecutionEvent : UpdateDataMapPostExecutionEvent =>
+          val tableIdentifier = createDataMapPostExecutionEvent.tableIdentifier
+          val carbonTableIdentifier = new CarbonTableIdentifier(tableIdentifier.database
+            .getOrElse("default"), tableIdentifier.table, "")
+          ACLFileUtils
+            .takeSnapAfterOperationAndApplyACL(sparkSession,
+              operationContext,
+              carbonTableIdentifier)
+        case updateDataMapPostExecutionEvent: UpdateDataMapPostExecutionEvent =>
           val sparkSession = updateDataMapPostExecutionEvent.sparkSession
-          ACLFileUtils.takeSnapAfterOperationAndApplyACL(sparkSession, operationContext)
+          val tableIdentifier = updateDataMapPostExecutionEvent.tableIdentifier
+          if (tableIdentifier != null) {
+            val carbonTableIdentifier = new CarbonTableIdentifier(tableIdentifier.database
+              .getOrElse("default"), tableIdentifier.table, "")
+            ACLFileUtils
+              .takeSnapAfterOperationAndApplyACL(sparkSession,
+                operationContext,
+                carbonTableIdentifier)
+          }
       }
     }
   }
+
 }

@@ -31,8 +31,6 @@ import org.apache.carbondata.events.{Event, OperationContext, OperationEventList
  */
 object AlterTableHivePartitionCommandEventListeners {
   val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
-  val folderListBeforeOperation = "folderListBeforeOperation"
-  val pathArrBeforeOperation = "pathArrBeforeOperation"
 
   class ACLPreAlterTableHivePartitionCommandEventListener extends OperationEventListener {
     /**
@@ -59,7 +57,7 @@ object AlterTableHivePartitionCommandEventListeners {
           .takeSnapshotBeforeOpeartion(operationContext,
             sparkSession,
             carbonTablePath,
-            carbonTable.getPartitionInfo(carbonTable.getTableName))
+            carbonTable.getPartitionInfo(carbonTable.getTableName), carbonTableIdentifier)
     }
   }
 
@@ -75,7 +73,10 @@ object AlterTableHivePartitionCommandEventListeners {
       val postAlterTableHivePartitionCommandEvent = event
         .asInstanceOf[PostAlterTableHivePartitionCommandEvent]
       val sparkSession = postAlterTableHivePartitionCommandEvent.sparkSession
-      ACLFileUtils.takeSnapAfterOperationAndApplyACL(sparkSession, operationContext)
+      ACLFileUtils
+        .takeSnapAfterOperationAndApplyACL(sparkSession,
+          operationContext,
+          postAlterTableHivePartitionCommandEvent.carbonTable.getCarbonTableIdentifier)
     }
   }
 

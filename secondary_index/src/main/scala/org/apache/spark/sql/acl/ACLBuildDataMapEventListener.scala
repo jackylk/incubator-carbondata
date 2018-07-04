@@ -24,7 +24,7 @@ import org.apache.spark.sql.SparkSession
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
-import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier
+import org.apache.carbondata.core.metadata.{AbsoluteTableIdentifier, CarbonTableIdentifier}
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.events.{BuildDataMapPreExecutionEvent, _}
 import org.apache.carbondata.events.exception.PreEventException
@@ -36,9 +36,6 @@ import org.apache.carbondata.spark.acl.{CarbonUserGroupInformation, InternalCarb
 object ACLBuildDataMapEventListener {
 
   val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
-  val folderListBeforeOperation = "folderListBeforeOperation"
-  val pathArrBeforeOperation = "pathArrBeforeOperation"
-
 
   class ACLPreBuildDataMapEventListener extends OperationEventListener {
 
@@ -76,8 +73,14 @@ object ACLBuildDataMapEventListener {
         val pathArrBeforeLoadOperation = ACLFileUtils
           .takeRecurTraverseSnapshot(sparkSession.sqlContext, folderListBeforeReBuild,
             recursive = true)
-        operationContext.setProperty(folderListBeforeOperation, folderListBeforeReBuild)
-        operationContext.setProperty(pathArrBeforeOperation, pathArrBeforeLoadOperation)
+        val carbonTableIdentifier = new CarbonTableIdentifier(tableIdentifier.getDatabaseName,
+          tableIdentifier.getTableName, "")
+        operationContext
+          .setProperty(ACLFileUtils.getFolderListKey(carbonTableIdentifier),
+            folderListBeforeReBuild)
+        operationContext
+          .setProperty(ACLFileUtils.getPathListKey(carbonTableIdentifier),
+            pathArrBeforeLoadOperation)
       }
     }
   }
@@ -86,18 +89,13 @@ object ACLBuildDataMapEventListener {
 
     override def onEvent(event: Event,
         operationContext: OperationContext): Unit = {
-      val folderPathsBeforeLoad = operationContext
-        .getProperty(folderListBeforeOperation)
-        .asInstanceOf[List[String]]
-      val pathArrBeforeLoad = operationContext
-        .getProperty(pathArrBeforeOperation)
-        .asInstanceOf[ArrayBuffer[String]]
-      val sparkSession = SparkSession.getActiveSession.get
-      val pathArrAfterLoad = ACLFileUtils
-        .takeRecurTraverseSnapshot(sparkSession.sqlContext, folderPathsBeforeLoad,
-          recursive = true)
-      ACLFileUtils.changeOwnerRecursivelyAfterOperation(sparkSession.sqlContext,
-        pathArrBeforeLoad, pathArrAfterLoad)
+      val buildDataMapPostExecutionEvent = event.asInstanceOf[BuildDataMapPostExecutionEvent]
+      val sparkSession = buildDataMapPostExecutionEvent.sparkSession
+      // take the snapshot post refresh table event and apply acl
+      ACLFileUtils
+        .takeSnapAfterOperationAndApplyACL(sparkSession,
+          operationContext,
+          buildDataMapPostExecutionEvent.identifier.getCarbonTableIdentifier)
     }
   }
 }

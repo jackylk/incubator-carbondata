@@ -36,8 +36,6 @@ import org.apache.carbondata.spark.acl.CarbonUserGroupInformation
 object ACLCreateTableEventListener {
 
   val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
-  val folderListBeforeOperation = "folderListBeforeOperation"
-  val pathArrBeforeOperation = "pathArrBeforeOperation"
 
   class ACLPreCreateTableEventListener extends OperationEventListener {
 
@@ -69,7 +67,11 @@ object ACLCreateTableEventListener {
 //      operationContext.setProperty(folderListBeforeOperation, folderListbeforeCreate)
 //      operationContext.setProperty(pathArrBeforeOperation, pathArrBeforeCreateOperation)
       ACLFileUtils
-        .takeSnapshotBeforeOpeartion(operationContext, sparkSession, tablePath, null)
+        .takeSnapshotBeforeOpeartion(operationContext,
+          sparkSession,
+          tablePath,
+          null,
+          carbonTableIdentifier)
     }
   }
 
@@ -88,7 +90,10 @@ object ACLCreateTableEventListener {
 //
 //      ACLFileUtils.changeOwnerRecursivelyAfterOperation(sparkSession.sqlContext,
 //        pathArrBeforeCreate, pathArrAfterCreate)
-      ACLFileUtils.takeSnapAfterOperationAndApplyACL(sparkSession, operationContext)
+      ACLFileUtils
+        .takeSnapAfterOperationAndApplyACL(sparkSession,
+          operationContext,
+          createTablePostExecutionEvent.identifier.getCarbonTableIdentifier)
 
     }
   }

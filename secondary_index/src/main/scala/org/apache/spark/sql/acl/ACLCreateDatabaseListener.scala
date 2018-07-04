@@ -29,8 +29,6 @@ import org.apache.carbondata.spark.acl.CarbonUserGroupInformation
 object ACLCreateDatabaseListener {
 
   val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
-  val folderListBeforeOperation = "folderListBeforeOperation"
-  val pathArrBeforeOperation = "pathArrBeforeOperation"
 
   class ACLPreCreateDatabaseListener extends OperationEventListener {
 

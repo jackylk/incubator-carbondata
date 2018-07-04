@@ -27,8 +27,6 @@ import org.apache.carbondata.events._
 object ACLAlterTableDataTypeChangeEventListener {
 
   val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
-  val folderListBeforeOperation = "folderListBeforeOperation"
-  val pathArrBeforeOperation = "pathArrBeforeOperation"
 
   class ACLPreAlterTableDataTypeChangeEventListener extends OperationEventListener {
 
@@ -42,7 +40,7 @@ object ACLAlterTableDataTypeChangeEventListener {
 
       ACLFileUtils
         .takeSnapshotBeforeOpeartion(operationContext, sparkSession, carbonTablePath,
-          carbonTable.getPartitionInfo(carbonTable.getTableName))
+          carbonTable.getPartitionInfo(carbonTable.getTableName), carbonTableIdentifier)
     }
   }
 
@@ -52,7 +50,10 @@ object ACLAlterTableDataTypeChangeEventListener {
         operationContext: OperationContext): Unit = {
       val alterTablePostExecutionEvent = event.asInstanceOf[AlterTableDataTypeChangePostEvent]
       val sparkSession = alterTablePostExecutionEvent.sparkSession
-      ACLFileUtils.takeSnapAfterOperationAndApplyACL(sparkSession, operationContext)
+      ACLFileUtils
+        .takeSnapAfterOperationAndApplyACL(sparkSession,
+          operationContext,
+          alterTablePostExecutionEvent.carbonTable.getCarbonTableIdentifier)
 
     }
   }

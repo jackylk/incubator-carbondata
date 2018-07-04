@@ -44,14 +44,24 @@ import org.apache.carbondata.spark.acl.{CarbonBadRecordStorePath, CarbonUserGrou
 
 object ACLFileUtils {
   val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
-  val folderListBeforeOperation = "folderListBeforeOperation"
-  val pathArrBeforeOperation = "pathArrBeforeOperation"
   def proxyOperate(
       loginUser: UserGroupInformation,
       currentUser: UserGroupInformation,
       msg: String,
       doOriLogic: Boolean = true)(f: => Unit): Unit = {
     Utils.proxyOperate(loginUser, currentUser, msg, doOriLogic)(f)
+  }
+
+  def getFolderListKey(carbonTable: CarbonTableIdentifier): String = {
+    val folderListBeforeOperation = "folderListBeforeOperation"
+    folderListBeforeOperation + '_' + carbonTable.getDatabaseName + '.' +
+    carbonTable.getTableName
+  }
+
+  def getPathListKey(carbonTable: CarbonTableIdentifier): String = {
+    val pathArrBeforeOperation = "pathArrBeforeOperation"
+    pathArrBeforeOperation + '_' + carbonTable.getDatabaseName + '.' +
+    carbonTable.getTableName
   }
 
   def takeRecurTraverseSnapshot(sqlContext: SQLContext,
@@ -65,17 +75,19 @@ object ACLFileUtils {
       s"permission to operate the given path", true) {
       var hdfs: FileSystem = null
       folderPaths.foreach { pathStr =>
-        val path = new Path(pathStr)
-        hdfs = path.getFileSystem(sqlContext.sparkContext.hadoopConfiguration)
-        recurTraverse(
-          hdfs,
-          path,
-          oriPathArr,
-          loginUser.getShortUserName,
-          None,
-          delimiter,
-          recursive
-        )
+        if (isACLSupported(pathStr)) {
+          val path = new Path(pathStr)
+          hdfs = path.getFileSystem(sqlContext.sparkContext.hadoopConfiguration)
+          recurTraverse(
+            hdfs,
+            path,
+            oriPathArr,
+            loginUser.getShortUserName,
+            None,
+            delimiter,
+            recursive
+          )
+        }
       }
     }
     oriPathArr
@@ -91,16 +103,18 @@ object ACLFileUtils {
    */
   def takeNonRecursiveSnapshot(sqlContext: SQLContext,
     path: Path, delimiter: String = "#~#"): ArrayBuffer[String] = {
-    val loginUser = CarbonUserGroupInformation.getInstance.getLoginUser
-    val currentUser = CarbonUserGroupInformation.getInstance.getCurrentUser
     val pathArray = new ArrayBuffer[String]()
-    Utils.proxyOperate(loginUser, currentUser,
-      s"Use login user ${loginUser.getShortUserName} as a proxy user as we need " +
+    if (isACLSupported(path.toString)) {
+      val loginUser = CarbonUserGroupInformation.getInstance.getLoginUser
+      val currentUser = CarbonUserGroupInformation.getInstance.getCurrentUser
+      Utils.proxyOperate(loginUser, currentUser,
+        s"Use login user ${ loginUser.getShortUserName } as a proxy user as we need " +
         s"permission to operate the given path", true) {
-      val hdfs: FileSystem = path.getFileSystem(sqlContext.sparkContext.hadoopConfiguration)
-      val fileStatus = hdfs.getFileStatus(path)
-      addFilePathToPathList(fileStatus.getPath, pathArray, loginUser.getShortUserName,
-        delimiter, fileStatus)
+        val hdfs: FileSystem = path.getFileSystem(sqlContext.sparkContext.hadoopConfiguration)
+        val fileStatus = hdfs.getFileStatus(path)
+        addFilePathToPathList(fileStatus.getPath, pathArray, loginUser.getShortUserName,
+          delimiter, fileStatus)
+      }
     }
     pathArray
   }
@@ -332,7 +346,7 @@ object ACLFileUtils {
   }
 
   def setACLGroupRights(currentUser: UserGroupInformation, hdfs: FileSystem, path: Path): Unit = {
-    if (isSecureModeEnabled) {
+    if (isSecureModeEnabled && isACLSupported(path.toString)) {
       val carbonDataLoadGroup = CarbonProperties.getInstance.
         getProperty(InternalCarbonConstant.CARBON_DATALOAD_GROUP_NAME,
           InternalCarbonConstant.CARBON_DATALOAD_GROUP_NAME_DEFAULT)
@@ -496,26 +510,30 @@ object ACLFileUtils {
 
   def takeSnapshotBeforeOpeartion(operationContext: OperationContext,
       sparkSession: SparkSession,
-      carbonTablePath: String, partitionInfo: PartitionInfo): Unit = {
+      carbonTablePath: String,
+      partitionInfo: PartitionInfo,
+      carbonTableIdentifier: CarbonTableIdentifier): Unit = {
 
     val folderListbeforeCreate: List[String] = ACLFileUtils
       .getTablePathListForSnapshot(carbonTablePath, partitionInfo)
     val pathArrBeforeCreateOperation = ACLFileUtils
       .takeRecurTraverseSnapshot(sparkSession.sqlContext, folderListbeforeCreate)
-    operationContext.setProperty(folderListBeforeOperation, folderListbeforeCreate)
-    operationContext.setProperty(pathArrBeforeOperation, pathArrBeforeCreateOperation)
+    operationContext.setProperty(getFolderListKey(carbonTableIdentifier), folderListbeforeCreate)
+    operationContext
+      .setProperty(getPathListKey(carbonTableIdentifier), pathArrBeforeCreateOperation)
   }
 
   def takeSnapAfterOperationAndApplyACL(sparkSession: SparkSession,
-      operationContext: OperationContext): Unit = {
-    val folderPathsBeforeCreate = operationContext.getProperty(folderListBeforeOperation)
+      operationContext: OperationContext, carbonTableIdentifier: CarbonTableIdentifier): Unit = {
+    val folderPathsBeforeCreate = operationContext
+      .getProperty(getFolderListKey(carbonTableIdentifier))
       .asInstanceOf[List[String]]
-    val pathArrBeforeCreate = operationContext.getProperty(pathArrBeforeOperation)
+    val pathArrBeforeCreate = operationContext.getProperty(getPathListKey(carbonTableIdentifier))
       .asInstanceOf[ArrayBuffer[String]]
     val pathArrAfterCreate = ACLFileUtils
       .takeRecurTraverseSnapshot(sparkSession.sqlContext, folderPathsBeforeCreate)
 
-    ACLFileUtils.changeOwnerRecursivelyAfterOperation(sparkSession.sqlContext,
+    changeOwnerRecursivelyAfterOperation(sparkSession.sqlContext,
       pathArrBeforeCreate, pathArrAfterCreate)
   }
 

@@ -56,7 +56,7 @@ object ACLCompactionEventListener {
 
       ACLFileUtils
           .takeSnapshotBeforeOpeartion(operationContext, sparkSession, carbonTablePath,
-            carbonTable.getPartitionInfo(carbonTable.getTableName))
+            carbonTable.getPartitionInfo(carbonTable.getTableName), carbonTableIdentifier)
     }
   }
 
@@ -66,7 +66,10 @@ object ACLCompactionEventListener {
         operationContext: OperationContext): Unit = {
       val compactionPostExecutionEvent = event.asInstanceOf[AlterTableCompactionPostEvent]
       val sparkSession = compactionPostExecutionEvent.sparkSession
-      ACLFileUtils.takeSnapAfterOperationAndApplyACL(sparkSession, operationContext)
+      ACLFileUtils
+        .takeSnapAfterOperationAndApplyACL(sparkSession,
+          operationContext,
+          compactionPostExecutionEvent.carbonTable.getCarbonTableIdentifier)
 
     }
   }

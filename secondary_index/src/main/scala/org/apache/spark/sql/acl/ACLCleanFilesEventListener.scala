@@ -28,8 +28,6 @@ import org.apache.carbondata.events.{CleanFilesPreEvent, _}
 object ACLCleanFilesEventListener {
 
   val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
-  val folderListBeforeOperation = "folderListBeforeOperation"
-  val pathArrBeforeOperation = "pathArrBeforeOperation"
 
   class ACLPreCleanFilesEventListener extends OperationEventListener {
 
@@ -44,7 +42,7 @@ object ACLCleanFilesEventListener {
       val carbonTablePath = carbonTable.getTablePath
       ACLFileUtils
           .takeSnapshotBeforeOpeartion(operationContext, sparkSession, carbonTablePath,
-            carbonTable.getPartitionInfo(carbonTable.getTableName))
+            carbonTable.getPartitionInfo(carbonTable.getTableName), carbonTableIdentifier)
     }
   }
 
@@ -54,8 +52,11 @@ object ACLCleanFilesEventListener {
         operationContext: OperationContext): Unit = {
       val deleteSegmentByIdPostEvent = event.asInstanceOf[CleanFilesPostEvent]
       val sparkSession = deleteSegmentByIdPostEvent.sparkSession
-      ACLFileUtils.takeSnapAfterOperationAndApplyACL(sparkSession, operationContext)
-      }
+      ACLFileUtils
+        .takeSnapAfterOperationAndApplyACL(sparkSession,
+          operationContext,
+          deleteSegmentByIdPostEvent.carbonTable.getCarbonTableIdentifier)
+    }
     }
   class ACLAbortCleanFilesEventListener extends OperationEventListener {
     override def onEvent(event: Event,

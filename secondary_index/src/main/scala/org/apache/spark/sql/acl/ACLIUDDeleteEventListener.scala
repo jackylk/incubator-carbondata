@@ -30,8 +30,6 @@ import org.apache.carbondata.events.{DeleteFromTableAbortEvent, DeleteFromTableP
 object ACLIUDDeleteEventListener {
 
   val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
-  val folderListBeforeOperation = "folderListBeforeOperation"
-  val pathArrBeforeOperation = "pathArrBeforeOperation"
 
   class ACLPreIUDDeleteEventListener extends OperationEventListener {
 
@@ -45,7 +43,7 @@ object ACLIUDDeleteEventListener {
       val sparkSession: SparkSession = deleteFromTablePreEvent.sparkSession
       val carbonTablePath = carbonTable.getTablePath
       ACLFileUtils.takeSnapshotBeforeOpeartion(operationContext, sparkSession, carbonTablePath,
-          carbonTable.getPartitionInfo(carbonTable.getTableName))
+          carbonTable.getPartitionInfo(carbonTable.getTableName), carbonTableIdentifier)
     }
   }
 
@@ -55,7 +53,10 @@ object ACLIUDDeleteEventListener {
         operationContext: OperationContext): Unit = {
       val deleteFromTablePostEvent = event.asInstanceOf[DeleteFromTablePostEvent]
       val sparkSession = deleteFromTablePostEvent.sparkSession
-      ACLFileUtils.takeSnapAfterOperationAndApplyACL(sparkSession, operationContext)
+      ACLFileUtils
+        .takeSnapAfterOperationAndApplyACL(sparkSession,
+          operationContext,
+          deleteFromTablePostEvent.carbonTable.getCarbonTableIdentifier)
     }
   }
 

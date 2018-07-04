@@ -48,8 +48,6 @@ import org.apache.carbondata.spark.acl.{CarbonUserGroupInformation, InternalCarb
 object ACLLoadEventListener {
 
   val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
-  val folderListBeforeOperation = "folderListBeforeOperation"
-  val pathArrBeforeOperation = "pathArrBeforeOperation"
 
   /**
    * to create Metadata/segments/tmp folder for standard hive partition table
@@ -159,8 +157,12 @@ object ACLLoadEventListener {
           partitionDirectoryPath)
         val pathArrBeforeLoadOperation = ACLFileUtils
           .takeRecurTraverseSnapshot(sparkSession.sqlContext, folderListBeforLoad)
-        operationContext.setProperty(folderListBeforeOperation, folderListBeforLoad)
-        operationContext.setProperty(pathArrBeforeOperation, pathArrBeforeLoadOperation)
+        operationContext
+          .setProperty(ACLFileUtils.getFolderListKey(carbonTable.getCarbonTableIdentifier),
+            folderListBeforLoad)
+        operationContext
+          .setProperty(ACLFileUtils.getPathListKey(carbonTable.getCarbonTableIdentifier),
+            pathArrBeforeLoadOperation)
       } else if (ACLFileUtils.isACLSupported(bad_record_path)) {
         checkACLForBadRecordPath(bad_records_logger_enable, bad_records_action, bad_record_path)(
           sparkSession)
@@ -247,18 +249,11 @@ object ACLLoadEventListener {
       val carbonLoadModel = loadTablePostExecutionEvent.getCarbonLoadModel
       if (ACLFileUtils.isACLSupported(carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable
         .getTablePath)) {
-        val folderPathsBeforeLoad = operationContext
-          .getProperty(ACLLoadEventListener.folderListBeforeOperation)
-          .asInstanceOf[List[String]]
-        val pathArrBeforeLoad = operationContext
-          .getProperty(ACLLoadEventListener.pathArrBeforeOperation)
-          .asInstanceOf[ArrayBuffer[String]]
-        val sparkSession = SparkSession.getActiveSession.get
-        val pathArrAfterLoad = ACLFileUtils
-          .takeRecurTraverseSnapshot(sparkSession.sqlContext, folderPathsBeforeLoad)
 
-        ACLFileUtils.changeOwnerRecursivelyAfterOperation(sparkSession.sqlContext,
-          pathArrBeforeLoad, pathArrAfterLoad)
+        ACLFileUtils
+          .takeSnapAfterOperationAndApplyACL(SparkSession.getActiveSession.get,
+            operationContext,
+            loadTablePostExecutionEvent.getCarbonTableIdentifier)
       }
     }
   }

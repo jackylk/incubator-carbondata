@@ -27,8 +27,6 @@ import org.apache.carbondata.events.{AlterTableAddColumnPreEvent, _}
 object ACLAlterTableDropColumnEventListener {
 
   val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
-  val folderListBeforeOperation = "folderListBeforeOperation"
-  val pathArrBeforeOperation = "pathArrBeforeOperation"
 
   class ACLPreAlterTableDropColumnEventListener extends OperationEventListener {
 
@@ -42,7 +40,7 @@ object ACLAlterTableDropColumnEventListener {
 
       ACLFileUtils
           .takeSnapshotBeforeOpeartion(operationContext, sparkSession, carbonTablePath,
-            carbonTable.getPartitionInfo(carbonTable.getTableName))
+            carbonTable.getPartitionInfo(carbonTable.getTableName), carbonTableIdentifier)
     }
   }
 
@@ -52,8 +50,10 @@ object ACLAlterTableDropColumnEventListener {
         operationContext: OperationContext): Unit = {
       val alterTablePostExecutionEvent = event.asInstanceOf[AlterTableDropColumnPostEvent]
       val sparkSession = alterTablePostExecutionEvent.sparkSession
-      ACLFileUtils.takeSnapAfterOperationAndApplyACL(sparkSession, operationContext)
-
+      ACLFileUtils
+        .takeSnapAfterOperationAndApplyACL(sparkSession,
+          operationContext,
+          alterTablePostExecutionEvent.carbonTable.getCarbonTableIdentifier)
     }
   }
 

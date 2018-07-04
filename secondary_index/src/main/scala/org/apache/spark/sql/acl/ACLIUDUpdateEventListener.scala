@@ -28,8 +28,6 @@ import org.apache.carbondata.events._
 object ACLIUDUpdateEventListener {
 
   val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
-  val folderListBeforeOperation = "folderListBeforeOperation"
-  val pathArrBeforeOperation = "pathArrBeforeOperation"
 
   class ACLPreIUDUpdateEventListener extends OperationEventListener {
 
@@ -43,7 +41,7 @@ object ACLIUDUpdateEventListener {
       val sparkSession: SparkSession = updateTablePreEvent.sparkSession
       val carbonTablePath = carbonTable.getTablePath
       ACLFileUtils.takeSnapshotBeforeOpeartion(operationContext, sparkSession, carbonTablePath,
-          carbonTable.getPartitionInfo(carbonTable.getTableName))
+          carbonTable.getPartitionInfo(carbonTable.getTableName), carbonTableIdentifier)
     }
   }
 
@@ -53,7 +51,10 @@ object ACLIUDUpdateEventListener {
         operationContext: OperationContext): Unit = {
       val updateTablePostEvent = event.asInstanceOf[UpdateTablePostEvent]
       val sparkSession = updateTablePostEvent.sparkSession
-      ACLFileUtils.takeSnapAfterOperationAndApplyACL(sparkSession, operationContext)
+      ACLFileUtils
+        .takeSnapAfterOperationAndApplyACL(sparkSession,
+          operationContext,
+          updateTablePostEvent.carbonTable.getCarbonTableIdentifier)
     }
   }
 

@@ -27,8 +27,6 @@ import org.apache.carbondata.events._
 object ACLIndexLoadEventListener {
 
   val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
-  val folderListBeforeOperation = "folderListBeforeOperation"
-  val pathArrBeforeOperation = "pathArrBeforeOperation"
 
   class ACLPreCreateIndexEventListener extends OperationEventListener {
 
@@ -40,7 +38,8 @@ object ACLIndexLoadEventListener {
         .carbonTableIdentifier
       val sparkSession: SparkSession = createSITablePreExecutionEvent.sparkSession
       ACLFileUtils
-        .takeSnapshotBeforeOpeartion(operationContext, sparkSession, tablePath, null)
+        .takeSnapshotBeforeOpeartion(operationContext,
+          sparkSession, tablePath, null, carbonTableIdentifier)
     }
   }
 
@@ -50,9 +49,9 @@ object ACLIndexLoadEventListener {
         operationContext: OperationContext): Unit = {
       val alterTablePostExecutionEvent = event.asInstanceOf[LoadTableSIPostExecutionEvent]
       val sparkSession = alterTablePostExecutionEvent.sparkSession
-      ACLFileUtils.takeSnapAfterOperationAndApplyACL(sparkSession, operationContext)
+      ACLFileUtils.takeSnapAfterOperationAndApplyACL(sparkSession, operationContext,
+        alterTablePostExecutionEvent.carbonTableIdentifier)
 
     }
   }
-
 }

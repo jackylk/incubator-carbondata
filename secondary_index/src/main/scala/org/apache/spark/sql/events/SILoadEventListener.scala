@@ -27,6 +27,7 @@ import org.apache.spark.util.CarbonInternalCommonUtil
 
 import org.apache.carbondata.common.logging.{LogService, LogServiceFactory}
 import org.apache.carbondata.core.constants.CarbonCommonConstants
+import org.apache.carbondata.core.metadata.CarbonTableIdentifier
 import org.apache.carbondata.core.statusmanager.SegmentStatus
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.events._
@@ -85,7 +86,7 @@ class SILoadEventListener extends OperationEventListener with Logging {
                 val operationContext = new OperationContext
                 val loadTableSIPreExecutionEvent: LoadTableSIPreExecutionEvent =
                   new LoadTableSIPreExecutionEvent(sparkSession,
-                    null,
+                    new CarbonTableIdentifier(carbonTable.getDatabaseName, indexTableName, ""),
                     carbonLoadModel,
                     factTablePath)
                 OperationListenerBus.getInstance

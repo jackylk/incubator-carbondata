@@ -27,8 +27,6 @@ import org.apache.carbondata.events.{DeleteSegmentByIdAbortEvent, DeleteSegmentB
 object ACLDeleteSegmentByIdEventListener {
 
   val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
-  val folderListBeforeOperation = "folderListBeforeOperation"
-  val pathArrBeforeOperation = "pathArrBeforeOperation"
 
   class ACLPreDeleteSegmentByIdEventListener extends OperationEventListener {
 
@@ -42,7 +40,7 @@ object ACLDeleteSegmentByIdEventListener {
       val sparkSession: SparkSession = deleteSegmentByIdPreEvent.sparkSession
       val carbonTablePath = carbonTable.getTablePath
       ACLFileUtils.takeSnapshotBeforeOpeartion(operationContext, sparkSession, carbonTablePath,
-          carbonTable.getPartitionInfo(carbonTable.getTableName))
+        carbonTable.getPartitionInfo(carbonTable.getTableName), carbonTableIdentifier)
     }
   }
 
@@ -52,8 +50,11 @@ object ACLDeleteSegmentByIdEventListener {
         operationContext: OperationContext): Unit = {
       val deleteSegmentByIdPostEvent = event.asInstanceOf[DeleteSegmentByIdPostEvent]
       val sparkSession = deleteSegmentByIdPostEvent.sparkSession
-      ACLFileUtils.takeSnapAfterOperationAndApplyACL(sparkSession, operationContext)
-      }
+      ACLFileUtils
+        .takeSnapAfterOperationAndApplyACL(sparkSession,
+          operationContext,
+          deleteSegmentByIdPostEvent.carbonTable.getCarbonTableIdentifier)
+    }
 
     }
   class ACLAbortDeleteSegmentByIdEventListener extends OperationEventListener {
