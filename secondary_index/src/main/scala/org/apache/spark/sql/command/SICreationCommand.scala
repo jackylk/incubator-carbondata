@@ -402,6 +402,9 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
     // sort column proeprty should be true for implicit no dictionary column position reference
     // as there exist a same behavior for no dictionary columns by default
     blockletId.setSortColumn(true)
+    // set the blockletId column as local dict column implicit no dictionary column position
+    // reference
+    blockletId.setLocalDictColumn(true)
     schemaOrdinal += 1
     val dummyMeasure: ColumnSchema = getColumnSchema(databaseName,
       DataType.getDataType(DataType.DOUBLE_MEASURE_CHAR),
@@ -430,6 +433,9 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
     tableProperties.foreach {
       x => tablePropertiesMap.put(x._1, x._2)
     }
+    // inherit and set the local dictionary properties from parent table
+    setLocalDictionaryConfigs(tablePropertiesMap,
+      carbonTable.getTableInfo.getFactTable.getTableProperties, allColumns)
     tableSchema.setTableProperties(tablePropertiesMap)
     tableInfo.setDatabaseName(databaseName)
     tableInfo.setTableUniqueName(databaseName + "_" + indexTableName)
@@ -438,6 +444,40 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
     tableInfo.setTablePath(absoluteTableIdentifier.getTablePath)
     tableInfo
   }
+
+   /**
+    * This function inherits and sets the local dictionary properties from parent table to index
+    * table properties
+    * @param indexTblPropertiesMap
+    * @param parentTblPropertiesMap
+    * @param allColumns
+    */
+   def setLocalDictionaryConfigs(indexTblPropertiesMap: java.util.HashMap[String, String],
+     parentTblPropertiesMap: java.util.Map[String, String],
+     allColumns: List[ColumnSchema]): Unit = {
+     val isLocalDictEnabledFormainTable = parentTblPropertiesMap
+       .get(CarbonCommonConstants.LOCAL_DICTIONARY_ENABLE)
+     indexTblPropertiesMap
+       .put(CarbonCommonConstants.LOCAL_DICTIONARY_ENABLE,
+         isLocalDictEnabledFormainTable)
+     indexTblPropertiesMap
+       .put(CarbonCommonConstants.LOCAL_DICTIONARY_THRESHOLD,
+         parentTblPropertiesMap
+           .getOrDefault(CarbonCommonConstants.LOCAL_DICTIONARY_THRESHOLD,
+             CarbonCommonConstants.LOCAL_DICTIONARY_THRESHOLD_DEFAULT))
+     var localDictColumns: scala.collection.mutable.Seq[String] = scala.collection.mutable.Seq()
+     allColumns.foreach(column =>
+       if (column.isLocalDictColumn) {
+         localDictColumns :+= column.getColumnName
+       }
+     )
+     if (isLocalDictEnabledFormainTable.toBoolean) {
+       indexTblPropertiesMap
+         .put(CarbonCommonConstants.LOCAL_DICTIONARY_INCLUDE,
+           localDictColumns.mkString(","))
+     }
+   }
+
 
   def acquireLockForSecondaryIndexCreation(absoluteTableIdentifier: AbsoluteTableIdentifier):
   List[ICarbonLock] = {
@@ -516,6 +556,7 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
     columnSchema.setScale(parentColumnSchema.getScale)
     columnSchema.setSchemaOrdinal(schemaOrdinal)
     columnSchema.setSortColumn(parentColumnSchema.isSortColumn)
+    columnSchema.setLocalDictColumn(parentColumnSchema.isLocalDictColumn)
     columnSchema
   }
 }

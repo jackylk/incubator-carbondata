@@ -21,6 +21,7 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.ShowIndexesCommand
 import org.apache.spark.sql.command.{CreateIndexTable, DropIndex, RegisterIndexTableCommand, SecondaryIndex}
 
+import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.spark.util.CommonUtil
 /**
  * sql parse for secondary index related commands
@@ -96,12 +97,29 @@ class CarbonInternalSpark2SqlParser extends CarbonSpark2SqlParser {
         }
         // validate the tableBlockSize from table properties
         CommonUtil.validateTableBlockSize(tableProperties)
+        // validate for supported table properties
+        validateTableProperties(tableProperties)
         val indexTableModel = SecondaryIndex(dbName,
           tableName.toLowerCase,
           cols.map(f => f.toLowerCase),
           indexTableName.toLowerCase)
         CreateIndexTable(indexTableModel, tableProperties)
     }
+
+ /**
+  * this method validates if index table properties contains other than supported ones
+  * @param tableProperties
+  */
+  private def validateTableProperties(tableProperties: scala.collection.mutable.Map[String,
+    String]) = {
+    val supportedPropertiesForIndexTable = Seq("TABLE_BLOCKSIZE")
+    tableProperties.foreach { property =>
+      if (!supportedPropertiesForIndexTable.contains(property._1.toUpperCase)) {
+        val errorMessage = "Unsupported Table property in index creation: " + property._1.toString
+        throw new MalformedCarbonCommandException(errorMessage)
+      }
+    }
+  }
 
   protected lazy val dropIndexTable: Parser[LogicalPlan] =
     DROP ~> INDEX ~> opt(IF ~> EXISTS) ~ ident ~ (ON ~> (ident <~ ".").? ~ ident) <~ opt(";") ^^ {
