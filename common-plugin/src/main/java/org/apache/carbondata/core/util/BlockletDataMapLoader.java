@@ -30,6 +30,7 @@ import org.apache.carbondata.core.indexstore.BlockMetaInfo;
 import org.apache.carbondata.core.indexstore.BlockletDataMapIndexWrapper;
 import org.apache.carbondata.core.indexstore.TableBlockIndexUniqueIdentifier;
 import org.apache.carbondata.core.indexstore.TableBlockIndexUniqueIdentifierWrapper;
+import org.apache.carbondata.core.indexstore.blockletindex.BlockDataMap;
 import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMap;
 import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMapModel;
 import org.apache.carbondata.core.indexstore.blockletindex.SegmentIndexFileStore;
@@ -50,7 +51,7 @@ public class BlockletDataMapLoader {
       throws IOException, MemoryException {
     TableBlockIndexUniqueIdentifier blockIndexUniqueIdentifier =
         blockIndexUniqueIdentifierWrapper.getTableBlockIndexUniqueIdentifier();
-    List<BlockletDataMap> dataMaps = new ArrayList<>();
+    List<BlockDataMap> dataMaps = new ArrayList<>();
     if (null != blockIndexUniqueIdentifier) {
       try {
         SegmentIndexFileStore indexFileStore = new SegmentIndexFileStore();

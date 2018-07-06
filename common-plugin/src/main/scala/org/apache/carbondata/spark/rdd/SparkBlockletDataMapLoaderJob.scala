@@ -32,7 +32,7 @@ import org.apache.spark.{Partition, SparkContext, TaskContext, TaskKilledExcepti
 import org.apache.carbondata.core.datamap.{AbstractDataMapJob, DataMapStoreManager}
 import org.apache.carbondata.core.datamap.dev.CacheableDataMap
 import org.apache.carbondata.core.indexstore.{BlockletDataMapIndexWrapper, TableBlockIndexUniqueIdentifierWrapper}
-import org.apache.carbondata.core.indexstore.blockletindex.{BlockletDataMap, BlockletDataMapDistributable, BlockletDataMapFactory}
+import org.apache.carbondata.core.indexstore.blockletindex.{BlockDataMap, BlockletDataMap, BlockletDataMapDistributable, BlockletDataMapFactory}
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema
 import org.apache.carbondata.core.util.CarbonUtil
@@ -76,7 +76,7 @@ class DataMapCacher(
   carbonTable: CarbonTable,
   tableColumnSchema: util.List[ColumnSchema]) extends Callable[Unit] {
   override def call(): Unit = {
-    val dataMaps: util.List[BlockletDataMap] = dataMapIndexWrapper._2.getDataMaps
+    val dataMaps: util.List[BlockDataMap] = dataMapIndexWrapper._2.getDataMaps
     dataMaps.asScala.foreach(dataMap => {
       val columnSchemaList = if (dataMap.getBlockletSchemaTime == 0L) {
         if (carbonTable.getTableInfo.isSchemaModified) {
