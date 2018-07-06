@@ -17,7 +17,7 @@
 
 package org.apache.spark.sql.acl
 
-import java.io.FileNotFoundException
+import java.io.{File, FileNotFoundException}
 import java.security.PrivilegedExceptionAction
 
 import scala.collection.mutable.ArrayBuffer
@@ -33,13 +33,14 @@ import org.apache.spark.SparkContext
 import org.apache.spark.sql.{SparkSession, SQLContext}
 
 import org.apache.carbondata.common.logging.LogServiceFactory
+import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.locks.LockUsage
 import org.apache.carbondata.core.metadata.CarbonTableIdentifier
 import org.apache.carbondata.core.metadata.schema.PartitionInfo
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.events.OperationContext
-import org.apache.carbondata.spark.acl.{CarbonBadRecordStorePath, CarbonUserGroupInformation, InternalCarbonConstant, UserGroupUtils}
+import org.apache.carbondata.spark.acl.{CarbonUserGroupInformation, InternalCarbonConstant, UserGroupUtils}
 
 
 object ACLFileUtils {
@@ -465,17 +466,19 @@ object ACLFileUtils {
    *
    * @param sqlContext
    * @param carbonTableIdentifier
-   * @param carbonBadRecordPath
+   * @param carbonBadRecordTablePath
    * @return
    */
   def createBadRecordsTablePath(sqlContext: SQLContext,
       carbonTableIdentifier: CarbonTableIdentifier,
-      carbonBadRecordPath: String): String = {
+      carbonBadRecordTablePath: String): String = {
 
-    val carbonBadRecordStorePath = new CarbonBadRecordStorePath(carbonBadRecordPath);
-    val carbonBadRecordDatabasePath = carbonBadRecordStorePath
-      .getCarbonBadRecordStoreDatabasePath(carbonTableIdentifier);
-
+    val splitpath = carbonBadRecordTablePath.split(CarbonCommonConstants.FILE_SEPARATOR)
+    val tableName: String = splitpath(splitpath.length - 1)
+    val dbName = splitpath(splitpath.length - 2)
+    val basePath = carbonBadRecordTablePath
+      .split(dbName + CarbonCommonConstants.FILE_SEPARATOR + tableName)(0)
+    val carbonBadRecordDatabasePath = basePath + CarbonCommonConstants.FILE_SEPARATOR + dbName
     if (!FileFactory
       .isFileExist(carbonBadRecordDatabasePath,
         FileFactory.getFileType(carbonBadRecordDatabasePath)
@@ -488,8 +491,7 @@ object ACLFileUtils {
           }
         });
     }
-    val carbonBadRecordTablePath = carbonBadRecordStorePath
-      .getCarbonBadRecordStoreTablePath(carbonTableIdentifier)
+
     if (!FileFactory
       .isFileExist(carbonBadRecordTablePath,
         FileFactory.getFileType(carbonBadRecordTablePath)
