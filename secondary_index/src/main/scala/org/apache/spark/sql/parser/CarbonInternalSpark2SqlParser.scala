@@ -22,6 +22,7 @@ import org.apache.spark.sql.ShowIndexesCommand
 import org.apache.spark.sql.command.{CreateIndexTable, DropIndex, RegisterIndexTableCommand, SecondaryIndex}
 
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
+import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.spark.util.CommonUtil
 /**
  * sql parse for secondary index related commands
@@ -99,20 +100,48 @@ class CarbonInternalSpark2SqlParser extends CarbonSpark2SqlParser {
         CommonUtil.validateTableBlockSize(tableProperties)
         // validate for supported table properties
         validateTableProperties(tableProperties)
+        // validate column_meta_cache proeperty if defined
+        val tableColumns: List[String] = cols.map(f => f.toLowerCase)
+        validateColumnMetaCacheAndCacheLevelProeprties(dbName,
+          indexTableName.toLowerCase,
+          tableColumns,
+          tableProperties)
         val indexTableModel = SecondaryIndex(dbName,
           tableName.toLowerCase,
-          cols.map(f => f.toLowerCase),
+          tableColumns,
           indexTableName.toLowerCase)
         CreateIndexTable(indexTableModel, tableProperties)
     }
 
+  private def validateColumnMetaCacheAndCacheLevelProeprties(dbName: Option[String],
+      tableName: String,
+      tableColumns: Seq[String],
+      tableProperties: scala.collection.mutable.Map[String, String]): Unit = {
+    // validate column_meta_cache property
+    if (tableProperties.get(CarbonCommonConstants.COLUMN_META_CACHE).isDefined) {
+      CommonUtil.validateColumnMetaCacheFields(
+        dbName.getOrElse(CarbonCommonConstants.DATABASE_DEFAULT_NAME),
+        tableName,
+        tableColumns,
+        tableProperties.get(CarbonCommonConstants.COLUMN_META_CACHE).get,
+        tableProperties)
+    }
+    // validate cache_level property
+    if (tableProperties.get(CarbonCommonConstants.CACHE_LEVEL).isDefined) {
+      CommonUtil.validateCacheLevel(
+        tableProperties.get(CarbonCommonConstants.CACHE_LEVEL).get,
+        tableProperties)
+    }
+  }
+
  /**
   * this method validates if index table properties contains other than supported ones
+  *
   * @param tableProperties
   */
   private def validateTableProperties(tableProperties: scala.collection.mutable.Map[String,
     String]) = {
-    val supportedPropertiesForIndexTable = Seq("TABLE_BLOCKSIZE")
+   val supportedPropertiesForIndexTable = Seq("TABLE_BLOCKSIZE", "COLUMN_META_CACHE", "CACHE_LEVEL")
     tableProperties.foreach { property =>
       if (!supportedPropertiesForIndexTable.contains(property._1.toUpperCase)) {
         val errorMessage = "Unsupported Table property in index creation: " + property._1.toString

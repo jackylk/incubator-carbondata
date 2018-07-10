@@ -31,12 +31,12 @@ import org.apache.spark.{Partition, SparkContext, TaskContext, TaskKilledExcepti
 
 import org.apache.carbondata.core.datamap.{AbstractDataMapJob, DataMapStoreManager}
 import org.apache.carbondata.core.datamap.dev.CacheableDataMap
-import org.apache.carbondata.core.indexstore.{BlockletDataMapIndexWrapper, TableBlockIndexUniqueIdentifierWrapper}
-import org.apache.carbondata.core.indexstore.blockletindex.{BlockDataMap, BlockletDataMap, BlockletDataMapDistributable, BlockletDataMapFactory}
+import org.apache.carbondata.core.indexstore.{BlockletDataMapIndexWrapper, TableBlockIndexUniqueIdentifier, TableBlockIndexUniqueIdentifierWrapper}
+import org.apache.carbondata.core.indexstore.blockletindex.{BlockDataMap, BlockletDataMapDistributable, BlockletDataMapFactory}
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema
-import org.apache.carbondata.core.util.CarbonUtil
-import org.apache.carbondata.hadoop.{CacheClient, DistributableBlockletDataMapLoader}
+import org.apache.carbondata.core.util.{BlockletDataMapDetailsWithSchema, CarbonUtil}
+import org.apache.carbondata.hadoop.DistributableBlockletDataMapLoader
 
 class SparkBlockletDataMapLoaderJob extends AbstractDataMapJob {
 
@@ -48,7 +48,6 @@ class SparkBlockletDataMapLoaderJob extends AbstractDataMapJob {
     var startTime = System.currentTimeMillis()
     val dataMapIndexWrappers = new DataMapLoaderRDD(SparkContext.getOrCreate(),
       dataMapFormat.asInstanceOf[DistributableBlockletDataMapLoader]).collect()
-    val cacheClient = new CacheClient
     val tableColumnSchema = CarbonUtil
       .getColumnSchemaList(carbonTable.getDimensionByTableName(carbonTable.getTableName),
         carbonTable.getMeasureByTableName(carbonTable.getTableName))
@@ -58,7 +57,6 @@ class SparkBlockletDataMapLoaderJob extends AbstractDataMapJob {
         executorService
           .submit(new DataMapCacher(cacheableDataMap,
             dataMapIndexWrapper,
-            cacheClient,
             carbonTable,
             tableColumnSchema))
       }
@@ -70,15 +68,29 @@ class SparkBlockletDataMapLoaderJob extends AbstractDataMapJob {
 }
 
 class DataMapCacher(
-  cacheableDataMap: CacheableDataMap,
-  dataMapIndexWrapper: (TableBlockIndexUniqueIdentifierWrapper, BlockletDataMapIndexWrapper),
-  cacheClient: CacheClient,
-  carbonTable: CarbonTable,
-  tableColumnSchema: util.List[ColumnSchema]) extends Callable[Unit] {
+    cacheableDataMap: CacheableDataMap,
+    dataMapIndexWrapper: (TableBlockIndexUniqueIdentifier, BlockletDataMapDetailsWithSchema),
+    carbonTable: CarbonTable,
+    tableColumnSchema: util.List[ColumnSchema]) extends Callable[Unit] {
   override def call(): Unit = {
-    val dataMaps: util.List[BlockDataMap] = dataMapIndexWrapper._2.getDataMaps
-    // TODO: Implement dataMaps to add segment properties
-    cacheableDataMap.cache(dataMapIndexWrapper._1, dataMapIndexWrapper._2)
+    val dataMaps: util.List[BlockDataMap] = dataMapIndexWrapper._2.getBlockletDataMapIndexWrapper
+      .getDataMaps
+    val segmentId = dataMapIndexWrapper._1.getSegmentId
+    dataMaps.asScala.foreach { dataMap =>
+      // add segment properties for each instance
+      val segmentPropertiesIndex = dataMapIndexWrapper._2
+        .addSegmentProperties(carbonTable, segmentId, dataMap.getSegmentPropertiesIndex)
+      dataMap.setSegmentPropertiesIndex(segmentPropertiesIndex)
+    }
+    // create identifier wrapper object
+    val tableBlockIndexUniqueIdentifierWrapper: TableBlockIndexUniqueIdentifierWrapper = new
+        TableBlockIndexUniqueIdentifierWrapper(
+          dataMapIndexWrapper._1,
+          carbonTable)
+    // add dataMap to cache
+    cacheableDataMap
+      .cache(tableBlockIndexUniqueIdentifierWrapper,
+        dataMapIndexWrapper._2.getBlockletDataMapIndexWrapper)
   }
 }
 
@@ -98,7 +110,7 @@ class DataMapLoaderPartition(rddId: Int, idx: Int, val inputSplit: InputSplit)
 class DataMapLoaderRDD(
   sc: SparkContext,
   dataMapFormat: DistributableBlockletDataMapLoader)
-  extends CarbonRDD[(TableBlockIndexUniqueIdentifierWrapper, BlockletDataMapIndexWrapper)](sc,
+  extends CarbonRDD[(TableBlockIndexUniqueIdentifier, BlockletDataMapDetailsWithSchema)](sc,
     Nil,
     sc.hadoopConfiguration) {
 
@@ -114,7 +126,7 @@ class DataMapLoaderRDD(
   }
 
   override def internalCompute(split: Partition, context: TaskContext):
-  Iterator[(TableBlockIndexUniqueIdentifierWrapper, BlockletDataMapIndexWrapper)] = {
+  Iterator[(TableBlockIndexUniqueIdentifier, BlockletDataMapDetailsWithSchema)] = {
     val attemptId = new TaskAttemptID(jobTrackerId, id, TaskType.MAP, split.index, 0)
     val attemptContext = new TaskAttemptContextImpl(new Configuration(), attemptId)
     val distributable = split.asInstanceOf[DataMapLoaderPartition].inputSplit
@@ -122,7 +134,7 @@ class DataMapLoaderRDD(
     val inputSplit = split.asInstanceOf[DataMapLoaderPartition].inputSplit
     val reader = dataMapFormat.createRecordReader(inputSplit, attemptContext)
     reader.initialize(inputSplit, attemptContext)
-    val iter = new Iterator[(TableBlockIndexUniqueIdentifierWrapper, BlockletDataMapIndexWrapper)] {
+    val iter = new Iterator[(TableBlockIndexUniqueIdentifier, BlockletDataMapDetailsWithSchema)] {
 
       private var havePair = false
       private var finished = false
@@ -139,7 +151,7 @@ class DataMapLoaderRDD(
         !finished
       }
 
-      override def next(): (TableBlockIndexUniqueIdentifierWrapper, BlockletDataMapIndexWrapper) = {
+      override def next(): (TableBlockIndexUniqueIdentifier, BlockletDataMapDetailsWithSchema) = {
         if (!hasNext) {
           throw new java.util.NoSuchElementException("End of stream")
         }

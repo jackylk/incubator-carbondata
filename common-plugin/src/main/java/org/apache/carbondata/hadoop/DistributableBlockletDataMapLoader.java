@@ -41,6 +41,7 @@ import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMapFactor
 import org.apache.carbondata.core.memory.MemoryException;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.metadata.schema.table.DataMapSchema;
+import org.apache.carbondata.core.util.BlockletDataMapDetailsWithSchema;
 import org.apache.carbondata.core.util.BlockletDataMapLoader;
 
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -53,7 +54,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
  * class to load blocklet data map
  */
 public class DistributableBlockletDataMapLoader
-    extends FileInputFormat<TableBlockIndexUniqueIdentifierWrapper, BlockletDataMapIndexWrapper>
+    extends FileInputFormat<TableBlockIndexUniqueIdentifier, BlockletDataMapDetailsWithSchema>
     implements Serializable {
 
   /**
@@ -101,13 +102,12 @@ public class DistributableBlockletDataMapLoader
   }
 
   @Override
-  public RecordReader<TableBlockIndexUniqueIdentifierWrapper, BlockletDataMapIndexWrapper>
+  public RecordReader<TableBlockIndexUniqueIdentifier, BlockletDataMapDetailsWithSchema>
       createRecordReader(InputSplit inputSplit, TaskAttemptContext taskAttemptContext)
       throws IOException, InterruptedException {
-    return new RecordReader<TableBlockIndexUniqueIdentifierWrapper, BlockletDataMapIndexWrapper>() {
+    return new RecordReader<TableBlockIndexUniqueIdentifier, BlockletDataMapDetailsWithSchema>() {
       private BlockletDataMapIndexWrapper wrapper = null;
       private TableBlockIndexUniqueIdentifier tableBlockIndexUniqueIdentifier = null;
-      private TableBlockIndexUniqueIdentifierWrapper tableBlockIndexUniqueIdentifierWrapper = null;
       boolean finished = false;
 
       @Override public void initialize(InputSplit inputSplit, TaskAttemptContext taskAttemptContext)
@@ -116,7 +116,7 @@ public class DistributableBlockletDataMapLoader
             (BlockletDataMapDistributable) inputSplit;
         tableBlockIndexUniqueIdentifier =
             blockletDistributable.getTableBlockIndexUniqueIdentifier();
-        tableBlockIndexUniqueIdentifierWrapper =
+        TableBlockIndexUniqueIdentifierWrapper tableBlockIndexUniqueIdentifierWrapper =
             new TableBlockIndexUniqueIdentifierWrapper(tableBlockIndexUniqueIdentifier, table);
         try {
           wrapper = BlockletDataMapLoader.loadDataMap(tableBlockIndexUniqueIdentifierWrapper);
@@ -135,14 +135,16 @@ public class DistributableBlockletDataMapLoader
         }
       }
 
-      @Override public TableBlockIndexUniqueIdentifierWrapper getCurrentKey()
+      @Override public TableBlockIndexUniqueIdentifier getCurrentKey()
           throws IOException, InterruptedException {
-        return tableBlockIndexUniqueIdentifierWrapper;
+        return tableBlockIndexUniqueIdentifier;
       }
 
-      @Override public BlockletDataMapIndexWrapper getCurrentValue()
+      @Override public BlockletDataMapDetailsWithSchema getCurrentValue()
           throws IOException, InterruptedException {
-        return wrapper;
+        BlockletDataMapDetailsWithSchema blockletDataMapDetailsWithSchema =
+            new BlockletDataMapDetailsWithSchema(wrapper);
+        return blockletDataMapDetailsWithSchema;
       }
 
       @Override public float getProgress() throws IOException, InterruptedException {

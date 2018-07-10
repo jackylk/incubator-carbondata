@@ -1,6 +1,9 @@
 package org.apache.carbondata.spark.testsuite.secondaryindex
 
-import org.apache.spark.sql.Row
+import scala.collection.JavaConverters._
+
+import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
+import org.apache.spark.sql.{CarbonEnv, Row}
 import org.apache.spark.sql.common.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
 
@@ -25,6 +28,20 @@ class TestSIWithSecondryIndex extends QueryTest with BeforeAndAfterAll {
     sql("update table_WithSIAndAlter set(date1) = (c2)").show
     sql("update table_WithSIAndAlter set(time) = (c3)").show
     sql("create index si_altercolumn on table table_WithSIAndAlter(date1,time) as 'carbondata'")
+  }
+
+  private def isExpectedValueValid(dbName: String,
+      tableName: String,
+      key: String,
+      expectedValue: String): Boolean = {
+    val carbonTable = CarbonEnv.getCarbonTable(Option(dbName), tableName)(sqlContext.sparkSession)
+    if (key.equalsIgnoreCase(CarbonCommonConstants.COLUMN_META_CACHE)) {
+      val value = carbonTable.getMinMaxCachedColumnsInCreateOrder.asScala.mkString(",")
+      expectedValue.equals(value)
+    } else {
+      val value = carbonTable.getTableInfo.getFactTable.getTableProperties.get(key)
+      expectedValue.equals(value)
+    }
   }
 
   test("Test secondry index data count") {
@@ -57,11 +74,49 @@ class TestSIWithSecondryIndex extends QueryTest with BeforeAndAfterAll {
     checkAnswer(sql("select * from maintableeee where c>1"), Seq(Row("k","x",2)))
   }
 
+  test("validate column_meta_cache and cache_level on SI table") {
+    sql("drop table if exists column_meta_cache")
+    sql("create table column_meta_cache(c1 String, c2 String, c3 int, c4 double) stored by 'carbondata'")
+    sql("create index indexCache on table column_meta_cache(c2,c1) as 'carbondata' TBLPROPERTIES('COLUMN_meta_CachE'='c2','cache_level'='BLOCK')")
+    assert(isExpectedValueValid("default", "indexCache", "column_meta_cache", "c2"))
+    assert(isExpectedValueValid("default", "indexCache", "cache_level", "BLOCK"))
+    // set invalid values for SI table for column_meta_cache and cache_level and verify
+    intercept[MalformedCarbonCommandException] {
+      sql("create index indexCache1 on table column_meta_cache(c2) as 'carbondata' TBLPROPERTIES('COLUMN_meta_CachE'='abc')")
+    }
+    intercept[MalformedCarbonCommandException] {
+      sql("create index indexCache1 on table column_meta_cache(c2) as 'carbondata' TBLPROPERTIES('cache_level'='abc')")
+    }
+    intercept[Exception] {
+      sql("Alter table indexCache SET TBLPROPERTIES('column_meta_cache'='abc')")
+    }
+    intercept[Exception] {
+      sql("Alter table indexCache SET TBLPROPERTIES('CACHE_LEVEL'='abc')")
+    }
+    // alter table to unset these properties on SI table
+    sql("Alter table indexCache UNSET TBLPROPERTIES('column_meta_cache')")
+    var descResult = sql("describe formatted indexCache")
+    checkExistence(descResult, false, "COLUMN_META_CACHE")
+    sql("Alter table indexCache UNSET TBLPROPERTIES('cache_level')")
+    descResult = sql("describe formatted indexCache")
+    checkExistence(descResult, true, "CACHE_LEVEL")
+    //alter SI table to set the properties again
+    sql("Alter table indexCache SET TBLPROPERTIES('column_meta_cache'='c1')")
+    assert(isExpectedValueValid("default", "indexCache", "column_meta_cache", "c1"))
+    // set empty value for column_meta_cache
+    sql("Alter table indexCache SET TBLPROPERTIES('column_meta_cache'='')")
+    assert(isExpectedValueValid("default", "indexCache", "column_meta_cache", ""))
+    // set cache_level to blocklet
+    sql("Alter table indexCache SET TBLPROPERTIES('cache_level'='BLOCKLET')")
+    assert(isExpectedValueValid("default", "indexCache", "cache_level", "BLOCKLET"))
+  }
+
   override def afterAll {
     sql("drop index si_altercolumn on table_WithSIAndAlter")
     sql("drop table if exists table_WithSIAndAlter")
     sql("drop table if exists maintable")
     sql("drop table if exists maintableeee")
+    sql("drop table if exists column_meta_cache")
   }
 
 }
