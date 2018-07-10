@@ -462,8 +462,8 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
          isLocalDictEnabledFormainTable)
      indexTblPropertiesMap
        .put(CarbonCommonConstants.LOCAL_DICTIONARY_THRESHOLD,
-         parentTblPropertiesMap
-           .getOrDefault(CarbonCommonConstants.LOCAL_DICTIONARY_THRESHOLD,
+         parentTblPropertiesMap.asScala
+           .getOrElse(CarbonCommonConstants.LOCAL_DICTIONARY_THRESHOLD,
              CarbonCommonConstants.LOCAL_DICTIONARY_THRESHOLD_DEFAULT))
      var localDictColumns: scala.collection.mutable.Seq[String] = scala.collection.mutable.Seq()
      allColumns.foreach(column =>

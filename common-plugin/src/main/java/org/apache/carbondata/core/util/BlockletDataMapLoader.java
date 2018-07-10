@@ -117,7 +117,7 @@ public class BlockletDataMapLoader {
     TableBlockIndexUniqueIdentifier identifier =
         identifierWrapper.getTableBlockIndexUniqueIdentifier();
     BlockletDataMap dataMap = new BlockletDataMap();
-    dataMap.init(new BlockletDataMapModel(
+    dataMap.init(new BlockletDataMapModel(identifierWrapper.getCarbonTable(),
         identifier.getIndexFilePath() + CarbonCommonConstants.FILE_SEPARATOR + identifier
             .getIndexFileName(), indexFileStore.getFileData(identifier.getIndexFileName()),
         blockMetaInfoMap, identifier.getSegmentId(), false));

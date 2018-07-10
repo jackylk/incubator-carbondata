@@ -77,27 +77,7 @@ class DataMapCacher(
   tableColumnSchema: util.List[ColumnSchema]) extends Callable[Unit] {
   override def call(): Unit = {
     val dataMaps: util.List[BlockDataMap] = dataMapIndexWrapper._2.getDataMaps
-    dataMaps.asScala.foreach(dataMap => {
-      val columnSchemaList = if (dataMap.getBlockletSchemaTime == 0L) {
-        if (carbonTable.getTableInfo.isSchemaModified) {
-          val columnSchemaBinary = dataMap.getColumnSchemaBinary
-          dataMap.readColumnSchema(columnSchemaBinary)
-        } else {
-          tableColumnSchema
-        }
-      } else if (dataMap.getBlockletSchemaTime < carbonTable.getTableLastUpdatedTime) {
-        val columnSchemaBinary = dataMap.getColumnSchemaBinary
-        dataMap.readColumnSchema(columnSchemaBinary)
-      } else {
-        tableColumnSchema
-      }
-      // fill segmentProperties
-      val segmentProperties = cacheClient
-        .getSegmentProperties(carbonTable.getAbsoluteTableIdentifier,
-          columnSchemaList,
-          dataMap.getColumnCardinality)
-      dataMap.setSegmentProperties(segmentProperties)
-    })
+    // TODO: Implement dataMaps to add segment properties
     cacheableDataMap.cache(dataMapIndexWrapper._1, dataMapIndexWrapper._2)
   }
 }
