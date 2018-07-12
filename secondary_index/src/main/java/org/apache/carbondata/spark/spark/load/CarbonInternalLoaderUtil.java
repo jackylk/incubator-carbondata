@@ -119,7 +119,7 @@ public class CarbonInternalLoaderUtil {
    * This API will write the load level metadata for the loadmanagement module inorder to
    * manage the load and query execution management smoothly.
    *
-   * @param loadMetadataDetails
+   * @param newLoadMetadataDetails
    * @param validSegments
    * @param databaseName
    * @param tableName
@@ -127,7 +127,7 @@ public class CarbonInternalLoaderUtil {
    * @return boolean which determines whether status update is done or not.
    * @throws IOException
    */
-  public static boolean recordLoadMetadata(List<LoadMetadataDetails> loadMetadataDetails,
+  public static boolean recordLoadMetadata(List<LoadMetadataDetails> newLoadMetadataDetails,
       List<String> validSegments, String databaseName, String tableName,
       CarbonTable carbonTable) throws IOException {
     boolean status = false;
@@ -140,18 +140,30 @@ public class CarbonInternalLoaderUtil {
         LOGGER.info("Acquired lock for table" + databaseName + "." + tableName
             + " for table status updation");
 
-        LoadMetadataDetails[] listOfLoadFolderDetailsArray =
+        LoadMetadataDetails[] currentLoadMetadataDetails =
             SegmentStatusManager.readLoadMetadata(metaDataFilepath);
 
-        List<LoadMetadataDetails> listOfLoadFolderDetailsForFact =
+        List<LoadMetadataDetails> updatedLoadMetadataDetails =
             new ArrayList<>(CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);
 
-        if (null != listOfLoadFolderDetailsArray) {
-          for (LoadMetadataDetails loadMetadata : listOfLoadFolderDetailsArray) {
-            listOfLoadFolderDetailsForFact.add(loadMetadata);
+        // check which load needs to be overwritten which are in in progress state
+        boolean found = false;
+        for (int i = 0; i < currentLoadMetadataDetails.length; i++) {
+          for (int j = 0; j < newLoadMetadataDetails.size(); j++) {
+            if (currentLoadMetadataDetails[i].getLoadName()
+                .equals(newLoadMetadataDetails.get(j).getLoadName())) {
+              currentLoadMetadataDetails[i] = newLoadMetadataDetails.get(j);
+              found = true;
+              break;
+            }
           }
+          updatedLoadMetadataDetails.add(currentLoadMetadataDetails[i]);
         }
-        listOfLoadFolderDetailsForFact.addAll(loadMetadataDetails);
+
+        // when data load is done for first time, add all the details
+        if (currentLoadMetadataDetails.length == 0 || !found) {
+          updatedLoadMetadataDetails.addAll(newLoadMetadataDetails);
+        }
 
         List<String> indexTables = CarbonInternalScalaUtil.getIndexesTables(carbonTable);
         if (!indexTables.isEmpty()) {
@@ -167,7 +179,7 @@ public class CarbonInternalLoaderUtil {
                 absoluteTableIdentifier.getCarbonTableIdentifier().getDatabaseName()
                     + CarbonCommonConstants.UNDERSCORE + indexTableName);
             List<LoadMetadataDetails> indexTableDetailsList = CarbonInternalScalaUtil
-                .getTableStatusDetailsForIndexTable(listOfLoadFolderDetailsForFact, indexTable,
+                .getTableStatusDetailsForIndexTable(updatedLoadMetadataDetails, indexTable,
                     newSegmentDetailsListForIndexTable);
 
             segmentStatusManager.writeLoadDetailsIntoFile(
@@ -178,8 +190,8 @@ public class CarbonInternalLoaderUtil {
         } else if (CarbonInternalScalaUtil.isIndexTable(carbonTable)) {
           segmentStatusManager.writeLoadDetailsIntoFile(
               metaDataFilepath + CarbonCommonConstants.FILE_SEPARATOR
-                  + CarbonTablePath.TABLE_STATUS_FILE, listOfLoadFolderDetailsForFact
-                  .toArray(new LoadMetadataDetails[listOfLoadFolderDetailsForFact.size()]));
+                  + CarbonTablePath.TABLE_STATUS_FILE, updatedLoadMetadataDetails
+                  .toArray(new LoadMetadataDetails[updatedLoadMetadataDetails.size()]));
         }
         status = true;
       } else {
@@ -263,11 +275,17 @@ public class CarbonInternalLoaderUtil {
             .addDataIndexSizeIntoMetaEntry(loadMetadataDetails, mergedLoadNumber, carbonTable);
         loadMetadataDetails.setLoadStartTime(mergeLoadStartTime);
         loadMetadataDetails.setPartitionCount("0");
+
+        // put the merged folder entry
+        for (int i = 0; i < loadDetails.length; i++) {
+          if (loadDetails[i].getLoadName().equals(loadMetadataDetails.getLoadName())) {
+            loadDetails[i] = loadMetadataDetails;
+          }
+        }
+
         // if this is a major compaction then set the segment as major compaction.
         List<LoadMetadataDetails> updatedDetailsList = new ArrayList<>(Arrays.asList(loadDetails));
 
-        // put the merged folder entry
-        updatedDetailsList.add(loadMetadataDetails);
         segmentStatusManager.writeLoadDetailsIntoFile(
             CarbonTablePath.getTableStatusFilePath(indexCarbonTable.getTablePath()),
             updatedDetailsList.toArray(new LoadMetadataDetails[updatedDetailsList.size()]));

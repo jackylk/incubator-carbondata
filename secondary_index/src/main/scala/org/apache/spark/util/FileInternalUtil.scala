@@ -81,7 +81,7 @@ object FileInternalUtil {
       loadMetadataDetail.setLoadName(segmentId)
       loadMetadataDetail.setPartitionCount("0")
       loadMetadataDetail.setSegmentStatus(loadStatus)
-      loadMetadataDetail.setLoadStartTime(segmentIdToLoadStartTimeMapping.get(segmentId).get)
+      loadMetadataDetail.setLoadStartTime(segmentIdToLoadStartTimeMapping(segmentId))
       loadMetadataDetail.setLoadEndTime(loadEndTime)
       loadMetadataDetail.setSegmentFile(segmentToSegmentFileNameMap.get(segmentId))
       loadMetadataDetailsList +:= loadMetadataDetail

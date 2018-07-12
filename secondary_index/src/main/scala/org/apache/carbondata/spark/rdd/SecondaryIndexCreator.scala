@@ -125,6 +125,16 @@ object SecondaryIndexCreator {
         .sparkSession).asInstanceOf[CarbonRelation].carbonTable
 
     try {
+      FileInternalUtil
+        .updateTableStatus(secondaryIndexModel.validSegments,
+          secondaryIndexModel.carbonLoadModel.getDatabaseName,
+          secondaryIndexModel.secondaryIndex.indexTableName,
+          SegmentStatus.INSERT_IN_PROGRESS,
+          secondaryIndexModel.segmentIdToLoadStartTimeMapping,
+          new java.util
+          .HashMap[String,
+            String](),
+          indexCarbonTable)
       SegmentStatusManager.deleteLoadsAndUpdateMetadata(indexCarbonTable, false, null)
       TableProcessingOperations.deletePartialLoadDataIfExist(indexCarbonTable, false)
       var execInstance = "1"
