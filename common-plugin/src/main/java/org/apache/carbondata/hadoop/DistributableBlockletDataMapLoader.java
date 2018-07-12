@@ -25,6 +25,9 @@ import java.util.List;
 import org.apache.carbondata.common.exceptions.sql.MalformedDataMapCommandException;
 import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
+import org.apache.carbondata.core.cache.Cache;
+import org.apache.carbondata.core.cache.CacheProvider;
+import org.apache.carbondata.core.cache.CacheType;
 import org.apache.carbondata.core.datamap.DataMapDistributable;
 import org.apache.carbondata.core.datamap.DataMapStoreManager;
 import org.apache.carbondata.core.datamap.Segment;
@@ -38,11 +41,9 @@ import org.apache.carbondata.core.indexstore.TableBlockIndexUniqueIdentifier;
 import org.apache.carbondata.core.indexstore.TableBlockIndexUniqueIdentifierWrapper;
 import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMapDistributable;
 import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMapFactory;
-import org.apache.carbondata.core.memory.MemoryException;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.metadata.schema.table.DataMapSchema;
 import org.apache.carbondata.core.util.BlockletDataMapDetailsWithSchema;
-import org.apache.carbondata.core.util.BlockletDataMapLoader;
 
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -108,6 +109,9 @@ public class DistributableBlockletDataMapLoader
     return new RecordReader<TableBlockIndexUniqueIdentifier, BlockletDataMapDetailsWithSchema>() {
       private BlockletDataMapIndexWrapper wrapper = null;
       private TableBlockIndexUniqueIdentifier tableBlockIndexUniqueIdentifier = null;
+      private TableBlockIndexUniqueIdentifierWrapper tableBlockIndexUniqueIdentifierWrapper;
+      Cache<TableBlockIndexUniqueIdentifierWrapper, BlockletDataMapIndexWrapper> cache =
+          CacheProvider.getInstance().createCache(CacheType.DRIVER_BLOCKLET_DATAMAP);
       boolean finished = false;
 
       @Override public void initialize(InputSplit inputSplit, TaskAttemptContext taskAttemptContext)
@@ -116,14 +120,10 @@ public class DistributableBlockletDataMapLoader
             (BlockletDataMapDistributable) inputSplit;
         tableBlockIndexUniqueIdentifier =
             blockletDistributable.getTableBlockIndexUniqueIdentifier();
-        TableBlockIndexUniqueIdentifierWrapper tableBlockIndexUniqueIdentifierWrapper =
-            new TableBlockIndexUniqueIdentifierWrapper(tableBlockIndexUniqueIdentifier, table);
-        try {
-          wrapper = BlockletDataMapLoader.loadDataMap(tableBlockIndexUniqueIdentifierWrapper);
-        } catch (MemoryException e) {
-          LOGGER.error(e, "Exception while loading dataMaps");
-          throw new IOException(e);
-        }
+        tableBlockIndexUniqueIdentifierWrapper =
+            new TableBlockIndexUniqueIdentifierWrapper(tableBlockIndexUniqueIdentifier, table,
+                false);
+        wrapper = cache.get(tableBlockIndexUniqueIdentifierWrapper);
       }
 
       @Override public boolean nextKeyValue() throws IOException, InterruptedException {
@@ -152,8 +152,11 @@ public class DistributableBlockletDataMapLoader
       }
 
       @Override public void close() throws IOException {
-
+        if (null != tableBlockIndexUniqueIdentifierWrapper) {
+          cache.invalidate(tableBlockIndexUniqueIdentifierWrapper);
+        }
       }
+
     };
   }
 }

@@ -133,8 +133,12 @@ class DataMapLoaderRDD(
       .asInstanceOf[BlockletDataMapDistributable]
     val inputSplit = split.asInstanceOf[DataMapLoaderPartition].inputSplit
     val reader = dataMapFormat.createRecordReader(inputSplit, attemptContext)
-    reader.initialize(inputSplit, attemptContext)
     val iter = new Iterator[(TableBlockIndexUniqueIdentifier, BlockletDataMapDetailsWithSchema)] {
+      // in case of success, failure or cancelation clear memory and stop execution
+      context.addTaskCompletionListener { context =>
+        reader.close()
+      }
+      reader.initialize(inputSplit, attemptContext)
 
       private var havePair = false
       private var finished = false
