@@ -163,7 +163,7 @@ public class CarbonReaderBuilder {
    * @return CarbonWriterBuilder object
    */
   public CarbonReaderBuilder setEndPoint(String value) {
-    return setEndPoint(Constants.ENDPOINT, value);
+    return setEndPoint("fs.s3a.endpoint", value);
   }
 
   /**
