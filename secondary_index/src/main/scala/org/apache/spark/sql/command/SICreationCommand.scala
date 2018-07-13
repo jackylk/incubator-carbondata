@@ -432,6 +432,14 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
     // inherit and set the local dictionary properties from parent table
     setLocalDictionaryConfigs(tablePropertiesMap,
       carbonTable.getTableInfo.getFactTable.getTableProperties, allColumns)
+
+    // inherit the flat folder config from parent table
+    if (carbonTable.getTableInfo.getFactTable.getTableProperties
+      .containsKey(CarbonCommonConstants.FLAT_FOLDER)) {
+      tablePropertiesMap.put(CarbonCommonConstants.FLAT_FOLDER,
+        carbonTable.getTableInfo.getFactTable.getTableProperties
+          .get(CarbonCommonConstants.FLAT_FOLDER))
+    }
     tableSchema.setTableProperties(tablePropertiesMap)
     tableInfo.setDatabaseName(databaseName)
     tableInfo.setTableUniqueName(databaseName + "_" + indexTableName)
@@ -467,7 +475,7 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
          localDictColumns :+= column.getColumnName
        }
      )
-     if (isLocalDictEnabledFormainTable.toBoolean) {
+     if (isLocalDictEnabledFormainTable != null && isLocalDictEnabledFormainTable.toBoolean) {
        indexTblPropertiesMap
          .put(CarbonCommonConstants.LOCAL_DICTIONARY_INCLUDE,
            localDictColumns.mkString(","))
