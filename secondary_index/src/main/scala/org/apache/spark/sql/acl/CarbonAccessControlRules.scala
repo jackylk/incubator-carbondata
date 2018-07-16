@@ -29,7 +29,7 @@ import org.apache.spark.sql.command.{CreateIndexTable, DropIndex}
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.command.datamap.{CarbonCreateDataMapCommand, CarbonDataMapRebuildCommand, CarbonDataMapShowCommand, CarbonDropDataMapCommand}
 import org.apache.spark.sql.execution.command.management._
-import org.apache.spark.sql.execution.command.partition.{CarbonAlterTableAddHivePartitionCommand, CarbonAlterTableDropHivePartitionCommand, CarbonAlterTableSplitPartitionCommand}
+import org.apache.spark.sql.execution.command.partition.CarbonAlterTableSplitPartitionCommand
 import org.apache.spark.sql.execution.command.schema.{CarbonAlterTableAddColumnCommand, CarbonAlterTableDataTypeChangeCommand, CarbonAlterTableDropColumnCommand, CarbonAlterTableRenameCommand}
 import org.apache.spark.sql.execution.command.table.{CarbonCreateTableCommand, CarbonDropTableCommand}
 import org.apache.spark.sql.hive.CarbonRelation
@@ -39,7 +39,7 @@ import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.core.metadata.schema.table.TableInfo
-import org.apache.carbondata.processing.merger.{CompactionType, InternalCompactionType}
+import org.apache.carbondata.processing.merger.CompactionType
 
 private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
     hCatalog: SessionCatalog,
@@ -212,11 +212,8 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
             CompactionType.valueOf(alterTableModel.compactionType.toUpperCase)
           } catch {
             case ex: Exception =>
-              if (!alterTableModel.compactionType.toUpperCase
-                .equalsIgnoreCase(InternalCompactionType.SEGMENT_INDEX.toString)) {
-                throw new MalformedCarbonCommandException(s"unsupported alter operation on carbon" +
-                                                          s" table ${alterTableModel.tableName}")
-              }
+              throw new MalformedCarbonCommandException(s"unsupported alter operation on carbon" +
+                                                        s" table ${alterTableModel.tableName}")
           }
           if (compactionType == CompactionType.CLOSE_STREAMING) {
             checkPrivilegeRecursively(c,

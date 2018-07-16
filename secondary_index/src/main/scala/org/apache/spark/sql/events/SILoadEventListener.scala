@@ -23,7 +23,6 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.command.{SecondaryIndex, SecondaryIndexModel}
 import org.apache.spark.util.si.FileInternalUtil
-import org.apache.spark.util.CarbonInternalCommonUtil
 
 import org.apache.carbondata.common.logging.{LogService, LogServiceFactory}
 import org.apache.carbondata.core.constants.CarbonCommonConstants
@@ -34,6 +33,7 @@ import org.apache.carbondata.events._
 import org.apache.carbondata.processing.loading.events.LoadEvents.LoadTablePreStatusUpdateEvent
 import org.apache.carbondata.spark.core.metadata.IndexMetadata
 import org.apache.carbondata.spark.rdd.SecondaryIndexCreator
+import org.apache.carbondata.spark.util.CommonUtil
 
 /**
  *
@@ -92,10 +92,10 @@ class SILoadEventListener extends OperationEventListener with Logging {
                 OperationListenerBus.getInstance
                   .fireEvent(loadTableSIPreExecutionEvent, operationContext)
 
-                val segmentToSegmentFileNameMap: java.util.Map[String, String] = new java.util
+                val segmentToSegmentTimestampMap: java.util.Map[String, String] = new java.util
                 .HashMap[String, String]()
                 val indexCarbonTable = SecondaryIndexCreator
-                  .createSecondaryIndex(secondaryIndexModel, segmentToSegmentFileNameMap, true)
+                  .createSecondaryIndex(secondaryIndexModel, segmentToSegmentTimestampMap, true)
 
                 val tableStatusUpdation = FileInternalUtil.updateTableStatus(
                   secondaryIndexModel.validSegments,
@@ -103,13 +103,13 @@ class SILoadEventListener extends OperationEventListener with Logging {
                   secondaryIndexModel.secondaryIndex.indexTableName,
                   SegmentStatus.SUCCESS,
                   secondaryIndexModel.segmentIdToLoadStartTimeMapping,
-                  segmentToSegmentFileNameMap,
+                  segmentToSegmentTimestampMap,
                   indexCarbonTable)
 
                 // merge index files
-                CarbonInternalCommonUtil.mergeIndexFiles(sparkSession.sparkContext,
+                CommonUtil.mergeIndexFiles(sparkSession.sparkContext,
                   secondaryIndexModel.validSegments,
-                  segmentToSegmentFileNameMap,
+                  segmentToSegmentTimestampMap,
                   indexCarbonTable.getTablePath,
                   indexCarbonTable, false)
 

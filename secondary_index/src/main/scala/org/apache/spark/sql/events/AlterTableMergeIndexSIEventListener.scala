@@ -27,26 +27,27 @@ import org.apache.spark.sql.CarbonEnv
 import org.apache.spark.sql.command.SecondaryIndex
 import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.sql.util.CarbonException
-import org.apache.spark.util.{CarbonInternalCommonUtil, CarbonInternalScalaUtil}
+import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.common.logging.{LogService, LogServiceFactory}
 import org.apache.carbondata.core.datamap.Segment
 import org.apache.carbondata.core.locks.{CarbonLockFactory, LockUsage}
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager
 import org.apache.carbondata.events._
-import org.apache.carbondata.processing.merger.{CarbonDataMergerUtil, InternalCompactionType}
+import org.apache.carbondata.processing.merger.{CarbonDataMergerUtil, CompactionType}
+import org.apache.carbondata.spark.util.CommonUtil
 
 
-class AlterTableCompactionAbortSIEventListener extends OperationEventListener with Logging {
+class AlterTableMergeIndexSIEventListener extends OperationEventListener with Logging {
   val LOGGER: LogService = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
 
   override def onEvent(event: Event, operationContext: OperationContext): Unit = {
-    val exceptionEvent = event.asInstanceOf[AlterTableCompactionAbortEvent]
+    val exceptionEvent = event.asInstanceOf[AlterTableMergeIndexEvent]
     val alterTableModel = exceptionEvent.alterTableModel
     val carbonMainTable = exceptionEvent.carbonTable
     val compactionType = alterTableModel.compactionType
     val sparkSession = exceptionEvent.sparkSession
-    if (compactionType.equalsIgnoreCase(InternalCompactionType.SEGMENT_INDEX.toString)) {
+    if (compactionType.equalsIgnoreCase(CompactionType.SEGMENT_INDEX.toString)) {
       LOGGER.audit(s"Compaction request received for table " +
                    s"${carbonMainTable.getDatabaseName}.${carbonMainTable.getTableName}")
       val lock = CarbonLockFactory.getCarbonLockObj(
@@ -63,7 +64,8 @@ class AlterTableCompactionAbortSIEventListener extends OperationEventListener wi
           val segmentFileNameMap: java.util.Map[String, String] = new util.HashMap[String, String]()
           loadFolderDetailsArray.foreach(loadMetadataDetails => {
             segmentFileNameMap
-              .put(loadMetadataDetails.getLoadName, loadMetadataDetails.getSegmentFile)
+              .put(loadMetadataDetails.getLoadName,
+                String.valueOf(loadMetadataDetails.getLoadStartTime))
           })
           if (null != indexTablesList && indexTablesList.nonEmpty) {
             indexTablesList.foreach { indexTableAndColumns =>
@@ -84,7 +86,7 @@ class AlterTableCompactionAbortSIEventListener extends OperationEventListener wi
                 validSegmentIds += segment.getSegmentNo
               }
               // Just launch job to merge index for all index tables
-              CarbonInternalCommonUtil.mergeIndexFiles(
+              CommonUtil.mergeIndexFiles(
                 sparkSession.sparkContext,
                 validSegmentIds,
                 segmentFileNameMap,

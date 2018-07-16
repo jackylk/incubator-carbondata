@@ -25,7 +25,7 @@ import scala.util.control.Breaks.{break, breakable}
 import org.apache.spark.sql.{CarbonEnv, SQLContext}
 import org.apache.spark.sql.command.{SecondaryIndex, SecondaryIndexModel}
 import org.apache.spark.sql.hive.CarbonRelation
-import org.apache.spark.util.{CarbonInternalCommonUtil, CarbonInternalScalaUtil}
+import org.apache.spark.util.CarbonInternalScalaUtil
 import org.apache.spark.util.si.FileInternalUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
@@ -38,6 +38,7 @@ import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 import org.apache.carbondata.processing.util.CarbonLoaderUtil
 import org.apache.carbondata.spark.SecondaryIndexCreationResultImpl
 import org.apache.carbondata.spark.core.CarbonInternalCommonConstants
+import org.apache.carbondata.spark.util.CommonUtil
 
 /**
  * This class is aimed at creating secondary index for specified segments
@@ -78,22 +79,22 @@ object SecondaryIndexCreator {
         List(loadName),
         segmentIdToLoadStartTimeMapping)
       try {
-        val segmentToSegmentFileNameMap: java.util.Map[String, String] = new java.util
+        val segmentToSegmentTimestampMap: java.util.Map[String, String] = new java.util
         .HashMap[String, String]()
         val indexCarbonTable = createSecondaryIndex(secondaryIndexModel,
-          segmentToSegmentFileNameMap)
+          segmentToSegmentTimestampMap)
         val tableStatusUpdation = FileInternalUtil.updateTableStatus(
           secondaryIndexModel.validSegments,
           secondaryIndexModel.carbonLoadModel.getDatabaseName,
           secondaryIndexModel.secondaryIndex.indexTableName,
           SegmentStatus.SUCCESS,
           secondaryIndexModel.segmentIdToLoadStartTimeMapping,
-          segmentToSegmentFileNameMap,
+          segmentToSegmentTimestampMap,
           carbonMainTable)
         // merge index files
-        CarbonInternalCommonUtil.mergeIndexFiles(sqlContext.sparkContext,
+        CommonUtil.mergeIndexFiles(sqlContext.sparkContext,
           secondaryIndexModel.validSegments,
-          segmentToSegmentFileNameMap,
+          segmentToSegmentTimestampMap,
           indexCarbonTable.getTablePath,
           indexCarbonTable, false)
         if (!tableStatusUpdation) {
@@ -107,7 +108,7 @@ object SecondaryIndexCreator {
   }
 
   def createSecondaryIndex(secondaryIndexModel: SecondaryIndexModel,
-    segmentToSegmentFileNameMap: java.util.Map[String, String],
+    segmentToLoadStartTimeMap: java.util.Map[String, String],
     forceAccessSegment: Boolean = false): CarbonTable = {
     val sc = secondaryIndexModel.sqlContext
     // get the thread pool size for secondary index creation
@@ -175,7 +176,7 @@ object SecondaryIndexCreator {
                 .writeSegmentFile(indexCarbonTable,
                   segId,
                   String.valueOf(carbonLoadModel.getFactTimeStamp))
-            segmentToSegmentFileNameMap.put(segId, segmentFileName)
+            segmentToLoadStartTimeMap.put(segId, String.valueOf(carbonLoadModel.getFactTimeStamp))
             if (secondaryIndexCreationStatus.length > 0) {
               eachSegmentSecondaryIndexCreationStatus = secondaryIndexCreationStatus.forall(_._2)
             }

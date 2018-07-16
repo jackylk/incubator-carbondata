@@ -240,8 +240,8 @@ object CarbonCommonInitializer {
         .addListener(classOf[AlterTableCompactionPreStatusUpdateEvent],
           new AlterTableCompactionPostEventListener)
       operationListenerBus
-        .addListener(classOf[AlterTableCompactionAbortEvent],
-          new AlterTableCompactionAbortSIEventListener)
+        .addListener(classOf[AlterTableMergeIndexEvent],
+          new AlterTableMergeIndexSIEventListener)
       operationListenerBus
         .addListener(classOf[UpdateTablePreEvent], new UpdateTablePreEventListener)
       operationListenerBus

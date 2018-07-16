@@ -26,7 +26,7 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.sql.CarbonEnv
 import org.apache.spark.sql.command.SecondaryIndex
 import org.apache.spark.sql.hive.CarbonRelation
-import org.apache.spark.util.{CarbonInternalCommonUtil, CarbonInternalScalaUtil, Compactor}
+import org.apache.spark.util.{CarbonInternalScalaUtil, Compactor}
 
 import org.apache.carbondata.common.logging.{LogService, LogServiceFactory}
 import org.apache.carbondata.core.constants.CarbonCommonConstants
@@ -34,7 +34,8 @@ import org.apache.carbondata.core.datamap.Segment
 import org.apache.carbondata.core.mutate.CarbonUpdateUtil
 import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatusManager}
 import org.apache.carbondata.events.{AlterTableCompactionPreStatusUpdateEvent, Event, OperationContext, OperationEventListener}
-import org.apache.carbondata.processing.merger.{CarbonDataMergerUtil, CompactionType, InternalCompactionType}
+import org.apache.carbondata.processing.merger.{CarbonDataMergerUtil, CompactionType}
+import org.apache.carbondata.spark.util.CommonUtil
 
 
 /**
@@ -57,7 +58,7 @@ class AlterTableCompactionPostEventListener extends OperationEventListener with 
         val compactionType: CompactionType = alterTableCompactionPostEvent.carbonMergerMapping
           .campactionType
         if (compactionType.toString
-          .equalsIgnoreCase(InternalCompactionType.SEGMENT_INDEX.toString)) {
+          .equalsIgnoreCase(CompactionType.SEGMENT_INDEX.toString)) {
           val carbonMainTable = carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable
           val indexTablesList = CarbonInternalScalaUtil.getIndexesMap(carbonMainTable).asScala
           val loadFolderDetailsArray = SegmentStatusManager
@@ -65,7 +66,8 @@ class AlterTableCompactionPostEventListener extends OperationEventListener with 
           val segmentFileNameMap: java.util.Map[String, String] = new util.HashMap[String, String]()
           loadFolderDetailsArray.foreach(loadMetadataDetails => {
             segmentFileNameMap
-              .put(loadMetadataDetails.getLoadName, loadMetadataDetails.getSegmentFile)
+              .put(loadMetadataDetails.getLoadName,
+                String.valueOf(loadMetadataDetails.getLoadStartTime))
           })
           if (null != indexTablesList && indexTablesList.nonEmpty) {
             indexTablesList.foreach { indexTableAndColumns =>
@@ -87,7 +89,7 @@ class AlterTableCompactionPostEventListener extends OperationEventListener with 
                 validSegmentIds += segment.getSegmentNo
               }
               // Just launch job to merge index for all index tables
-              CarbonInternalCommonUtil.mergeIndexFiles(
+              CommonUtil.mergeIndexFiles(
                 sQLContext.sparkContext,
                 validSegmentIds,
                 segmentFileNameMap,

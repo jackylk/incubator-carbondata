@@ -26,6 +26,7 @@ import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 import org.apache.carbondata.spark.rdd.SecondaryIndexCreator
 import org.apache.carbondata.spark.spark.load.CarbonInternalLoaderUtil
+import org.apache.carbondata.spark.util.CommonUtil
 
 /**
  *
@@ -65,23 +66,23 @@ object Compactor {
         validSegments,
         segmentIdToLoadStartTimeMapping)
       try {
-        val segmentToSegmentFileNameMap: java.util.Map[String, String] = new java.util
+        val segmentToSegmentTimestampMap: java.util.Map[String, String] = new java.util
         .HashMap[String, String]()
         val indexCarbonTable = SecondaryIndexCreator
           .createSecondaryIndex(secondaryIndexModel,
-            segmentToSegmentFileNameMap,
+            segmentToSegmentTimestampMap,
             forceAccessSegment)
         CarbonInternalLoaderUtil.updateLoadMetadataWithMergeStatus(
           indexCarbonTable,
           loadsToMerge,
           validSegments.head,
           carbonLoadModel,
-          segmentToSegmentFileNameMap,
+          segmentToSegmentTimestampMap,
           segmentIdToLoadStartTimeMapping.get(validSegments.head).get)
         // merge index files
-        CarbonInternalCommonUtil.mergeIndexFiles(sqlContext.sparkContext,
+        CommonUtil.mergeIndexFiles(sqlContext.sparkContext,
           secondaryIndexModel.validSegments,
-          segmentToSegmentFileNameMap,
+          segmentToSegmentTimestampMap,
           indexCarbonTable.getTablePath,
           indexCarbonTable, false)
       } catch {

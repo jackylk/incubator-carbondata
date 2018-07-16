@@ -24,7 +24,7 @@ import scala.collection.JavaConverters._
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.impl.FileFactory
-import org.apache.carbondata.core.metadata.CarbonTableIdentifier
+import org.apache.carbondata.core.metadata.{CarbonTableIdentifier, SegmentFileStore}
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.mutate.CarbonUpdateUtil
 import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatus}
@@ -72,7 +72,7 @@ object FileInternalUtil {
     tableName: String,
     loadStatus: SegmentStatus,
     segmentIdToLoadStartTimeMapping: scala.collection.mutable.Map[String, java.lang.Long],
-    segmentToSegmentFileNameMap: java.util.Map[String, String],
+    segmentToSegmentTimestampMap: java.util.Map[String, String],
     carbonTable: CarbonTable): Boolean = {
     var loadMetadataDetailsList = Array[LoadMetadataDetails]()
     val loadEndTime = CarbonUpdateUtil.readCurrentTime
@@ -83,7 +83,19 @@ object FileInternalUtil {
       loadMetadataDetail.setSegmentStatus(loadStatus)
       loadMetadataDetail.setLoadStartTime(segmentIdToLoadStartTimeMapping(segmentId))
       loadMetadataDetail.setLoadEndTime(loadEndTime)
-      loadMetadataDetail.setSegmentFile(segmentToSegmentFileNameMap.get(segmentId))
+      if (null != segmentToSegmentTimestampMap.get(segmentId)) {
+        loadMetadataDetail
+          .setSegmentFile(SegmentFileStore
+                            .genSegmentFileName(segmentId,
+                              segmentToSegmentTimestampMap.get(segmentId).toString) +
+                          CarbonTablePath.SEGMENT_EXT)
+      } else {
+        loadMetadataDetail
+          .setSegmentFile(SegmentFileStore
+                            .genSegmentFileName(segmentId,
+                              segmentIdToLoadStartTimeMapping.get(segmentId).toString) +
+                          CarbonTablePath.SEGMENT_EXT)
+      }
       loadMetadataDetailsList +:= loadMetadataDetail
     }
 

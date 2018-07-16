@@ -32,6 +32,7 @@ import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.locks.ICarbonLock;
 import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier;
 import org.apache.carbondata.core.metadata.CarbonMetadata;
+import org.apache.carbondata.core.metadata.SegmentFileStore;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.mutate.CarbonUpdateUtil;
 import org.apache.carbondata.core.statusmanager.LoadMetadataDetails;
@@ -228,7 +229,7 @@ public class CarbonInternalLoaderUtil {
    */
   public static boolean updateLoadMetadataWithMergeStatus(CarbonTable indexCarbonTable,
       String[] loadsToMerge, String mergedLoadNumber, CarbonLoadModel carbonLoadModel,
-      Map<String, String> segmentToSegmentFileNameMap, long mergeLoadStartTime) throws IOException {
+      Map<String, String> segmentToLoadStartTimeMap, long mergeLoadStartTime) throws IOException {
     boolean tableStatusUpdationStatus = false;
     List<String> loadMergeList = new ArrayList<>(Arrays.asList(loadsToMerge));
     AbsoluteTableIdentifier absoluteTableIdentifier =
@@ -270,7 +271,9 @@ public class CarbonInternalLoaderUtil {
         loadMetadataDetails.setLoadEndTime(loadEnddate);
         CarbonTable carbonTable = carbonLoadModel.getCarbonDataLoadSchema().getCarbonTable();
         loadMetadataDetails.setLoadName(mergedLoadNumber);
-        loadMetadataDetails.setSegmentFile(segmentToSegmentFileNameMap.get(mergedLoadNumber));
+        loadMetadataDetails.setSegmentFile(SegmentFileStore.genSegmentFileName(mergedLoadNumber,
+            String.valueOf(segmentToLoadStartTimeMap.get(mergedLoadNumber)))
+            + CarbonTablePath.SEGMENT_EXT);
         CarbonLoaderUtil
             .addDataIndexSizeIntoMetaEntry(loadMetadataDetails, mergedLoadNumber, carbonTable);
         loadMetadataDetails.setLoadStartTime(mergeLoadStartTime);
