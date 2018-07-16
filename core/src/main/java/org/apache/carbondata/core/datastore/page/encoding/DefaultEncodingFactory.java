@@ -330,7 +330,7 @@ public class DefaultEncodingFactory extends EncodingFactory {
     // V100R002C50RC2SPC100B160 and UQuery Carbon version
     // The older commercial version does not store the decimal count value in ValueEncoderMeta i.e.
     // wrong encoder was selected for the legacy store.
-    if (decimalCount == 0 && srcDataType == DataTypes.DOUBLE) {
+    if (decimalCount == 0 && srcDataType == DataTypes.DOUBLE && !isComplexPrimitive) {
       return new DirectCompressCodec(DataTypes.DOUBLE);
     } else if (srcDataType == DataTypes.FLOAT && decimalCount == 0) {
       return getColumnPageCodec(stats, isComplexPrimitive, columnSpec, srcDataType, maxValue,
