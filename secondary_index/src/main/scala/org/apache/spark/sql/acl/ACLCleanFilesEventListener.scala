@@ -58,11 +58,5 @@ object ACLCleanFilesEventListener {
           deleteSegmentByIdPostEvent.carbonTable.getCarbonTableIdentifier)
     }
     }
-  class ACLAbortCleanFilesEventListener extends OperationEventListener {
-    override def onEvent(event: Event,
-        operationContext: OperationContext): Unit = {
-      val deleteSegmentByIdAbortEvent = event.asInstanceOf[CleanFilesAbortEvent]
-    }
-  }
 }
 

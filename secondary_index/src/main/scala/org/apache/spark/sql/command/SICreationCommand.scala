@@ -392,10 +392,8 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
     val blockletId: ColumnSchema = getColumnSchema(databaseName,
       DataTypes.STRING,
       CarbonCommonConstants.POSITION_REFERENCE,
-      true,
       encoders,
       true,
-      -1,
       0,
       0,
       schemaOrdinal)
@@ -409,10 +407,8 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
     val dummyMeasure: ColumnSchema = getColumnSchema(databaseName,
       DataType.getDataType(DataType.DOUBLE_MEASURE_CHAR),
       CarbonCommonConstants.DEFAULT_INVISIBLE_DUMMY_MEASURE,
-      true,
       encoders,
       false,
-      -1,
       0,
       0,
       schemaOrdinal)
@@ -519,9 +515,9 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
     }
   }
 
-  def getColumnSchema(databaseName: String, dataType: DataType, colName: String, isCol: Boolean,
+  def getColumnSchema(databaseName: String, dataType: DataType, colName: String,
     encoders: java.util.List[Encoding], isDimensionCol: Boolean,
-    colGroup: Integer, precision: Integer, scale: Integer, schemaOrdinal: Int): ColumnSchema = {
+    precision: Integer, scale: Integer, schemaOrdinal: Int): ColumnSchema = {
     val columnSchema = new ColumnSchema()
     columnSchema.setDataType(dataType)
     columnSchema.setColumnName(colName)
@@ -532,9 +528,7 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
     val columnUniqueId = colUniqueIdGenerator.generateUniqueId(columnSchema)
     columnSchema.setColumnUniqueId(columnUniqueId)
     columnSchema.setColumnReferenceId(columnUniqueId)
-    columnSchema.setColumnar(isCol)
     columnSchema.setDimensionColumn(isDimensionCol)
-    columnSchema.setColumnGroup(colGroup)
     columnSchema.setPrecision(precision)
     columnSchema.setScale(scale)
     columnSchema.setSchemaOrdinal(schemaOrdinal)
@@ -549,9 +543,7 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
     columnSchema.setEncodingList(parentColumnSchema.getEncodingList)
     columnSchema.setColumnUniqueId(parentColumnSchema.getColumnUniqueId)
     columnSchema.setColumnReferenceId(parentColumnSchema.getColumnReferenceId)
-    columnSchema.setColumnar(parentColumnSchema.isColumnar())
     columnSchema.setDimensionColumn(parentColumnSchema.isDimensionColumn())
-    columnSchema.setColumnGroup(parentColumnSchema.getColumnGroupId)
     columnSchema.setPrecision(parentColumnSchema.getPrecision)
     columnSchema.setScale(parentColumnSchema.getScale)
     columnSchema.setSchemaOrdinal(schemaOrdinal)

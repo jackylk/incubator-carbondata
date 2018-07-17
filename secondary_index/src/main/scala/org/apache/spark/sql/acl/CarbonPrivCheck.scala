@@ -19,19 +19,17 @@ package org.apache.spark.sql.acl
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.{CarbonTableIdentifierImplicit, InternalRow, TableIdentifier}
 import org.apache.spark.sql.catalyst.catalog.SessionCatalog
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeSet}
-import org.apache.spark.sql.catalyst.expressions.codegen.{CodegenContext, ExprCode}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.catalyst.plans.physical.Partitioning
-import org.apache.spark.sql.execution.{BatchedDataSourceScanExec, CodegenSupport, RowDataSourceScanExec, SparkPlan, UnaryExecNode}
+import org.apache.spark.sql.execution.{FileSourceScanExec, RowDataSourceScanExec, SparkPlan}
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.command.management.{CarbonInsertIntoCommand, CarbonLoadDataCommand}
 import org.apache.spark.sql.execution.command.schema.CarbonAlterTableRenameCommand
 import org.apache.spark.sql.execution.command.table.{CarbonDescribeFormattedCommand, CarbonDropTableCommand}
+import org.apache.spark.sql.execution.strategy.CarbonDataSourceScan
 import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.sql.hive.acl.{HiveACLInterface, ObjectType, PrivObject, PrivType}
 import org.apache.spark.sql.hive.execution.command.CarbonDropDatabaseCommand
@@ -41,7 +39,6 @@ import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.scan.expression.{ColumnExpression, Expression}
 import org.apache.carbondata.spark.rdd.CarbonScanRDD
-import org.apache.carbondata.spark.util.CarbonSparkUtil
 
 private[sql] case class CarbonPrivCheck(sparkSession: SparkSession,
     hCatalog: SessionCatalog,
@@ -146,23 +143,33 @@ private[sql] case class CarbonPrivCheck(sparkSession: SparkSession,
             case internalProject: CarbonInternalProject =>
               internalTable = Some(internalProject)
               internalProject
-            case scan@BatchedDataSourceScanExec(projectList, rdd: CarbonScanRDD[InternalRow],
-            relation: CarbonDatasourceHadoopRelation, _, _, _, logicalRelation)
-              if !isSameTable(relation, internalTable) && logicalRelation.needPriv =>
-              checkPrivilege(projectList, relation.carbonRelation, rdd)
+            case scan: CarbonDataSourceScan
+              if (!isSameTable(scan.logicalRelation.relation
+                .asInstanceOf[CarbonDatasourceHadoopRelation],
+                internalTable) &&
+                  scan.logicalRelation.needPriv) =>
+              checkPrivilege(scan.output,
+                scan.logicalRelation.relation.asInstanceOf[CarbonDatasourceHadoopRelation]
+                  .carbonRelation,
+                scan.rdd.asInstanceOf[CarbonScanRDD[InternalRow]])
               scan
             case scan@RowDataSourceScanExec(projectList, rdd: CarbonScanRDD[InternalRow],
             relation: CarbonDatasourceHadoopRelation, _, _, _, _)
               if !isSameTable(relation, internalTable) && scan.needPriv =>
               checkPrivilege(projectList, relation.carbonRelation, rdd)
               scan
-            case scan@BatchedDataSourceScanExec(projectList, rdd: CarbonDecoderRDD,
-            relation: CarbonDatasourceHadoopRelation, _, _, _, logicalRelation)
-              if rdd.prev.isInstanceOf[CarbonScanRDD[InternalRow]] &&
-                 !isSameTable(relation, internalTable) && logicalRelation.needPriv =>
-              checkPrivilege(projectList,
-                relation.carbonRelation,
-                rdd.prev.asInstanceOf[CarbonScanRDD[InternalRow]])
+            case scan: CarbonDataSourceScan
+              if (scan.rdd.asInstanceOf[CarbonDecoderRDD].prev
+                    .isInstanceOf[CarbonScanRDD[InternalRow]] &&
+                  !isSameTable(scan.logicalRelation.relation
+                    .asInstanceOf[CarbonDatasourceHadoopRelation],
+                    internalTable) &&
+                  scan.logicalRelation.needPriv) =>
+              checkPrivilege(scan.output,
+                scan.logicalRelation.relation.asInstanceOf[CarbonDatasourceHadoopRelation]
+                  .carbonRelation,
+                scan.rdd.asInstanceOf[CarbonDecoderRDD].prev
+                  .asInstanceOf[CarbonScanRDD[InternalRow]])
               scan
             case scan@RowDataSourceScanExec(projectList, rdd: CarbonDecoderRDD,
             relation: CarbonDatasourceHadoopRelation, _, _, _, _)

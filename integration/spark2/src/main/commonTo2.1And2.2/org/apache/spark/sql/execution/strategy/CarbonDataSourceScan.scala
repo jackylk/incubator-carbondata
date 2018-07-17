@@ -41,7 +41,9 @@ class CarbonDataSourceScan(
     relation.dataSchema,
     Seq.empty,
     Seq.empty,
-    identifier) {
+    identifier,
+    false,
+    Seq.empty) {
 
   override val supportsBatch: Boolean = true
 

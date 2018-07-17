@@ -502,8 +502,7 @@ public class SecondaryIndexQueryResultProcessor {
         new CarbonDataFileAttributes(Integer.parseInt(carbonLoadModel.getTaskNo()),
             carbonLoadModel.getFactTimeStamp());
     carbonFactDataHandlerModel.setCarbonDataFileAttributes(carbonDataFileAttributes);
-    dataHandler = CarbonFactHandlerFactory.createCarbonFactHandler(carbonFactDataHandlerModel,
-        CarbonFactHandlerFactory.FactHandlerType.COLUMNAR);
+    dataHandler = CarbonFactHandlerFactory.createCarbonFactHandler(carbonFactDataHandlerModel);
     try {
       dataHandler.initialise();
     } catch (CarbonDataWriterException e) {

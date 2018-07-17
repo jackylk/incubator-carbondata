@@ -37,6 +37,7 @@ import org.apache.spark.sql.catalyst.plans.physical.{BroadcastDistribution, Broa
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.exchange.{BroadcastExchangeExec, ReusedExchangeExec}
 import org.apache.spark.sql.execution.metric.SQLMetrics
+import org.apache.spark.sql.execution.strategy.CarbonDataSourceScan
 import org.apache.spark.sql.optimizer.CarbonFilters
 import org.apache.spark.sql.types.{LongType, TimestampType}
 import org.apache.spark.unsafe.types.UTF8String
@@ -568,7 +569,7 @@ case class BroadCastSIFilterPushJoin(
       case BuildRight => longMetric("numRightRows")
     }
     val secondaryIndexRDD = buildPlan.collect {
-      case batchData: BatchedDataSourceScanExec =>
+      case batchData: CarbonDataSourceScan =>
         batchData.rdd
       case rowData: RowDataSourceScanExec =>
         rowData.rdd
@@ -597,7 +598,7 @@ case class BroadCastSIFilterPushJoin(
   }
 
   val mainTableRDD: Option[RDD[InternalRow]] = carbonScan.collectFirst {
-    case batchData: BatchedDataSourceScanExec =>
+    case batchData: CarbonDataSourceScan =>
       batchData.rdd
     case rowData: RowDataSourceScanExec =>
       rowData.rdd
@@ -702,7 +703,7 @@ object BroadCastFilterPushJoin {
     }
 
     val tableScan = carbonScan.collectFirst {
-      case ProjectExec(projectList, batchData: BatchedDataSourceScanExec)
+      case ProjectExec(projectList, batchData: CarbonDataSourceScan)
         if (filterKey.isDefined && projectList.exists(x =>
           x.name.equalsIgnoreCase(filterKey.get.name) &&
           x.exprId.id == filterKey.get.exprId.id &&
@@ -714,7 +715,7 @@ object BroadCastFilterPushJoin {
           x.exprId.id == filterKey.get.exprId.id &&
           x.exprId.jvmId.equals(filterKey.get.exprId.jvmId))) =>
         rowData
-      case batchData: BatchedDataSourceScanExec
+      case batchData: CarbonDataSourceScan
         if (filterKey.isDefined && batchData.output.attrs.exists(x =>
           x.name.equalsIgnoreCase(filterKey.get.name) &&
           x.exprId.id == filterKey.get.exprId.id &&
@@ -736,8 +737,8 @@ object BroadCastFilterPushJoin {
         && ((filters(0).size > 0 && filters(0).size <= configuredFilterRecordSize.toInt) ||
             isIndexTable)) {
       LOGGER.info("Pushing down filter for broadcast join. Filter size:" + filters(0).size)
-      if (tableScan.get.isInstanceOf[BatchedDataSourceScanExec]) {
-        addPushdownToCarbonRDD(tableScan.get.asInstanceOf[BatchedDataSourceScanExec].rdd,
+      if (tableScan.get.isInstanceOf[CarbonDataSourceScan]) {
+        addPushdownToCarbonRDD(tableScan.get.asInstanceOf[CarbonDataSourceScan].rdd,
           addPushdownFilters(filterKeys, filters))
       } else {
         addPushdownToCarbonRDD(tableScan.get.asInstanceOf[RowDataSourceScanExec].rdd,

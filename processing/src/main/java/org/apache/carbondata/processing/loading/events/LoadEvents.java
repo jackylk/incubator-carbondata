@@ -67,6 +67,26 @@ public class LoadEvents {
     public CarbonLoadModel getCarbonLoadModel() {
       return carbonLoadModel;
     }
+
+    public String getFactPath() {
+      return factPath;
+    }
+
+    public boolean isDataFrameDefined() {
+      return isDataFrameDefined;
+    }
+
+    public Map<String, String> getOptionsFinal() {
+      return optionsFinal;
+    }
+
+    public Map<String, String> getUserProvidedOptions() {
+      return userProvidedOptions;
+    }
+
+    public boolean isOverWriteTable() {
+      return isOverWriteTable;
+    }
   }
 
   /**

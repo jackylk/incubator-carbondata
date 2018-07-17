@@ -64,7 +64,5 @@ class InsertIntoCarbonTableTestCase extends QueryTest with BeforeAndAfterAll {
   override def afterAll {
     sql("drop table if exists TCarbonSource")
     sql("drop table if exists TCarbon")
-    OperationListenerBus.getInstance()
-      .removeListener(classOf[LoadTablePreExecutionEvent].getName, new BlockEventListener)
   }
 }

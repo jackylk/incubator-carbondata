@@ -49,8 +49,8 @@ object CarbonCommonListenerRegister {
           new MergeIndexEventListener)
       // Merge index compaction DDL listener
       operationListenerBus
-        .addListener(classOf[AlterTableCompactionExceptionEvent],
-          new AlterTableCompactionExceptionEventListener)
+        .addListener(classOf[AlterTableCompactionAbortEvent],
+          new AlterTableCompactionAbortEventListener)
       initialized = true
     }
   }

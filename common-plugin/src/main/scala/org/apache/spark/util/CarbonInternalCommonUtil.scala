@@ -18,11 +18,11 @@
 package org.apache.spark.util
 
 import org.apache.spark.SparkContext
+import org.apache.spark.rdd.CarbonMergeFilesRDD
 
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.spark.core.CarbonCommonPluginConstants
-import org.apache.carbondata.spark.rdd.CarbonMergeFilesRDD
 
 
 object CarbonInternalCommonUtil {

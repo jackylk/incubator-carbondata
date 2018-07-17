@@ -64,10 +64,6 @@ object CarbonCommonInitializer {
         .addListener(classOf[LoadTablePostExecutionEvent],
           new ACLLoadEventListener.ACLPostLoadEventListener
         )
-      operationListenerBus
-        .addListener(classOf[LoadTableAbortExecutionEvent],
-          new ACLLoadEventListener.ACLAbortLoadEventListener
-        )
 
       operationListenerBus
         .addListener(classOf[CreateTablePreExecutionEvent],
@@ -162,11 +158,6 @@ object CarbonCommonInitializer {
           new ACLCleanFilesEventListener.ACLPostCleanFilesEventListener
         )
       operationListenerBus
-        .addListener(classOf[CleanFilesAbortEvent],
-          new ACLCleanFilesEventListener.ACLAbortCleanFilesEventListener
-        )
-
-      operationListenerBus
         .addListener(classOf[AlterTableCompactionPreEvent],
           new ACLCompactionEventListener.ACLPreCompactionEventListener
         )
@@ -249,8 +240,8 @@ object CarbonCommonInitializer {
         .addListener(classOf[AlterTableCompactionPreStatusUpdateEvent],
           new AlterTableCompactionPostEventListener)
       operationListenerBus
-        .addListener(classOf[AlterTableCompactionExceptionEvent],
-          new AlterTableCompactionExceptionSIEventListener)
+        .addListener(classOf[AlterTableCompactionAbortEvent],
+          new AlterTableCompactionAbortSIEventListener)
       operationListenerBus
         .addListener(classOf[UpdateTablePreEvent], new UpdateTablePreEventListener)
       operationListenerBus
