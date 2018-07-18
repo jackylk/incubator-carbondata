@@ -368,22 +368,16 @@ class CarbonACLSqlAstBuilder(conf: SQLConf, parser: CarbonSpark2SqlParser,
   val helper = new CarbonHelperACLSqlAstBuilder(conf, parser, sparkSession)
 
   override def visitCreateHiveTable(ctx: CreateHiveTableContext): LogicalPlan = {
-    val fileStorage = helper.getFileStorage(ctx.createFileFormat)
+    val fileStorage = CarbonSparkSqlParserUtil.getFileStorage(ctx.createFileFormat)
 
     if (fileStorage.equalsIgnoreCase("'carbondata'") ||
-      fileStorage.equalsIgnoreCase("'org.apache.carbondata.format'")) {
-      helper.createCarbonTable(
-        tableHeader = ctx.createTableHeader,
-        skewSpecContext = ctx.skewSpec,
-        bucketSpecContext = ctx.bucketSpec,
-        partitionColumns = ctx.partitionColumns,
-        columns = ctx.columns,
-        tablePropertyList = ctx.tablePropertyList,
-        locationSpecContext = ctx.locationSpec(),
-        tableComment = Option(ctx.STRING()).map(string),
-        ctas = ctx.AS,
-        query = ctx.query
-      )
+        fileStorage.equalsIgnoreCase("carbondata") ||
+        fileStorage.equalsIgnoreCase("'carbonfile'") ||
+        fileStorage.equalsIgnoreCase("'org.apache.carbondata.format'")) {
+      val createTableTuple = (ctx.createTableHeader, ctx.skewSpec,
+        ctx.bucketSpec, ctx.partitionColumns, ctx.columns, ctx.tablePropertyList,ctx.locationSpec(),
+        Option(ctx.STRING()).map(string), ctx.AS, ctx.query, fileStorage)
+      helper.createCarbonTable(createTableTuple)
     } else {
       if (SparkUtil.isUQuery) {
         helper.validateFileFormat(
