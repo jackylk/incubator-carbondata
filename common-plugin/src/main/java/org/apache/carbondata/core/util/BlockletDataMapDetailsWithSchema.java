@@ -17,14 +17,11 @@
 package org.apache.carbondata.core.util;
 
 import java.io.Serializable;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.carbondata.core.datastore.block.SegmentPropertiesAndSchemaHolder;
 import org.apache.carbondata.core.indexstore.BlockletDataMapIndexWrapper;
 import org.apache.carbondata.core.indexstore.blockletindex.BlockDataMap;
-import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema;
 
 /**
@@ -39,24 +36,26 @@ public class BlockletDataMapDetailsWithSchema implements Serializable {
 
   private BlockletDataMapIndexWrapper blockletDataMapIndexWrapper;
 
-  private Map<Integer, ColumnSchemaWrapper> dataMapIndexToColumnSchemaMapping = new HashMap<>();
+  private int[] columnCardinality;
+
+  private List<ColumnSchema> columnSchemaList;
 
   public BlockletDataMapDetailsWithSchema(
-      BlockletDataMapIndexWrapper blockletDataMapIndexWrapper) {
+      BlockletDataMapIndexWrapper blockletDataMapIndexWrapper, boolean isSchemaModified) {
     this.blockletDataMapIndexWrapper = blockletDataMapIndexWrapper;
     List<BlockDataMap> dataMaps = blockletDataMapIndexWrapper.getDataMaps();
-    for (BlockDataMap blockDataMap : dataMaps) {
-      int segmentPropertiesIndex = blockDataMap.getSegmentPropertiesIndex();
-      if (null == dataMapIndexToColumnSchemaMapping.get(segmentPropertiesIndex)) {
-        SegmentPropertiesAndSchemaHolder.SegmentPropertiesWrapper segmentPropertiesWrapper =
-            SegmentPropertiesAndSchemaHolder.getInstance()
-                .getSegmentPropertiesWrapper(segmentPropertiesIndex);
-        // create new Column Schema wrapper instance
-        ColumnSchemaWrapper columnSchemaWrapper =
-            new ColumnSchemaWrapper(segmentPropertiesWrapper.getColumnsInTable(),
-                segmentPropertiesWrapper.getColumnCardinality());
-        // add new mapping entry to the map
-        dataMapIndexToColumnSchemaMapping.put(segmentPropertiesIndex, columnSchemaWrapper);
+    if (!dataMaps.isEmpty()) {
+      // In one task all dataMaps will have the same cardinality and schema therefore
+      // segmentPropertyIndex can be fetched from one dataMap
+      int segmentPropertiesIndex = dataMaps.get(0).getSegmentPropertiesIndex();
+      SegmentPropertiesAndSchemaHolder.SegmentPropertiesWrapper segmentPropertiesWrapper =
+          SegmentPropertiesAndSchemaHolder.getInstance()
+              .getSegmentPropertiesWrapper(segmentPropertiesIndex);
+      columnCardinality = segmentPropertiesWrapper.getColumnCardinality();
+      // flag to check whether carbon table schema is modified. ColumnSchemaList will be
+      // serialized from executor to driver only if schema is modified
+      if (isSchemaModified) {
+        columnSchemaList = segmentPropertiesWrapper.getColumnsInTable();
       }
     }
   }
@@ -65,46 +64,11 @@ public class BlockletDataMapDetailsWithSchema implements Serializable {
     return blockletDataMapIndexWrapper;
   }
 
-  private List<ColumnSchema> getColumnSchemaList(int index) {
-    return dataMapIndexToColumnSchemaMapping.get(index).getColumnSchemaList();
+  public List<ColumnSchema> getColumnSchemaList() {
+    return columnSchemaList;
   }
 
-  private int[] getColumnCardinality(int index) {
-    return dataMapIndexToColumnSchemaMapping.get(index).getColumnCardinality();
-  }
-
-  /**
-   * add segmentProperties in the segment properties holder instance
-   *
-   * @param carbonTable
-   * @param segmentId
-   * @param index
-   */
-  public int addSegmentProperties(CarbonTable carbonTable, String segmentId, int index) {
-    return SegmentPropertiesAndSchemaHolder.getInstance()
-        .addSegmentProperties(carbonTable, getColumnSchemaList(index), getColumnCardinality(index),
-            segmentId);
-  }
-
-  public static class ColumnSchemaWrapper implements Serializable {
-
-    private static final long serialVersionUID = 1329083135274487751L;
-    private List<ColumnSchema> columnSchemaList;
-
-    private int[] columnCardinality;
-
-    public ColumnSchemaWrapper(List<ColumnSchema> columnSchemaList, int[] columnCardinality) {
-      this.columnSchemaList = columnSchemaList;
-      this.columnCardinality = columnCardinality;
-    }
-
-    public List<ColumnSchema> getColumnSchemaList() {
-      return columnSchemaList;
-    }
-
-    public int[] getColumnCardinality() {
-      return columnCardinality;
-    }
-
+  public int[] getColumnCardinality() {
+    return columnCardinality;
   }
 }

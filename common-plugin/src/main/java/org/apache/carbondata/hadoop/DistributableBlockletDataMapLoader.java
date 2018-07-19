@@ -22,7 +22,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.carbondata.common.exceptions.sql.MalformedDataMapCommandException;
 import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.cache.Cache;
@@ -40,9 +39,7 @@ import org.apache.carbondata.core.indexstore.PartitionSpec;
 import org.apache.carbondata.core.indexstore.TableBlockIndexUniqueIdentifier;
 import org.apache.carbondata.core.indexstore.TableBlockIndexUniqueIdentifierWrapper;
 import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMapDistributable;
-import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMapFactory;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
-import org.apache.carbondata.core.metadata.schema.table.DataMapSchema;
 import org.apache.carbondata.core.util.BlockletDataMapDetailsWithSchema;
 
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -87,16 +84,11 @@ public class DistributableBlockletDataMapLoader
     for (DataMapDistributableWrapper wrapper : distributables) {
       distributableList.add(wrapper.getDistributable());
     }
-    List<DataMapDistributable> validDistributables = new ArrayList<>();
-    try {
-      DataMapSchema dataMapSchema = BlockletDataMapFactory.DATA_MAP_SCHEMA;
-      DataMapFactory dataMapFactory = DataMapStoreManager.getInstance()
-          .getDataMapFactoryClass(table, dataMapSchema);
-      CacheableDataMap factory = (CacheableDataMap) dataMapFactory;
-      validDistributables = factory.getAllUncachedDistributables(distributableList);
-    } catch (MalformedDataMapCommandException e) {
-      LOGGER.error(e, "failed to get DataMap factory for the provided schema");
-    }
+    DataMapFactory dataMapFactory =
+        DataMapStoreManager.getInstance().getDefaultDataMap(table).getDataMapFactory();
+    CacheableDataMap factory = (CacheableDataMap) dataMapFactory;
+    List<DataMapDistributable> validDistributables =
+        factory.getAllUncachedDistributables(distributableList);
     List<InputSplit> inputSplits = new ArrayList<>(validDistributables.size());
     inputSplits.addAll(validDistributables);
     return inputSplits;
@@ -143,7 +135,7 @@ public class DistributableBlockletDataMapLoader
       @Override public BlockletDataMapDetailsWithSchema getCurrentValue()
           throws IOException, InterruptedException {
         BlockletDataMapDetailsWithSchema blockletDataMapDetailsWithSchema =
-            new BlockletDataMapDetailsWithSchema(wrapper);
+            new BlockletDataMapDetailsWithSchema(wrapper, table.getTableInfo().isSchemaModified());
         return blockletDataMapDetailsWithSchema;
       }
 
