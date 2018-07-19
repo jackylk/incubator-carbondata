@@ -144,9 +144,10 @@ private[sql] case class CarbonPrivCheck(sparkSession: SparkSession,
               internalTable = Some(internalProject)
               internalProject
             case scan: CarbonDataSourceScan
-              if (!isSameTable(scan.logicalRelation.relation
-                .asInstanceOf[CarbonDatasourceHadoopRelation],
-                internalTable) &&
+              if (scan.rdd.isInstanceOf[CarbonScanRDD[InternalRow]] &&
+                  !isSameTable(scan.logicalRelation.relation
+                    .asInstanceOf[CarbonDatasourceHadoopRelation],
+                    internalTable) &&
                   scan.logicalRelation.needPriv) =>
               checkPrivilege(scan.output,
                 scan.logicalRelation.relation.asInstanceOf[CarbonDatasourceHadoopRelation]
@@ -159,7 +160,8 @@ private[sql] case class CarbonPrivCheck(sparkSession: SparkSession,
               checkPrivilege(projectList, relation.carbonRelation, rdd)
               scan
             case scan: CarbonDataSourceScan
-              if (scan.rdd.asInstanceOf[CarbonDecoderRDD].prev
+              if (scan.rdd.isInstanceOf[CarbonDecoderRDD] &&
+                  scan.rdd.asInstanceOf[CarbonDecoderRDD].prev
                     .isInstanceOf[CarbonScanRDD[InternalRow]] &&
                   !isSameTable(scan.logicalRelation.relation
                     .asInstanceOf[CarbonDatasourceHadoopRelation],
