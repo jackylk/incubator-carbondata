@@ -111,8 +111,7 @@ class DataMapLoaderRDD(
   sc: SparkContext,
   dataMapFormat: DistributableBlockletDataMapLoader)
   extends CarbonRDD[(TableBlockIndexUniqueIdentifier, BlockletDataMapDetailsWithSchema)](sc,
-    Nil,
-    sc.hadoopConfiguration) {
+    Nil, sc.hadoopConfiguration) {
 
   private val jobTrackerId: String = {
     val formatter = new SimpleDateFormat("yyyyMMddHHmm")
