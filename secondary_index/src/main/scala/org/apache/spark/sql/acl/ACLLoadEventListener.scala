@@ -201,7 +201,7 @@ object ACLLoadEventListener {
           LoggerAction.REDIRECT.name()
             .equalsIgnoreCase(badRecordsAction)) {
         carbonBadRecordTablePath = ACLFileUtils.createBadRecordsTablePath(sqlContext,
-          carbonTableIdentifier, badRecordLocation)
+          carbonTableIdentifier, FileFactory.getUpdatedFilePath(badRecordLocation))
       }
       val tablePath = carbonTable.getTablePath
       val currentUser = CarbonUserGroupInformation.getInstance.getCurrentUser
