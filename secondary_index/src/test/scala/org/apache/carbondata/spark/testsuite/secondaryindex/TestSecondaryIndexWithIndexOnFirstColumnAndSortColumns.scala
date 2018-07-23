@@ -1,3 +1,14 @@
+/*
+ *
+ * Copyright Notice
+ * ===================================================================
+ * This file contains proprietary information of
+ * Huawei Technologies India Pvt Ltd.
+ * Redistribution or use without prior written approval is prohibited.
+ * Copyright (c) 2018
+ * ===================================================================
+ *
+ */
 package org.apache.carbondata.spark.testsuite.secondaryindex
 
 import org.apache.spark.sql.Row
