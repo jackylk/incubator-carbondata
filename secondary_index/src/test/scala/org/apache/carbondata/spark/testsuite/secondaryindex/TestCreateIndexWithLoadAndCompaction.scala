@@ -265,9 +265,31 @@ class TestCreateIndexWithLoadAndCompaction extends QueryTest with BeforeAndAfter
     }
   }
 
+  test("test SI with flat folder structure") {
+    sql("drop table if exists table_withoutflat")
+    sql("drop table if exists table_withflat")
+    sql(
+      "create table table_withoutflat (a string,b string) stored by 'carbondata' tblproperties" +
+      "('local_dictionary_enable'='false', 'local_dictionary_exclude'='b'," +
+      "'local_dictionary_threshold'='20000','flat_folder'='false')")
+    sql("insert into table_withoutflat values('k','r')")
+    sql("create index index1 on table table_withoutflat(b) as 'carbondata' ")
+    sql(
+      "create table table_withflat (a string,b string) stored by 'carbondata' tblproperties" +
+      "('local_dictionary_enable'='false', 'local_dictionary_exclude'='b'," +
+      "'local_dictionary_threshold'='20000','flat_folder'='true')")
+    sql("insert into table_withflat values('k','r')")
+    sql("create index index2 on table table_withflat(b) as 'carbondata' ")
+    checkAnswer(sql("select b from table_withflat where b ='r'"), sql("select b from table_withoutflat where b ='r'"))
+  }
+
   override def afterAll: Unit = {
     sql("drop table if exists index_test")
     sql("drop table if exists seccust1")
+    sql("drop table if exists table_without_flat")
+    sql("drop table if exists table_with_flat")
+    sql("drop table if exists table_withoutflat")
+    sql("drop table if exists table_withflat")
   }
 
 }

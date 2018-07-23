@@ -23,6 +23,7 @@ import scala.collection.JavaConverters._
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
+import org.apache.carbondata.core.datamap.Segment
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.metadata.{CarbonTableIdentifier, SegmentFileStore}
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
@@ -30,10 +31,10 @@ import org.apache.carbondata.core.mutate.CarbonUpdateUtil
 import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatus}
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.core.util.path.CarbonTablePath
+import org.apache.carbondata.processing.util.CarbonLoaderUtil
 import org.apache.carbondata.spark.core.CarbonInternalCommonConstants
 import org.apache.carbondata.spark.spark.load.CarbonInternalLoaderUtil
 import org.apache.carbondata.spark.spark.util.CarbonPluginUtil
-
 
 /**
  * Utility Class for the Secondary Index creation flow
@@ -96,6 +97,7 @@ object FileInternalUtil {
                               segmentIdToLoadStartTimeMapping.get(segmentId).toString) +
                           CarbonTablePath.SEGMENT_EXT)
       }
+      CarbonLoaderUtil.addDataIndexSizeIntoMetaEntry(loadMetadataDetail, segmentId, carbonTable)
       loadMetadataDetailsList +:= loadMetadataDetail
     }
 
