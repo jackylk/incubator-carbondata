@@ -181,8 +181,8 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
             null,
             Set(PrivType.SELECT_NOGRANT))))
 
-        case c@CarbonDataMapShowCommand(table) =>
-          checkPrivilegeRecursively(c, Some(
+        case c@CarbonDataMapShowCommand(table) if !table.isEmpty =>
+        checkPrivilegeRecursively(c, Some(
             CarbonEnv.getDatabaseName(table.get.database)(sparkSession)),
             table.get.table,
             PrivType.SELECT_NOGRANT)
