@@ -95,7 +95,8 @@ object ACLBuildDataMapEventListener {
       ACLFileUtils
         .takeSnapAfterOperationAndApplyACL(sparkSession,
           operationContext,
-          buildDataMapPostExecutionEvent.identifier.getCarbonTableIdentifier)
+          buildDataMapPostExecutionEvent.identifier.getCarbonTableIdentifier, true)
     }
   }
+
 }

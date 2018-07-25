@@ -526,14 +526,18 @@ object ACLFileUtils {
   }
 
   def takeSnapAfterOperationAndApplyACL(sparkSession: SparkSession,
-      operationContext: OperationContext, carbonTableIdentifier: CarbonTableIdentifier): Unit = {
+      operationContext: OperationContext,
+      carbonTableIdentifier: CarbonTableIdentifier,
+      recursive: Boolean = false): Unit = {
     val folderPathsBeforeCreate = operationContext
       .getProperty(getFolderListKey(carbonTableIdentifier))
       .asInstanceOf[List[String]]
     val pathArrBeforeCreate = operationContext.getProperty(getPathListKey(carbonTableIdentifier))
       .asInstanceOf[ArrayBuffer[String]]
     val pathArrAfterCreate = ACLFileUtils
-      .takeRecurTraverseSnapshot(sparkSession.sqlContext, folderPathsBeforeCreate)
+      .takeRecurTraverseSnapshot(sparkSession.sqlContext,
+        folderPathsBeforeCreate,
+        recursive = recursive)
 
     changeOwnerRecursivelyAfterOperation(sparkSession.sqlContext,
       pathArrBeforeCreate, pathArrAfterCreate)
