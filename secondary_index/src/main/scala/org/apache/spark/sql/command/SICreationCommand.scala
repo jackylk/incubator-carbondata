@@ -59,9 +59,9 @@ class ErrorMessage(message: String) extends Exception(message) {
 private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
   tableProperties: scala.collection.mutable.Map[String, String],
   var inputSqlString: String = null, var isCreateSIndex: Boolean = true) extends RunnableCommand {
+  val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
 
   def run(sparkSession: SparkSession): Seq[Row] = {
-    val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
     val databaseName = CarbonEnv.getDatabaseName(indexModel.databaseName)(sparkSession)
     indexModel.databaseName = Some(databaseName)
     val tableName = indexModel.tableName
@@ -433,12 +433,17 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
     setLocalDictionaryConfigs(tablePropertiesMap,
       carbonTable.getTableInfo.getFactTable.getTableProperties, allColumns)
 
-    // inherit the flat folder config from parent table
+    // block SI creation when the parent table has flat folder structure
     if (carbonTable.getTableInfo.getFactTable.getTableProperties
-      .containsKey(CarbonCommonConstants.FLAT_FOLDER)) {
-      tablePropertiesMap.put(CarbonCommonConstants.FLAT_FOLDER,
+          .containsKey(CarbonCommonConstants.FLAT_FOLDER) &&
         carbonTable.getTableInfo.getFactTable.getTableProperties
-          .get(CarbonCommonConstants.FLAT_FOLDER))
+          .get(CarbonCommonConstants.FLAT_FOLDER).toBoolean) {
+      LOGGER.audit(
+        s"Index creation with Database name [$databaseName] and index name " +
+        s"[$indexTableName] failed. " +
+        s"Index table creation is not permitted on table with flat folder structure")
+      throw new ErrorMessage(
+        "Index table creation is not permitted on table with flat folder structure")
     }
     tableSchema.setTableProperties(tablePropertiesMap)
     tableInfo.setDatabaseName(databaseName)

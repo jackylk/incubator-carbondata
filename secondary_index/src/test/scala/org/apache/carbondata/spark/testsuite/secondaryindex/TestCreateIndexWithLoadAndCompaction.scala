@@ -265,31 +265,21 @@ class TestCreateIndexWithLoadAndCompaction extends QueryTest with BeforeAndAfter
     }
   }
 
-  test("test SI with flat folder structure") {
-    sql("drop table if exists table_withoutflat")
-    sql("drop table if exists table_withflat")
+  test("test block SI on table flat folder structure") {
+    sql("drop table if exists table_with_flat")
     sql(
-      "create table table_withoutflat (a string,b string) stored by 'carbondata' tblproperties" +
-      "('local_dictionary_enable'='false', 'local_dictionary_exclude'='b'," +
-      "'local_dictionary_threshold'='20000','flat_folder'='false')")
-    sql("insert into table_withoutflat values('k','r')")
-    sql("create index index1 on table table_withoutflat(b) as 'carbondata' ")
-    sql(
-      "create table table_withflat (a string,b string) stored by 'carbondata' tblproperties" +
-      "('local_dictionary_enable'='false', 'local_dictionary_exclude'='b'," +
-      "'local_dictionary_threshold'='20000','flat_folder'='true')")
-    sql("insert into table_withflat values('k','r')")
-    sql("create index index2 on table table_withflat(b) as 'carbondata' ")
-    checkAnswer(sql("select b from table_withflat where b ='r'"), sql("select b from table_withoutflat where b ='r'"))
+      "create table table_with_flat (a string,b string) stored by 'carbondata' tblproperties('flat_folder'='true')")
+    sql("insert into table_with_flat values('k','r')")
+    val ex = intercept[Exception] {
+      sql("create index index2 on table table_with_flat(b) as 'carbondata' ")
+    }
+    assert(ex.getMessage.contains("Index table creation is not permitted on table with flat folder structure"))
   }
 
   override def afterAll: Unit = {
     sql("drop table if exists index_test")
     sql("drop table if exists seccust1")
-    sql("drop table if exists table_without_flat")
     sql("drop table if exists table_with_flat")
-    sql("drop table if exists table_withoutflat")
-    sql("drop table if exists table_withflat")
   }
 
 }
