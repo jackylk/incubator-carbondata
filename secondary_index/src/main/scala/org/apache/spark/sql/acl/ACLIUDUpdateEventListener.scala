@@ -40,7 +40,7 @@ object ACLIUDUpdateEventListener {
         .getCarbonTableIdentifier
       val sparkSession: SparkSession = updateTablePreEvent.sparkSession
       val carbonTablePath = carbonTable.getTablePath
-      ACLFileUtils.takeSnapshotBeforeOpeartion(operationContext, sparkSession, carbonTablePath,
+      ACLFileUtils.takeSnapshotBeforeOperation(operationContext, sparkSession, carbonTablePath,
           carbonTable.getPartitionInfo(carbonTable.getTableName), carbonTableIdentifier)
     }
   }

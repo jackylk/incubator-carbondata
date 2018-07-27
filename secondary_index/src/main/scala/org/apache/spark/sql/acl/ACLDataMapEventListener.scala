@@ -19,11 +19,16 @@ package org.apache.spark.sql.acl
 
 import java.security.PrivilegedExceptionAction
 
-import org.apache.spark.sql.SparkSession
+import scala.collection.mutable.ArrayBuffer
+
+import org.apache.spark.sql.{CarbonEnv, SparkSession}
+import org.apache.spark.sql.acl.ACLFileUtils.{getFolderListKey, getPathListKey}
 
 import org.apache.carbondata.common.logging.LogServiceFactory
+import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.metadata.CarbonTableIdentifier
+import org.apache.carbondata.core.metadata.schema.datamap.DataMapClassProvider
 import org.apache.carbondata.events.{CreateDataMapPostExecutionEvent, CreateDataMapPreExecutionEvent, _}
 import org.apache.carbondata.spark.acl.CarbonUserGroupInformation
 
@@ -88,12 +93,31 @@ object ACLDataMapEventListener {
         case createDataMapPostExecutionEvent: CreateDataMapPostExecutionEvent =>
           val sparkSession = createDataMapPostExecutionEvent.sparkSession
           val tableIdentifier = createDataMapPostExecutionEvent.tableIdentifier
-          val carbonTableIdentifier = new CarbonTableIdentifier(tableIdentifier.database
-            .getOrElse("default"), tableIdentifier.table, "")
-          ACLFileUtils
-            .takeSnapAfterOperationAndApplyACL(sparkSession,
-              operationContext,
-              carbonTableIdentifier)
+          if (tableIdentifier.isDefined) {
+            val absoluteTableIdentifier = CarbonEnv
+              .getCarbonTable(tableIdentifier.get.database, tableIdentifier.get.table)(sparkSession)
+            val carbonTableIdentifier = absoluteTableIdentifier.getCarbonTableIdentifier
+            val dmProviderName = createDataMapPostExecutionEvent.dmProviderName
+            // Checking only for preaggregate as for preagregate only requires to take snapshot
+            // of schema file. PredataMapEvent is already skipped in case of Preaggreagte and here
+            // setting only schema file to change ownership and Permission
+            if (dmProviderName.equalsIgnoreCase(DataMapClassProvider.PREAGGREGATE.toString)) {
+              val schemaPath = absoluteTableIdentifier.getTablePath +
+                               CarbonCommonConstants.FILE_SEPARATOR + "Metadata" +
+                               CarbonCommonConstants.FILE_SEPARATOR + "schema"
+              operationContext
+                .setProperty(getFolderListKey(absoluteTableIdentifier.getCarbonTableIdentifier),
+                  List(schemaPath))
+              operationContext
+                .setProperty(getPathListKey(absoluteTableIdentifier.getCarbonTableIdentifier),
+                  ArrayBuffer(""))
+            }
+            ACLFileUtils
+              .takeSnapAfterOperationAndApplyACL(sparkSession,
+                operationContext,
+                carbonTableIdentifier)
+          }
+
         case updateDataMapPostExecutionEvent: UpdateDataMapPostExecutionEvent =>
           val sparkSession = updateDataMapPostExecutionEvent.sparkSession
           val tableIdentifier = updateDataMapPostExecutionEvent.tableIdentifier

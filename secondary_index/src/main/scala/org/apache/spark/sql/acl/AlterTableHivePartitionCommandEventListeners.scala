@@ -54,7 +54,7 @@ object AlterTableHivePartitionCommandEventListeners {
       }
 
       ACLFileUtils
-          .takeSnapshotBeforeOpeartion(operationContext,
+          .takeSnapshotBeforeOperation(operationContext,
             sparkSession,
             carbonTablePath,
             carbonTable.getPartitionInfo(carbonTable.getTableName), carbonTableIdentifier)

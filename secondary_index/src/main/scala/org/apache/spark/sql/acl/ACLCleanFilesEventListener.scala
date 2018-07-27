@@ -41,7 +41,7 @@ object ACLCleanFilesEventListener {
       val sparkSession: SparkSession = cleanFilesPreEvent.sparkSession
       val carbonTablePath = carbonTable.getTablePath
       ACLFileUtils
-          .takeSnapshotBeforeOpeartion(operationContext, sparkSession, carbonTablePath,
+          .takeSnapshotBeforeOperation(operationContext, sparkSession, carbonTablePath,
             carbonTable.getPartitionInfo(carbonTable.getTableName), carbonTableIdentifier)
     }
   }

@@ -510,7 +510,7 @@ object ACLFileUtils {
     carbonBadRecordTablePath
   }
 
-  def takeSnapshotBeforeOpeartion(operationContext: OperationContext,
+  def takeSnapshotBeforeOperation(operationContext: OperationContext,
       sparkSession: SparkSession,
       carbonTablePath: String,
       partitionInfo: PartitionInfo,

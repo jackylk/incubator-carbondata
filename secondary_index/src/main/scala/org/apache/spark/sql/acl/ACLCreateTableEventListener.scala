@@ -78,7 +78,7 @@ object ACLCreateTableEventListener {
 //      operationContext.setProperty(folderListBeforeOperation, folderListbeforeCreate)
 //      operationContext.setProperty(pathArrBeforeOperation, pathArrBeforeCreateOperation)
       ACLFileUtils
-        .takeSnapshotBeforeOpeartion(operationContext,
+        .takeSnapshotBeforeOperation(operationContext,
           sparkSession,
           tablePath,
           null,

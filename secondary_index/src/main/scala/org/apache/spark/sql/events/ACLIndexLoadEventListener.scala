@@ -38,7 +38,7 @@ object ACLIndexLoadEventListener {
         .carbonTableIdentifier
       val sparkSession: SparkSession = createSITablePreExecutionEvent.sparkSession
       ACLFileUtils
-        .takeSnapshotBeforeOpeartion(operationContext,
+        .takeSnapshotBeforeOperation(operationContext,
           sparkSession, tablePath, null, carbonTableIdentifier)
     }
   }

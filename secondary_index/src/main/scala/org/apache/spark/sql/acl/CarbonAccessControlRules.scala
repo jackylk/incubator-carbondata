@@ -63,7 +63,7 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
             Set(PrivType.CREATE_NOGRANT))))
 
         case c@CarbonCreateDataMapCommand(dataMapName: String,
-        tableIdentifier: TableIdentifier,
+        tableIdentifier: Option[TableIdentifier],
         dmClassName: String,
         dmproperties: Map[String, String],
         queryString: Option[String],
@@ -71,8 +71,8 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
         deferredRebuild: Boolean) =>
           checkPrivilege(c, Set(new PrivObject(
             ObjectType.TABLE,
-            CarbonEnv.getDatabaseName(tableIdentifier.database)(sparkSession),
-            tableIdentifier.table,
+            CarbonEnv.getDatabaseName(tableIdentifier.get.database)(sparkSession),
+            tableIdentifier.get.table,
             null,
             Set(PrivType.OWNER_PRIV))))
 

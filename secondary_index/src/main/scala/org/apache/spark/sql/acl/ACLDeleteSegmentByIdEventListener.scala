@@ -39,7 +39,7 @@ object ACLDeleteSegmentByIdEventListener {
         .getCarbonTableIdentifier
       val sparkSession: SparkSession = deleteSegmentByIdPreEvent.sparkSession
       val carbonTablePath = carbonTable.getTablePath
-      ACLFileUtils.takeSnapshotBeforeOpeartion(operationContext, sparkSession, carbonTablePath,
+      ACLFileUtils.takeSnapshotBeforeOperation(operationContext, sparkSession, carbonTablePath,
         carbonTable.getPartitionInfo(carbonTable.getTableName), carbonTableIdentifier)
     }
   }
