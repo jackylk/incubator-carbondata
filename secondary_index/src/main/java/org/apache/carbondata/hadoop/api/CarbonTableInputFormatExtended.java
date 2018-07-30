@@ -27,15 +27,20 @@ import java.util.Set;
 import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
+import org.apache.carbondata.core.datamap.DataMapChooser;
 import org.apache.carbondata.core.datamap.DataMapStoreManager;
+import org.apache.carbondata.core.datamap.DataMapUtil;
 import org.apache.carbondata.core.datamap.Segment;
 import org.apache.carbondata.core.datamap.TableDataMap;
+import org.apache.carbondata.core.datamap.dev.expr.DataMapExprWrapper;
 import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.readcommitter.ReadCommittedScope;
 import org.apache.carbondata.core.scan.expression.Expression;
 import org.apache.carbondata.core.scan.filter.resolver.FilterResolverIntf;
+import org.apache.carbondata.core.statusmanager.LoadMetadataDetails;
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager;
+import org.apache.carbondata.core.statusmanager.SegmentUpdateStatusManager;
 import org.apache.carbondata.core.util.CarbonProperties;
 
 import org.apache.hadoop.conf.Configuration;
@@ -120,13 +125,21 @@ public class CarbonTableInputFormatExtended {
         carbonTable.resolveFilter(filter);
     List<Segment> filteredSegments = new ArrayList<>();
     // If filter is null then return all segments.
+    List<Segment> segmentIds =
+        Arrays.asList(carbonTableInputFormat.getSegmentsToAccess(job, readCommittedScope));
     if (filter != null) {
-      List<Segment> setSegID = isSegmentValidAfterFilter(carbonTable, filterInterface,
-          Arrays.asList(carbonTableInputFormat.getSegmentsToAccess(job, readCommittedScope)));
+      // refresh the segments if needed
+      LoadMetadataDetails[] loadMetadataDetails = readCommittedScope.getSegmentList();
+      SegmentUpdateStatusManager updateStatusManager =
+          new SegmentUpdateStatusManager(carbonTable, loadMetadataDetails);
+      carbonTableInputFormat
+          .refreshSegmentCacheIfRequired(job, carbonTable, updateStatusManager, segmentIds);
+      List<Segment> setSegID =
+          isSegmentValidAfterFilter(job.getConfiguration(), carbonTable, filterInterface,
+              segmentIds);
       filteredSegments.addAll(setSegID);
     } else {
-      filteredSegments =
-          Arrays.asList(carbonTableInputFormat.getSegmentsToAccess(job, readCommittedScope));
+      filteredSegments = segmentIds;
     }
     return filteredSegments;
   }
@@ -134,9 +147,14 @@ public class CarbonTableInputFormatExtended {
   /**
    * @return true if the filter expression lies between any one of the AbstractIndex min max values.
    */
-  public static List<Segment> isSegmentValidAfterFilter(CarbonTable carbonTable,
-      FilterResolverIntf filterResolverIntf, List<Segment> segmentIds) throws IOException {
+  public static List<Segment> isSegmentValidAfterFilter(Configuration configuration,
+      CarbonTable carbonTable, FilterResolverIntf filterResolverIntf, List<Segment> segmentIds)
+      throws IOException {
     TableDataMap blockletMap = DataMapStoreManager.getInstance().getDefaultDataMap(carbonTable);
+    DataMapExprWrapper dataMapExprWrapper =
+        DataMapChooser.getDefaultDataMap(carbonTable, filterResolverIntf);
+    DataMapUtil.loadDataMaps(carbonTable, dataMapExprWrapper, segmentIds,
+        CarbonTableInputFormat.getPartitionsToPrune(configuration));
     return blockletMap.pruneSegments(segmentIds, filterResolverIntf);
   }
 
