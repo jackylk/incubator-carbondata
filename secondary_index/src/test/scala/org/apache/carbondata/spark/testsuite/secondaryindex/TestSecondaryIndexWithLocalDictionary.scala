@@ -11,7 +11,6 @@
  */
 package org.apache.carbondata.spark.testsuite.secondaryindex
 
-import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.spark.sql.common.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
 
@@ -38,9 +37,9 @@ class TestSecondaryIndexWithLocalDictionary extends QueryTest with BeforeAndAfte
       "Local Dictionary Include")
   }
 
-  test("test local dictionary for index with default properties") {
+  test("test local dictionary for index with default properties when enabled") {
     sql("drop table if exists local_sec")
-    sql("create table local_sec (a string,b string) stored by 'carbondata'")
+    sql("create table local_sec (a string,b string) stored by 'carbondata' tblproperties('local_dictionary_enable'='true')")
     sql("create index index1 on table local_sec(b) as 'carbondata'")
     val descLoc = sql("describe formatted index1").collect
     descLoc.find(_.get(0).toString.contains("Local Dictionary Enabled")) match {
@@ -59,7 +58,7 @@ class TestSecondaryIndexWithLocalDictionary extends QueryTest with BeforeAndAfte
 
   test("test local dictionary for index when index column is dictionary excluded") {
     sql("drop table if exists local_sec")
-    sql("create table local_sec (a string,b string) stored by 'carbondata' tblproperties('local_dictionary_exclude'='b','local_dictionary_threshold'='20000')")
+    sql("create table local_sec (a string,b string) stored by 'carbondata' tblproperties('local_dictionary_enable'='true','local_dictionary_exclude'='b','local_dictionary_threshold'='20000')")
     sql("create index index1 on table local_sec(b) as 'carbondata'")
     val descLoc = sql("describe formatted index1").collect
     descLoc.find(_.get(0).toString.contains("Local Dictionary Enabled")) match {
