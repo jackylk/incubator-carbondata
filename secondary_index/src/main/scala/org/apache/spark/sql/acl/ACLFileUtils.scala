@@ -49,14 +49,14 @@ object ACLFileUtils {
 
   def getFolderListKey(carbonTable: CarbonTableIdentifier): String = {
     val folderListBeforeOperation = "folderListBeforeOperation"
-    folderListBeforeOperation + '_' + carbonTable.getDatabaseName + '.' +
-    carbonTable.getTableName
+    (folderListBeforeOperation + '_' + carbonTable.getDatabaseName + '.' +
+    carbonTable.getTableName).toLowerCase
   }
 
   def getPathListKey(carbonTable: CarbonTableIdentifier): String = {
     val pathArrBeforeOperation = "pathArrBeforeOperation"
-    pathArrBeforeOperation + '_' + carbonTable.getDatabaseName + '.' +
-    carbonTable.getTableName
+    (pathArrBeforeOperation + '_' + carbonTable.getDatabaseName + '.' +
+    carbonTable.getTableName).toLowerCase
   }
 
   def takeRecurTraverseSnapshot(sqlContext: SQLContext,

@@ -42,7 +42,7 @@ object ACLDataMapEventListener {
           val systemDirectoryPath: String = createDataMapPreExecutionEvent.storePath
           val tableIdentifier = createDataMapPreExecutionEvent.tableIdentifier
           val carbonTableIdentifier = new CarbonTableIdentifier(tableIdentifier.database
-            .getOrElse("default"), tableIdentifier.table, "")
+            .getOrElse(sparkSession.catalog.currentDatabase), tableIdentifier.table, "")
           if (!FileFactory.isFileExist(systemDirectoryPath)) {
             CarbonUserGroupInformation.getInstance.getCurrentUser
               .doAs(new PrivilegedExceptionAction[Unit]() {
@@ -65,7 +65,7 @@ object ACLDataMapEventListener {
           val tableIdentifier = updateDataMapPreExecutionEvent.tableIdentifier
           if (tableIdentifier != null) {
             val carbonTableIdentifier = new CarbonTableIdentifier(tableIdentifier.database
-              .getOrElse("default"), tableIdentifier.table, "")
+              .getOrElse(sparkSession.catalog.currentDatabase), tableIdentifier.table, "")
             val folderListBeforeReBuild = List[String](systemDirectoryPath)
             val pathArrBeforeLoadOperation = ACLFileUtils
               .takeRecurTraverseSnapshot(sparkSession.sqlContext, folderListBeforeReBuild)
@@ -117,7 +117,7 @@ object ACLDataMapEventListener {
           val tableIdentifier = updateDataMapPostExecutionEvent.tableIdentifier
           if (tableIdentifier != null) {
             val carbonTableIdentifier = new CarbonTableIdentifier(tableIdentifier.database
-              .getOrElse("default"), tableIdentifier.table, "")
+              .getOrElse(sparkSession.catalog.currentDatabase), tableIdentifier.table, "")
             ACLFileUtils
               .takeSnapAfterOperationAndApplyACL(sparkSession,
                 operationContext,
