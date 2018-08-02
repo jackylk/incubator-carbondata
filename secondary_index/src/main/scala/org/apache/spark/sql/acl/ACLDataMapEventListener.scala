@@ -17,6 +17,8 @@ import scala.collection.mutable.ArrayBuffer
 
 import org.apache.spark.sql.{CarbonEnv, SparkSession}
 import org.apache.spark.sql.acl.ACLFileUtils.{getFolderListKey, getPathListKey}
+import org.apache.spark.sql.command.ErrorMessage
+import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
@@ -41,8 +43,15 @@ object ACLDataMapEventListener {
           val sparkSession: SparkSession = createDataMapPreExecutionEvent.sparkSession
           val systemDirectoryPath: String = createDataMapPreExecutionEvent.storePath
           val tableIdentifier = createDataMapPreExecutionEvent.tableIdentifier
-          val carbonTableIdentifier = new CarbonTableIdentifier(tableIdentifier.database
-            .getOrElse(sparkSession.catalog.currentDatabase), tableIdentifier.table, "")
+          val dbName: String = tableIdentifier.database
+            .getOrElse(sparkSession.catalog.currentDatabase)
+          val carbonTableIdentifier = new CarbonTableIdentifier(dbName, tableIdentifier.table, "")
+          val carbonTable = CarbonEnv
+            .getCarbonTable(Some(dbName), tableIdentifier.table)(sparkSession)
+          if(carbonTable.isChildDataMap || CarbonInternalScalaUtil.isIndexTable(carbonTable)) {
+            throw new ErrorMessage(
+              "Datamap creation on Pre-aggregate table or Secondary Index table is not supported")
+          }
           if (!FileFactory.isFileExist(systemDirectoryPath)) {
             CarbonUserGroupInformation.getInstance.getCurrentUser
               .doAs(new PrivilegedExceptionAction[Unit]() {
@@ -88,22 +97,22 @@ object ACLDataMapEventListener {
           val sparkSession = createDataMapPostExecutionEvent.sparkSession
           val tableIdentifier = createDataMapPostExecutionEvent.tableIdentifier
           if (tableIdentifier.isDefined) {
-            val absoluteTableIdentifier = CarbonEnv
+            val carbonTable = CarbonEnv
               .getCarbonTable(tableIdentifier.get.database, tableIdentifier.get.table)(sparkSession)
-            val carbonTableIdentifier = absoluteTableIdentifier.getCarbonTableIdentifier
+            val carbonTableIdentifier = carbonTable.getCarbonTableIdentifier
             val dmProviderName = createDataMapPostExecutionEvent.dmProviderName
             // Checking only for preaggregate as for preagregate only requires to take snapshot
             // of schema file. PredataMapEvent is already skipped in case of Preaggreagte and here
             // setting only schema file to change ownership and Permission
             if (dmProviderName.equalsIgnoreCase(DataMapClassProvider.PREAGGREGATE.toString)) {
-              val schemaPath = absoluteTableIdentifier.getTablePath +
+              val schemaPath = carbonTable.getTablePath +
                                CarbonCommonConstants.FILE_SEPARATOR + "Metadata" +
                                CarbonCommonConstants.FILE_SEPARATOR + "schema"
               operationContext
-                .setProperty(getFolderListKey(absoluteTableIdentifier.getCarbonTableIdentifier),
+                .setProperty(getFolderListKey(carbonTable.getCarbonTableIdentifier),
                   List(schemaPath))
               operationContext
-                .setProperty(getPathListKey(absoluteTableIdentifier.getCarbonTableIdentifier),
+                .setProperty(getPathListKey(carbonTable.getCarbonTableIdentifier),
                   ArrayBuffer(""))
             }
             ACLFileUtils

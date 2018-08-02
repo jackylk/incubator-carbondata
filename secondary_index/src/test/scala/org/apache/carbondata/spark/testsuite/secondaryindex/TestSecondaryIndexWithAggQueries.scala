@@ -12,6 +12,7 @@
 package org.apache.carbondata.spark.testsuite.secondaryindex
 
 import org.apache.spark.sql.Row
+import org.apache.spark.sql.command.ErrorMessage
 import org.apache.spark.sql.common.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
 
@@ -100,12 +101,55 @@ class TestSecondaryIndexWithAggQueries extends QueryTest with BeforeAndAfterAll 
       Seq(Row(458.16, 91.12)))
   }
 
+  // DTS2018073003938
+  test("test datamap on SI table") {
+    sql("drop table if exists test_si_1")
+    sql(
+      "CREATE TABLE test_si_1 (id int,name string,salary float,dob date,address string)STORED BY " +
+      "'carbondata'  tblproperties('dictionary_include'='address')")
+    sql("insert into test_si_1 select 1,'aa',23423.334,'2009-09-09','df'")
+    sql("insert into test_si_1 select 2,'bb',4454.454,'2009-09-09','bang'")
+    sql(
+      "CREATE DATAMAP dm_test_si_11 ON TABLE test_si_1 USING 'bloomfilter' DMPROPERTIES " +
+      "('INDEX_COLUMNS' = 'address', 'BLOOM_SIZE'='640000', 'BLOOM_FPP'='0.00001')")
+    sql("create index si_test_si_1 on table test_si_1(address) as 'carbondata'")
+    val exceptionMessage = intercept[ErrorMessage] {
+      sql(
+        "CREATE DATAMAP dm_on_si ON TABLE si_test_si_1  USING 'bloomfilter' DMPROPERTIES " +
+        "('INDEX_COLUMNS' = 'address', 'BLOOM_SIZE'='640000', 'BLOOM_FPP'='0.00001')")
+    }.getMessage
+    assert(exceptionMessage.contains("Datamap creation on Pre-aggregate table or Secondary Index table is not supported"))
+  }
+
+  // DTS2018072710090
+  test("test datamap on pre-agg table") {
+    sql("drop table if exists test_pre_agg")
+    sql(
+      "CREATE TABLE test_pre_agg (id int,name string,salary float,dob date,address string)STORED BY " +
+      "'carbondata'  tblproperties('dictionary_include'='address')")
+    sql("insert into test_pre_agg select 1,'aa',23423.334,'2009-09-09','df'")
+    sql("insert into test_pre_agg select 2,'bb',4454.454,'2009-09-09','bang'")
+    sql(
+      "CREATE DATAMAP dm_test_pre_agg1 ON TABLE test_pre_agg USING 'bloomfilter' DMPROPERTIES " +
+      "('INDEX_COLUMNS' = 'address', 'BLOOM_SIZE'='640000', 'BLOOM_FPP'='0.00001')")
+    sql("create datamap datamap_test_pre_agg  ON TABLE test_pre_agg USING 'preaggregate' as select " +
+        "id,count(id) from test_pre_agg group by id")
+    val exceptionMessage = intercept[ErrorMessage] {
+      sql(
+        "create datamap dm_preag_bloom_cust_id on table test_pre_agg_datamap_test_pre_agg using " +
+        "'bloomfilter' dmproperties('index_columns'='test_pre_agg_id')")
+    }.getMessage
+    assert(exceptionMessage.contains("Datamap creation on Pre-aggregate table or Secondary Index table is not supported"))
+  }
+
   override def afterAll: Unit = {
     sql("drop table if exists source")
     sql("drop table if exists catalog_return")
     sql("drop table if exists date_dims")
     sql("drop table if exists catalog_returns")
     sql("drop table if exists date_dim")
+    sql("drop table if exists test_si_1")
+    sql("drop table if exists test_pre_agg")
   }
 
 }
