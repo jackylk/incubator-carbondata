@@ -408,7 +408,11 @@ class CarbonScanRDD[T: ClassTag](
     val inputSplit = split.asInstanceOf[CarbonSparkPartition].split.value
     TaskMetricsMap.getInstance().registerThreadCallback()
     inputMetricsStats.initBytesReadCallback(context, inputSplit)
+    logInfo(s"partition idx: " + split.index)
     val iterator = if (inputSplit.getAllSplits.size() > 0) {
+      logInfo(s"Input split size is " + inputSplit.getAllSplits.size())
+      for (i <- inputSplit.getAllSplits().asScala)
+        logInfo("Path " + i.getBlockPath + " blocket id " + i.getBlockletId + " taskId " + i.taskId)
       val model = format.createQueryModel(inputSplit, attemptContext)
       // one query id per table
       model.setQueryId(queryId)

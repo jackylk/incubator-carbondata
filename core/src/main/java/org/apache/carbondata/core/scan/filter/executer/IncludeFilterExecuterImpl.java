@@ -16,9 +16,8 @@
  */
 package org.apache.carbondata.core.scan.filter.executer;
 
-import java.io.IOException;
-import java.util.BitSet;
-
+import org.apache.carbondata.common.logging.LogService;
+import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.datastore.block.SegmentProperties;
 import org.apache.carbondata.core.datastore.chunk.DimensionColumnPage;
 import org.apache.carbondata.core.datastore.chunk.impl.DimensionRawColumnChunk;
@@ -38,8 +37,13 @@ import org.apache.carbondata.core.util.DataTypeUtil;
 import org.apache.carbondata.core.util.comparator.Comparator;
 import org.apache.carbondata.core.util.comparator.SerializableComparator;
 
+import java.io.IOException;
+import java.util.BitSet;
+
 public class IncludeFilterExecuterImpl implements FilterExecuter {
 
+  private static final LogService LOGGER =
+          LogServiceFactory.getLogService(IncludeFilterExecuterImpl.class.getName());
   protected DimColumnResolvedFilterInfo dimColumnEvaluatorInfo;
   DimColumnExecuterFilterInfo dimColumnExecuterInfo;
   private MeasureColumnResolvedFilterInfo msrColumnEvaluatorInfo;
@@ -483,6 +487,10 @@ public class IncludeFilterExecuterImpl implements FilterExecuter {
       DataType dataType) {
     Object maxObject = DataTypeUtil.getMeasureObjectFromDataType(maxValue, dataType);
     Object minObject = DataTypeUtil.getMeasureObjectFromDataType(minValue, dataType);
+    if (filterValue.length > 0) {
+      LOGGER.info("Max value " + maxObject + ",MIn value " + minObject +
+              ",filter value " + filterValue[0]  + ",size " + filterValue.length);
+    }
     for (int i = 0; i < filterValue.length; i++) {
       // TODO handle min and max for null values.
       if (filterValue[i] == null) {

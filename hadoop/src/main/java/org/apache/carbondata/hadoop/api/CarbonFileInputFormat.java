@@ -118,7 +118,7 @@ public class CarbonFileInputFormat<T> extends CarbonInputFormat<T> implements Se
         readCommittedScope = new LatestFilesReadCommittedScope(
             identifier.getTablePath() + "/Fact/Part0/Segment_null/");
       } else {
-        readCommittedScope = new LatestFilesReadCommittedScope(identifier.getTablePath());
+        readCommittedScope = getLatestFilesReadCommittedScope(identifier.getTablePath());
       }
       Expression filter = getFilterPredicates(job.getConfiguration());
       // this will be null in case of corrupt schema file.
@@ -156,6 +156,10 @@ public class CarbonFileInputFormat<T> extends CarbonInputFormat<T> implements Se
       return splits;
     }
     return null;
+  }
+
+  protected LatestFilesReadCommittedScope getLatestFilesReadCommittedScope(String tablePath) {
+    return new LatestFilesReadCommittedScope(tablePath);
   }
 
   /**

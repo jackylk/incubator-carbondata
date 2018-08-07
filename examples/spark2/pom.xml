@@ -31,6 +31,7 @@
 
   <properties>
     <dev.path>${basedir}/../../dev</dev.path>
+    <skipTests>false</skipTests>
   </properties>
 
   <dependencies>
@@ -173,6 +174,7 @@
         <version>1.0</version>
         <!-- Note config is repeated in surefire config -->
         <configuration>
+          <skipTests>${skipTests}</skipTests>
           <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
           <junitxml>.</junitxml>
           <testFailureIgnore>false</testFailureIgnore>

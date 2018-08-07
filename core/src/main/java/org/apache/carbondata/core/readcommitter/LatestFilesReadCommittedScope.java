@@ -170,6 +170,7 @@ public class LatestFilesReadCommittedScope implements ReadCommittedScope {
         throw new IOException(
             "No Index files are present in the table location :" + carbonFilePath);
       }
+      carbonIndexFiles = filterCarbonFiles(carbonIndexFiles);
       for (int i = 0; i < carbonIndexFiles.length; i++) {
         // TODO. If Required to support merge index, then this code has to be modified.
         // TODO. Nested File Paths.
@@ -209,4 +210,7 @@ public class LatestFilesReadCommittedScope implements ReadCommittedScope {
     }
   }
 
+  protected CarbonFile[] filterCarbonFiles(CarbonFile[] allFiles) {
+    return allFiles;
+  }
 }

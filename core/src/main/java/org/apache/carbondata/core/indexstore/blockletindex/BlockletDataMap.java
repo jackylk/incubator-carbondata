@@ -663,9 +663,10 @@ public class BlockletDataMap extends CoarseGrainDataMap implements Serializable 
         boolean isValid =
             addBlockBasedOnMinMaxValue(filterExecuter, getMinMaxValue(safeRow, MAX_VALUES_INDEX),
                 getMinMaxValue(safeRow, MIN_VALUES_INDEX), filePath, blockletId);
-        if (isValid) {
-          blocklets.add(createBlocklet(safeRow, blockletId));
-        }
+        LOGGER.info("Blocket id is " + blockletId + " result is " + isValid + " path is " + filePath);
+//        if (filePath.endsWith("part-1-402_batchno0-0-1531207650037.carbondata")) {
+        blocklets.add(createBlocklet(safeRow, blockletId));
+//        }
         startIndex++;
       }
     }
@@ -747,6 +748,7 @@ public class BlockletDataMap extends CoarseGrainDataMap implements Serializable 
       bitSet = ((ImplicitColumnFilterExecutor) filterExecuter)
           .isFilterValuesPresentInBlockOrBlocklet(maxValue, minValue, uniqueBlockPath);
     } else {
+      LOGGER.info("filepath " + filePath + ", blocketId " + blockletId);
       bitSet = filterExecuter.isScanRequired(maxValue, minValue);
     }
     if (!bitSet.isEmpty()) {
