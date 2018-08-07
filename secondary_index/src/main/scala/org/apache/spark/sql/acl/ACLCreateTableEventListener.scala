@@ -45,12 +45,15 @@ object ACLCreateTableEventListener {
       CarbonUserGroupInformation.getInstance.getCurrentUser
         .doAs(new PrivilegedExceptionAction[Unit]() {
           override def run(): Unit = {
-            FileFactory.createDirectoryAndSetPermission(tablePath,
-              ACLFileUtils.getPermissionsOnTable())
+            if (ACLFileUtils.isACLSupported(tablePath)) {
+              FileFactory.createDirectoryAndSetPermission(tablePath,
+                ACLFileUtils.getPermissionsOnTable())
+            }
             // create the lock directory path during create table and before taking first snapshot
             // to avoid permission issue in acl for lock files
             val lockDirPath = if (
-              CarbonProperties.getInstance().getProperty(CarbonCommonConstants.LOCK_PATH) != null) {
+              CarbonProperties.getInstance().getProperty(CarbonCommonConstants.LOCK_PATH) !=
+              null) {
               CarbonTablePath
                 .getLockFilesDirPath(CarbonLockFactory
                   .getLockpath(carbonTableIdentifier.getTableId))
@@ -58,19 +61,14 @@ object ACLCreateTableEventListener {
               CarbonTablePath
                 .getLockFilesDirPath(tablePath)
             }
-            if (null != lockDirPath && !FileFactory.isFileExist(lockDirPath)) {
+            if (null != lockDirPath && !FileFactory.isFileExist(lockDirPath) &&
+                ACLFileUtils.isACLSupported(lockDirPath)) {
               FileFactory
                 .createDirectoryAndSetPermission(lockDirPath,
                   new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL))
             }
           }
         })
-//      val folderListbeforeCreate: List[Path] = ACLFileUtils
-//        .getTablePathListForSnapshot(carbonTablePath)
-//      val pathArrBeforeCreateOperation = ACLFileUtils
-//        .takeRecurTraverseSnapshot(sparkSession.sqlContext, folderListbeforeCreate)
-//      operationContext.setProperty(folderListBeforeOperation, folderListbeforeCreate)
-//      operationContext.setProperty(pathArrBeforeOperation, pathArrBeforeCreateOperation)
       ACLFileUtils
         .takeSnapshotBeforeOperation(operationContext,
           sparkSession,

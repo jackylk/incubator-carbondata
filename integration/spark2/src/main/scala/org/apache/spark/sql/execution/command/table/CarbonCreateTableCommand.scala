@@ -36,6 +36,7 @@ import org.apache.carbondata.core.metadata.schema.partition.PartitionType
 import org.apache.carbondata.core.metadata.schema.table.{CarbonTable, TableInfo}
 import org.apache.carbondata.core.util.{CarbonUtil, ThreadLocalSessionInfo}
 import org.apache.carbondata.events.{CreateTablePostExecutionEvent, CreateTablePreExecutionEvent, OperationContext, OperationListenerBus}
+import org.apache.carbondata.hadoop.util.CarbonInputFormatUtil
 import org.apache.carbondata.spark.util.CarbonSparkUtil
 
 case class CarbonCreateTableCommand(
@@ -64,6 +65,7 @@ case class CarbonCreateTableCommand(
     tableInfo.setDatabaseName(dbName)
     tableInfo.setTableUniqueName(CarbonTable.buildUniqueName(dbName, tableName))
     val isTransactionalTable = tableInfo.isTransactionalTable
+    CarbonInputFormatUtil.setS3Configurations(sparkSession.sessionState.newHadoopConf())
     if (sparkSession.sessionState.catalog.listTables(dbName)
       .exists(_.table.equalsIgnoreCase(tableName))) {
       if (!ifNotExistsSet) {
