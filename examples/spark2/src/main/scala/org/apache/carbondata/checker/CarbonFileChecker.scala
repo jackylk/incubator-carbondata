@@ -33,7 +33,7 @@ class CarbonFileChecker() {
     val dataFilePath = filePath + "/" + dataFileName
     indexReader.openThriftReader(indexFilePath)
     val indexHead = indexReader.readIndexHeader()
-    val idx = indexHead.table_columns.asScala.indexWhere(p => p.column_name == colName)
+    val idx = indexHead.table_columns.asScala.indexWhere(p => p.column_name.equalsIgnoreCase(colName))
     var indexMap = scala.collection.mutable.Map[Int, (Long, Long)]()
     var blockId = 0
     while (indexReader.hasNext) {

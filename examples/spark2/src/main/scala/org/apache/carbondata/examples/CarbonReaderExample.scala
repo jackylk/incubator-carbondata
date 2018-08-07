@@ -11,27 +11,33 @@ import scala.util.control.Breaks.{break, breakable}
 
 object CarbonReaderExample {
 
+  val path = "/Users/jacky/code/carbondata/examples/spark2/target/store/default/comparetest_carbonv3/Fact/Part0/Segment_0/"
+  //val indexFile = "0_batchno0-0-1533630274061.carbonindex"
+  val indexFile = "0_batchno0-0-1533631106875.carbonindex"
+  val columnName = "id2"
+
   def main(args: Array[String]): Unit = {
     import org.apache.carbondata.checker.CarbonFileChecker
     val checker = new CarbonFileChecker
-    checker.checkLong("/bdata00/zhangyunfan/carbondata/testdata/d_live_item_stats_1_4",
-      "id", "100100042100001_batchno0-0-1532489931883.carbonindex",
-      "part-2-100100042100001_batchno0-0-1532489931883.carbondata",
+    checker.checkLong(path, columnName, indexFile,
+      "part-0-0_batchno0-0-1533631106875.carbondata",
       (0 to 100).toArray)
 
-    checker.checkLong("/bdata00/zhangyunfan/carbondata/testdata/m_device_distinct_1_4_0",
-    "device_id", "134100000100001_batchno0-0-1532915792395.carbonindex",
-      "part-0-134100000100001_batchno0-0-1532915792395.carbondata",
-      (0 to 100).toArray)
-
-    checker.checkLong("/bdata00/zhangyunfan/carbondata/testdata/test_bigint_1_4",
-    "id", "0_batchno0-0-1532945815582.carbonindex",
-    "part-0-0_batchno0-0-1532945815582.carbondata", (0 to 100).toArray)
-
-    checker.checkLong("/bdata00/zhangyunfan/carbondata/testdata/partition_test_bigint_1_4",
-    "id", "100100000100001_batchno0-0-1533125882436.carbonindex",
-    "part-0-100100000100001_batchno0-0-1533125882436.carbondata", (0 to 100).toArray)
-
+//    checker.checkLong(path, columnName, indexFile,
+//      "part-1-0_batchno0-0-1533630274061.carbondata",
+//      (0 to 100).toArray)
+//
+//    checker.checkLong(path, columnName, indexFile,
+//      "part-2-0_batchno0-0-1533630274061.carbondata",
+//      (0 to 100).toArray)
+//
+//    checker.checkLong(path, columnName, indexFile,
+//      "part-3-0_batchno0-0-1533630274061.carbondata",
+//      (0 to 100).toArray)
+//
+//    checker.checkLong(path, columnName, indexFile,
+//      "part-4-0_batchno0-0-1533630274061.carbondata",
+//      (0 to 100).toArray)
   }
 
 

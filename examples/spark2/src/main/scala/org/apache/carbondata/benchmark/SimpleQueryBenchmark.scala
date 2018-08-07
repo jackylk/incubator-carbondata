@@ -229,17 +229,17 @@ object SimpleQueryBenchmark {
 
   // load data into parquet, carbonV2, carbonV3
   private def prepareTable(spark: SparkSession, table1: String, table2: String): Unit = {
-    val df = DataGenerator.generateDataFrame(spark, totalNum = 10 * 10 * 1000).cache
+    val df = DataGenerator.generateDataFrame(spark, totalNum = 60 * 1000).cache
     println(s"loading ${df.count} records, schema: ${df.schema}")
-    val table1Time = if (table1.endsWith("parquet")) {
-      loadParquetTable(spark, df, table1)
-    } else if (table1.endsWith("orc")) {
-      loadOrcTable(spark, df, table1)
-    } else {
-      sys.error("invalid table: " + table1)
-    }
+//    val table1Time = if (table1.endsWith("parquet")) {
+//      loadParquetTable(spark, df, table1)
+//    } else if (table1.endsWith("orc")) {
+//      loadOrcTable(spark, df, table1)
+//    } else {
+//      sys.error("invalid table: " + table1)
+//    }
     val table2Time = loadCarbonTable(spark, df, table2)
-    println(s"load completed, time: $table1Time, $table2Time")
+//    println(s"load completed, time: $table1Time, $table2Time")
     df.unpersist()
   }
 
@@ -329,10 +329,10 @@ object SimpleQueryBenchmark {
     val table1 = parquetTableName
     val table2 = carbonTableName("3")
     prepareTable(spark, table1, table2)
-    runTest(spark, table1, table2)
+//    runTest(spark, table1, table2)
 
-    CarbonUtil.deleteFoldersAndFiles(new File(table1))
-    spark.sql(s"drop table if exists $table2")
+//    CarbonUtil.deleteFoldersAndFiles(new File(table1))
+//    spark.sql(s"drop table if exists $table2")
     spark.close()
   }
 

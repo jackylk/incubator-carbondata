@@ -17,6 +17,8 @@
 
 package org.apache.carbondata.spark.util
 
+import scala.util.Random
+
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import org.apache.spark.sql.types._
 
@@ -50,27 +52,19 @@ object DataGenerator {
    * @return Dataframe of test data
    */
   def generateDataFrame(spark: SparkSession, totalNum: Int): DataFrame = {
+    val r = new Random()
     val rdd = spark.sparkContext
       .parallelize(1 to totalNum, 4)
       .map { x =>
-        ((x % 100000000).toString, "city" + x % 6, "country" + x % 6, "planet" + x % 100000,
-          (x % 16).toShort, x / 2, (x << 1).toLong, x.toDouble / 13,
-          BigDecimal.valueOf(x.toDouble / 11))
+        ((x % 100000000).toString, Math.abs(r.nextLong()))
       }.map { x =>
-      Row(x._1, x._2, x._3, x._4, x._5, x._6, x._7, x._8, x._9)
+      Row(x._1, x._2)
     }
 
     val schema = StructType(
       Seq(
         StructField("id", StringType, nullable = false),
-        StructField("city", StringType, nullable = false),
-        StructField("country", StringType, nullable = false),
-        StructField("planet", StringType, nullable = false),
-        StructField("m1", ShortType, nullable = false),
-        StructField("m2", IntegerType, nullable = false),
-        StructField("m3", LongType, nullable = false),
-        StructField("m4", DoubleType, nullable = false),
-        StructField("m5", DecimalType(30, 10), nullable = false)
+        StructField("id2", LongType, nullable = false)
       )
     )
 
