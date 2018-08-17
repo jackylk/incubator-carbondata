@@ -229,7 +229,7 @@ object SimpleQueryBenchmark {
 
   // load data into parquet, carbonV2, carbonV3
   private def prepareTable(spark: SparkSession, table1: String, table2: String): Unit = {
-    val df = DataGenerator.generateDataFrame(spark, totalNum = 10 * 10 * 1000).cache
+    val df = DataGenerator.generateDataFrame(spark, totalNum = 10 * 1000 * 1000).cache
     println(s"loading ${df.count} records, schema: ${df.schema}")
     val table1Time = if (table1.endsWith("parquet")) {
       loadParquetTable(spark, df, table1)
@@ -244,31 +244,29 @@ object SimpleQueryBenchmark {
   }
 
   // Run all queries for the specified table
-  private def runQueries(spark: SparkSession, tableName: String): Array[(Double, Array[Row])] = {
+  private def runQueries(spark: SparkSession, tableName: String): Array[(Double, Int)] = {
     println(s"start running queries for $tableName...")
-    var result: Array[Row] = null
+    var result: Int = 0
     queries.zipWithIndex.map { case (query, index) =>
       val sqlText = query.sqlText.replace("$table", tableName)
       print(s"running query ${index + 1}: $sqlText ")
       val rt = time {
-        result = spark.sql(sqlText).collect()
+        result = spark.sql(sqlText).collect().length
       }
       println(s"=> $rt sec")
       (rt, result)
     }
   }
 
-  private def printErrorIfNotMatch(index: Int, table1: String, result1: Array[Row],
-      table2: String, result2: Array[Row]): Unit = {
+  private def printErrorIfNotMatch(index: Int, table1: String, result1: Int,
+      table2: String, result2: Int): Unit = {
     // check result size instead of result value, because some test case include
     // aggregation on double column which will give different result since carbon
     // records are sorted
-    if (result1.length != result2.length) {
+    if (result1 != result2) {
       val num = index + 1
-      println(s"$table1 result for query $num: ")
-      println(s"""${result1.mkString(",")}""")
-      println(s"$table2 result for query $num: ")
-      println(s"""${result2.mkString(",")}""")
+      println(s"$table1 result size for query $num: $result1")
+      println(s"$table2 result size for query $num: $result2")
       sys.error(s"result not matching for query $num (${queries(index).desc})")
     }
   }
@@ -278,13 +276,13 @@ object SimpleQueryBenchmark {
     val formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
     val date = new Date
     // run queries on parquet and carbon
-    val table1Result: Array[(Double, Array[Row])] = runQueries(spark, table1)
+    val table1Result: Array[(Double, Int)] = runQueries(spark, table1)
     // do GC and sleep for some time before running next table
     System.gc()
     Thread.sleep(1000)
     System.gc()
     Thread.sleep(1000)
-    val table2Result: Array[(Double, Array[Row])] = runQueries(spark, table2)
+    val table2Result: Array[(Double, Int)] = runQueries(spark, table2)
     // check result by comparing output from parquet and carbon
     table1Result.zipWithIndex.foreach { case (result, index) =>
       printErrorIfNotMatch(index, table1, result._2, table2, table2Result(index)._2)
@@ -295,7 +293,7 @@ object SimpleQueryBenchmark {
           s""""query":"${index + 1}", """ +
           s""""$table1 time":${table1Result(index)._1}, """ +
           s""""$table2 time":${table2Result(index)._1}, """ +
-          s""""fetched":${table1Result(index)._2.length}, """ +
+          s""""fetched":${table1Result(index)._2}, """ +
           s""""type":"${query.queryType}", """ +
           s""""desc":"${query.desc}",  """ +
           s""""date": "${formatter.format(date)}" """ +
@@ -310,6 +308,7 @@ object SimpleQueryBenchmark {
         .addProperty("enable.unsafe.sort", "true")
         .addProperty("carbon.blockletgroup.size.in.mb", "32")
         .addProperty(CarbonCommonConstants.ENABLE_UNSAFE_COLUMN_PAGE, "true")
+        .addProperty(CarbonCommonConstants.LOCAL_DICTIONARY_ENABLE, "true")
     import org.apache.spark.sql.CarbonSession._
     val rootPath = new File(this.getClass.getResource("/").getPath
         + "../../../..").getCanonicalPath
