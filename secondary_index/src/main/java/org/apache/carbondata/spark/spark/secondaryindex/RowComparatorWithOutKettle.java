@@ -13,7 +13,10 @@ package org.apache.carbondata.spark.spark.secondaryindex;
 
 import java.util.Comparator;
 
+import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.util.ByteUtil.UnsafeComparer;
+import org.apache.carbondata.core.util.DataTypeUtil;
+import org.apache.carbondata.core.util.comparator.SerializableComparator;
 
 /**
  * This class is for comparing the two mdkeys in no kettle flow.
@@ -25,11 +28,14 @@ public class RowComparatorWithOutKettle implements Comparator<Object[]> {
    */
   private boolean[] noDictionaryColMaping;
 
+  private DataType[] noDicDataTypes;
+
   /**
    * @param noDictionaryColMaping
    */
-  public RowComparatorWithOutKettle(boolean[] noDictionaryColMaping) {
+  public RowComparatorWithOutKettle(boolean[] noDictionaryColMaping, DataType[] noDicDataTypes) {
     this.noDictionaryColMaping = noDictionaryColMaping;
+    this.noDicDataTypes = noDicDataTypes;
   }
 
   /**
@@ -39,18 +45,31 @@ public class RowComparatorWithOutKettle implements Comparator<Object[]> {
     int diff = 0;
     int index = 0;
     int noDictionaryIndex = 0;
+    int dataTypeIdx = 0;
     int[] leftMdkArray = (int[]) rowA[0];
     int[] rightMdkArray = (int[]) rowB[0];
-    byte[][] leftNonDictArray = (byte[][]) rowA[1];
-    byte[][] rightNonDictArray = (byte[][]) rowB[1];
+    Object[] leftNonDictArray = (Object[]) rowA[1];
+    Object[] rightNonDictArray = (Object[]) rowB[1];
     for (boolean isNoDictionary : noDictionaryColMaping) {
       if (isNoDictionary) {
-        diff = UnsafeComparer.INSTANCE
-            .compareTo(leftNonDictArray[noDictionaryIndex], rightNonDictArray[noDictionaryIndex]);
-        if (diff != 0) {
-          return diff;
+        if (DataTypeUtil.isPrimitiveColumn(noDicDataTypes[dataTypeIdx])) {
+          // use data types based comparator for the no dictionary measure columns
+          SerializableComparator comparator = org.apache.carbondata.core.util.comparator.Comparator
+              .getComparator(noDicDataTypes[dataTypeIdx]);
+          int difference = comparator
+              .compare(leftNonDictArray[noDictionaryIndex], rightNonDictArray[noDictionaryIndex]);
+          if (difference != 0) {
+            return difference;
+          }
+          dataTypeIdx++;
+        } else {
+          diff = UnsafeComparer.INSTANCE.compareTo((byte[]) leftNonDictArray[noDictionaryIndex],
+              (byte[]) rightNonDictArray[noDictionaryIndex]);
+          if (diff != 0) {
+            return diff;
+          }
+          noDictionaryIndex++;
         }
-        noDictionaryIndex++;
       } else {
         diff = leftMdkArray[index] - rightMdkArray[index];
         if (diff != 0) {

@@ -31,6 +31,7 @@ import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema;
 import org.apache.carbondata.core.scan.result.RowBatch;
 import org.apache.carbondata.core.scan.wrappers.ByteArrayWrapper;
 import org.apache.carbondata.core.util.CarbonUtil;
+import org.apache.carbondata.core.util.DataTypeUtil;
 import org.apache.carbondata.processing.loading.TableProcessingOperations;
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel;
 import org.apache.carbondata.processing.sort.exception.CarbonSortKeyAndGroupByException;
@@ -281,7 +282,17 @@ public class SecondaryIndexQueryResultProcessor {
         preparedRow[i] = dictionaryValues[dictionaryIndex++];
       } else {
         // no dictionary dims
-        preparedRow[i] = wrapper.getNoDictionaryKeyByIndex(noDictionaryIndex++);
+        byte[] noDictionaryKeyByIndex = wrapper.getNoDictionaryKeyByIndex(noDictionaryIndex++);
+        // no dictionary primitive columns are expected to be in original data while loading,
+        // so convert it to original data
+        if (DataTypeUtil.isPrimitiveColumn(dims.getDataType())) {
+          Object dataFromBytes = DataTypeUtil
+              .getDataBasedOnDataTypeForNoDictionaryColumn(noDictionaryKeyByIndex,
+                  dims.getDataType());
+          preparedRow[i] = dataFromBytes;
+        } else {
+          preparedRow[i] = noDictionaryKeyByIndex;
+        }
       }
     }
 
@@ -302,8 +313,8 @@ public class SecondaryIndexQueryResultProcessor {
       Object[] previousRow = null;
       // comparator for grouping the similar data, means every record
       // should be unique in index table
-      RowComparatorWithOutKettle comparator =
-          new RowComparatorWithOutKettle(noDictionaryColMapping);
+      RowComparatorWithOutKettle comparator = new RowComparatorWithOutKettle(noDictionaryColMapping,
+          sortParameters.getNoDictDataType());
       intermediateFileMerger.finish();
       sortDataRows = null;
       finalMerger.startFinalMerge();
