@@ -180,7 +180,7 @@
     <profile>
       <id>build-all</id>
       <properties>
-        <spark.version>2.2.1</spark.version>
+        <spark.version>2.2.1.0100</spark.version>
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11.8</scala.version>
       </properties>
@@ -194,7 +194,7 @@
     <profile>
       <id>spark-2.1</id>
       <properties>
-        <spark.version>2.1.0</spark.version>
+        <spark.version>2.1.0.0100</spark.version>
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11.8</scala.version>
       </properties>
@@ -237,7 +237,7 @@
         <activeByDefault>true</activeByDefault>
       </activation>
       <properties>
-        <spark.version>2.2.1</spark.version>
+        <spark.version>2.2.1.0100</spark.version>
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11.8</scala.version>
       </properties>

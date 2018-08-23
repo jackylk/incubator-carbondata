@@ -28,6 +28,7 @@ import org.apache.spark.sql.execution.command.NodeInfo
 import org.apache.spark.sql.hive.DistributionUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
+import org.apache.carbondata.converter.SparkDataTypeConverterImpl
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.block.{Distributable, TableBlockInfo, TaskBlockInfo}
 import org.apache.carbondata.core.metadata.{AbsoluteTableIdentifier, CarbonMetadata, CarbonTableIdentifier}
@@ -45,7 +46,6 @@ import org.apache.carbondata.processing.merger.CarbonCompactionUtil
 import org.apache.carbondata.processing.util.{CarbonDataProcessorUtil, CarbonLoaderUtil}
 import org.apache.carbondata.spark.SecondaryIndexCreationResult
 import org.apache.carbondata.spark.spark.secondaryindex.{CarbonSecondaryIndexExecutor, SecondaryIndexQueryResultProcessor, SecondaryIndexUtil}
-import org.apache.carbondata.spark.util.SparkDataTypeConverterImpl
 
 
 class CarbonSecondaryIndexRDD[K, V](
