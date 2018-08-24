@@ -99,12 +99,16 @@
     <module>core</module>
     <module>processing</module>
     <module>hadoop</module>
+<<<<<<< HEAD
     <module>integration/spark-common</module>
     <module>integration/spark-common-test</module>
     <module>integration/hive</module>
     <module>datamap/examples</module>
+=======
+>>>>>>> 3fed56f... [1.5.0 DLI] removed unwanted modules in spark2.2 profile
     <module>store/sdk</module>
     <module>assembly</module>
+    <module>integration/spark-datasource</module>
     <module>tools/cli</module>
   </modules>
 
@@ -495,6 +499,10 @@
         <!--module>integration/presto</module-->
         <module>examples/flink</module>
         <module>streaming</module>
+        <module>integration/spark-common</module>
+        <module>integration/spark-common-test</module>
+        <module>datamap/examples</module>
+        <module>assembly</module>
       </modules>
       <build>
         <plugins>
@@ -524,13 +532,17 @@
         <scala.version>2.11.8</scala.version>
       </properties>
       <modules>
+        <module>streaming</module>
+        <module>integration/spark-common</module>
+        <module>integration/spark-common-test</module>
+        <module>datamap/examples</module>
+        <module>assembly</module>
         <module>integration/spark2</module>
         <module>integration/spark-datasource</module>
         <module>secondary_index</module>
         <module>common-plugin</module>
         <module>integration/hive</module>
        <!-- <module>integration/presto</module> -->
-        <module>streaming</module>
         <!--<module>examples/spark2</module>-->
         <!--<module>datamap/lucene</module>-->
         <module>datamap/bloom</module>
@@ -590,17 +602,6 @@
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11.8</scala.version>
       </properties>
-      <modules>
-        <module>integration/spark2</module>
-        <module>integration/spark-datasource</module>
-        <module>common-plugin</module>
-        <module>integration/hive</module>
-        <!--<module>integration/presto</module>-->
-        <module>streaming</module>
-        <module>examples/spark2</module>
-        <module>datamap/lucene</module>
-        <module>datamap/bloom</module>
-      </modules>
       <build>
         <plugins>
           <plugin>
@@ -710,6 +711,10 @@
         <scala.version>2.11.8</scala.version>
       </properties>
       <modules>
+        <module>integration/spark-common</module>
+        <module>integration/spark-common-test</module>
+        <module>datamap/examples</module>
+        <module>assembly</module>
         <module>integration/spark2</module>
         <module>common-plugin</module>
         <module>secondary_index</module>
