@@ -74,7 +74,7 @@ object Compactor {
           segmentToSegmentTimestampMap,
           segmentIdToLoadStartTimeMapping.get(validSegments.head).get)
         // merge index files
-        CommonUtil.mergeIndexFiles(sqlContext.sparkContext,
+        CommonUtil.mergeIndexFiles(sqlContext.sparkSession,
           secondaryIndexModel.validSegments,
           segmentToSegmentTimestampMap,
           indexCarbonTable.getTablePath,

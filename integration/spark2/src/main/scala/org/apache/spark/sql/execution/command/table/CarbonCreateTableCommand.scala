@@ -65,7 +65,6 @@ case class CarbonCreateTableCommand(
     tableInfo.setDatabaseName(dbName)
     tableInfo.setTableUniqueName(CarbonTable.buildUniqueName(dbName, tableName))
     val isTransactionalTable = tableInfo.isTransactionalTable
-    CarbonInputFormatUtil.setS3Configurations(sparkSession.sessionState.newHadoopConf())
     if (sparkSession.sessionState.catalog.listTables(dbName)
       .exists(_.table.equalsIgnoreCase(tableName))) {
       if (!ifNotExistsSet) {

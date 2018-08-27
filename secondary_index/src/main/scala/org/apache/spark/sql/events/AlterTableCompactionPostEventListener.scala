@@ -84,7 +84,7 @@ class AlterTableCompactionPostEventListener extends OperationEventListener with 
               }
               // Just launch job to merge index for all index tables
               CommonUtil.mergeIndexFiles(
-                sQLContext.sparkContext,
+                sQLContext.sparkSession,
                 validSegmentIds,
                 segmentFileNameMap,
                 indexCarbonTable.getTablePath,

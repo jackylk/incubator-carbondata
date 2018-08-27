@@ -267,8 +267,8 @@ public class CarbonTableOutputFormat extends FileOutputFormat<NullWritable, Obje
     // It should be started in new thread as the underlying iterator uses blocking queue.
     Future future = executorService.submit(new Thread() {
       @Override public void run() {
-        ThreadLocalSessionInfo.setConfigurationToCurrentThread(taskAttemptContext
-            .getConfiguration());
+        ThreadLocalSessionInfo.getOrCreateCarbonSessionInfo().getNonSerializableExtraInfo()
+            .put("carbonConf", taskAttemptContext.getConfiguration());
         try {
           dataLoadExecutor
               .execute(loadModel, tempStoreLocations, iterators);

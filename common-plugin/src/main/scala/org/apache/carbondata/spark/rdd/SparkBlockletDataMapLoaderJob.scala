@@ -22,7 +22,9 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.mapreduce.{InputSplit, Job, TaskAttemptID, TaskType}
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl
-import org.apache.spark.{Partition, SparkContext, TaskContext, TaskKilledException}
+import org.apache.spark.{Partition, TaskContext, TaskKilledException}
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.util.SparkSQLUtil
 
 import org.apache.carbondata.core.datamap.{AbstractDataMapJob, DataMapStoreManager}
 import org.apache.carbondata.core.datamap.dev.CacheableDataMap
@@ -62,7 +64,7 @@ class SparkBlockletDataMapLoaderJob extends AbstractDataMapJob {
     val dataMapFactory = DataMapStoreManager.getInstance().getDefaultDataMap(carbonTable)
       .getDataMapFactory
     val cacheableDataMap = dataMapFactory.asInstanceOf[CacheableDataMap]
-    val dataMapIndexWrappers = new DataMapLoaderRDD(SparkContext.getOrCreate(),
+    val dataMapIndexWrappers = new DataMapLoaderRDD(SparkSQLUtil.getSparkSession,
       dataMapFormat.asInstanceOf[DistributableBlockletDataMapLoader]).collect()
     // add segmentProperties in single thread if carbon table schema is not modified
     if (!carbonTable.getTableInfo.isSchemaModified) {
@@ -165,21 +167,20 @@ class DataMapLoaderPartition(rddId: Int, idx: Int, val inputSplit: InputSplit)
 /**
  * This RDD is used to load the dataMaps of a segment
  *
- * @param sc
+ * @param ss
  * @param dataMapFormat
  */
 class DataMapLoaderRDD(
-  sc: SparkContext,
+  @transient ss: SparkSession,
   dataMapFormat: DistributableBlockletDataMapLoader)
-  extends CarbonRDD[(TableBlockIndexUniqueIdentifier, BlockletDataMapDetailsWithSchema)](sc,
-    Nil, sc.hadoopConfiguration) {
+  extends CarbonRDD[(TableBlockIndexUniqueIdentifier, BlockletDataMapDetailsWithSchema)](ss, Nil) {
 
   private val jobTrackerId: String = {
     val formatter = new SimpleDateFormat("yyyyMMddHHmm")
     formatter.format(new Date())
   }
 
-  override def getPartitions: Array[Partition] = {
+  override def internalGetPartitions: Array[Partition] = {
     val job = Job.getInstance(new Configuration())
     val splits = dataMapFormat.getSplits(job)
     splits.asScala.zipWithIndex.map(f => new DataMapLoaderPartition(id, f._2, f._1)).toArray

@@ -81,7 +81,7 @@ class AlterTableMergeIndexSIEventListener extends OperationEventListener with Lo
               }
               // Just launch job to merge index for all index tables
               CommonUtil.mergeIndexFiles(
-                sparkSession.sparkContext,
+                sparkSession,
                 validSegmentIds,
                 segmentFileNameMap,
                 indexCarbonTable.getTablePath,

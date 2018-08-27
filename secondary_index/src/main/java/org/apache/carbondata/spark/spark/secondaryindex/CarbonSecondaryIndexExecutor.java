@@ -25,6 +25,7 @@ import org.apache.carbondata.core.cache.dictionary.Dictionary;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.block.TableBlockInfo;
 import org.apache.carbondata.core.datastore.block.TaskBlockInfo;
+import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonDimension;
 import org.apache.carbondata.core.scan.executor.QueryExecutor;
@@ -83,7 +84,8 @@ public class CarbonSecondaryIndexExecutor {
         new ArrayList<>(CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);
     List<TableBlockInfo> blockList = null;
     queryModel = prepareQueryModel();
-    this.queryExecutor = QueryExecutorFactory.getQueryExecutor(queryModel);
+    this.queryExecutor =
+        QueryExecutorFactory.getQueryExecutor(queryModel, FileFactory.getConfiguration());
     // for each segment get task block info
     Set<String> taskBlockListMapping = taskBlockInfo.getTaskSet();
     for (String task : taskBlockListMapping) {

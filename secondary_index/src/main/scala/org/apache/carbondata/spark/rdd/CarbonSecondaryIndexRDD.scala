@@ -23,6 +23,7 @@ import org.apache.hadoop.mapred.JobConf
 import org.apache.hadoop.mapreduce.Job
 import org.apache.spark._
 import org.apache.spark.deploy.SparkHadoopUtil
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.command.SecondaryIndex
 import org.apache.spark.sql.execution.command.NodeInfo
 import org.apache.spark.sql.hive.DistributionUtil
@@ -49,7 +50,7 @@ import org.apache.carbondata.spark.spark.secondaryindex.{CarbonSecondaryIndexExe
 
 
 class CarbonSecondaryIndexRDD[K, V](
-    sc: SparkContext,
+    @transient ss: SparkSession,
     result: SecondaryIndexCreationResult[K, V],
     carbonLoadModel: CarbonLoadModel,
     secondaryIndex: SecondaryIndex,
@@ -57,12 +58,12 @@ class CarbonSecondaryIndexRDD[K, V](
     confExecutorsTemp: String,
     indexCarbonTable: CarbonTable,
     forceAccessSegment: Boolean = false)
-  extends CarbonRDD[(K, V)](sc, Nil, sc.hadoopConfiguration) {
+  extends CarbonRDD[(K, V)](ss, Nil) {
 
   private val queryId = sparkContext.getConf.get("queryId", System.nanoTime() + "")
-  val defaultParallelism = sc.defaultParallelism
-  sc.setLocalProperty("spark.scheduler.pool", "DDL")
-  sc.setLocalProperty("spark.job.interruptOnCancel", "true")
+  val defaultParallelism = sparkContext.defaultParallelism
+  sparkContext.setLocalProperty("spark.scheduler.pool", "DDL")
+  sparkContext.setLocalProperty("spark.job.interruptOnCancel", "true")
 
   var localStoreLocation: String = null
   var columnCardinality: Array[Int] = Array[Int]()
@@ -177,13 +178,13 @@ class CarbonSecondaryIndexRDD[K, V](
     theSplit.split.value.getLocations.filter(_ != "localhost")
   }
 
-  override def getPartitions: Array[Partition] = {
+  override def internalGetPartitions: Array[Partition] = {
     val startTime = System.currentTimeMillis()
     val absoluteTableIdentifier: AbsoluteTableIdentifier = AbsoluteTableIdentifier.from(
       carbonStoreLocation, databaseName, factTableName, tableId)
     val updateStatusManager: SegmentUpdateStatusManager = new SegmentUpdateStatusManager(
       carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable)
-    val jobConf: JobConf = new JobConf(new Configuration)
+    val jobConf: JobConf = new JobConf(config.value.value)
     SparkHadoopUtil.get.addCredentials(jobConf)
     val job: Job = new Job(jobConf)
     val format = CarbonInputFormatUtil.createCarbonInputFormat(absoluteTableIdentifier, job)

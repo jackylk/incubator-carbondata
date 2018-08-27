@@ -32,7 +32,7 @@ public class ACLFileFactory implements FileTypeInterface {
 
   private static final Log LOG = LogFactory.getLog(FileFactory.class);
 
-  public FileReader getFileHolder(FileFactory.FileType fileType) {
+  public FileReader getFileHolder(FileFactory.FileType fileType, Configuration configuration) {
     switch (fileType) {
       case LOCAL:
         return new FileReaderImpl();
@@ -40,7 +40,7 @@ public class ACLFileFactory implements FileTypeInterface {
       case ALLUXIO:
       case VIEWFS:
       case S3:
-        return new DFSFileReaderImpl();
+        return new DFSFileReaderImpl(configuration);
       default:
         return new FileReaderImpl();
     }

@@ -101,7 +101,7 @@ class SILoadEventListener extends OperationEventListener with Logging {
                   indexCarbonTable)
 
                 // merge index files
-                CommonUtil.mergeIndexFiles(sparkSession.sparkContext,
+                CommonUtil.mergeIndexFiles(sparkSession,
                   secondaryIndexModel.validSegments,
                   segmentToSegmentTimestampMap,
                   indexCarbonTable.getTablePath,

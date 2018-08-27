@@ -117,7 +117,7 @@ private[sql] case class LoadDataForSecondaryIndex(indexModel: SecondaryIndex) ex
             segmentToSegmentTimestampMap,
             indexCarbonTable)
           // merge index files
-          CommonUtil.mergeIndexFiles(sparkSession.sparkContext,
+          CommonUtil.mergeIndexFiles(sparkSession,
             secondaryIndexModel.validSegments,
             segmentToSegmentTimestampMap,
             indexCarbonTable.getTablePath,

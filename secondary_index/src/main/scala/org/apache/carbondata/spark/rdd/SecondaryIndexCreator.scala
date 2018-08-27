@@ -19,6 +19,7 @@ import scala.util.control.Breaks.{break, breakable}
 import org.apache.spark.sql.{CarbonEnv, SQLContext}
 import org.apache.spark.sql.command.{SecondaryIndex, SecondaryIndexModel}
 import org.apache.spark.sql.hive.CarbonRelation
+import org.apache.spark.sql.util.SparkSQLUtil
 import org.apache.spark.util.CarbonInternalScalaUtil
 import org.apache.spark.util.si.FileInternalUtil
 
@@ -26,7 +27,7 @@ import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.metadata.SegmentFileStore
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.statusmanager.{SegmentStatus, SegmentStatusManager}
-import org.apache.carbondata.core.util.CarbonProperties
+import org.apache.carbondata.core.util.{CarbonProperties, ThreadLocalSessionInfo}
 import org.apache.carbondata.processing.loading.TableProcessingOperations
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 import org.apache.carbondata.processing.util.CarbonLoaderUtil
@@ -86,7 +87,7 @@ object SecondaryIndexCreator {
           segmentToSegmentTimestampMap,
           carbonMainTable)
         // merge index files
-        CommonUtil.mergeIndexFiles(sqlContext.sparkContext,
+        CommonUtil.mergeIndexFiles(sqlContext.sparkSession,
           secondaryIndexModel.validSegments,
           segmentToSegmentTimestampMap,
           indexCarbonTable.getTablePath,
@@ -153,6 +154,8 @@ object SecondaryIndexCreator {
         futureObjectList :+= executorService.submit(new Callable[Boolean] {
           @throws(classOf[Exception])
           override def call(): Boolean = {
+            ThreadLocalSessionInfo.getOrCreateCarbonSessionInfo().getNonSerializableExtraInfo
+              .put("carbonConf", SparkSQLUtil.sessionState(sc.sparkSession).newHadoopConf())
             var eachSegmentSecondaryIndexCreationStatus = false
             CarbonLoaderUtil.checkAndCreateCarbonDataLocation(segId, indexCarbonTable)
             val carbonLoadModel = getCopyObject(secondaryIndexModel.carbonLoadModel)
@@ -160,7 +163,7 @@ object SecondaryIndexCreator {
               .setFactTimeStamp(secondaryIndexModel.segmentIdToLoadStartTimeMapping.get(eachSegment)
                 .get)
             carbonLoadModel.setTablePath(secondaryIndexModel.carbonTable.getTablePath)
-            val secondaryIndexCreationStatus = new CarbonSecondaryIndexRDD(sc.sparkContext,
+            val secondaryIndexCreationStatus = new CarbonSecondaryIndexRDD(sc.sparkSession,
               new SecondaryIndexCreationResultImpl,
               carbonLoadModel,
               secondaryIndexModel.secondaryIndex,
