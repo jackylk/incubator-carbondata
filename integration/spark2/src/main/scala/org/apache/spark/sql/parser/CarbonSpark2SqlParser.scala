@@ -88,7 +88,7 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
     alterAddPartition | alterSplitPartition | alterDropPartition
 
   protected lazy val datamapManagement: Parser[LogicalPlan] =
-    createDataMap | dropDataMap | showDataMap | refreshDataMap
+    createDataMap | dropDataMap | showDataMap | rebuildDataMap
 
   protected lazy val stream: Parser[LogicalPlan] =
     createStream | dropStream | showStreams
@@ -236,7 +236,7 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
    * The syntax of show datamap is used to show datamaps on the table
    * REBUILD DATAMAP datamapname [ON TABLE] tableName
    */
-  protected lazy val refreshDataMap: Parser[LogicalPlan] =
+  protected lazy val rebuildDataMap: Parser[LogicalPlan] =
     REBUILD ~> DATAMAP ~> ident ~ opt(ontable) <~ opt(";") ^^ {
       case datamap ~ tableIdent =>
         CarbonDataMapRebuildCommand(datamap, tableIdent)
