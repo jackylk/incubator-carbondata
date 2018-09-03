@@ -96,6 +96,9 @@ public class SecondaryIndexQueryResultProcessor {
    * boolean mapping for no dictionary columns in schema
    */
   private boolean[] noDictionaryColMapping;
+
+  private boolean[] sortColumnMapping;
+
   /**
    * agg type defined for measures
    */
@@ -415,12 +418,16 @@ public class SecondaryIndexQueryResultProcessor {
     implicitColumnCount = indexTable.getImplicitDimensionByTableName(indexTableName).size();
     List<CarbonDimension> dimensions = indexTable.getDimensionByTableName(indexTableName);
     noDictionaryColMapping = new boolean[dimensions.size()];
+    sortColumnMapping = new boolean[dimensions.size()];
     isVarcharDimMapping = new boolean[dimensions.size()];
     int i = 0;
     for (CarbonDimension dimension : dimensions) {
       if (CarbonUtil.hasEncoding(dimension.getEncoder(), Encoding.DICTIONARY)) {
         i++;
         continue;
+      }
+      if (dimension.isSortColumn()) {
+        sortColumnMapping[i] = true;
       }
       noDictionaryColMapping[i] = true;
       if (dimension.getColumnSchema().getDataType() == DataTypes.VARCHAR) {
@@ -454,7 +461,7 @@ public class SecondaryIndexQueryResultProcessor {
         .createSortParameters(indexTable, databaseName, indexTableName, dimensionColumnCount,
             complexDimensionCount, measureCount, noDictionaryCount,
             segmentId, carbonLoadModel.getTaskNo(),
-            noDictionaryColMapping, isVarcharDimMapping, false);
+            noDictionaryColMapping, sortColumnMapping, isVarcharDimMapping, false);
     return parameters;
   }
 
@@ -466,15 +473,8 @@ public class SecondaryIndexQueryResultProcessor {
     String[] sortTempFileLocation = CarbonDataProcessorUtil
         .arrayAppend(tempStoreLocation, CarbonCommonConstants.FILE_SEPARATOR,
             CarbonCommonConstants.SORT_TEMP_FILE_LOCATION);
-    boolean[] noDictionarySortColumnMapping = null;
-    if (noDictionaryColMapping.length == this.segmentProperties.getNumberOfSortColumns()) {
-      noDictionarySortColumnMapping = noDictionaryColMapping;
-    } else {
-      noDictionarySortColumnMapping = new boolean[this.segmentProperties.getNumberOfSortColumns()];
-      System.arraycopy(noDictionaryColMapping, 0, noDictionarySortColumnMapping, 0,
-          noDictionarySortColumnMapping.length);
-    }
-    sortParameters.setNoDictionarySortColumn(noDictionarySortColumnMapping);
+    sortParameters.setNoDictionarySortColumn(CarbonDataProcessorUtil
+        .getNoDictSortColMapping(indexTable.getDatabaseName(), indexTableName));
     finalMerger =
         new SingleThreadFinalSortFilesMerger(sortTempFileLocation, indexTableName, sortParameters);
   }

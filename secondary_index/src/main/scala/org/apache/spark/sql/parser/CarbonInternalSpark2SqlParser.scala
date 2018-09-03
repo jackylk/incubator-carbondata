@@ -91,7 +91,7 @@ class CarbonInternalSpark2SqlParser extends CarbonSpark2SqlParser {
           scala.collection.mutable.Map.empty[String, String]
         }
         // validate the tableBlockSize from table properties
-        CommonUtil.validateTableBlockSize(tableProperties)
+        CommonUtil.validateSize(tableProperties, CarbonCommonConstants.TABLE_BLOCKSIZE)
         // validate for supported table properties
         validateTableProperties(tableProperties)
         // validate column_meta_cache proeperty if defined

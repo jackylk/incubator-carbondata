@@ -115,8 +115,7 @@ public class CarbonTableInputFormatExtended {
     // process and resolve the expression
     Expression filter = carbonTableInputFormat.getFilterPredicates(job.getConfiguration());
     carbonTable.processFilterExpression(filter, null, null);
-    FilterResolverIntf filterInterface =
-        carbonTable.resolveFilter(filter);
+    FilterResolverIntf filterInterface = carbonTable.resolveFilter(filter, identifier);
     List<Segment> filteredSegments = new ArrayList<>();
     // If filter is null then return all segments.
     List<Segment> segmentIds =

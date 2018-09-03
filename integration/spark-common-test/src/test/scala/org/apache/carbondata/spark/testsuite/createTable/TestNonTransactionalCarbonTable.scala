@@ -38,7 +38,6 @@ import org.apache.spark.sql.test.util.QueryTest
 import org.apache.spark.sql.{AnalysisException, CarbonEnv, Row}
 import org.junit.Assert
 import org.scalatest.BeforeAndAfterAll
-
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.core.cache.dictionary.DictionaryByteArrayWrapper
 import org.apache.carbondata.core.constants.CarbonCommonConstants
@@ -57,6 +56,7 @@ import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.core.util.{CarbonMetadataUtil, CarbonProperties, CarbonUtil, DataFileFooterConverterV3}
 import org.apache.carbondata.processing.loading.exception.CarbonDataLoadingException
 import org.apache.carbondata.sdk.file._
+import org.apache.hadoop.conf.Configuration
 
 
 class TestNonTransactionalCarbonTable extends QueryTest with BeforeAndAfterAll {
