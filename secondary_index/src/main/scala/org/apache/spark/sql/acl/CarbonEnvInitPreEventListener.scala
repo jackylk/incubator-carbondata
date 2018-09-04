@@ -11,9 +11,8 @@
  */
 package org.apache.spark.sql.acl
 
-import org.apache.hadoop.security.UserGroupInformation
-import org.apache.spark.sql.execution.command.CreateFunctionCommand
 import org.apache.spark.sql.hive.CarbonInternalMetaUtil
+import org.apache.spark.util.CarbonInternalReflectionUtils
 
 import org.apache.carbondata.events.{CarbonEnvInitPreEvent, Event, OperationContext, OperationEventListener}
 import org.apache.carbondata.spark.acl.CarbonUserGroupInformation
@@ -42,9 +41,10 @@ class CarbonEnvInitPreEventListener extends OperationEventListener {
     carbonSessionInfo.getNonSerializableExtraInfo
       .put(CarbonInternalCommonConstants.USER_UNIQUE_UGI_OBJECT, sessionLevelUGIObject)
      Utils.initCarbonFoldersPermission(storePath, sparkSession)
-     // register position ID UDF
-     sparkSession.udf.register("getPositionId", () => "")
-     CreateFunctionCommand(None, "NI", "org.apache.spark.sql.hive.NonIndexUDFExpression",
-       Seq(), true).run(sparkSession)
+    // register position ID UDF
+    sparkSession.udf.register("getPositionId", () => "")
+    CarbonInternalReflectionUtils
+      .callCreateFunctionCommand(None, "NI", "org.apache.spark.sql.hive.NonIndexUDFExpression",
+        Seq(), true).run(sparkSession)
   }
 }

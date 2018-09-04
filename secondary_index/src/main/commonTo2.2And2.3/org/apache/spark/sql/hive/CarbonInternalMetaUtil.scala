@@ -11,15 +11,15 @@
  */
 package org.apache.spark.sql.hive
 
+import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.spark.sql.CarbonExpressions.{CarbonSubqueryAlias => SubqueryAlias}
 import org.apache.spark.sql.catalyst.catalog.UnresolvedCatalogRelation
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, ResolvedHint}
 import org.apache.spark.sql.execution.datasources.{FindDataSourceTable, LogicalRelation}
 import org.apache.spark.sql.hive.acl.ACLInterface
+import org.apache.spark.sql.util.SparkSQLUtil
 import org.apache.spark.sql.{CarbonDatasourceHadoopRelation, SparkSession}
 import org.apache.spark.util.CarbonInternalScalaUtil
-
-import org.apache.carbondata.common.logging.LogServiceFactory
 /**
  *
  */
@@ -38,9 +38,11 @@ object CarbonInternalMetaUtil {
     otherRDDPlan match {
       case ResolvedHint(p, hintInfo) => true
       case p if session.sqlContext.conf.autoBroadcastJoinThreshold > 0 &&
-        p.stats(session.sqlContext.conf).sizeInBytes <=
-          session.sqlContext.conf.autoBroadcastJoinThreshold =>
-        LOGGER.info("canPushDownJoin statistics:" + p.stats(session.sqlContext.conf).sizeInBytes)
+                SparkSQLUtil.invokeStatsMethod(p, session.sqlContext.conf).sizeInBytes <=
+                session.sqlContext.conf.autoBroadcastJoinThreshold =>
+        LOGGER
+          .info("canPushDownJoin statistics:" +
+                SparkSQLUtil.invokeStatsMethod(p, session.sqlContext.conf).sizeInBytes)
         true
       case plan if (CarbonInternalScalaUtil.checkIsIndexTable(plan)) => true
       case _ => false

@@ -11,6 +11,11 @@
  */
 package org.apache.spark.sql.hive
 
+import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
+import org.apache.carbondata.core.constants.CarbonCommonConstants
+import org.apache.carbondata.core.util.CarbonProperties
+import org.apache.carbondata.spark.acl.CarbonUserGroupInformation
+import org.apache.carbondata.spark.util.CarbonScalaUtil
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql._
@@ -31,6 +36,7 @@ import org.apache.spark.sql.execution.command.table.CarbonShowTablesCommand
 import org.apache.spark.sql.execution.command.{AlterTableAddColumnsModel, AlterTableDataTypeChangeModel}
 import org.apache.spark.sql.execution.datasources.{DataSourceAnalysis, PreprocessTableCreation, PreprocessTableInsertion, _}
 import org.apache.spark.sql.execution.strategy.{CarbonInternalLateDecodeStrategy, CarbonLateDecodeStrategy, DDLStrategy, StreamingTableStrategy}
+import org.apache.spark.sql.helper.SparkObjectCreationHelper
 import org.apache.spark.sql.hive.acl.ACLInterface
 import org.apache.spark.sql.hive.client.HiveClient
 import org.apache.spark.sql.internal.{SQLConf, SessionState, SparkSessionListener}
@@ -39,11 +45,6 @@ import org.apache.spark.sql.parser._
 import org.apache.spark.sql.types.DecimalType
 import org.apache.spark.util.SparkUtil
 
-import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
-import org.apache.carbondata.core.constants.CarbonCommonConstants
-import org.apache.carbondata.core.util.CarbonProperties
-import org.apache.carbondata.spark.acl.CarbonUserGroupInformation
-import org.apache.carbondata.spark.util.CarbonScalaUtil
 
 /**
   * This class will have carbon catalog and refresh the relation from cache if the carbontable in
@@ -362,22 +363,20 @@ class CarbonACLSqlAstBuilder(conf: SQLConf, parser: CarbonSpark2SqlParser,
   val helper = new CarbonHelperACLSqlAstBuilder(conf, parser, sparkSession)
 
   override def visitCreateHiveTable(ctx: CreateHiveTableContext): LogicalPlan = {
-    val fileStorage = CarbonSparkSqlParserUtil.getFileStorage(ctx.createFileFormat)
+    val fileStorage = CarbonSparkSqlParserUtil
+      .getFileStorage(SparkObjectCreationHelper.getFileFormat(ctx))
 
     if (fileStorage.equalsIgnoreCase("'carbondata'") ||
         fileStorage.equalsIgnoreCase("carbondata") ||
         fileStorage.equalsIgnoreCase("'carbonfile'") ||
         fileStorage.equalsIgnoreCase("'org.apache.carbondata.format'")) {
-      val createTableTuple = (ctx.createTableHeader, ctx.skewSpec,
-        ctx.bucketSpec, ctx.partitionColumns, ctx.columns, ctx.tablePropertyList,ctx.locationSpec(),
-        Option(ctx.STRING()).map(string), ctx.AS, ctx.query, fileStorage)
-      helper.createCarbonTable(createTableTuple)
+      SparkObjectCreationHelper.createTableTuple(ctx, helper, fileStorage)
     } else {
       if (SparkUtil.isUQuery) {
         helper.validateFileFormat(
           ctx.createTableHeader,
-          ctx.locationSpec,
-          ctx.createFileFormat
+          SparkObjectCreationHelper.getLocationSpec(ctx),
+          SparkObjectCreationHelper.getFileFormat(ctx)
         )
       }
       super.visitCreateHiveTable(ctx)

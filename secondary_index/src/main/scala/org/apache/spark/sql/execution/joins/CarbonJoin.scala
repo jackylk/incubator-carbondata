@@ -22,7 +22,7 @@ import org.apache.spark.TaskContext
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.deploy.SparkHadoopUtil
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.CarbonDecoderRDD
+import org.apache.spark.sql.{CarbonDecoderRDD, SparkSession}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.{And, Attribute, BindReferences, BoundReference, Expression, In, Literal, UnsafeRow}
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodegenContext, ExprCode, GenerateUnsafeProjection}
@@ -50,7 +50,7 @@ case class BroadCastFilterPushJoin(
     buildSide: BuildSide,
     left: SparkPlan,
     right: SparkPlan,
-    condition: Option[Expression]) extends BinaryExecNode with HashJoin with CodegenSupport {
+    condition: Option[Expression]) extends CarbonBroadCastFilterPushJoin {
 
   override lazy val metrics = Map(
     "numLeftRows" -> SQLMetrics.createMetric(sparkContext, "number of left rows"),
@@ -115,11 +115,7 @@ case class BroadCastFilterPushJoin(
     val streamedPlanOutput = streamedPlan.execute()
     // scalastyle:off
     // scalastyle:on
-    streamedPlanOutput.mapPartitions { streamedIter =>
-      val hashedRelation = broadcastRelation.value.asReadOnlyCopy()
-      TaskContext.get().taskMetrics().incPeakExecutionMemory(hashedRelation.estimatedSize)
-      join(streamedIter, hashedRelation, numOutputRows)
-    }
+    performJoinOperation(sparkContext, streamedPlanOutput, broadcastRelation, numOutputRows)
   }
 
   override def inputRDDs(): Seq[RDD[InternalRow]] = {
@@ -156,13 +152,8 @@ case class BroadCastFilterPushJoin(
       rightKeys,
       buildSide)
     val broadcast = ctx.addReferenceObj("broadcast", broadcastRelation)
-    val relationTerm = ctx.freshName("relation")
     val clsName = broadcastRelation.value.getClass.getName
-    ctx.addMutableState(clsName, relationTerm,
-      s"""
-         | $relationTerm = (($clsName) $broadcast.value()).asReadOnlyCopy();
-         | incPeakExecutionMemory($relationTerm.estimatedSize());
-       """.stripMargin)
+    val relationTerm = addMutableStateToContext(ctx, clsName, broadcast)
     (broadcastRelation, relationTerm)
   }
 
@@ -264,6 +255,7 @@ case class BroadCastFilterPushJoin(
       case BuildRight => input ++ buildVars
     }
     if (broadcastRelation.value.keyIsUnique) {
+      setCopyResult(ctx, false)
       s"""
          |// generate join key for stream side
          |${ keyEv.code }
@@ -276,7 +268,7 @@ case class BroadCastFilterPushJoin(
        """.stripMargin
 
     } else {
-      ctx.copyResult = true
+      setCopyResult(ctx, true)
       val matches = ctx.freshName("matches")
       val iteratorCls = classOf[Iterator[UnsafeRow]].getName
       s"""
@@ -297,7 +289,6 @@ case class BroadCastFilterPushJoin(
        """.stripMargin
     }
   }
-
   /**
    * Generates the code for left or right outer join.
    */
@@ -334,6 +325,7 @@ case class BroadCastFilterPushJoin(
       case BuildRight => input ++ buildVars
     }
     if (broadcastRelation.value.keyIsUnique) {
+      setCopyResult(ctx, false)
       s"""
          |// generate join key for stream side
          |${ keyEv.code }
@@ -350,7 +342,7 @@ case class BroadCastFilterPushJoin(
        """.stripMargin
 
     } else {
-      ctx.copyResult = true
+      setCopyResult(ctx, true)
       val matches = ctx.freshName("matches")
       val iteratorCls = classOf[Iterator[UnsafeRow]].getName
       val found = ctx.freshName("found")

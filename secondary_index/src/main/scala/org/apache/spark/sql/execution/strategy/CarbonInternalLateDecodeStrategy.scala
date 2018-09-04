@@ -24,7 +24,7 @@ import org.apache.spark.sql.catalyst.plans.logical.{Filter => LogicalFilter, _}
 import org.apache.spark.sql.execution.{FilterExec, GlobalLimitExec, LocalLimitExec, SparkPlan}
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.execution.joins.{BroadCastFilterPushJoin, BroadCastSIFilterPushJoin, BuildLeft, BuildRight}
-import org.apache.spark.sql.hive.CarbonInternalMetaUtil
+import org.apache.spark.sql.hive.{CarbonInternalMetaUtil, MatchLogicalRelation}
 import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
@@ -156,9 +156,9 @@ private[sql] class CarbonInternalLateDecodeStrategy extends CarbonLateDecodeStra
       case CarbonDictionaryCatalystDecoder(relations, profile, aliasMap, _, child) =>
         true
       case PhysicalOperation(_, _,
-      LogicalRelation(_: CarbonDatasourceHadoopRelation, _, _)) =>
+      MatchLogicalRelation(_: CarbonDatasourceHadoopRelation, _, _)) =>
         true
-      case LogicalFilter(_, LogicalRelation(_: CarbonDatasourceHadoopRelation, _, _)) =>
+      case LogicalFilter(_, MatchLogicalRelation(_: CarbonDatasourceHadoopRelation, _, _)) =>
         true
       case _ => false
     }

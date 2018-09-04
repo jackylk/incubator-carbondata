@@ -19,12 +19,13 @@ import org.apache.spark.sql.catalyst.{CarbonTableIdentifierImplicit, InternalRow
 import org.apache.spark.sql.catalyst.catalog.SessionCatalog
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeSet}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.execution.{FileSourceScanExec, RowDataSourceScanExec, SparkPlan}
+import org.apache.spark.sql.execution.{RowDataSourceScanExec, SparkPlan}
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.command.management.{CarbonInsertIntoCommand, CarbonLoadDataCommand}
 import org.apache.spark.sql.execution.command.schema.CarbonAlterTableRenameCommand
 import org.apache.spark.sql.execution.command.table.{CarbonDescribeFormattedCommand, CarbonDropTableCommand}
 import org.apache.spark.sql.execution.strategy.CarbonDataSourceScan
+import org.apache.spark.sql.helper.SparkObjectCreationHelper
 import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.sql.hive.acl.{HiveACLInterface, ObjectType, PrivObject, PrivType}
 import org.apache.spark.sql.hive.execution.command.CarbonDropDatabaseCommand
@@ -149,10 +150,14 @@ private[sql] case class CarbonPrivCheck(sparkSession: SparkSession,
                   .carbonRelation,
                 scan.rdd.asInstanceOf[CarbonScanRDD[InternalRow]])
               scan
-            case scan@RowDataSourceScanExec(projectList, rdd: CarbonScanRDD[InternalRow],
-            relation: CarbonDatasourceHadoopRelation, _, _, _, _)
-              if !isSameTable(relation, internalTable) && scan.needPriv =>
-              checkPrivilege(projectList, relation.carbonRelation, rdd)
+            case scan: RowDataSourceScanExec
+              if (scan.rdd.isInstanceOf[CarbonScanRDD[InternalRow]] &&
+                  scan.relation.isInstanceOf[CarbonDatasourceHadoopRelation]) &&
+                 !isSameTable(scan.relation.asInstanceOf[CarbonDatasourceHadoopRelation],
+                   internalTable) && scan.needPriv =>
+              checkPrivilege(SparkObjectCreationHelper.getOutputObjectFromRowDataSourceScan(scan),
+                scan.relation.asInstanceOf[CarbonDatasourceHadoopRelation].carbonRelation,
+                scan.rdd.asInstanceOf[CarbonScanRDD[InternalRow]])
               scan
             case scan: CarbonDataSourceScan
               if (scan.rdd.isInstanceOf[CarbonDecoderRDD] &&
@@ -168,13 +173,17 @@ private[sql] case class CarbonPrivCheck(sparkSession: SparkSession,
                 scan.rdd.asInstanceOf[CarbonDecoderRDD].prev
                   .asInstanceOf[CarbonScanRDD[InternalRow]])
               scan
-            case scan@RowDataSourceScanExec(projectList, rdd: CarbonDecoderRDD,
-            relation: CarbonDatasourceHadoopRelation, _, _, _, _)
-              if rdd.prev.isInstanceOf[CarbonScanRDD[InternalRow]] &&
-                 !isSameTable(relation, internalTable) && scan.needPriv =>
-              checkPrivilege(projectList,
-                relation.carbonRelation,
-                rdd.prev.asInstanceOf[CarbonScanRDD[InternalRow]])
+            case scan: RowDataSourceScanExec
+              if (scan.rdd.isInstanceOf[CarbonDecoderRDD] &&
+                  scan.relation.isInstanceOf[CarbonDatasourceHadoopRelation]) &&
+                 scan.rdd.asInstanceOf[CarbonDecoderRDD].prev
+                   .isInstanceOf[CarbonScanRDD[InternalRow]] &&
+                 !isSameTable(scan.relation.asInstanceOf[CarbonDatasourceHadoopRelation],
+                   internalTable) && scan.needPriv =>
+              checkPrivilege(SparkObjectCreationHelper.getOutputObjectFromRowDataSourceScan(scan),
+                scan.relation.asInstanceOf[CarbonDatasourceHadoopRelation].carbonRelation,
+                scan.rdd.asInstanceOf[CarbonDecoderRDD].prev
+                  .asInstanceOf[CarbonScanRDD[InternalRow]])
               scan
             case countStar@CarbonCountStar(_, carbonTable: CarbonTable, _, needPrev)
               if !isSameTable(carbonTable, internalTable) && needPrev =>
@@ -276,5 +285,4 @@ private[sql] case class CarbonPrivCheck(sparkSession: SparkSession,
     newProjSet
   }
 }
-
 

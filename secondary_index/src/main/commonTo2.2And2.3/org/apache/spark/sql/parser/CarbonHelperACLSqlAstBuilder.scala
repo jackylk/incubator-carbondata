@@ -11,15 +11,15 @@
  */
 package org.apache.spark.sql.parser
 
-import scala.collection.mutable
-
 import org.antlr.v4.runtime.tree.TerminalNode
-import org.apache.spark.sql.{SparkACLSqlAstBuilder, SparkSession}
 import org.apache.spark.sql.catalyst.parser.ParserUtils._
 import org.apache.spark.sql.catalyst.parser.SqlBaseParser._
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types.StructField
+import org.apache.spark.sql.{SparkACLSqlAstBuilder, SparkSession}
+
+import scala.collection.mutable
 
 class CarbonHelperACLSqlAstBuilder(conf: SQLConf,
   parser: CarbonSpark2SqlParser,
