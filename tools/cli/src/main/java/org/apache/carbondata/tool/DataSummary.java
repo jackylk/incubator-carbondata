@@ -137,8 +137,8 @@ class DataSummary {
         String.format("avg: %s/block, %s/blocklet, %,d rows/block, %,d rows/blocklet",
             Strings.formatSize(totalDataSize / numBlock),
             Strings.formatSize(totalDataSize / numBlocklet),
-            numRow / numBlock,
-            numRow / numBlocklet));
+            Double.valueOf(numRow / numBlock).intValue(),
+            Double.valueOf(numRow / numBlocklet).intValue()));
   }
 
   void printSchema() throws IOException {
