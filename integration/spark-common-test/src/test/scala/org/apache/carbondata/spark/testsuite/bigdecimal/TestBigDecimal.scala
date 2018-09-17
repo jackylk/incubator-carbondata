@@ -32,6 +32,8 @@ import org.apache.spark.sql.test.util.QueryTest
 class TestBigDecimal extends QueryTest with BeforeAndAfterAll {
 
   override def beforeAll {
+    // TODO: revert this changes when spark fixes decimal issue
+    sqlContext.setConf("spark.sql.decimalOperations.allowPrecisionLoss", "false")
     sql("drop table if exists carbonTable")
     sql("drop table if exists hiveTable")
     sql("drop table if exists hiveBigDecimal")
