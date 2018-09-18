@@ -233,6 +233,7 @@ object SecondaryIndexCreator {
 //    copyObj.setPartitionId(carbonLoadModel.getPartitionId)
     copyObj.setLoadMetadataDetails(carbonLoadModel.getLoadMetadataDetails)
     copyObj.setCarbonDataLoadSchema(carbonLoadModel.getCarbonDataLoadSchema)
+    copyObj.setColumnCompressor(carbonLoadModel.getColumnCompressor)
     copyObj
   }
 

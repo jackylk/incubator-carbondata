@@ -18,6 +18,8 @@ import org.apache.spark.sql.execution.command.RunnableCommand
 import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.util.si.FileInternalUtil
 
+import org.apache.carbondata.core.constants.CarbonCommonConstants
+import org.apache.carbondata.core.datastore.compression.CompressorFactory
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatus,
 SegmentStatusManager}
@@ -64,6 +66,13 @@ private[sql] case class LoadDataForSecondaryIndex(indexModel: SecondaryIndex) ex
       carbonLoadModel.setTableName(relation.carbonTable.getTableName)
       carbonLoadModel.setDatabaseName(relation.carbonTable.getDatabaseName)
       carbonLoadModel.setTablePath(relation.carbonTable.getTablePath)
+      var columnCompressor: String = relation.carbonTable.getTableInfo.getFactTable
+        .getTableProperties
+        .get(CarbonCommonConstants.COMPRESSOR)
+      if (null == columnCompressor) {
+        columnCompressor = CompressorFactory.getInstance.getCompressor.getName
+      }
+      carbonLoadModel.setColumnCompressor(columnCompressor)
       createSecondaryIndex(sparkSession, indexModel, carbonLoadModel)
     } catch {
       case ex: Exception =>
