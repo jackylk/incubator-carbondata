@@ -14,7 +14,10 @@ package org.apache.carbondata.hadoop;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
@@ -35,6 +38,7 @@ import org.apache.carbondata.core.indexstore.TableBlockIndexUniqueIdentifierWrap
 import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMapDistributable;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.util.BlockletDataMapDetailsWithSchema;
+import org.apache.carbondata.core.util.CarbonBlockLoaderHelper;
 
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -63,6 +67,8 @@ public class DistributableBlockletDataMapLoader
 
   private List<Segment> validSegments;
 
+  private Set<String> keys;
+
   public DistributableBlockletDataMapLoader(CarbonTable table,
       DataMapExprWrapper dataMapExprWrapper, List<Segment> validSegments,
       List<Segment> invalidSegments, List<PartitionSpec> partitions, boolean isJobToClearDataMaps) {
@@ -83,8 +89,22 @@ public class DistributableBlockletDataMapLoader
     CacheableDataMap factory = (CacheableDataMap) dataMapFactory;
     List<DataMapDistributable> validDistributables =
         factory.getAllUncachedDistributables(distributableList);
-    List<InputSplit> inputSplits = new ArrayList<>(validDistributables.size());
-    inputSplits.addAll(validDistributables);
+    CarbonBlockLoaderHelper instance = CarbonBlockLoaderHelper.getInstance();
+    int distributableSize = validDistributables.size();
+    List<InputSplit> inputSplits = new ArrayList<>(distributableSize);
+    keys = new HashSet<>();
+    Iterator<DataMapDistributable> iterator = validDistributables.iterator();
+    while (iterator.hasNext()) {
+      BlockletDataMapDistributable next = (BlockletDataMapDistributable) iterator.next();
+      String key = next.getFilePath();
+      if (instance.checkAlreadySubmittedBlock(table.getAbsoluteTableIdentifier(), key)) {
+        inputSplits.add(next);
+        keys.add(key);
+      }
+    }
+    int sizeOfDistToBeLoaded = inputSplits.size();
+    LOGGER.info("Submitted blocks " + sizeOfDistToBeLoaded + ", " + distributableSize
+        + " . Rest already considered for load in other job.");
     return inputSplits;
   }
 
@@ -144,5 +164,12 @@ public class DistributableBlockletDataMapLoader
       }
 
     };
+  }
+
+  public void invalidate() {
+    if (null != keys) {
+      CarbonBlockLoaderHelper instance = CarbonBlockLoaderHelper.getInstance();
+      instance.clear(table.getAbsoluteTableIdentifier(), keys);
+    }
   }
 }

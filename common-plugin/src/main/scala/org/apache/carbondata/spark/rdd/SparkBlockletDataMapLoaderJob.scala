@@ -64,8 +64,9 @@ class SparkBlockletDataMapLoaderJob extends AbstractDataMapJob {
     val dataMapFactory = DataMapStoreManager.getInstance().getDefaultDataMap(carbonTable)
       .getDataMapFactory
     val cacheableDataMap = dataMapFactory.asInstanceOf[CacheableDataMap]
-    val dataMapIndexWrappers = new DataMapLoaderRDD(SparkSQLUtil.getSparkSession,
-      dataMapFormat.asInstanceOf[DistributableBlockletDataMapLoader]).collect()
+    val loader: DistributableBlockletDataMapLoader = dataMapFormat
+      .asInstanceOf[DistributableBlockletDataMapLoader]
+    val dataMapIndexWrappers = new DataMapLoaderRDD(SparkSQLUtil.getSparkSession, loader).collect()
     // add segmentProperties in single thread if carbon table schema is not modified
     if (!carbonTable.getTableInfo.isSchemaModified) {
       addSegmentProperties(carbonTable, dataMapIndexWrappers)
@@ -79,6 +80,7 @@ class SparkBlockletDataMapLoaderJob extends AbstractDataMapJob {
             carbonTable))
       }
     } finally {
+      loader.invalidate()
       executorService.shutdown()
       executorService.awaitTermination(10, TimeUnit.MINUTES)
     }
