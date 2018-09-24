@@ -1,0 +1,11 @@
+ID,country,name,phonetype,serialname,salary,floatField
+1,china,aaa1,phone197,ASD69643,15000,2.34
+2,china,aaa2,phone756,ASD42892,15001,2.34
+3,china,aaa3,phone1904,ASD37014,15002,2.34
+4,china,aaa4,phone2435,ASD66902,15003,2.34
+5,china,aaa5,phone2441,ASD90633,15004,2.34
+6,china,aaa6,phone294,ASD59961,15005,3.5
+7,china,aaa7,phone610,ASD14875,15006,2.34
+8,china,aaa8,phone1848,ASD57308,15007,2.34
+9,china,aaa9,phone706,ASD86717,15008,2.34
+10,usa,aaa10,phone685,ASD30505,15009,2.34

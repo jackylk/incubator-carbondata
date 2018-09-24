@@ -1,0 +1,12 @@
+empname,empid,city,country,gender,salary,amt
+e1,empid82,严重10,严重32,严重43,925880.0,0.0
+e2,empid88,严重20,country36,gender0,585813.0,0.0
+e3,empid960,city62,country26,gender1,153777.0,0.0
+e4,empid41,city28,country30,gender1,262297.0,0.0
+e5,empid572,city62,country13,gender1,843481.0,0.0
+e6,empid258,city60,country47,gender1,594058.0,0.0
+e7,empid308,city9,country47,gender0,173508.0,0.0
+e8,empid341,city40,country47,gender0,225418.0
+e9,empid776,city71,country8,gender1,357413.0
+e10,empid991,严重1,country18,gender1,421788.0
+
