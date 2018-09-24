@@ -61,7 +61,6 @@ public class RowComparatorWithOutKettle implements Comparator<Object[]> {
           if (difference != 0) {
             return difference;
           }
-          dataTypeIdx++;
         } else {
           diff = UnsafeComparer.INSTANCE.compareTo((byte[]) leftNonDictArray[noDictionaryIndex],
               (byte[]) rightNonDictArray[noDictionaryIndex]);
@@ -70,6 +69,7 @@ public class RowComparatorWithOutKettle implements Comparator<Object[]> {
           }
           noDictionaryIndex++;
         }
+        dataTypeIdx++;
       } else {
         diff = leftMdkArray[index] - rightMdkArray[index];
         if (diff != 0) {

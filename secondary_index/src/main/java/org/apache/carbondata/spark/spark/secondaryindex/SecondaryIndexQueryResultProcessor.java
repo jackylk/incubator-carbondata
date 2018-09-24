@@ -289,6 +289,9 @@ public class SecondaryIndexQueryResultProcessor {
           Object dataFromBytes = DataTypeUtil
               .getDataBasedOnDataTypeForNoDictionaryColumn(noDictionaryKeyByIndex,
                   dims.getDataType());
+          if (null != dataFromBytes && dims.getDataType() == DataTypes.TIMESTAMP) {
+            dataFromBytes = (long) dataFromBytes / 1000L;
+          }
           preparedRow[i] = dataFromBytes;
         } else {
           preparedRow[i] = noDictionaryKeyByIndex;
