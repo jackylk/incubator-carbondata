@@ -428,6 +428,9 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
 
     var tableName: Option[String] = None
     val doNotPushToSI = condition match {
+      case Not(EqualTo(left: AttributeReference, right: Literal)) => true
+      case Not(Like(left: AttributeReference, right: Literal)) => true
+      case Not(In(left: AttributeReference, right: Seq[Expression])) => true
       case IsNotNull(child: AttributeReference) => true
       case Like(left: AttributeReference, right: Literal) if (!pushDownRequired) => true
       case EndsWith(left: AttributeReference, right: Literal) if (!pushDownRequired) => true
