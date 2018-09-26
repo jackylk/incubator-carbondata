@@ -36,7 +36,7 @@ object ResourceRegisterAndCopier {
 
   private val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
 
-  val link = "http://code.huawei.com/sWX514299/Carbon/raw/sdv-test_data/integration/spark-common" +
+  val link = "http://code.huawei.com/swx579992/Carbon/raw/sdv-test_data/integration/spark-common" +
              "-test/src/test/resources"
 
   def copyResourcesifNotExists(hdfsPath: String,
