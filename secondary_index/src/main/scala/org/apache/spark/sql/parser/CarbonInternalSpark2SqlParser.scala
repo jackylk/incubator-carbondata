@@ -17,6 +17,8 @@ import org.apache.spark.sql.command.{CreateIndexTable, DropIndex, RegisterIndexT
 
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.core.constants.CarbonCommonConstants
+import org.apache.carbondata.core.datastore.compression.CompressorFactory
+import org.apache.carbondata.core.exception.InvalidConfigurationException
 import org.apache.carbondata.spark.util.CommonUtil
 /**
  * sql parse for secondary index related commands
@@ -100,6 +102,8 @@ class CarbonInternalSpark2SqlParser extends CarbonSpark2SqlParser {
           indexTableName.toLowerCase,
           tableColumns,
           tableProperties)
+        validateColumnCompressorProperty(tableProperties
+          .getOrElse(CarbonCommonConstants.COMPRESSOR, null))
         val indexTableModel = SecondaryIndex(dbName,
           tableName.toLowerCase,
           tableColumns,
@@ -128,6 +132,18 @@ class CarbonInternalSpark2SqlParser extends CarbonSpark2SqlParser {
     }
   }
 
+  private def validateColumnCompressorProperty(columnCompressor: String): Unit = {
+    // Add validatation for column compressor when creating index table
+    try {
+      if (null != columnCompressor) {
+        CompressorFactory.getInstance().getCompressor(columnCompressor)
+      }
+    } catch {
+      case ex: UnsupportedOperationException =>
+        throw new InvalidConfigurationException(ex.getMessage)
+    }
+  }
+
  /**
   * this method validates if index table properties contains other than supported ones
   *
@@ -135,7 +151,10 @@ class CarbonInternalSpark2SqlParser extends CarbonSpark2SqlParser {
   */
   private def validateTableProperties(tableProperties: scala.collection.mutable.Map[String,
     String]) = {
-   val supportedPropertiesForIndexTable = Seq("TABLE_BLOCKSIZE", "COLUMN_META_CACHE", "CACHE_LEVEL")
+    val supportedPropertiesForIndexTable = Seq("TABLE_BLOCKSIZE",
+      "COLUMN_META_CACHE",
+      "CACHE_LEVEL",
+      CarbonCommonConstants.COMPRESSOR.toUpperCase)
     tableProperties.foreach { property =>
       if (!supportedPropertiesForIndexTable.contains(property._1.toUpperCase)) {
         val errorMessage = "Unsupported Table property in index creation: " + property._1.toString

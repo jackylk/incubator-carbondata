@@ -158,7 +158,7 @@ object SecondaryIndexCreator {
               .put("carbonConf", SparkSQLUtil.sessionState(sc.sparkSession).newHadoopConf())
             var eachSegmentSecondaryIndexCreationStatus = false
             CarbonLoaderUtil.checkAndCreateCarbonDataLocation(segId, indexCarbonTable)
-            val carbonLoadModel = getCopyObject(secondaryIndexModel.carbonLoadModel)
+            val carbonLoadModel = getCopyObject(secondaryIndexModel)
             carbonLoadModel
               .setFactTimeStamp(secondaryIndexModel.segmentIdToLoadStartTimeMapping.get(eachSegment)
                 .get)
@@ -226,14 +226,16 @@ object SecondaryIndexCreator {
    *
    * @return
    */
-  def getCopyObject(carbonLoadModel: CarbonLoadModel): CarbonLoadModel = {
+  def getCopyObject(secondaryIndexModel: SecondaryIndexModel): CarbonLoadModel = {
+    val carbonLoadModel = secondaryIndexModel.carbonLoadModel
     val copyObj = new CarbonLoadModel
     copyObj.setTableName(carbonLoadModel.getTableName)
     copyObj.setDatabaseName(carbonLoadModel.getDatabaseName)
-//    copyObj.setPartitionId(carbonLoadModel.getPartitionId)
     copyObj.setLoadMetadataDetails(carbonLoadModel.getLoadMetadataDetails)
     copyObj.setCarbonDataLoadSchema(carbonLoadModel.getCarbonDataLoadSchema)
-    copyObj.setColumnCompressor(carbonLoadModel.getColumnCompressor)
+    copyObj.setColumnCompressor(CarbonInternalScalaUtil
+      .getCompressorForIndexTable(secondaryIndexModel)(secondaryIndexModel
+        .sqlContext.sparkSession))
     copyObj
   }
 
