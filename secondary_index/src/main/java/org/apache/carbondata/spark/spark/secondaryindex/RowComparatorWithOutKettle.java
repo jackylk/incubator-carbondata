@@ -30,12 +30,16 @@ public class RowComparatorWithOutKettle implements Comparator<Object[]> {
 
   private DataType[] noDicDataTypes;
 
+  private boolean[] noDicSortColumnMapping;
+
   /**
    * @param noDictionaryColMaping
    */
-  public RowComparatorWithOutKettle(boolean[] noDictionaryColMaping, DataType[] noDicDataTypes) {
+  public RowComparatorWithOutKettle(boolean[] noDictionaryColMaping, DataType[] noDicDataTypes,
+      boolean[] noDicSortColumnMapping) {
     this.noDictionaryColMaping = noDictionaryColMaping;
     this.noDicDataTypes = noDicDataTypes;
+    this.noDicSortColumnMapping = noDicSortColumnMapping;
   }
 
   /**
@@ -46,30 +50,34 @@ public class RowComparatorWithOutKettle implements Comparator<Object[]> {
     int index = 0;
     int noDictionaryIndex = 0;
     int dataTypeIdx = 0;
+    int noDicSortIdx = 0;
     int[] leftMdkArray = (int[]) rowA[0];
     int[] rightMdkArray = (int[]) rowB[0];
     Object[] leftNonDictArray = (Object[]) rowA[1];
     Object[] rightNonDictArray = (Object[]) rowB[1];
     for (boolean isNoDictionary : noDictionaryColMaping) {
       if (isNoDictionary) {
-        if (DataTypeUtil.isPrimitiveColumn(noDicDataTypes[dataTypeIdx])) {
-          // use data types based comparator for the no dictionary measure columns
-          SerializableComparator comparator = org.apache.carbondata.core.util.comparator.Comparator
-              .getComparator(noDicDataTypes[dataTypeIdx]);
-          int difference = comparator
-              .compare(leftNonDictArray[noDictionaryIndex], rightNonDictArray[noDictionaryIndex]);
-          if (difference != 0) {
-            return difference;
-          }
-        } else {
-          diff = UnsafeComparer.INSTANCE.compareTo((byte[]) leftNonDictArray[noDictionaryIndex],
-              (byte[]) rightNonDictArray[noDictionaryIndex]);
-          if (diff != 0) {
-            return diff;
+        if (noDicSortColumnMapping[noDicSortIdx++]) {
+          if (DataTypeUtil.isPrimitiveColumn(noDicDataTypes[dataTypeIdx])) {
+            // use data types based comparator for the no dictionary measure columns
+            SerializableComparator comparator =
+                org.apache.carbondata.core.util.comparator.Comparator
+                    .getComparator(noDicDataTypes[dataTypeIdx]);
+            int difference = comparator
+                .compare(leftNonDictArray[noDictionaryIndex], rightNonDictArray[noDictionaryIndex]);
+            if (difference != 0) {
+              return difference;
+            }
+          } else {
+            diff = UnsafeComparer.INSTANCE.compareTo((byte[]) leftNonDictArray[noDictionaryIndex],
+                (byte[]) rightNonDictArray[noDictionaryIndex]);
+            if (diff != 0) {
+              return diff;
+            }
           }
           noDictionaryIndex++;
+          dataTypeIdx++;
         }
-        dataTypeIdx++;
       } else {
         diff = leftMdkArray[index] - rightMdkArray[index];
         if (diff != 0) {
