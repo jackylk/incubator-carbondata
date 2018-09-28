@@ -31,6 +31,7 @@ import org.apache.carbondata.core.datamap.dev.CacheableDataMap;
 import org.apache.carbondata.core.datamap.dev.DataMapFactory;
 import org.apache.carbondata.core.datamap.dev.expr.DataMapDistributableWrapper;
 import org.apache.carbondata.core.datamap.dev.expr.DataMapExprWrapper;
+import org.apache.carbondata.core.datastore.block.SegmentPropertiesAndSchemaHolder;
 import org.apache.carbondata.core.indexstore.BlockletDataMapIndexWrapper;
 import org.apache.carbondata.core.indexstore.PartitionSpec;
 import org.apache.carbondata.core.indexstore.TableBlockIndexUniqueIdentifier;
@@ -159,7 +160,17 @@ public class DistributableBlockletDataMapLoader
 
       @Override public void close() throws IOException {
         if (null != tableBlockIndexUniqueIdentifierWrapper) {
-          cache.invalidate(tableBlockIndexUniqueIdentifierWrapper);
+          if (null != wrapper && null != wrapper.getDataMaps() && !wrapper.getDataMaps()
+              .isEmpty()) {
+            String segmentId =
+                tableBlockIndexUniqueIdentifierWrapper.getTableBlockIndexUniqueIdentifier()
+                    .getSegmentId();
+            // as segmentId will be same for all the dataMaps and segmentProperties cache is
+            // maintained at segment level so it need to be called only once for clearing
+            SegmentPropertiesAndSchemaHolder.getInstance()
+                .invalidate(segmentId, wrapper.getDataMaps().get(0).getSegmentPropertiesIndex(),
+                    tableBlockIndexUniqueIdentifierWrapper.isAddTableBlockToUnsafeAndLRUCache());
+          }
         }
       }
 
