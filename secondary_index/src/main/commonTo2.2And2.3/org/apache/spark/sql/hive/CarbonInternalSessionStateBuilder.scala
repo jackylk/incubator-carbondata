@@ -18,6 +18,7 @@ import org.apache.carbondata.spark.acl.CarbonUserGroupInformation
 import org.apache.carbondata.spark.util.CarbonScalaUtil
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
+import org.apache.hadoop.hive.ql.metadata.HiveException
 import org.apache.spark.sql._
 import org.apache.spark.sql.acl._
 import org.apache.spark.sql.catalyst.TableIdentifier
@@ -109,7 +110,16 @@ class CarbonACLSessionCatalog(
   CarbonEnv.init(sparkSession)
 
   override def lookupRelation(name: TableIdentifier): LogicalPlan = {
-    val rtnRelation = super.lookupRelation(name)
+    val rtnRelation: LogicalPlan =
+      try {
+        super.lookupRelation(name)
+      } catch {
+        case ex: Exception =>
+          if (ex.getMessage.contains("Permission denied")) {
+            throw new AnalysisException("Missing Privileges")
+          }
+          throw ex
+      }
     val isRelationRefreshed =
       CarbonSessionUtil.refreshRelation(rtnRelation, name)(sparkSession)
     if (isRelationRefreshed) {

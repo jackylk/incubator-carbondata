@@ -227,7 +227,11 @@ class CarbonFileMetastore extends CarbonMetaStore {
     try {
       lookupRelation(tableIdentifier)(sparkSession)
     } catch {
-      case _: Exception =>
+      case ex: Exception =>
+        if (ex.getMessage.contains("Permission denied") ||
+            ex.getMessage.contains("Missing Privileges")) {
+          throw ex
+        }
         return false
     }
     true

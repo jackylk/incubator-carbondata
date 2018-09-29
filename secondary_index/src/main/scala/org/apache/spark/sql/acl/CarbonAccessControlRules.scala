@@ -339,10 +339,21 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
       dbNameOp: Option[String],
       tableName: String,
       privType: PrivType.PrivType): LogicalPlan = {
-    val isCarbonTable = CarbonEnv.getInstance(sparkSession).carbonMetastore
-      .tableExists(TableIdentifier(tableName,
-        Some(CarbonEnv.getDatabaseName(dbNameOp)(sparkSession))))(
-        sparkSession)
+    var isCarbonTable: Boolean = false
+    isCarbonTable =
+      try {
+        CarbonEnv.getInstance(sparkSession).carbonMetastore
+          .tableExists(TableIdentifier(tableName,
+            Some(CarbonEnv.getDatabaseName(dbNameOp)(sparkSession))))(
+            sparkSession)
+      } catch {
+        case ex: Exception =>
+          if (ex.getMessage.contains("Permission denied") ||
+              ex.getMessage.contains("Missing Privileges")) {
+            throw new AnalysisException("Missing Privileges")
+          }
+          throw ex
+      }
     if (isCarbonTable) {
       checkPrivilege(plan, Set(new PrivObject(
         ObjectType.TABLE,
