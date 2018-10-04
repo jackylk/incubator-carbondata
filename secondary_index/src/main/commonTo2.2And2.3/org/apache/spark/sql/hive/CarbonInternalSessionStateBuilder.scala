@@ -43,7 +43,6 @@ import org.apache.spark.sql.internal.{SQLConf, SessionState, SparkSessionListene
 import org.apache.spark.sql.optimizer.{CarbonIUDRule, CarbonLateDecodeRule, CarbonSITransformationRule, CarbonUDFTransformRule}
 import org.apache.spark.sql.parser._
 import org.apache.spark.sql.types.DecimalType
-import org.apache.spark.util.SparkUtil
 
 
 /**
@@ -372,13 +371,6 @@ class CarbonACLSqlAstBuilder(conf: SQLConf, parser: CarbonSpark2SqlParser,
         fileStorage.equalsIgnoreCase("'org.apache.carbondata.format'")) {
       SparkObjectCreationHelper.createTableTuple(ctx, helper, fileStorage)
     } else {
-      if (SparkUtil.isUQuery) {
-        helper.validateFileFormat(
-          ctx.createTableHeader,
-          SparkObjectCreationHelper.getLocationSpec(ctx),
-          SparkObjectCreationHelper.getFileFormat(ctx)
-        )
-      }
       super.visitCreateHiveTable(ctx)
     }
   }
