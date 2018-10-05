@@ -184,7 +184,7 @@ class CarbonSecondaryIndexRDD[K, V](
       carbonStoreLocation, databaseName, factTableName, tableId)
     val updateStatusManager: SegmentUpdateStatusManager = new SegmentUpdateStatusManager(
       carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable)
-    val jobConf: JobConf = new JobConf(config.value.value)
+    val jobConf: JobConf = new JobConf(hadoopConf)
     SparkHadoopUtil.get.addCredentials(jobConf)
     val job: Job = new Job(jobConf)
     val format = CarbonInputFormatUtil.createCarbonInputFormat(absoluteTableIdentifier, job)

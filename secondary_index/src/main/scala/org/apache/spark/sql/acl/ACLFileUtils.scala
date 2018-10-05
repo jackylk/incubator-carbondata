@@ -16,6 +16,7 @@ import java.security.PrivilegedExceptionAction
 
 import scala.collection.mutable.ArrayBuffer
 
+import org.apache.commons.lang3.StringUtils
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileStatus, FileSystem, Path, PathFilter}
 import org.apache.hadoop.fs.permission.{AclEntry, AclEntryType, FsAction, FsPermission}
@@ -540,6 +541,6 @@ object ACLFileUtils {
   }
 
   def isACLSupported(tablePath: String): Boolean = {
-    !tablePath.startsWith("s3")
+    !StringUtils.isEmpty(tablePath) && !tablePath.startsWith("s3")
   }
 }
