@@ -45,7 +45,7 @@ import org.apache.carbondata.core.metadata.schema.table.column.CarbonDimension
 import org.apache.carbondata.core.scan.executor.util.QueryUtil
 import org.apache.carbondata.core.util.{DataTypeUtil, ThreadLocalSessionInfo}
 import org.apache.carbondata.spark.CarbonAliasDecoderRelation
-import org.apache.carbondata.spark.rdd.{CarbonRDDWithTableInfo, CarbonScanRDD, SerializableConfiguration}
+import org.apache.carbondata.spark.rdd.{CarbonRDDWithTableInfo, CarbonScanRDD}
 
 /**
  * It decodes the data.
