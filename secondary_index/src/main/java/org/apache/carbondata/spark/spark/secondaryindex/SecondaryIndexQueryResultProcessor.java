@@ -316,9 +316,8 @@ public class SecondaryIndexQueryResultProcessor {
       Object[] previousRow = null;
       // comparator for grouping the similar data, means every record
       // should be unique in index table
-      RowComparatorWithOutKettle comparator =
-          new RowComparatorWithOutKettle(noDictionaryColMapping, sortParameters.getNoDictDataType(),
-              sortParameters.getNoDictionarySortColumn());
+      RowComparatorWithOutKettle comparator = new RowComparatorWithOutKettle(noDictionaryColMapping,
+          SecondaryIndexUtil.getNoDictDataTypes(databaseName, indexTableName));
       intermediateFileMerger.finish();
       sortDataRows = null;
       finalMerger.startFinalMerge();

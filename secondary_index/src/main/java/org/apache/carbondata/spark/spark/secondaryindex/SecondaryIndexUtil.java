@@ -23,6 +23,7 @@ import org.apache.carbondata.core.datastore.block.TableBlockInfo;
 import org.apache.carbondata.core.datastore.block.TaskBlockInfo;
 import org.apache.carbondata.core.metadata.CarbonMetadata;
 import org.apache.carbondata.core.metadata.blocklet.DataFileFooter;
+import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.metadata.encoder.Encoding;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonDimension;
@@ -224,5 +225,25 @@ public class SecondaryIndexUtil {
         }
       }
     }
+  }
+
+  /**
+   * In case of secondary index table all the columns participate in SORT. So,
+   * only for SI table sorting all the no dictionary data types are needed.
+   *
+   * @param databaseName
+   * @param tableName
+   * @return
+   */
+  public static DataType[] getNoDictDataTypes(String databaseName, String tableName) {
+    CarbonTable carbonTable = CarbonMetadata.getInstance().getCarbonTable(databaseName, tableName);
+    List<CarbonDimension> dimensions = carbonTable.getDimensionByTableName(tableName);
+    List<DataType> type = new ArrayList<>();
+    for (int i = 0; i < dimensions.size(); i++) {
+      if (!dimensions.get(i).hasEncoding(Encoding.DICTIONARY)) {
+        type.add(dimensions.get(i).getDataType());
+      }
+    }
+    return type.toArray(new DataType[type.size()]);
   }
 }
