@@ -106,7 +106,6 @@
     <module>store/sdk</module>
     <module>assembly</module>
     <module>integration/spark-datasource</module>
-    <module>tools/cli</module>
   </modules>
 
   <properties>
@@ -664,6 +663,7 @@
         <module>common-plugin</module>
         <module>examples/spark2</module>
         <module>datamap/lucene</module>
+        <module>tools/cli</module>
       </modules>
       <build>
         <plugins>
@@ -727,6 +727,7 @@
         <module>examples/spark2</module>
 		    <module>datamap/lucene</module>
         <module>datamap/bloom</module>
+        <module>tools/cli</module>
       </modules>
       <build>
         <plugins>
