@@ -104,9 +104,17 @@ object ACLLoadEventListener {
       }
       val dbName = carbonLoadModel.getDatabaseName
       val carbonTable = carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable
-      val bad_records_logger_enable = optionsFinal.getOrDefault("bad_records_logger_enable", "")
-      val bad_records_action = optionsFinal.getOrDefault("bad_records_action", "")
-      var bad_record_path = optionsFinal.getOrDefault("bad_record_path", "")
+      val bad_records_logger_enable = if (optionsFinal.containsKey("bad_records_logger_enable")) {
+        optionsFinal.get("bad_records_logger_enable")
+      } else {
+        ""
+      }
+      val bad_records_action = if (optionsFinal.containsKey("bad_records_action")) {
+        optionsFinal.get("bad_records_action")
+      } else {
+        ""
+      }
+      var bad_record_path = optionsFinal.get("bad_record_path")
       if (!StringUtils.isEmpty(bad_record_path)) {
         bad_record_path = CarbonUtil.checkAndAppendHDFSUrl(bad_record_path)
       }
