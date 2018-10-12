@@ -693,10 +693,9 @@ class DataLoadingTestCase extends QueryTest with BeforeAndAfterAll {
   //Check insert into Carbon table with select done on a Hive partitioned table
   test("Insert_Func_109", Include) {
      sql(s"""drop table IF EXISTS t_hive14""").collect
-   sql(s"""create table T_Hive14(Item_code STRING,  Profit DECIMAL(3,2)) partitioned by (Qty_total INT, Item_type_cd TINYINT) row format delimited fields terminated by ',' collection items terminated by '$DOLLAR'""").collect
+   sql(s"""create table T_Hive14(Item_code STRING,  Profit DECIMAL(3,2)) partitioned by (Qty_total INT, Item_type_cd TINYINT) row format delimited fields terminated by ',' collection items terminated by '$DOLLAR' location '$resourcesPath/t_hive14'""").collect
    sql(s"""drop table IF EXISTS T_Carbn014""").collect
    sql(s"""create table T_Carbn014(Item_code STRING, Profit DECIMAL(3,2), Qty_total INT, Item_type_cd INT) STORED BY 'org.apache.carbondata.format'""").collect
-   sql(s"""load data INPATH '$resourcesPath/Data/InsertData/T_Hive14.csv' overwrite into table T_Hive14 partition(Qty_total=100, Item_type_cd=2)""").collect
    sql(s"""insert into T_carbn014 select * from T_Hive14 where Qty_total =100""").collect
     checkAnswer(s"""select item_code, profit from T_Carbn014 order by item_code, profit""",
       Seq(Row("BE3423ee",4.99),Row("BE3423ee",4.99),Row("SE3423ee",4.99),Row("SE3423ee",4.99),Row("SE3423ee",4.99),Row("SE3423ee",4.99)), "DataLoadingTestCase-Insert_Func_109")
@@ -818,9 +817,7 @@ class DataLoadingTestCase extends QueryTest with BeforeAndAfterAll {
 
   //Check for insert into carbon table with select statement having logical operators
   test("Insert_Func_043", Include) {
-     sql(s"""create table Logical_Dataload_H (Item_code STRING, Qty int)row format delimited fields terminated by ',' LINES TERMINATED BY '\n'""").collect
-   sql(s"""LOAD DATA INPATH '$resourcesPath/Data/InsertData/Measures.csv' INTO TABLE Logical_Dataload_H""").collect
-   sql(s"""LOAD DATA INPATH '$resourcesPath/Data/InsertData/Measures.csv' INTO TABLE Logical_Dataload_H""").collect
+     sql(s"""create table Logical_Dataload_H (Item_code STRING, Qty int)row format delimited fields terminated by ',' LINES TERMINATED BY '\n' location '$resourcesPath/measures_1'""").collect
    sql(s"""create table Logical_Dataload_C (Item_code STRING, Qty int)stored by 'org.apache.carbondata.format'""").collect
    sql(s"""insert into Logical_Dataload_C select * from Logical_Dataload_H where Item_Code != 'D' and Qty < 40""").collect
     checkAnswer(s"""select count(*) from Logical_Dataload_C""",
@@ -832,11 +829,8 @@ class DataLoadingTestCase extends QueryTest with BeforeAndAfterAll {
 
   //Check that select query fetches the correct data after doing insert and load .
   test("Insert_Func_073", Include) {
-     sql(s"""create table Dataload_H (Item_code STRING, Qty int)row format delimited fields terminated by ',' LINES TERMINATED BY '\n'""").collect
-   sql(s"""LOAD DATA INPATH '$resourcesPath/Data/InsertData/Measures.csv' INTO TABLE Dataload_H""").collect
+     sql(s"""create table Dataload_H (Item_code STRING, Qty int)row format delimited fields terminated by ',' LINES TERMINATED BY '\n' location '$resourcesPath/measures'""").collect
    sql(s"""create table Dataload_C (Item_code STRING, Qty int)stored by 'org.apache.carbondata.format'""").collect
-
-
    sql(s"""insert into Dataload_C select * from Dataload_H""").collect
     checkAnswer(s"""select count(*) from Dataload_C""",
       Seq(Row(6)), "DataLoadingTestCase-Insert_Func_073")
@@ -848,8 +842,7 @@ class DataLoadingTestCase extends QueryTest with BeforeAndAfterAll {
   //Check insert into T_Carbn01 with select from T_Hive1 from diff database
   test("Insert_Func_111", Include) {
      sql(s"""create database insert1""").collect
-   sql(s"""create table insert1.DiffDB_Dataload_H(Item_code STRING, Qty int)row format delimited fields terminated by ',' LINES TERMINATED BY '\n'""").collect
-   sql(s"""LOAD DATA INPATH '$resourcesPath/Data/InsertData/Measures.csv' INTO TABLE insert1.DiffDB_Dataload_H""").collect
+   sql(s"""create table insert1.DiffDB_Dataload_H(Item_code STRING, Qty int)row format delimited fields terminated by ',' LINES TERMINATED BY '\n' location '$resourcesPath/measures'""").collect
    sql(s"""create database insert2""").collect
    sql(s"""create table insert2.DiffDB_Dataload_C(Item_code STRING, Qty int)stored by 'org.apache.carbondata.format'""").collect
    sql(s"""insert into insert2.DiffDB_Dataload_C select * from insert1.DiffDB_Dataload_H""").collect
@@ -1418,16 +1411,15 @@ class DataLoadingTestCase extends QueryTest with BeforeAndAfterAll {
   test("Insert_Func_023_01", Include) {
     dropTable("Norecords_Dataload_C")
     dropTable("Norecords_Dataload_H")
-    intercept[Exception] {
-      sql(s"""create table Norecords_Dataload_H (Item_code STRING, Qty int)stored by 'org.apache.carbondata.format'""").collect
-      sql(s"""LOAD DATA INPATH '$resourcesPath/Data/InsertData/Measures.csv' INTO TABLE Norecords_Dataload_H OPTIONS('DELIMITER'=',' , 'QUOTECHAR'='"','BAD_RECORDS_ACTION'='FORCE','FILEHEADER'='Item_code,Qty')""").collect
-      sql(s"""LOAD DATA INPATH '$resourcesPath/Data/InsertData/Measures.csv' INTO TABLE Norecords_Dataload_H OPTIONS('DELIMITER'=',' , 'QUOTECHAR'='"','BAD_RECORDS_ACTION'='FORCE','FILEHEADER'='Item_code,Qty')""").collect
-      sql(s"""create table Norecords_Dataload_C (Item_code STRING, Qty int)stored by 'org.apache.carbondata.format'""").collect
-      sql(s"""delete from table Norecords_Dataload_H where segment.id in (0,1)""").collect
-      sql(s"""insert into Norecords_Dataload_C select * from Norecords_Dataload_H""").collect
-      checkAnswer(s"""select count(*) from Norecords_Dataload_C""",
-        Seq(Row(0)), "DataLoadingTestCase-Insert_Func_023_01")
-    }
+    sql(s"""create table Norecords_Dataload_H (Item_code STRING, Qty int)stored by 'org.apache.carbondata.format'""").collect
+    sql(s"""LOAD DATA INPATH '$resourcesPath/Data/InsertData/Measures.csv' INTO TABLE Norecords_Dataload_H OPTIONS('DELIMITER'=',' , 'QUOTECHAR'='"','BAD_RECORDS_ACTION'='FORCE','FILEHEADER'='Item_code,Qty')""").collect
+    sql(s"""LOAD DATA INPATH '$resourcesPath/Data/InsertData/Measures.csv' INTO TABLE Norecords_Dataload_H OPTIONS('DELIMITER'=',' , 'QUOTECHAR'='"','BAD_RECORDS_ACTION'='FORCE','FILEHEADER'='Item_code,Qty')""").collect
+    sql(s"""create table Norecords_Dataload_C (Item_code STRING, Qty int)stored by 'org.apache.carbondata.format'""").collect
+    sql(s"""delete from table Norecords_Dataload_H where segment.id in (0,1)""").collect
+    sql(s"""insert into Norecords_Dataload_C select * from Norecords_Dataload_H""").collect
+     checkAnswer(s"""select count(*) from Norecords_Dataload_C""",
+       Seq(Row(0)), "DataLoadingTestCase-Insert_Func_023_01")
+
      dropTable("Norecords_Dataload_C")
      dropTable("Norecords_Dataload_H")
   }
