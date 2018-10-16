@@ -63,7 +63,6 @@ object CarbonInternalMetastore {
         Audit.log(LOGGER, s"Deleting index table $dbName.$tableName")
         CarbonEnv.getInstance(sparkSession).carbonMetastore
           .dropTable(indexCarbonTable.getAbsoluteTableIdentifier)(sparkSession)
-        deleteTableDirectory(indexCarbonTable.getCarbonTableIdentifier, sparkSession)
         if (removeEntryFromParentTable && parentCarbonTable != null) {
           val parentTableName = parentCarbonTable.getTableName
           val relation: LogicalPlan = CarbonEnv.getInstance(sparkSession).carbonMetastore
@@ -250,7 +249,7 @@ object CarbonInternalMetastore {
     keysParts
   }
 
-  private def deleteTableDirectory(carbonTableIdentifier: CarbonTableIdentifier,
+  def deleteTableDirectory(carbonTableIdentifier: CarbonTableIdentifier,
       sparkSession: SparkSession): Unit = {
     val dbName = carbonTableIdentifier.getDatabaseName
     val tableName = carbonTableIdentifier.getTableName

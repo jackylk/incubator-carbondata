@@ -42,6 +42,8 @@ private[sql] case class DropIndex(ifExistsSet: Boolean,
     parentTableName: String = null, var dropIndexSql: String = null)
   extends RunnableCommand {
 
+  var carbonTable: Option[CarbonTable] = _
+
   def run(sparkSession: SparkSession): Seq[Row] = {
     val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
     val dbName = CarbonEnv.getDatabaseName(databaseNameOp)(sparkSession)
@@ -52,11 +54,10 @@ private[sql] case class DropIndex(ifExistsSet: Boolean,
     val databaseLoc = CarbonEnv.getDatabaseLocation(dbName, sparkSession)
     // flag to check if folders and files can be successfully deleted
     var isValidDeletion = false
-    var isUnlockRequired = true
     val carbonLocks: scala.collection.mutable.ArrayBuffer[ICarbonLock] = ArrayBuffer[ICarbonLock]()
     try {
       catalog.checkSchemasModifiedTimeAndReloadTable(TableIdentifier(tableName, Option(dbName)))
-      val carbonTable: Option[CarbonTable] =
+      carbonTable =
         catalog.getTableFromMetadataCache(dbName, tableName) match {
           case Some(carbonTable) => Some(carbonTable)
           case None => try {
@@ -110,8 +111,6 @@ private[sql] case class DropIndex(ifExistsSet: Boolean,
           tablePath,
           parentCarbonTable,
           removeEntryFromParentTable = true)(sparkSession)
-        // index table has been deleted already so unlock is not required.
-        isUnlockRequired = false
       }
     } catch {
       case ex: Exception =>
@@ -120,24 +119,18 @@ private[sql] case class DropIndex(ifExistsSet: Boolean,
           sys.error(s"Dropping table $dbName.$tableName failed: ${ ex.getMessage }")
         }
     } finally {
-      if (carbonLocks.nonEmpty && isUnlockRequired) {
+      if (carbonLocks.nonEmpty) {
         val unlocked = carbonLocks.forall(_.unlock())
         if (unlocked) {
           logInfo("Table MetaData Unlocked Successfully")
           if (isValidDeletion) {
-            val tablePath = databaseLoc + CarbonCommonConstants.FILE_SEPARATOR + tableName
-            // deleting any remaining files.
-            val metadataFilePath = CarbonTablePath.getMetadataPath(tablePath)
-            val fileType = FileFactory.getFileType(metadataFilePath)
-            if (FileFactory.isFileExist(metadataFilePath, fileType)) {
-              val file = FileFactory.getCarbonFile(metadataFilePath, fileType)
-              CarbonUtil.deleteFoldersAndFiles(file.getParentFile)
-            }
-            import org.apache.commons.io.FileUtils
-            if (FileFactory.isFileExist(tablePath, fileType)) {
-              FileUtils.deleteDirectory(new File(tablePath))
+            if (carbonTable != null && carbonTable.isDefined) {
+              CarbonInternalMetastore
+                .deleteTableDirectory(carbonTable.get.getCarbonTableIdentifier, sparkSession)
             }
           }
+        } else {
+          logError("Table metadata unlocking is unsuccessful, index table may be in stale state")
         }
       }
     }
