@@ -26,6 +26,7 @@ class TestSecondaryIndexWithIUD extends QueryTest with BeforeAndAfterAll {
     sql("drop table if exists dest")
     sql("drop table if exists source")
     sql("drop table if exists test")
+    sql("drop table if exists sitestmain")
   }
 
   test("test index with IUD delete all_rows") {
@@ -176,9 +177,33 @@ class TestSecondaryIndexWithIUD extends QueryTest with BeforeAndAfterAll {
       Seq())
   }
 
+  // DTS2018100903355
+  test("test if secondary index gives correct result after updation in maintable") {
+    sql("drop table if exists sitestmain")
+    sql("Create Table sitestmain (id int,dim1 string,name string,tech string,measure int,amount " +
+        "int,dim2 string,M1 int,dim3 string,M2 int,dim4 string,dim5 string,M3 int,dim6 string," +
+        "dim7 string,M4 int,dim8 string,dim9 string,M5 int,dim10 string,dim11 string,dim12 " +
+        "string,M6 int,dim13 string,dim14 string,dim15 string,M7 int,dim16 string,dim17 string," +
+        "dim18 string,dim19 string) STORED BY 'org.apache.carbondata.format' tblproperties" +
+        "('dictionary_include'='dim1,name,tech,dim2,dim3,dim4,dim5,dim6,dim7,dim8,dim9,dim10," +
+        "dim11,dim12,dim13,dim14,dim15,dim16,dim17,dim18,dim19')")
+
+    sql(s"LOAD DATA INPATH '$pluginResourcesPath/IUD/hugedataSI_ful_new.csv' into table sitestmain " +
+        "OPTIONS('DELIMITER'=',' , 'QUOTECHAR'='\"','FILEHEADER'='id,dim1,name,tech,measure," +
+        "amount,dim2,M1,dim3,M2,dim4,dim5,M3,dim6,dim7,M4,dim8,dim9,M5,dim10,dim11,dim12,M6," +
+        "dim13,dim14,dim15,M7,dim16,dim17,dim18,dim19')")
+    val count = sql("select * from sitestmain where name='Cathy'").count()
+    sql("update sitestmain set (name) = ('Revathi') where name='Cathy'").show()
+    sql("create index siindex on table sitestmain(name) as 'org.apache.carbondata.format'")
+    checkAnswer(sql("select name from sitestmain where name='Revathi' limit 1"),
+      Seq(Row("Revathi")))
+    assertResult(count)(sql("select * from sitestmain where name='Revathi'").count())
+  }
+
   override def afterAll: Unit = {
     sql("drop table if exists dest")
     sql("drop table if exists source")
     sql("drop table if exists test")
+    sql("drop table if exists sitestmain")
   }
 }

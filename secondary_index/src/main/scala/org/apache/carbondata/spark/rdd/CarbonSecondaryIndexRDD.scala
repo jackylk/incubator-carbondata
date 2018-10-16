@@ -311,32 +311,31 @@ class CarbonSecondaryIndexRDD[K, V](
         val splitList = multiBlockSplit.getAllSplits
         val tableBlocks: util.List[TableBlockInfo] = CarbonInputSplit.createBlocks(splitList)
         val tableBlocksSize: Int = tableBlocks.size
-        if (tableBlocksSize > 0 && columnCardinality.length == 0) {
+        if (tableBlocksSize > 0) {
           // read the footer and get column cardinality which will be same for all tasks in a
           // segment
           val dataFileFooter: DataFileFooter = SecondaryIndexUtil
             .readFileFooter(tableBlocks.get(tableBlocks.size() - 1))
-          val columnToCardinalityMap = new util.HashMap[java.lang.String, Integer]()
           CarbonCompactionUtil
             .addColumnCardinalityToMap(columnToCardinalityMap,
               dataFileFooter.getColumnInTable,
               dataFileFooter.getSegmentInfo.getColumnCardinality)
-          val updatedMaxSegmentColumnList = new util.ArrayList[ColumnSchema]()
-          // update cardinality and column schema list according to master schema
-          val updatedFactColumnCardinality = CarbonCompactionUtil
-            .updateColumnSchemaAndGetCardinality(columnToCardinalityMap,
-              carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable,
-              updatedMaxSegmentColumnList)
-          columnCardinality = SecondaryIndexUtil
-            .prepareColumnCardinalityForIndexTable(dataFileFooter,
-              updatedFactColumnCardinality,
-              databaseName,
-              factTableName,
-              secondaryIndex.indexTableName)
         }
         logInfo(s"Node: ${ multiBlockSplit.getLocations.mkString(",") }, No.Of Blocks: " +
                 s"${ CarbonInputSplit.createBlocks(splitList).size }")
       }
+      val updatedMaxSegmentColumnList = new util.ArrayList[ColumnSchema]()
+      // update cardinality and column schema list according to master schema
+      val factTableCardinality: Array[Int] = CarbonCompactionUtil
+        .updateColumnSchemaAndGetCardinality(columnToCardinalityMap,
+          carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable,
+          updatedMaxSegmentColumnList)
+      // prepare the cardinality based on the SI table schema
+      columnCardinality = SecondaryIndexUtil
+        .prepareColumnCardinalityForIndexTable(factTableCardinality,
+          databaseName,
+          factTableName,
+          indexCarbonTable.getTableName)
       result.toArray(new Array[Partition](result.size))
     } else {
       new Array[Partition](0)

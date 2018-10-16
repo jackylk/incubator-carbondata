@@ -103,16 +103,14 @@ public class SecondaryIndexUtil {
    * This method will iterate over dimensions of fact table and prepare the
    * column cardinality for index table
    *
-   * @param dataFileFooter
    * @param columnCardinalityForFactTable
    * @param databaseName
    * @param factTableName
    * @param indexTableName
    * @return
    */
-  public static int[] prepareColumnCardinalityForIndexTable(DataFileFooter dataFileFooter,
-      int[] columnCardinalityForFactTable, String databaseName, String factTableName,
-      String indexTableName) {
+  public static int[] prepareColumnCardinalityForIndexTable(int[] columnCardinalityForFactTable,
+      String databaseName, String factTableName, String indexTableName) {
     int[] columnCardinalityForIndexTable = null;
     List<CarbonDimension> factTableDimensions = CarbonMetadata.getInstance()
         .getCarbonTable(databaseName + CarbonCommonConstants.UNDERSCORE + factTableName)
