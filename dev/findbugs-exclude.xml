@@ -95,6 +95,12 @@
     </Or>
   </Match>
   <Match>
+    <Class name="org.apache.carbondata.core.indexstore.PartitionSpec"/>
+    <Or>
+      <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED"/>
+    </Or>
+  </Match>
+  <Match>
     <Bug pattern="SIC_INNER_SHOULD_BE_STATIC_ANON"/>
   </Match>
   <Match>
