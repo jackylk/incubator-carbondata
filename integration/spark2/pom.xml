@@ -360,6 +360,13 @@
     </profile>
     <profile>
       <id>spark-2.3</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.carbondata</groupId>
+          <artifactId>carbondata-cli</artifactId>
+          <version>${project.version}</version>
+        </dependency>
+      </dependencies>
       <properties>
         <spark.version>2.3.2.0200</spark.version>
         <scala.binary.version>2.11</scala.binary.version>
@@ -403,6 +410,13 @@
     </profile>
 	<profile>
     <id>mrs</id>
+    <dependencies>
+      <dependency>
+        <groupId>org.apache.carbondata</groupId>
+        <artifactId>carbondata-cli</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+    </dependencies>
     <properties>
       <spark.version>2.2.1.0200</spark.version>
       <scala.binary.version>2.11</scala.binary.version>

@@ -19,7 +19,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.carbondata.common.CarbonIterator;
-import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.cache.dictionary.Dictionary;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
@@ -36,6 +35,8 @@ import org.apache.carbondata.core.scan.model.QueryModelBuilder;
 import org.apache.carbondata.core.scan.result.RowBatch;
 import org.apache.carbondata.core.util.CarbonUtil;
 import org.apache.carbondata.core.util.DataTypeConverter;
+
+import org.apache.log4j.Logger;
 
 /**
  * Executor class for executing the query on every segment for creating secondary index.
@@ -54,7 +55,7 @@ public class CarbonSecondaryIndexExecutor {
   // converter for UTF8String and decimal conversion
   private DataTypeConverter dataTypeConverter;
 
-  private static final LogService LOGGER =
+  private static final Logger LOGGER =
       LogServiceFactory.getLogService(CarbonSecondaryIndexExecutor.class.getName());
 
   /**
@@ -106,7 +107,7 @@ public class CarbonSecondaryIndexExecutor {
     try {
       queryExecutor.finish();
     } catch (QueryExecutionException e) {
-      LOGGER.error(e, "Problem while finish: ");
+      LOGGER.error("Problem while finish: ", e);
     }
     clearDictionaryFromQueryModel();
   }

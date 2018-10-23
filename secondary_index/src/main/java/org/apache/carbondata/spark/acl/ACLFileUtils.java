@@ -14,7 +14,6 @@ package org.apache.carbondata.spark.acl;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 
-import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.spark.acl.filesystem.PrivilegedFileOperation;
@@ -25,6 +24,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.viewfs.ViewFileSystem;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.log4j.Logger;
 
 /**
  * ACLFileUtils: to do PrivilegedFileOperation on the file
@@ -33,7 +33,7 @@ public class ACLFileUtils {
   /**
    * LOGGER
    */
-  private static final LogService LOGGER =
+  private static final Logger LOGGER =
       LogServiceFactory.getLogService(ACLFileUtils.class.getName());
 
   /**

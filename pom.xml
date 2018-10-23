@@ -598,6 +598,9 @@
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11.8</scala.version>
       </properties>
+      <modules>
+        <module>tools/cli</module>
+      </modules>
       <build>
         <plugins>
           <plugin>

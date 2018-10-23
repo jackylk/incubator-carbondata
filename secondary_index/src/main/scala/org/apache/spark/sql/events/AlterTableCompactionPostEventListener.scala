@@ -17,12 +17,14 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 import org.apache.spark.internal.Logging
+import org.apache.spark.rdd.CarbonMergeFilesRDD
 import org.apache.spark.sql.CarbonEnv
 import org.apache.spark.sql.command.SecondaryIndex
 import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.util.{CarbonInternalScalaUtil, Compactor}
 
-import org.apache.carbondata.common.logging.{LogService, LogServiceFactory}
+import org.apache.carbondata.common.logging.LogServiceFactory
+import org.apache.carbondata.common.logging.impl.Audit
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datamap.Segment
 import org.apache.carbondata.core.mutate.CarbonUpdateUtil
@@ -36,7 +38,7 @@ import org.apache.carbondata.spark.util.CommonUtil
  *
  */
 class AlterTableCompactionPostEventListener extends OperationEventListener with Logging {
-  val LOGGER: LogService = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
+  val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
 
   /**
    * Called on a specified event occurrence
@@ -46,7 +48,7 @@ class AlterTableCompactionPostEventListener extends OperationEventListener with 
   override def onEvent(event: Event, operationContext: OperationContext): Unit = {
     event match {
       case alterTableCompactionPostEvent: AlterTableCompactionPreStatusUpdateEvent =>
-        LOGGER.audit("post load event-listener called")
+        Audit.log(LOGGER, "post load event-listener called")
         val carbonLoadModel = alterTableCompactionPostEvent.carbonLoadModel
         val sQLContext = alterTableCompactionPostEvent.sparkSession.sqlContext
         val compactionType: CompactionType = alterTableCompactionPostEvent.carbonMergerMapping
@@ -83,7 +85,7 @@ class AlterTableCompactionPostEventListener extends OperationEventListener with 
                 validSegmentIds += segment.getSegmentNo
               }
               // Just launch job to merge index for all index tables
-              CommonUtil.mergeIndexFiles(
+              CarbonMergeFilesRDD.mergeIndexFiles(
                 sQLContext.sparkSession,
                 validSegmentIds,
                 segmentFileNameMap,

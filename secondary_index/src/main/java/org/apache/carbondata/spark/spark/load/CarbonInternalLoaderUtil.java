@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
@@ -36,6 +35,7 @@ import org.apache.carbondata.core.util.path.CarbonTablePath;
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel;
 import org.apache.carbondata.processing.util.CarbonLoaderUtil;
 
+import org.apache.log4j.Logger;
 import org.apache.spark.util.CarbonInternalScalaUtil;
 
 /**
@@ -43,7 +43,7 @@ import org.apache.spark.util.CarbonInternalScalaUtil;
  */
 public class CarbonInternalLoaderUtil {
 
-  private static final LogService LOGGER =
+  private static final Logger LOGGER =
       LogServiceFactory.getLogService(CarbonInternalLoaderUtil.class.getName());
 
   public static List<String> getListOfValidSlices(LoadMetadataDetails[] details) {

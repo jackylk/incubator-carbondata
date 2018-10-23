@@ -13,6 +13,7 @@ package org.apache.spark.util
 
 import scala.collection.JavaConverters._
 
+import org.apache.spark.rdd.CarbonMergeFilesRDD
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.command.{SecondaryIndex, SecondaryIndexModel}
 
@@ -74,14 +75,14 @@ object Compactor {
           segmentToSegmentTimestampMap,
           segmentIdToLoadStartTimeMapping.get(validSegments.head).get)
         // merge index files
-        CommonUtil.mergeIndexFiles(sqlContext.sparkSession,
+        CarbonMergeFilesRDD.mergeIndexFiles(sqlContext.sparkSession,
           secondaryIndexModel.validSegments,
           segmentToSegmentTimestampMap,
           indexCarbonTable.getTablePath,
           indexCarbonTable, false)
       } catch {
         case ex: Exception =>
-          LOGGER.error(ex, s"Compaction failed for SI table ${secondaryIndex.indexTableName}")
+          LOGGER.error(s"Compaction failed for SI table ${secondaryIndex.indexTableName}", ex)
           throw ex
       }
     }

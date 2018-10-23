@@ -22,7 +22,7 @@ import org.apache.carbondata.events.{Event, LookupRelationPostEvent, OperationCo
  */
 class SIRefreshEventListener extends OperationEventListener with Logging {
 
-  val LOGGER: LogService = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
+  val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
 
   /**
    * Called on a specified event occurrence

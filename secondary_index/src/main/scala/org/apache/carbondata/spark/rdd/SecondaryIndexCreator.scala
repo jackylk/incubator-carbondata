@@ -16,6 +16,7 @@ import java.util.concurrent.Callable
 import scala.collection.JavaConverters._
 import scala.util.control.Breaks.{break, breakable}
 
+import org.apache.spark.rdd.CarbonMergeFilesRDD
 import org.apache.spark.sql.{CarbonEnv, SQLContext}
 import org.apache.spark.sql.command.{SecondaryIndex, SecondaryIndexModel}
 import org.apache.spark.sql.hive.CarbonRelation
@@ -87,7 +88,7 @@ object SecondaryIndexCreator {
           segmentToSegmentTimestampMap,
           carbonMainTable)
         // merge index files
-        CommonUtil.mergeIndexFiles(sqlContext.sparkSession,
+        CarbonMergeFilesRDD.mergeIndexFiles(sqlContext.sparkSession,
           secondaryIndexModel.validSegments,
           segmentToSegmentTimestampMap,
           indexCarbonTable.getTablePath,
@@ -208,8 +209,8 @@ object SecondaryIndexCreator {
         } catch {
           case e: Exception =>
             LOGGER
-              .error(e, "Problem while cleaning up stale folder for index table " +
-                        secondaryIndexModel.secondaryIndex.indexTableName)
+              .error("Problem while cleaning up stale folder for index table " +
+                        secondaryIndexModel.secondaryIndex.indexTableName, e)
         }
         LOGGER.error(ex)
         throw ex

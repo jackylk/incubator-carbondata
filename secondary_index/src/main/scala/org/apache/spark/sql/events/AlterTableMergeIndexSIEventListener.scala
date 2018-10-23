@@ -17,23 +17,24 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 import org.apache.spark.internal.Logging
+import org.apache.spark.rdd.CarbonMergeFilesRDD
 import org.apache.spark.sql.CarbonEnv
 import org.apache.spark.sql.command.SecondaryIndex
 import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.sql.util.CarbonException
 import org.apache.spark.util.CarbonInternalScalaUtil
 
-import org.apache.carbondata.common.logging.{LogService, LogServiceFactory}
+import org.apache.carbondata.common.logging.impl.Audit
+import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.datamap.Segment
 import org.apache.carbondata.core.locks.{CarbonLockFactory, LockUsage}
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager
 import org.apache.carbondata.events._
 import org.apache.carbondata.processing.merger.{CarbonDataMergerUtil, CompactionType}
-import org.apache.carbondata.spark.util.CommonUtil
 
 
 class AlterTableMergeIndexSIEventListener extends OperationEventListener with Logging {
-  val LOGGER: LogService = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
+  val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
 
   override def onEvent(event: Event, operationContext: OperationContext): Unit = {
     val exceptionEvent = event.asInstanceOf[AlterTableMergeIndexEvent]
@@ -42,7 +43,7 @@ class AlterTableMergeIndexSIEventListener extends OperationEventListener with Lo
     val compactionType = alterTableModel.compactionType
     val sparkSession = exceptionEvent.sparkSession
     if (compactionType.equalsIgnoreCase(CompactionType.SEGMENT_INDEX.toString)) {
-      LOGGER.audit(s"Compaction request received for table " +
+      Audit.log(LOGGER, s"Compaction request received for table " +
                    s"${carbonMainTable.getDatabaseName}.${carbonMainTable.getTableName}")
       val lock = CarbonLockFactory.getCarbonLockObj(
         carbonMainTable.getAbsoluteTableIdentifier,
@@ -80,7 +81,7 @@ class AlterTableMergeIndexSIEventListener extends OperationEventListener with Lo
                 validSegmentIds += segment.getSegmentNo
               }
               // Just launch job to merge index for all index tables
-              CommonUtil.mergeIndexFiles(
+              CarbonMergeFilesRDD.mergeIndexFiles(
                 sparkSession,
                 validSegmentIds,
                 segmentFileNameMap,
@@ -89,12 +90,12 @@ class AlterTableMergeIndexSIEventListener extends OperationEventListener with Lo
                 true)
             }
           }
-          LOGGER.audit(s"Compaction request completed for table " +
+          Audit.log(LOGGER, s"Compaction request completed for table " +
                        s"${carbonMainTable.getDatabaseName}.${carbonMainTable.getTableName}")
           LOGGER.info(s"Compaction request completed for table " +
                       s"${carbonMainTable.getDatabaseName}.${carbonMainTable.getTableName}")
         } else {
-          LOGGER.audit("Not able to acquire the compaction lock for table " +
+          Audit.log(LOGGER, "Not able to acquire the compaction lock for table " +
                        s"${carbonMainTable.getDatabaseName}.${carbonMainTable.getTableName}")
           LOGGER.error(s"Not able to acquire the compaction lock for table" +
                        s" ${carbonMainTable.getDatabaseName}.${carbonMainTable.getTableName}")

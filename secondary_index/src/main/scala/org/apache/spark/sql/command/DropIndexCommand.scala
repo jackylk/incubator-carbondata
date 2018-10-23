@@ -115,7 +115,7 @@ private[sql] case class DropIndex(ifExistsSet: Boolean,
       }
     } catch {
       case ex: Exception =>
-        LOGGER.error(ex, s"Dropping table $dbName.$tableName failed")
+        LOGGER.error(s"Dropping table $dbName.$tableName failed", ex)
         if (!ifExistsSet) {
           sys.error(s"Dropping table $dbName.$tableName failed: ${ ex.getMessage }")
         }

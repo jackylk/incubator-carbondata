@@ -14,11 +14,13 @@ package org.apache.spark.sql.events
 import scala.collection.JavaConverters._
 
 import org.apache.spark.internal.Logging
+import org.apache.spark.rdd.CarbonMergeFilesRDD
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.command.{SecondaryIndex, SecondaryIndexModel}
 import org.apache.spark.util.si.FileInternalUtil
 
-import org.apache.carbondata.common.logging.{LogService, LogServiceFactory}
+import org.apache.carbondata.common.logging.LogServiceFactory
+import org.apache.carbondata.common.logging.impl.Audit
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.metadata.CarbonTableIdentifier
 import org.apache.carbondata.core.statusmanager.SegmentStatus
@@ -27,13 +29,12 @@ import org.apache.carbondata.events._
 import org.apache.carbondata.processing.loading.events.LoadEvents.LoadTablePreStatusUpdateEvent
 import org.apache.carbondata.spark.core.metadata.IndexMetadata
 import org.apache.carbondata.spark.rdd.SecondaryIndexCreator
-import org.apache.carbondata.spark.util.CommonUtil
 
 /**
  *
  */
 class SILoadEventListener extends OperationEventListener with Logging {
-  val LOGGER: LogService = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
+  val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
 
   /**
    * Called on a specified event occurrence
@@ -43,7 +44,7 @@ class SILoadEventListener extends OperationEventListener with Logging {
   override def onEvent(event: Event, operationContext: OperationContext): Unit = {
     event match {
       case preStatusUpdateEvent: LoadTablePreStatusUpdateEvent =>
-        LOGGER.audit("Load pre status update event-listener called")
+        Audit.log(LOGGER, "Load pre status update event-listener called")
         val loadTablePreStatusUpdateEvent = event.asInstanceOf[LoadTablePreStatusUpdateEvent]
         val carbonLoadModel = loadTablePreStatusUpdateEvent.getCarbonLoadModel
         val carbonTable = carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable
@@ -101,7 +102,7 @@ class SILoadEventListener extends OperationEventListener with Logging {
                   indexCarbonTable)
 
                 // merge index files
-                CommonUtil.mergeIndexFiles(sparkSession,
+                CarbonMergeFilesRDD.mergeIndexFiles(sparkSession,
                   secondaryIndexModel.validSegments,
                   segmentToSegmentTimestampMap,
                   indexCarbonTable.getTablePath,

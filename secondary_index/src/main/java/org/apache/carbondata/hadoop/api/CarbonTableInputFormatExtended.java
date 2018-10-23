@@ -18,7 +18,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datamap.DataMapChooser;
@@ -39,6 +38,7 @@ import org.apache.carbondata.core.util.CarbonProperties;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.log4j.Logger;
 import org.apache.spark.util.CarbonInternalScalaUtil;
 
 /**
@@ -46,7 +46,7 @@ import org.apache.spark.util.CarbonInternalScalaUtil;
  */
 public class CarbonTableInputFormatExtended {
 
-  private static final LogService LOG =
+  private static final Logger LOG =
       LogServiceFactory.getLogService(CarbonTableInputFormatExtended.class.getName());
 
   /**

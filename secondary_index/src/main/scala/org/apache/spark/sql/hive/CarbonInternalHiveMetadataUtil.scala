@@ -18,6 +18,7 @@ import org.apache.spark.util.CarbonInternalScalaUtil
 import org.apache.spark.util.si.FileInternalUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
+import org.apache.carbondata.common.logging.impl.Audit
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.spark.spark.indextable.IndexTableUtil
@@ -70,7 +71,7 @@ object CarbonInternalHiveMetadataUtil {
       }
     } catch {
       case e: Exception =>
-        LOGGER.audit(
+        Audit.log(LOGGER,
           s"Error While deleting the table $dbName.$tableName during drop carbon table" +
           e.getMessage)
     }

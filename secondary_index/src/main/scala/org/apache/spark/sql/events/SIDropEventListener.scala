@@ -22,18 +22,18 @@ import org.apache.spark.sql.hive.CarbonInternalMetastore
 import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.util.CarbonInternalScalaUtil
 
-import org.apache.carbondata.common.logging.{LogService, LogServiceFactory}
+import org.apache.carbondata.common.logging.LogServiceFactory
+import org.apache.carbondata.common.logging.impl.Audit
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
-import org.apache.carbondata.events.{DropTablePreEvent, Event, OperationContext,
-OperationEventListener}
+import org.apache.carbondata.events.{DropTablePreEvent, Event, OperationContext, OperationEventListener}
 
 /**
  *
  */
 class SIDropEventListener extends OperationEventListener with Logging {
-  val LOGGER: LogService = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
+  val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
 
   /**
    * Called on a specified event occurrence
@@ -43,7 +43,7 @@ class SIDropEventListener extends OperationEventListener with Logging {
   override def onEvent(event: Event, operationContext: OperationContext): Unit = {
     event match {
       case dropTablePreEvent: DropTablePreEvent =>
-        LOGGER.audit("drop table pre event-listener called")
+        Audit.log(LOGGER, "drop table pre event-listener called")
         val parentCarbonTable = dropTablePreEvent.carbonTable
         try {
           val tableIdentifier = new TableIdentifier(parentCarbonTable.getTableName,
@@ -74,11 +74,11 @@ class SIDropEventListener extends OperationEventListener with Logging {
                 } catch {
                   case ex: Exception =>
                     LOGGER
-                      .error(ex,
+                      .error(
                         s"Dropping Index table ${ tableIdentifier.database }.${
                           tableIdentifier
                             .table
-                        } failed")
+                        } failed", ex)
                     if (!ifExistsSet) {
                       sys
                         .error(s"Dropping Index table ${ tableIdentifier.database }.${

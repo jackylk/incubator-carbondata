@@ -15,9 +15,10 @@ import java.lang.reflect.Field;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.spark.core.CarbonInternalCommonConstants;
+
+import org.apache.log4j.Logger;
 
 /**
  *
@@ -27,7 +28,7 @@ public final class CarbonPluginProperties {
   /**
    * Attribute for Carbon LOGGER.
    */
-  private static final LogService LOGGER =
+  private static final Logger LOGGER =
       LogServiceFactory.getLogService(CarbonProperties.class.getName());
 
   /**

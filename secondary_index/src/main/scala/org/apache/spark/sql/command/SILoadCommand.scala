@@ -13,6 +13,7 @@ package org.apache.spark.sql.command
 
 import scala.collection.JavaConverters._
 
+import org.apache.spark.rdd.CarbonMergeFilesRDD
 import org.apache.spark.sql.{CarbonEnv, Row, SparkSession, SQLContext}
 import org.apache.spark.sql.execution.command.RunnableCommand
 import org.apache.spark.sql.hive.CarbonRelation
@@ -21,12 +22,10 @@ import org.apache.spark.util.si.FileInternalUtil
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.compression.CompressorFactory
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
-import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatus,
-SegmentStatusManager}
+import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatus, SegmentStatusManager}
 import org.apache.carbondata.processing.loading.model.{CarbonDataLoadSchema, CarbonLoadModel}
 import org.apache.carbondata.spark.rdd.SecondaryIndexCreator
 import org.apache.carbondata.spark.spark.load.CarbonInternalLoaderUtil
-import org.apache.carbondata.spark.util.CommonUtil
 
 case class SecondaryIndex(var databaseName: Option[String], tableName: String,
     columnNames: List[String], indexTableName: String)
@@ -126,7 +125,7 @@ private[sql] case class LoadDataForSecondaryIndex(indexModel: SecondaryIndex) ex
             segmentToSegmentTimestampMap,
             indexCarbonTable)
           // merge index files
-          CommonUtil.mergeIndexFiles(sparkSession,
+          CarbonMergeFilesRDD.mergeIndexFiles(sparkSession,
             secondaryIndexModel.validSegments,
             segmentToSegmentTimestampMap,
             indexCarbonTable.getTablePath,

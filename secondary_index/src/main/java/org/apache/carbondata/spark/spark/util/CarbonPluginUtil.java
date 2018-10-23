@@ -14,7 +14,6 @@ package org.apache.carbondata.spark.spark.util;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.metadata.CarbonMetadata;
@@ -24,13 +23,14 @@ import org.apache.carbondata.core.statusmanager.SegmentStatusManager;
 import org.apache.carbondata.core.util.DeleteLoadFolders;
 import org.apache.carbondata.core.util.path.CarbonTablePath;
 
+import org.apache.log4j.Logger;
 import org.apache.spark.util.CarbonInternalScalaUtil;
 
 /**
  *
  */
 public final class CarbonPluginUtil {
-  private static final LogService LOG =
+  private static final Logger LOG =
       LogServiceFactory.getLogService(CarbonPluginUtil.class.getName());
 
   /**

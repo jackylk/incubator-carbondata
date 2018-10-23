@@ -23,7 +23,7 @@ import org.apache.carbondata.events.{CreateCarbonRelationPostEvent, Event, Opera
  */
 class CreateCarbonRelationEventListener extends OperationEventListener with Logging {
 
-  val LOGGER: LogService = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
+  val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
 
   /**
    * Called on a specified event occurrence

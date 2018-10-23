@@ -25,6 +25,7 @@ import org.apache.spark.sql.hive.{CarbonInternalHiveMetadataUtil, CarbonInternal
 import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
+import org.apache.carbondata.common.logging.impl.Audit
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.locks.{CarbonLockFactory, CarbonLockUtil, ICarbonLock, LockUsage}
 import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier
@@ -66,9 +67,8 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
 
     val tablePath = dbLocation + CarbonCommonConstants.FILE_SEPARATOR + indexTableName
 
-
-    LOGGER.audit(
-      s"Creating Index with Database name [$databaseName] and Index name [$indexTableName]")
+    Audit.log(LOGGER,
+        s"Creating Index with Database name [$databaseName] and Index name [$indexTableName]")
     val catalog = CarbonEnv.getInstance(sparkSession).carbonMetastore
     val identifier = TableIdentifier(tableName, indexModel.databaseName)
     catalog.checkSchemasModifiedTimeAndReloadTable(identifier)
@@ -133,8 +133,9 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
         .tableExists(TableIdentifier(indexTableName, indexModel.databaseName))
       if (((indexTableExistsInCarbon && !indexTableExistsInHive) ||
         (!indexTableExistsInCarbon && indexTableExistsInHive)) && isCreateSIndex) {
-        LOGGER
-          .audit(s"Index with [$indexTableName] under database [$databaseName] is present in " +
+        Audit
+          .log(LOGGER,
+            s"Index with [$indexTableName] under database [$databaseName] is present in " +
             s"stale state.")
         throw new ErrorMessage(
           s"Index with [$indexTableName] under database [$databaseName] is present in " +
@@ -143,8 +144,9 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
         val indexTableStorePath = storePath + CarbonCommonConstants.FILE_SEPARATOR + databaseName +
           CarbonCommonConstants.FILE_SEPARATOR + indexTableName
         if (CarbonUtil.isFileExists(indexTableStorePath)) {
-          LOGGER
-            .audit(s"Index with [$indexTableName] under database [$databaseName] is present in " +
+          Audit
+            .log(LOGGER,
+              s"Index with [$indexTableName] under database [$databaseName] is present in " +
               s"stale state.")
           throw new ErrorMessage(
             s"Index with [$indexTableName] under database [$databaseName] is present in " +
@@ -234,7 +236,7 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
            tableName, indexTableName, absoluteTableIdentifier)
        }
       if (isCreateSIndex && indexTableExists) {
-        LOGGER.audit(
+        Audit.log(LOGGER,
           s"Index creation with Database name [$databaseName] and index name " +
             s"[$indexTableName] failed. " +
             s"Index [$indexTableName] already exists under database [$databaseName]")
@@ -242,7 +244,7 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
           s"Index [$indexTableName] already exists under database [$databaseName]")
       } else {
         if (!isCreateSIndex && !indexTableExists) {
-          LOGGER.audit(
+          Audit.log(LOGGER,
             s"Index registration with Database name [$databaseName] and index name " +
               s"[$indexTableName] failed. " +
               s"Index [$indexTableName] does not exists under database [$databaseName]")
@@ -330,8 +332,9 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
           new CreateTablePostExecutionEvent(sparkSession, tableIdentifier)
         OperationListenerBus.getInstance.fireEvent(createTablePostExecutionEvent, operationContext)
       }
-      LOGGER
-        .audit(s"Index created with Database name [$databaseName] and Index name [$indexTableName]")
+      Audit
+        .log(LOGGER,
+          s"Index created with Database name [$databaseName] and Index name [$indexTableName]")
     } catch {
       case err@(_: ErrorMessage | _: IndexTableExistException) =>
         sys.error(err.getMessage)
@@ -343,12 +346,11 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
             .lookupRelation(identifier)(sparkSession).asInstanceOf[CarbonRelation]
         } catch {
           case e: Exception =>
-            LOGGER
-              .audit(s"Index table [$indexTableName] does not exist under Database " +
+            Audit.log(LOGGER, s"Index table [$indexTableName] does not exist under Database " +
                 s"[$databaseName]")
         }
         if (relation != null) {
-          LOGGER.audit(s"Deleting Index [$indexTableName] under Database [$databaseName]" +
+          Audit.log(LOGGER, s"Deleting Index [$indexTableName] under Database [$databaseName]" +
             "as create Index failed")
           CarbonInternalMetastore.dropIndexTable(identifier, relation.metaData.carbonTable,
             storePath,
@@ -358,7 +360,7 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
            '$oldIndexInfo')""")
         }
         CarbonInternalScalaUtil.removeIndexTableInfo(carbonTable, indexTableName)
-        LOGGER.audit(s"Index creation with Database name [$databaseName] " +
+        Audit.log(LOGGER, s"Index creation with Database name [$databaseName] " +
           s"and Index name [$indexTableName] failed")
         throw e
     }
@@ -433,7 +435,7 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
           .containsKey(CarbonCommonConstants.FLAT_FOLDER) &&
         carbonTable.getTableInfo.getFactTable.getTableProperties
           .get(CarbonCommonConstants.FLAT_FOLDER).toBoolean) {
-      LOGGER.audit(
+      Audit.log(LOGGER,
         s"Index creation with Database name [$databaseName] and index name " +
         s"[$indexTableName] failed. " +
         s"Index table creation is not permitted on table with flat folder structure")

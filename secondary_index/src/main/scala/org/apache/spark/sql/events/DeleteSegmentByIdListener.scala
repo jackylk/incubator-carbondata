@@ -19,7 +19,8 @@ import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.api.CarbonStore
-import org.apache.carbondata.common.logging.{LogService, LogServiceFactory}
+import org.apache.carbondata.common.logging.LogServiceFactory
+import org.apache.carbondata.common.logging.impl.Audit
 import org.apache.carbondata.events.{DeleteSegmentByIdPostEvent, Event, OperationContext, OperationEventListener}
 
 /**
@@ -27,7 +28,7 @@ import org.apache.carbondata.events.{DeleteSegmentByIdPostEvent, Event, Operatio
  */
 class DeleteSegmentByIdListener extends OperationEventListener with Logging {
 
-  val LOGGER: LogService = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
+  val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
 
   /**
    * Called on a specified event occurrence
@@ -37,7 +38,7 @@ class DeleteSegmentByIdListener extends OperationEventListener with Logging {
   override def onEvent(event: Event, operationContext: OperationContext): Unit = {
     event match {
       case deleteSegmentPostEvent: DeleteSegmentByIdPostEvent =>
-        LOGGER.audit("Delete segment By id post event listener called")
+        Audit.log(LOGGER, "Delete segment By id post event listener called")
         val carbonTable = deleteSegmentPostEvent.carbonTable
         val loadIds = deleteSegmentPostEvent.loadIds
         val sparkSession = deleteSegmentPostEvent.sparkSession

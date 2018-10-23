@@ -24,6 +24,7 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
+import org.apache.carbondata.common.logging.impl.Audit
 import org.apache.carbondata.core.cache.dictionary.ManageDictionaryAndBTree
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datamap.DataMapStoreManager
@@ -59,7 +60,7 @@ object CarbonInternalMetastore {
     try {
       if (indexCarbonTable != null) {
         ManageDictionaryAndBTree.clearBTreeAndDictionaryLRUCache(indexCarbonTable)
-        LOGGER.audit(s"Deleting index table $dbName.$tableName")
+        Audit.log(LOGGER, s"Deleting index table $dbName.$tableName")
         CarbonEnv.getInstance(sparkSession).carbonMetastore
           .dropTable(indexCarbonTable.getAbsoluteTableIdentifier)(sparkSession)
         deleteTableDirectory(indexCarbonTable.getCarbonTableIdentifier, sparkSession)
@@ -91,7 +92,7 @@ object CarbonInternalMetastore {
       sparkSession.sessionState.catalog
         .dropTable(indexTableIdentifier, ignoreIfNotExists = true, purge = false)
       sparkSession.sessionState.catalog.refreshTable(indexTableIdentifier)
-      LOGGER.audit(s"Deleted index table $dbName.$tableName")
+      Audit.log(LOGGER, s"Deleted index table $dbName.$tableName")
     }
   }
 
@@ -173,7 +174,7 @@ object CarbonInternalMetastore {
       } catch {
         case e: Exception =>
           // In case of creating a table, hivetable will not be available.
-          LOGGER.error(e, e.getMessage)
+          LOGGER.error(e.getMessage, e)
       }
     }
   }
