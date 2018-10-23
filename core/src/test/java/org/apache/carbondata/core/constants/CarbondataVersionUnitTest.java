@@ -31,4 +31,8 @@ public class CarbondataVersionUnitTest {
     assertTrue(StringUtils.isNoneEmpty(CarbonVersionConstants.CARBONDATA_REVISION));
     assertTrue(StringUtils.isNoneEmpty(CarbonVersionConstants.CARBONDATA_BUILD_DATE));
   }
+
+  @Test public void testCarbonBVersion() {
+    assertTrue(CarbonVersionConstants.CARBONDATA_VERSION.contains(".B0"));
+  }
 }

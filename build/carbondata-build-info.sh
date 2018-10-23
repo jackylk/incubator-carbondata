@@ -27,10 +27,14 @@ mkdir -p "$RESOURCE_DIR"
 CARBONDATA_BUILD_INFO="${RESOURCE_DIR}"/carbondata-version-info.properties
 
 echo_build_properties() {
+  if [ $1 -eq $2 ]; then
+  echo version=$2
+  else
   echo version=$1
+  fi
   echo revision=$(git rev-parse HEAD)
   echo branch=$(git rev-parse --abbrev-ref HEAD)
   echo date=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 }
 
-echo_build_properties $2 > "$CARBONDATA_BUILD_INFO"
+echo_build_properties $2 $3 > "$CARBONDATA_BUILD_INFO"
