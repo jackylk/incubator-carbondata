@@ -693,9 +693,12 @@ class DataLoadingTestCase extends QueryTest with BeforeAndAfterAll {
   //Check insert into Carbon table with select done on a Hive partitioned table
   test("Insert_Func_109", Include) {
      sql(s"""drop table IF EXISTS t_hive14""").collect
-   sql(s"""create table T_Hive14(Item_code STRING,  Profit DECIMAL(3,2)) partitioned by (Qty_total INT, Item_type_cd TINYINT) row format delimited fields terminated by ',' collection items terminated by '$DOLLAR' location '$resourcesPath/t_hive14'""").collect
+   sql(s"""drop table IF EXISTS T_Hive14_temp""").collect
+   sql(s"""create table T_Hive14_temp(Item_code STRING,  Profit DECIMAL(3,2)) row format delimited fields terminated by ',' collection items terminated by '$DOLLAR' location '$resourcesPath/t_hive14'""").collect
+   sql(s"""create table T_Hive14(Item_code STRING,  Profit DECIMAL(3,2)) partitioned by (Qty_total INT, Item_type_cd TINYINT) row format delimited fields terminated by ',' collection items terminated by '$DOLLAR'""").collect
    sql(s"""drop table IF EXISTS T_Carbn014""").collect
    sql(s"""create table T_Carbn014(Item_code STRING, Profit DECIMAL(3,2), Qty_total INT, Item_type_cd INT) STORED BY 'org.apache.carbondata.format'""").collect
+   sql(s"""insert overwrite table T_Hive14 partition(Qty_total=100, Item_type_cd=2) select Item_code,Profit from T_Hive14_temp""").collect
    sql(s"""insert into T_carbn014 select * from T_Hive14 where Qty_total =100""").collect
     checkAnswer(s"""select item_code, profit from T_Carbn014 order by item_code, profit""",
       Seq(Row("BE3423ee",4.99),Row("BE3423ee",4.99),Row("SE3423ee",4.99),Row("SE3423ee",4.99),Row("SE3423ee",4.99),Row("SE3423ee",4.99)), "DataLoadingTestCase-Insert_Func_109")
