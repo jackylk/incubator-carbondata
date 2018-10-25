@@ -530,6 +530,7 @@
       <modules>
         <module>streaming</module>
         <module>integration/spark-common</module>
+        <module>tools/cli</module>
         <module>integration/spark-common-test</module>
         <module>datamap/examples</module>
         <module>assembly</module>
