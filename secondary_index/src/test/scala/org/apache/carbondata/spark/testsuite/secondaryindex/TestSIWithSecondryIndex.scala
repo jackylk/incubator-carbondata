@@ -110,7 +110,7 @@ class TestSIWithSecondryIndex extends QueryTest with BeforeAndAfterAll {
     checkExistence(descResult, false, "COLUMN_META_CACHE")
     sql("Alter table indexCache UNSET TBLPROPERTIES('cache_level')")
     descResult = sql("describe formatted indexCache")
-    checkExistence(descResult, true, "CACHE_LEVEL")
+    checkExistence(descResult, true, "Min/Max Index Cache Level")
     //alter SI table to set the properties again
     sql("Alter table indexCache SET TBLPROPERTIES('column_meta_cache'='c1')")
     assert(isExpectedValueValid("default", "indexCache", "column_meta_cache", "c1"))

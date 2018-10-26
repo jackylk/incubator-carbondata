@@ -16,6 +16,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.carbondata.common.logging.LogServiceFactory;
+import org.apache.carbondata.core.util.annotations.CarbonProperty;
 import org.apache.carbondata.spark.core.CarbonInternalCommonConstants;
 
 import org.apache.log4j.Logger;

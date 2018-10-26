@@ -11,7 +11,7 @@
  */
 package org.apache.carbondata.spark.acl;
 
-import org.apache.carbondata.core.util.CarbonProperty;
+import org.apache.carbondata.core.util.annotations.CarbonProperty;
 
 /**
  * Internal huawei constants

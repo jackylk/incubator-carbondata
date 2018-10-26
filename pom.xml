@@ -104,7 +104,6 @@
     <module>integration/hive</module>
     <module>datamap/examples</module>
     <module>store/sdk</module>
-    <module>assembly</module>
     <module>integration/spark-datasource</module>
   </modules>
 
@@ -661,7 +660,6 @@
         <module>datamap/bloom</module>
         <module>integration/spark-common</module>
         <module>datamap/examples</module>
-        <module>store/search</module>
         <module>assembly</module>
         <module>secondary_index</module>
         <module>common-plugin</module>
