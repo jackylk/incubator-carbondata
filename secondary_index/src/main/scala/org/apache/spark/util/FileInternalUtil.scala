@@ -11,9 +11,13 @@
  */
 package org.apache.spark.util.si
 
+import java.util
 import java.util.UUID
 
 import scala.collection.JavaConverters._
+
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
@@ -68,7 +72,7 @@ object FileInternalUtil {
     loadStatus: SegmentStatus,
     segmentIdToLoadStartTimeMapping: scala.collection.mutable.Map[String, java.lang.Long],
     segmentToSegmentTimestampMap: java.util.Map[String, String],
-    carbonTable: CarbonTable): Boolean = {
+    carbonTable: CarbonTable, sparkSession: SparkSession): Boolean = {
     var loadMetadataDetailsList = Array[LoadMetadataDetails]()
     val loadEndTime = CarbonUpdateUtil.readCurrentTime
     validSegments.foreach { segmentId =>
@@ -94,13 +98,15 @@ object FileInternalUtil {
       CarbonLoaderUtil.addDataIndexSizeIntoMetaEntry(loadMetadataDetail, segmentId, carbonTable)
       loadMetadataDetailsList +:= loadMetadataDetail
     }
-
+    val indexTables = CarbonInternalScalaUtil
+      .getIndexCarbonTables(carbonTable, sparkSession)
     val status = CarbonInternalLoaderUtil.recordLoadMetadata(
       loadMetadataDetailsList.toList.asJava,
       validSegments.asJava,
+      carbonTable,
+      indexTables,
       databaseName,
-      tableName,
-      carbonTable
+      tableName
     )
     status
   }
@@ -113,12 +119,13 @@ object FileInternalUtil {
    * @param isForceDeletion
    */
   def cleanIndexFiles(factTable: CarbonTable,
+      indexTables: util.ArrayList[CarbonTable],
       carbonStoreLocation: String,
       isForceDeletion: Boolean): Unit = {
     try {
       CarbonPluginUtil
-        .cleanUpIndexFiles(factTable,
-          carbonStoreLocation,
+        .cleanUpIndexFiles(
+          indexTables,
           isForceDeletion)
     } catch {
       case e: Exception =>

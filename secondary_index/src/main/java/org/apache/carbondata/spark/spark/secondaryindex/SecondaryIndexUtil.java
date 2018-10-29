@@ -21,7 +21,6 @@ import org.apache.carbondata.common.logging.impl.Audit;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.block.TableBlockInfo;
 import org.apache.carbondata.core.datastore.block.TaskBlockInfo;
-import org.apache.carbondata.core.metadata.CarbonMetadata;
 import org.apache.carbondata.core.metadata.blocklet.DataFileFooter;
 import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.metadata.encoder.Encoding;
@@ -103,21 +102,18 @@ public class SecondaryIndexUtil {
    * This method will iterate over dimensions of fact table and prepare the
    * column cardinality for index table
    *
+   * @param carbonTable
    * @param columnCardinalityForFactTable
-   * @param databaseName
-   * @param factTableName
-   * @param indexTableName
+   * @param indexTable
    * @return
    */
-  public static int[] prepareColumnCardinalityForIndexTable(int[] columnCardinalityForFactTable,
-      String databaseName, String factTableName, String indexTableName) {
+  public static int[] prepareColumnCardinalityForIndexTable(CarbonTable carbonTable,
+      int[] columnCardinalityForFactTable, CarbonTable indexTable) {
     int[] columnCardinalityForIndexTable = null;
-    List<CarbonDimension> factTableDimensions = CarbonMetadata.getInstance()
-        .getCarbonTable(databaseName + CarbonCommonConstants.UNDERSCORE + factTableName)
-        .getDimensionByTableName(factTableName);
-    List<CarbonDimension> indexTableDimensions = CarbonMetadata.getInstance()
-        .getCarbonTable(databaseName + CarbonCommonConstants.UNDERSCORE + indexTableName)
-        .getDimensionByTableName(indexTableName);
+    List<CarbonDimension> factTableDimensions =
+        carbonTable.getDimensionByTableName(carbonTable.getTableName());
+    List<CarbonDimension> indexTableDimensions =
+        indexTable.getDimensionByTableName(indexTable.getTableName());
     List<Integer> factToIndexTableDimensionIndexMapping =
         new ArrayList<>(CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);
     for (CarbonDimension indexTableDimension : indexTableDimensions) {
@@ -147,20 +143,17 @@ public class SecondaryIndexUtil {
   /**
    * This method will return fact table to index table column mapping
    *
-   * @param databaseName
-   * @param factTableName
-   * @param indexTableName
+   * @param carbonTable
+   * @param indexTable
+   * @param indexTable
    * @return
    */
-  public static int[] prepareColumnMappingOfFactToIndexTable(
-      String databaseName, String factTableName,
-      String indexTableName, Boolean isDictColsAlone) {
-    List<CarbonDimension> factTableDimensions = CarbonMetadata.getInstance()
-            .getCarbonTable(databaseName + CarbonCommonConstants.UNDERSCORE + factTableName)
-            .getDimensionByTableName(factTableName);
-    List<CarbonDimension> indexTableDimensions = CarbonMetadata.getInstance()
-            .getCarbonTable(databaseName + CarbonCommonConstants.UNDERSCORE + indexTableName)
-            .getDimensionByTableName(indexTableName);
+  public static int[] prepareColumnMappingOfFactToIndexTable(CarbonTable carbonTable,
+      CarbonTable indexTable, Boolean isDictColsAlone) {
+    List<CarbonDimension> factTableDimensions =
+        carbonTable.getDimensionByTableName(carbonTable.getTableName());
+    List<CarbonDimension> indexTableDimensions =
+        indexTable.getDimensionByTableName(indexTable.getTableName());
     List<Integer> dims = new ArrayList<Integer>();
     for (CarbonDimension indexTableDimension : indexTableDimensions) {
       for (int i = 0; i < factTableDimensions.size(); i++) {
@@ -231,13 +224,12 @@ public class SecondaryIndexUtil {
    * In case of secondary index table all the columns participate in SORT. So,
    * only for SI table sorting all the no dictionary data types are needed.
    *
-   * @param databaseName
-   * @param tableName
+   * @param carbonTable
    * @return
    */
-  public static DataType[] getNoDictDataTypes(String databaseName, String tableName) {
-    CarbonTable carbonTable = CarbonMetadata.getInstance().getCarbonTable(databaseName, tableName);
-    List<CarbonDimension> dimensions = carbonTable.getDimensionByTableName(tableName);
+  public static DataType[] getNoDictDataTypes(CarbonTable carbonTable) {
+    List<CarbonDimension> dimensions =
+        carbonTable.getDimensionByTableName(carbonTable.getTableName());
     List<DataType> type = new ArrayList<>();
     for (int i = 0; i < dimensions.size(); i++) {
       if (!dimensions.get(i).hasEncoding(Encoding.DICTIONARY)) {

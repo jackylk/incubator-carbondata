@@ -123,7 +123,8 @@ private[sql] case class LoadDataForSecondaryIndex(indexModel: SecondaryIndex) ex
             SegmentStatus.SUCCESS,
             secondaryIndexModel.segmentIdToLoadStartTimeMapping,
             segmentToSegmentTimestampMap,
-            indexCarbonTable)
+            indexCarbonTable,
+            sparkSession)
           // merge index files
           CarbonMergeFilesRDD.mergeIndexFiles(sparkSession,
             secondaryIndexModel.validSegments,

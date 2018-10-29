@@ -27,12 +27,13 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.command.SecondaryIndex
 import org.apache.spark.sql.execution.command.NodeInfo
 import org.apache.spark.sql.hive.DistributionUtil
+import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.converter.SparkDataTypeConverterImpl
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.block.{Distributable, TableBlockInfo, TaskBlockInfo}
-import org.apache.carbondata.core.metadata.{AbsoluteTableIdentifier, CarbonMetadata, CarbonTableIdentifier}
+import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier
 import org.apache.carbondata.core.metadata.blocklet.DataFileFooter
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.metadata.schema.table.column.{CarbonDimension, ColumnSchema}
@@ -72,12 +73,14 @@ class CarbonSecondaryIndexRDD[K, V](
   val factTableName = carbonLoadModel.getTableName
   val tableId = carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable.getAbsoluteTableIdentifier
     .getCarbonTableIdentifier.getTableId
+  private val indexTable: CarbonTable = CarbonInternalScalaUtil
+    .getIndexCarbonTable(databaseName, secondaryIndex.indexTableName)(ss)
   val factToIndexColumnMapping: Array[Int] = SecondaryIndexUtil
-    .prepareColumnMappingOfFactToIndexTable(
-      databaseName, factTableName, secondaryIndex.indexTableName, false)
+    .prepareColumnMappingOfFactToIndexTable(carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable,
+      indexTable, false)
   val factToIndexDictColumnMapping: Array[Int] = SecondaryIndexUtil
-    .prepareColumnMappingOfFactToIndexTable(
-      databaseName, factTableName, secondaryIndex.indexTableName, true)
+    .prepareColumnMappingOfFactToIndexTable(carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable,
+      indexTable, true)
 
   override def internalCompute(theSplit: Partition, context: TaskContext): Iterator[(K, V)] = {
     val LOGGER = LogServiceFactory.getLogService(this.getClass.getName)
@@ -131,13 +134,12 @@ class CarbonSecondaryIndexRDD[K, V](
             false,
             false)
         CarbonProperties.getInstance().addProperty(tempLocationKey, localStoreLocation)
-        CarbonMetadata.getInstance().addCarbonTable(indexCarbonTable)
         val secondaryIndexQueryResultProcessor: SecondaryIndexQueryResultProcessor = new
             SecondaryIndexQueryResultProcessor(
               carbonLoadModel,
               columnCardinality,
               segmentId,
-              secondaryIndex.indexTableName,
+              indexCarbonTable,
               factToIndexColumnMapping,
               factToIndexDictColumnMapping)
         context.addTaskCompletionListener { context =>
@@ -332,10 +334,10 @@ class CarbonSecondaryIndexRDD[K, V](
           updatedMaxSegmentColumnList)
       // prepare the cardinality based on the SI table schema
       columnCardinality = SecondaryIndexUtil
-        .prepareColumnCardinalityForIndexTable(factTableCardinality,
-          databaseName,
-          factTableName,
-          indexCarbonTable.getTableName)
+        .prepareColumnCardinalityForIndexTable(carbonLoadModel.getCarbonDataLoadSchema
+          .getCarbonTable,
+          factTableCardinality,
+          indexCarbonTable)
       result.toArray(new Array[Partition](result.size))
     } else {
       new Array[Partition](0)

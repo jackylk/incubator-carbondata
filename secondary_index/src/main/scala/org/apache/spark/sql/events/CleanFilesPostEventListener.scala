@@ -12,6 +12,7 @@
 package org.apache.spark.sql.events
 
 import org.apache.spark.internal.Logging
+import org.apache.spark.util.CarbonInternalScalaUtil
 import org.apache.spark.util.si.FileInternalUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
@@ -35,7 +36,10 @@ class CleanFilesPostEventListener extends OperationEventListener with Logging {
       case cleanFilesPostEvent: CleanFilesPostEvent =>
         Audit.log(LOGGER, "Clean files post event listener called")
         val carbonTable = cleanFilesPostEvent.carbonTable
-        FileInternalUtil.cleanIndexFiles(carbonTable, carbonTable.getTablePath, true)
+        val indexTables = CarbonInternalScalaUtil
+          .getIndexCarbonTables(carbonTable, cleanFilesPostEvent.sparkSession)
+        FileInternalUtil
+          .cleanIndexFiles(carbonTable, indexTables, carbonTable.getTablePath, true)
     }
   }
 }

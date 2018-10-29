@@ -258,8 +258,8 @@ private[sql] case class CreateIndexTable(indexModel: SecondaryIndex,
         val catalog = CarbonEnv.getInstance(sparkSession).carbonMetastore
         //        val tablePath = tableIdentifier.getTablePath
         val carbonSchemaString = catalog.generateTableSchemaString(tableInfo, tableIdentifier)
-        val indexCarbonTable = org.apache.carbondata.core.metadata.CarbonMetadata
-          .getInstance().getCarbonTable(databaseName + '_' + indexTableName)
+        val indexCarbonTable = CarbonInternalScalaUtil
+          .getIndexCarbonTable(tableInfo.getDatabaseName, indexTableName)(sparkSession)
         // set index information in index table
         val indexTableMeta = new IndexMetadata(indexTableName, true, carbonTable.getTablePath)
         indexCarbonTable.getTableInfo.getFactTable.getTableProperties

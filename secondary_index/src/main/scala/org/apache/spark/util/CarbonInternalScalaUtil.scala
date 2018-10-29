@@ -230,4 +230,23 @@ object CarbonInternalScalaUtil {
     }
     columnCompressor
   }
+
+  def getIndexCarbonTable(databaseName: String, indexTableName: String)
+    (sparkSession: SparkSession): CarbonTable = {
+    CarbonEnv.getCarbonTable(Some(databaseName), indexTableName)(sparkSession)
+  }
+
+  def getIndexCarbonTables(carbonTable: CarbonTable,
+      sparkSession: SparkSession): util.ArrayList[CarbonTable] = {
+    val indexTableNames: util.List[String] = CarbonInternalScalaUtil.getIndexesTables(carbonTable)
+    val indexTables = new util.ArrayList[CarbonTable]()
+    for (indexTableName <- indexTableNames.asScala) {
+      indexTables
+        .add(CarbonInternalScalaUtil
+          .getIndexCarbonTable(carbonTable.getDatabaseName, indexTableName)(
+            sparkSession))
+    }
+    indexTables
+  }
+
 }

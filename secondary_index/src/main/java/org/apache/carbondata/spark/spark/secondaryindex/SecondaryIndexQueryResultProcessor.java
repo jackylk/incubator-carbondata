@@ -20,7 +20,6 @@ import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.block.SegmentProperties;
 import org.apache.carbondata.core.datastore.exception.CarbonDataWriterException;
 import org.apache.carbondata.core.datastore.row.CarbonRow;
-import org.apache.carbondata.core.metadata.CarbonMetadata;
 import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.metadata.datatype.DataTypes;
 import org.apache.carbondata.core.metadata.encoder.Encoding;
@@ -110,10 +109,6 @@ public class SecondaryIndexQueryResultProcessor {
    */
   private String segmentId;
   /**
-   * index table name
-   */
-  private String indexTableName;
-  /**
    * temp store location to be sued during data load
    */
   private String[] tempStoreLocation;
@@ -162,15 +157,15 @@ public class SecondaryIndexQueryResultProcessor {
    * @param carbonLoadModel
    * @param columnCardinality
    * @param segmentId
-   * @param indexTableName
+   * @param indexTable
    */
   public SecondaryIndexQueryResultProcessor(CarbonLoadModel carbonLoadModel,
-      int[] columnCardinality, String segmentId, String indexTableName,
+      int[] columnCardinality, String segmentId, CarbonTable indexTable,
       int[] factToIndexColumnMapping, int[] factToIndexDictColumnMapping) {
     this.carbonLoadModel = carbonLoadModel;
     this.columnCardinality = columnCardinality;
     this.segmentId = segmentId;
-    this.indexTableName = indexTableName;
+    this.indexTable = indexTable;
     this.databaseName = carbonLoadModel.getDatabaseName();
     this.factToIndexColumnMapping = factToIndexColumnMapping;
     this.factToIndexDictColumnMapping = factToIndexDictColumnMapping;
@@ -202,10 +197,10 @@ public class SecondaryIndexQueryResultProcessor {
       // clear temp files and folders created during secondary index creation
       String databaseName = carbonLoadModel.getDatabaseName();
       String tempLocationKey = CarbonDataProcessorUtil
-          .getTempStoreLocationKey(databaseName, indexTableName, carbonLoadModel.getSegmentId(),
-              carbonLoadModel.getTaskNo(), false, false);
+          .getTempStoreLocationKey(databaseName, indexTable.getTableName(),
+              carbonLoadModel.getSegmentId(), carbonLoadModel.getTaskNo(), false, false);
       TableProcessingOperations
-          .deleteLocalDataLoadFolderLocation(tempLocationKey, indexTableName);
+          .deleteLocalDataLoadFolderLocation(tempLocationKey, indexTable.getTableName());
     }
   }
 
@@ -318,7 +313,7 @@ public class SecondaryIndexQueryResultProcessor {
       // comparator for grouping the similar data, means every record
       // should be unique in index table
       RowComparatorWithOutKettle comparator = new RowComparatorWithOutKettle(noDictionaryColMapping,
-          SecondaryIndexUtil.getNoDictDataTypes(databaseName, indexTableName));
+          SecondaryIndexUtil.getNoDictDataTypes(indexTable));
       intermediateFileMerger.finish();
       sortDataRows = null;
       finalMerger.startFinalMerge();
@@ -370,11 +365,9 @@ public class SecondaryIndexQueryResultProcessor {
    * initialise segment properties
    */
   private void initSegmentProperties() {
-    indexTable = CarbonMetadata.getInstance()
-        .getCarbonTable(databaseName + CarbonCommonConstants.UNDERSCORE + indexTableName);
     List<ColumnSchema> columnSchemaList = CarbonUtil
-        .getColumnSchemaList(indexTable.getDimensionByTableName(indexTableName),
-            indexTable.getMeasureByTableName(indexTableName));
+        .getColumnSchemaList(indexTable.getDimensionByTableName(indexTable.getTableName()),
+            indexTable.getMeasureByTableName(indexTable.getTableName()));
     segmentProperties = new SegmentProperties(columnSchemaList, columnCardinality);
     srcSegmentProperties =
         new SegmentProperties(getParentColumnOrder(columnSchemaList), getParentOrderCardinality());
@@ -429,9 +422,11 @@ public class SecondaryIndexQueryResultProcessor {
    * create an instance of sort data rows
    */
   private void initSortDataRows() throws SecondaryIndexException {
-    measureCount = indexTable.getMeasureByTableName(indexTableName).size();
-    implicitColumnCount = indexTable.getImplicitDimensionByTableName(indexTableName).size();
-    List<CarbonDimension> dimensions = indexTable.getDimensionByTableName(indexTableName);
+    measureCount = indexTable.getMeasureByTableName(indexTable.getTableName()).size();
+    implicitColumnCount =
+        indexTable.getImplicitDimensionByTableName(indexTable.getTableName()).size();
+    List<CarbonDimension> dimensions =
+        indexTable.getDimensionByTableName(indexTable.getTableName());
     noDictionaryColMapping = new boolean[dimensions.size()];
     sortColumnMapping = new boolean[dimensions.size()];
     isVarcharDimMapping = new boolean[dimensions.size()];
@@ -473,10 +468,10 @@ public class SecondaryIndexQueryResultProcessor {
    */
   private SortParameters createSortParameters() {
     SortParameters parameters = SortParameters
-        .createSortParameters(indexTable, databaseName, indexTableName, dimensionColumnCount,
-            complexDimensionCount, measureCount, noDictionaryCount,
-            segmentId, carbonLoadModel.getTaskNo(),
-            noDictionaryColMapping, sortColumnMapping, isVarcharDimMapping, false);
+        .createSortParameters(indexTable, databaseName, indexTable.getTableName(),
+            dimensionColumnCount, complexDimensionCount, measureCount, noDictionaryCount, segmentId,
+            carbonLoadModel.getTaskNo(), noDictionaryColMapping, sortColumnMapping,
+            isVarcharDimMapping, false);
     return parameters;
   }
 
@@ -488,10 +483,11 @@ public class SecondaryIndexQueryResultProcessor {
     String[] sortTempFileLocation = CarbonDataProcessorUtil
         .arrayAppend(tempStoreLocation, CarbonCommonConstants.FILE_SEPARATOR,
             CarbonCommonConstants.SORT_TEMP_FILE_LOCATION);
-    sortParameters.setNoDictionarySortColumn(CarbonDataProcessorUtil
-        .getNoDictSortColMapping(indexTable));
+    sortParameters
+        .setNoDictionarySortColumn(CarbonDataProcessorUtil.getNoDictSortColMapping(indexTable));
     finalMerger =
-        new SingleThreadFinalSortFilesMerger(sortTempFileLocation, indexTableName, sortParameters);
+        new SingleThreadFinalSortFilesMerger(sortTempFileLocation, indexTable.getTableName(),
+            sortParameters);
   }
 
   /**
@@ -500,12 +496,11 @@ public class SecondaryIndexQueryResultProcessor {
    * @throws SecondaryIndexException
    */
   private void initDataHandler() throws SecondaryIndexException {
-    String carbonStoreLocation = CarbonDataProcessorUtil
-        .createCarbonStoreLocation(carbonLoadModel.getCarbonDataLoadSchema().getCarbonTable(),
-            segmentId);
+    String carbonStoreLocation =
+        CarbonDataProcessorUtil.createCarbonStoreLocation(this.indexTable, segmentId);
     CarbonFactDataHandlerModel carbonFactDataHandlerModel = CarbonFactDataHandlerModel
         .getCarbonFactDataHandlerModel(carbonLoadModel, indexTable, segmentProperties,
-            indexTableName, tempStoreLocation, carbonStoreLocation);
+            indexTable.getTableName(), tempStoreLocation, carbonStoreLocation);
     carbonFactDataHandlerModel.setSchemaUpdatedTimeStamp(indexTable.getTableLastUpdatedTime());
     CarbonDataFileAttributes carbonDataFileAttributes =
         new CarbonDataFileAttributes(Integer.parseInt(carbonLoadModel.getTaskNo()),
@@ -535,6 +530,7 @@ public class SecondaryIndexQueryResultProcessor {
    * initialise aggregation type for measures for their storage format
    */
   private void initAggType() {
-    aggType = CarbonDataProcessorUtil.initDataType(indexTable, indexTableName, measureCount);
+    aggType =
+        CarbonDataProcessorUtil.initDataType(indexTable, indexTable.getTableName(), measureCount);
   }
 }

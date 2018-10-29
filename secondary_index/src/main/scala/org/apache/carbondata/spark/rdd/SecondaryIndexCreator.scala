@@ -86,7 +86,8 @@ object SecondaryIndexCreator {
           SegmentStatus.SUCCESS,
           secondaryIndexModel.segmentIdToLoadStartTimeMapping,
           segmentToSegmentTimestampMap,
-          carbonMainTable)
+          carbonMainTable,
+          sqlContext.sparkSession)
         // merge index files
         CarbonMergeFilesRDD.mergeIndexFiles(sqlContext.sparkSession,
           secondaryIndexModel.validSegments,
@@ -131,7 +132,8 @@ object SecondaryIndexCreator {
           new java.util
           .HashMap[String,
             String](),
-          indexCarbonTable)
+          indexCarbonTable,
+          sc.sparkSession)
       SegmentStatusManager.deleteLoadsAndUpdateMetadata(indexCarbonTable, false, null)
       TableProcessingOperations.deletePartialLoadDataIfExist(indexCarbonTable, false)
       var execInstance = "1"

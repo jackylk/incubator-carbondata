@@ -24,7 +24,6 @@ import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.locks.ICarbonLock;
 import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier;
-import org.apache.carbondata.core.metadata.CarbonMetadata;
 import org.apache.carbondata.core.metadata.SegmentFileStore;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.mutate.CarbonUpdateUtil;
@@ -119,12 +118,13 @@ public class CarbonInternalLoaderUtil {
    * @param databaseName
    * @param tableName
    * @param carbonTable
+   * @param indexCarbonTables
    * @return boolean which determines whether status update is done or not.
    * @throws IOException
    */
   public static boolean recordLoadMetadata(List<LoadMetadataDetails> newLoadMetadataDetails,
-      List<String> validSegments, String databaseName, String tableName,
-      CarbonTable carbonTable) throws IOException {
+      List<String> validSegments, CarbonTable carbonTable, List<CarbonTable> indexCarbonTables,
+      String databaseName, String tableName) throws IOException {
     boolean status = false;
     String metaDataFilepath = carbonTable.getMetadataPath();
     AbsoluteTableIdentifier absoluteTableIdentifier = carbonTable.getAbsoluteTableIdentifier();
@@ -169,10 +169,7 @@ public class CarbonInternalLoaderUtil {
             newSegmentDetailsObject.setLoadName(segmentId);
             newSegmentDetailsListForIndexTable.add(newSegmentDetailsObject);
           }
-          for (String indexTableName : indexTables) {
-            CarbonTable indexTable = CarbonMetadata.getInstance().getCarbonTable(
-                absoluteTableIdentifier.getCarbonTableIdentifier().getDatabaseName()
-                    + CarbonCommonConstants.UNDERSCORE + indexTableName);
+          for (CarbonTable indexTable : indexCarbonTables) {
             List<LoadMetadataDetails> indexTableDetailsList = CarbonInternalScalaUtil
                 .getTableStatusDetailsForIndexTable(updatedLoadMetadataDetails, indexTable,
                     newSegmentDetailsListForIndexTable);

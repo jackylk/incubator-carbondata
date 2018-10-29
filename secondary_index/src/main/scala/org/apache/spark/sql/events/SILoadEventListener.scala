@@ -99,7 +99,8 @@ class SILoadEventListener extends OperationEventListener with Logging {
                   SegmentStatus.SUCCESS,
                   secondaryIndexModel.segmentIdToLoadStartTimeMapping,
                   segmentToSegmentTimestampMap,
-                  indexCarbonTable)
+                  indexCarbonTable,
+                  sparkSession)
 
                 // merge index files
                 CarbonMergeFilesRDD.mergeIndexFiles(sparkSession,
