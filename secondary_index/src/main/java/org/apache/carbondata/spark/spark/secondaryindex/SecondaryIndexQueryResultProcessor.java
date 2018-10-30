@@ -489,7 +489,7 @@ public class SecondaryIndexQueryResultProcessor {
         .arrayAppend(tempStoreLocation, CarbonCommonConstants.FILE_SEPARATOR,
             CarbonCommonConstants.SORT_TEMP_FILE_LOCATION);
     sortParameters.setNoDictionarySortColumn(CarbonDataProcessorUtil
-        .getNoDictSortColMapping(indexTable.getDatabaseName(), indexTableName));
+        .getNoDictSortColMapping(indexTable));
     finalMerger =
         new SingleThreadFinalSortFilesMerger(sortTempFileLocation, indexTableName, sortParameters);
   }
@@ -501,8 +501,8 @@ public class SecondaryIndexQueryResultProcessor {
    */
   private void initDataHandler() throws SecondaryIndexException {
     String carbonStoreLocation = CarbonDataProcessorUtil
-        .createCarbonStoreLocation(carbonLoadModel.getDatabaseName(),
-            indexTableName, segmentId);
+        .createCarbonStoreLocation(carbonLoadModel.getCarbonDataLoadSchema().getCarbonTable(),
+            segmentId);
     CarbonFactDataHandlerModel carbonFactDataHandlerModel = CarbonFactDataHandlerModel
         .getCarbonFactDataHandlerModel(carbonLoadModel, indexTable, segmentProperties,
             indexTableName, tempStoreLocation, carbonStoreLocation);

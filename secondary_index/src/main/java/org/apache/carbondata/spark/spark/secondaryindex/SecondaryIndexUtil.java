@@ -91,7 +91,7 @@ public class SecondaryIndexUtil {
     DataFileFooter dataFileFooter = null;
     try {
       dataFileFooter = CarbonUtil
-          .readMetadatFile(tableBlockInfo);
+          .readMetadataFile(tableBlockInfo);
     } catch (IOException e) {
       throw new SecondaryIndexException(
           "Problem reading the file footer during secondary index creation: " + e.getMessage());
