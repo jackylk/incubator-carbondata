@@ -40,7 +40,7 @@ class CreateTableWithLocalDictionaryTestCase extends QueryTest with BeforeAndAft
 
     val descLoc = sql("describe formatted local1").collect
     descLoc.find(_.get(0).toString.contains("Local Dictionary Enabled")) match {
-      case Some(row) => assert(row.get(1).toString.contains("false"))
+      case Some(row) => assert(row.get(1).toString.contains("true"))
     }
   }
 
@@ -1478,7 +1478,7 @@ class CreateTableWithLocalDictionaryTestCase extends QueryTest with BeforeAndAft
     val descLoc = sql("describe formatted local1").collect
 
     descLoc.find(_.get(0).toString.contains("Local Dictionary Enabled")) match {
-      case Some(row) => assert(row.get(1).toString.contains("false"))
+      case Some(row) => assert(row.get(1).toString.contains("true"))
     }
     descLoc.find(_.get(0).toString.contains("Sort Scope")) match {
       case Some(row) => assert(row.get(1).toString.contains("global_sort"))
@@ -1498,7 +1498,7 @@ class CreateTableWithLocalDictionaryTestCase extends QueryTest with BeforeAndAft
     val descLoc = sql("describe formatted local1").collect
 
     descLoc.find(_.get(0).toString.contains("Local Dictionary Enabled")) match {
-      case Some(row) => assert(row.get(1).toString.contains("false"))
+      case Some(row) => assert(row.get(1).toString.contains("true"))
     }
     descLoc.find(_.get(0).toString.contains("Sort Scope")) match {
       case Some(row) => assert(row.get(1).toString.contains("batch_sort"))
@@ -1517,7 +1517,7 @@ class CreateTableWithLocalDictionaryTestCase extends QueryTest with BeforeAndAft
     val descLoc = sql("describe formatted local1").collect
 
     descLoc.find(_.get(0).toString.contains("Local Dictionary Enabled")) match {
-      case Some(row) => assert(row.get(1).toString.contains("false"))
+      case Some(row) => assert(row.get(1).toString.contains("true"))
     }
     descLoc.find(_.get(0).toString.contains("Sort Scope")) match {
       case Some(row) => assert(row.get(1).toString.contains("no_sort"))
@@ -1536,7 +1536,7 @@ class CreateTableWithLocalDictionaryTestCase extends QueryTest with BeforeAndAft
     val descLoc = sql("describe formatted local1").collect
 
     descLoc.find(_.get(0).toString.contains("Local Dictionary Enabled")) match {
-      case Some(row) => assert(row.get(1).toString.contains("false"))
+      case Some(row) => assert(row.get(1).toString.contains("true"))
     }
     descLoc.find(_.get(0).toString.contains("Sort Scope")) match {
       case Some(row) => assert(row.get(1).toString.contains("local_sort"))

@@ -105,13 +105,13 @@ class SDKwriterTestCase extends QueryTest with BeforeAndAfterEach {
             .sortBy(sortColumns.toArray)
             .uniqueIdentifier(
               System.currentTimeMillis).withBlockSize(2).withLoadOptions(options)
-            .withCsvInput(Schema.parseJson(schema)).build()
+            .withCsvInput(Schema.parseJson(schema)).writtenBy("SDKWriterTestCase").build()
         } else {
           builder.outputPath(writerPath)
             .sortBy(sortColumns.toArray)
             .uniqueIdentifier(
               System.currentTimeMillis).withBlockSize(2)
-            .withCsvInput(Schema.parseJson(schema)).build()
+            .withCsvInput(Schema.parseJson(schema)).writtenBy("SDKWriterTestCase").build()
         }
       var i = 0
       while (i < rows) {
@@ -527,7 +527,7 @@ class SDKwriterTestCase extends QueryTest with BeforeAndAfterEach {
     try {
       val writer = CarbonWriter.builder
         .outputPath(writerPath)
-        .uniqueIdentifier(System.currentTimeMillis()).withAvroInput(nn).build()
+        .uniqueIdentifier(System.currentTimeMillis()).withAvroInput(nn).writtenBy("SDKWriterTestCase").build()
       var i = 0
       while (i < rows) {
         writer.write(record)
@@ -725,7 +725,7 @@ class SDKwriterTestCase extends QueryTest with BeforeAndAfterEach {
       .append("]")
       .toString()
     val builder = CarbonWriter.builder()
-    val writer = builder.outputPath(writerPath).withCsvInput(Schema.parseJson(schema)).build()
+    val writer = builder.outputPath(writerPath).withCsvInput(Schema.parseJson(schema)).writtenBy("SDKWriterTestCase").build()
 
     for (i <- 0 until 5) {
       writer.write(Array[String](s"name_$i", RandomStringUtils.randomAlphabetic(33000), i.toString))
@@ -748,7 +748,7 @@ class SDKwriterTestCase extends QueryTest with BeforeAndAfterEach {
       .append("]")
       .toString()
     val builder = CarbonWriter.builder()
-    val writer = builder.outputPath(writerPath).withCsvInput(Schema.parseJson(schema)).build()
+    val writer = builder.outputPath(writerPath).withCsvInput(Schema.parseJson(schema)).writtenBy("SDKWriterTestCase").build()
     val varCharLen = 4000000
     for (i <- 0 until 3) {
       writer
@@ -781,7 +781,7 @@ class SDKwriterTestCase extends QueryTest with BeforeAndAfterEach {
     val writer = builder
       .outputPath(writerPath)
       .sortBy(Array[String]())
-      .withCsvInput(Schema.parseJson(schema)).build()
+      .withCsvInput(Schema.parseJson(schema)).writtenBy("SDKWriterTestCase").build()
 
     for (i <- 0 until 5) {
       writer
