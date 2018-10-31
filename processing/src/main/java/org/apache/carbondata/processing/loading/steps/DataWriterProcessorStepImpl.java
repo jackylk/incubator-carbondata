@@ -32,7 +32,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.datastore.exception.CarbonDataWriterException;
 import org.apache.carbondata.core.datastore.row.CarbonRow;
-import org.apache.carbondata.core.keygenerator.KeyGenException;
 import org.apache.carbondata.core.localdictionary.generator.LocalDictionaryGenerator;
 import org.apache.carbondata.core.metadata.CarbonTableIdentifier;
 import org.apache.carbondata.core.util.CarbonThreadFactory;
@@ -131,15 +130,15 @@ public class DataWriterProcessorStepImpl extends AbstractDataLoadProcessorStep {
         for (int j = 0; j < rangeExecutorServiceSubmitList.size(); j++) {
           rangeExecutorServiceSubmitList.get(j).get();
         }
-      } catch (InterruptedException | ExecutionException e) {
+      } catch (InterruptedException e) {
         throw new CarbonDataWriterException(e);
+      } catch (ExecutionException e) {
+        throw new CarbonDataWriterException(e.getCause());
       }
     } catch (CarbonDataWriterException e) {
-      LOGGER.error("Failed for table: " + tableName + " in DataWriterProcessorStepImpl", e);
       throw new CarbonDataLoadingException(
-          "Error while initializing data handler : " + e.getMessage());
+          "Error while initializing writer: " + e.getMessage(), e);
     } catch (Exception e) {
-      LOGGER.error("Failed for table: " + tableName + " in DataWriterProcessorStepImpl", e);
       throw new CarbonDataLoadingException("There is an unexpected error: " + e.getMessage(), e);
     }
     return null;
@@ -164,7 +163,7 @@ public class DataWriterProcessorStepImpl extends AbstractDataLoadProcessorStep {
       this.rangeId = rangeId;
     }
 
-    @Override public Void call() throws Exception {
+    @Override public Void call() {
       LOGGER.info("Process writer forward for table " + tableIdentifier.getTableName()
           + ", range: " + rangeId);
       processRange(insideRangeIterator, rangeId);
@@ -184,8 +183,7 @@ public class DataWriterProcessorStepImpl extends AbstractDataLoadProcessorStep {
     while (insideRangeIterator.hasNext()) {
       if (rowsNotExist) {
         rowsNotExist = false;
-        dataHandler = CarbonFactHandlerFactory
-            .createCarbonFactHandler(model);
+        dataHandler = CarbonFactHandlerFactory.createCarbonFactHandler(model);
         carbonFactHandlers.add(dataHandler);
         dataHandler.initialise();
       }
@@ -222,41 +220,24 @@ public class DataWriterProcessorStepImpl extends AbstractDataLoadProcessorStep {
             System.currentTimeMillis());
   }
 
-  private void processingComplete(CarbonFactHandler dataHandler) throws CarbonDataLoadingException {
+  private void processingComplete(CarbonFactHandler dataHandler) {
     if (null != dataHandler) {
-      try {
-        dataHandler.closeHandler();
-      } catch (CarbonDataWriterException e) {
-        LOGGER.error(e.getMessage(), e);
-        throw new CarbonDataLoadingException(e.getMessage(), e);
-      } catch (Exception e) {
-        LOGGER.error(e.getMessage(), e);
-        throw new CarbonDataLoadingException("There is an unexpected error: " + e.getMessage());
-      }
+      dataHandler.closeHandler();
     }
   }
 
-  private void processBatch(CarbonRowBatch batch, CarbonFactHandler dataHandler)
-      throws CarbonDataLoadingException {
-    try {
-      while (batch.hasNext()) {
-        CarbonRow row = batch.next();
-        dataHandler.addDataToStore(row);
-        readCounter++;
-      }
-    } catch (Exception e) {
-      throw new CarbonDataLoadingException(e);
+  private void processBatch(CarbonRowBatch batch, CarbonFactHandler dataHandler) {
+    while (batch.hasNext()) {
+      CarbonRow row = batch.next();
+      dataHandler.addDataToStore(row);
+      readCounter++;
     }
     rowCounter.getAndAdd(batch.getSize());
   }
 
-  public void processRow(CarbonRow row, CarbonFactHandler dataHandler) throws KeyGenException {
-    try {
-      readCounter++;
-      dataHandler.addDataToStore(row);
-    } catch (Exception e) {
-      throw new CarbonDataLoadingException(e);
-    }
+  public void processRow(CarbonRow row, CarbonFactHandler dataHandler) {
+    readCounter++;
+    dataHandler.addDataToStore(row);
     rowCounter.getAndAdd(1);
   }
 
