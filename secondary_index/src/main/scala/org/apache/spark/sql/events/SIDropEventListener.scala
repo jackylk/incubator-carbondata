@@ -23,7 +23,6 @@ import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
-import org.apache.carbondata.common.logging.impl.Audit
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
@@ -43,7 +42,7 @@ class SIDropEventListener extends OperationEventListener with Logging {
   override def onEvent(event: Event, operationContext: OperationContext): Unit = {
     event match {
       case dropTablePreEvent: DropTablePreEvent =>
-        Audit.log(LOGGER, "drop table pre event-listener called")
+        LOGGER.info("drop table pre event-listener called")
         val parentCarbonTable = dropTablePreEvent.carbonTable
         try {
           val tableIdentifier = new TableIdentifier(parentCarbonTable.getTableName,

@@ -18,7 +18,6 @@ import org.apache.spark.sql.CarbonEnv
 import org.apache.spark.sql.hive._
 import org.apache.spark.util.CarbonInternalScalaUtil
 
-import org.apache.carbondata.common.logging.impl.Audit
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.events.{AlterTableRenamePostEvent, Event, OperationContext, OperationEventListener}
@@ -38,7 +37,7 @@ class AlterTableRenameEventListener extends OperationEventListener with Logging 
   override def onEvent(event: Event, operationContext: OperationContext): Unit = {
     event match {
       case alterTableRenamePreEvent: AlterTableRenamePostEvent =>
-        Audit.log(LOGGER, "alter table rename Pre event listener called")
+        LOGGER.info("alter table rename Pre event listener called")
         val alterTableRenameModel = alterTableRenamePreEvent.alterTableRenameModel
         val carbonTable = alterTableRenamePreEvent.carbonTable
         val sparkSession = alterTableRenamePreEvent.sparkSession

@@ -21,7 +21,6 @@ import org.apache.spark.sql.hive.{CarbonInternalMetastore, CarbonRelation}
 import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
-import org.apache.carbondata.common.logging.impl.Audit
 import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.events.{DeleteFromTablePostEvent, DeleteFromTablePreEvent, Event, OperationContext, OperationEventListener}
 import org.apache.carbondata.spark.acl.CarbonUserGroupInformation
@@ -42,7 +41,7 @@ class DeleteFromTableEventListener extends OperationEventListener with Logging {
   override def onEvent(event: Event, operationContext: OperationContext): Unit = {
     event match {
       case deleteFromTablePreEvent: DeleteFromTablePreEvent =>
-        Audit.log(LOGGER, "Delete from table pre event listener called")
+        LOGGER.info("Delete from table pre event listener called")
         val carbonTable = deleteFromTablePreEvent.carbonTable
         // Should not allow delete on index table
         if (CarbonInternalScalaUtil.isIndexTable(carbonTable)) {
@@ -53,7 +52,7 @@ class DeleteFromTableEventListener extends OperationEventListener with Logging {
             }.${ carbonTable.getTableName }]")
         }
       case deleteFromTablePostEvent: DeleteFromTablePostEvent =>
-        Audit.log(LOGGER, "Delete from table post event listener called")
+        LOGGER.info("Delete from table post event listener called")
         val parentCarbonTable = deleteFromTablePostEvent.carbonTable
         val sparkSession = deleteFromTablePostEvent.sparkSession
         CarbonInternalMetastore

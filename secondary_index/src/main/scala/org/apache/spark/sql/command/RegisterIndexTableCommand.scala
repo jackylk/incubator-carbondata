@@ -17,10 +17,9 @@ import scala.collection.JavaConverters._
 
 import org.apache.spark.sql.{CarbonEnv, Row, SparkSession}
 import org.apache.spark.sql.catalyst.TableIdentifier
-import org.apache.spark.sql.execution.command.RunnableCommand
+import org.apache.spark.sql.execution.command.AtomicRunnableCommand
 import org.apache.spark.sql.util.CarbonException
 
-import org.apache.carbondata.common.logging.impl.Audit
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier
@@ -37,15 +36,15 @@ import org.apache.carbondata.spark.core.CarbonInternalCommonConstants
  */
 case class RegisterIndexTableCommand(dbName: Option[String], indexTableName: String,
   parentTable: String, var registerSql: String = null)
-  extends RunnableCommand {
+  extends AtomicRunnableCommand {
   val LOGGER =
     LogServiceFactory.getLogService(this.getClass.getName)
 
-  override def run(sparkSession: SparkSession): Seq[Row] = {
-    processSchema(sparkSession)
+  override def processMetadata(sparkSession: SparkSession): Seq[Row] = {
+    Seq.empty
   }
 
-   def processSchema(sparkSession: SparkSession): Seq[Row] = {
+  override def processData(sparkSession: SparkSession): Seq[Row] = {
     val metaStore = CarbonEnv.getInstance(sparkSession).carbonMetastore
     val databaseName = CarbonEnv.getDatabaseName(dbName)(sparkSession)
     val databaseLocation = CarbonEnv.getDatabaseLocation(databaseName, sparkSession)
@@ -53,6 +52,8 @@ case class RegisterIndexTableCommand(dbName: Option[String], indexTableName: Str
     val absoluteTableIdentifier = AbsoluteTableIdentifier.from(tablePath, databaseName,
       indexTableName
     )
+    setAuditTable(databaseName, indexTableName)
+    setAuditInfo(Map("Parent TableName" -> parentTable))
     // 1. check if the main and index table exist
     val tables: Seq[TableIdentifier] = sparkSession.sessionState.catalog.listTables(databaseName)
     if (!tables.exists(_.table.equalsIgnoreCase(parentTable))) {
@@ -60,7 +61,6 @@ case class RegisterIndexTableCommand(dbName: Option[String], indexTableName: Str
         s" table" +
         s" [$databaseName.$parentTable] failed." +
         s"Table [$parentTable] does not exists under database [$databaseName]"
-      Audit.log(LOGGER, message)
       CarbonException.analysisException(message)
     }
     if (!tables.exists(_.table.equalsIgnoreCase(indexTableName))) {
@@ -68,7 +68,6 @@ case class RegisterIndexTableCommand(dbName: Option[String], indexTableName: Str
         s" table" +
         s" [$databaseName.$parentTable] failed." +
         s"Secondary Index Table [$indexTableName] does not exists under database [$databaseName]"
-      Audit.log(LOGGER, message)
       CarbonException.analysisException(message)
     }
     // 2. Read TableInfo
@@ -81,7 +80,7 @@ case class RegisterIndexTableCommand(dbName: Option[String], indexTableName: Str
     CreateIndexTable(indexModel = secondaryIndex,
       tableProperties = tableInfo.getFactTable.getTableProperties.asScala,
       isCreateSIndex = false).run(sparkSession)
-     Audit.log(LOGGER, s"Table [$indexTableName] registered as Secondary Index table with" +
+     LOGGER.info(s"Table [$indexTableName] registered as Secondary Index table with" +
                        s" table [$databaseName.$parentTable] successfully.")
     Seq.empty
   }
@@ -98,4 +97,7 @@ case class RegisterIndexTableCommand(dbName: Option[String], indexTableName: Str
       !f.getColumnName.equalsIgnoreCase(CarbonInternalCommonConstants.POSITION_REFERENCE))
     ).map(column => column.getColumnName.toLowerCase()).toList
   }
+
+  override protected def opName: String = "Register Index Table"
+
 }

@@ -15,7 +15,6 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
-import org.apache.carbondata.common.logging.impl.Audit
 import org.apache.carbondata.events.{Event, OperationContext, OperationEventListener, UpdateTablePreEvent}
 
 /**
@@ -33,7 +32,7 @@ class UpdateTablePreEventListener extends OperationEventListener with Logging {
   override def onEvent(event: Event, operationContext: OperationContext): Unit = {
     event match {
       case updateTablePreEvent: UpdateTablePreEvent =>
-        Audit.log(LOGGER, "Update table pre event listener called")
+        LOGGER.info("Update table pre event listener called")
         val carbonTable = updateTablePreEvent.carbonTable
         // Should not allow update on index table
         if (CarbonInternalScalaUtil.isIndexTable(carbonTable)) {

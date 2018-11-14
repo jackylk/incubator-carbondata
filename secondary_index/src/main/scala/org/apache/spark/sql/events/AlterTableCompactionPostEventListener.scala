@@ -24,7 +24,6 @@ import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.util.{CarbonInternalScalaUtil, Compactor}
 
 import org.apache.carbondata.common.logging.LogServiceFactory
-import org.apache.carbondata.common.logging.impl.Audit
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datamap.Segment
 import org.apache.carbondata.core.mutate.CarbonUpdateUtil
@@ -48,7 +47,7 @@ class AlterTableCompactionPostEventListener extends OperationEventListener with 
   override def onEvent(event: Event, operationContext: OperationContext): Unit = {
     event match {
       case alterTableCompactionPostEvent: AlterTableCompactionPreStatusUpdateEvent =>
-        Audit.log(LOGGER, "post load event-listener called")
+        LOGGER.info("post load event-listener called")
         val carbonLoadModel = alterTableCompactionPostEvent.carbonLoadModel
         val sQLContext = alterTableCompactionPostEvent.sparkSession.sqlContext
         val compactionType: CompactionType = alterTableCompactionPostEvent.carbonMergerMapping

@@ -20,7 +20,6 @@ import org.apache.spark.sql.command.{SecondaryIndex, SecondaryIndexModel}
 import org.apache.spark.util.si.FileInternalUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
-import org.apache.carbondata.common.logging.impl.Audit
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.metadata.CarbonTableIdentifier
 import org.apache.carbondata.core.statusmanager.SegmentStatus
@@ -44,7 +43,7 @@ class SILoadEventListener extends OperationEventListener with Logging {
   override def onEvent(event: Event, operationContext: OperationContext): Unit = {
     event match {
       case preStatusUpdateEvent: LoadTablePreStatusUpdateEvent =>
-        Audit.log(LOGGER, "Load pre status update event-listener called")
+        LOGGER.info("Load pre status update event-listener called")
         val loadTablePreStatusUpdateEvent = event.asInstanceOf[LoadTablePreStatusUpdateEvent]
         val carbonLoadModel = loadTablePreStatusUpdateEvent.getCarbonLoadModel
         val carbonTable = carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable

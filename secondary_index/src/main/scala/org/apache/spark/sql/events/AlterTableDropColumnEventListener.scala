@@ -21,7 +21,6 @@ import org.apache.spark.sql.hive.CarbonInternalMetastore
 import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.util.CarbonInternalScalaUtil
 
-import org.apache.carbondata.common.logging.impl.Audit
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.events.{AlterTableDropColumnPreEvent, Event, OperationContext, OperationEventListener}
 
@@ -39,7 +38,7 @@ class AlterTableDropColumnEventListener extends OperationEventListener with Logg
   override def onEvent(event: Event, operationContext: OperationContext): Unit = {
     event match {
       case alterTableDropColumnPreEvent: AlterTableDropColumnPreEvent =>
-        Audit.log(LOGGER, "alter table drop column event listener called")
+        LOGGER.info("alter table drop column event listener called")
         val carbonTable = alterTableDropColumnPreEvent.carbonTable
         val dbName = carbonTable.getDatabaseName
         val tableName = carbonTable.getTableName

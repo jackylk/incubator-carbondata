@@ -17,7 +17,6 @@ import java.util.Collections;
 import java.util.List;
 
 import org.apache.carbondata.common.logging.LogServiceFactory;
-import org.apache.carbondata.common.logging.impl.Audit;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.block.TableBlockInfo;
 import org.apache.carbondata.core.datastore.block.TaskBlockInfo;
@@ -209,7 +208,7 @@ public class SecondaryIndexUtil {
               CarbonTablePath.getTableStatusFilePath(indexTable.getTablePath()),
               loadFolderDetailsArrayMainTable);
           if (invalidLoads.size() > 0) {
-            Audit.log(LOG, "Delete segment by Id is successfull for $dbName.$tableName.");
+            LOG.info("Delete segment by Id is successfull for $dbName.$tableName.");
           } else {
             LOG.error("Delete segment by Id is failed. Invalid ID is: " + invalidLoads.toString());
           }
