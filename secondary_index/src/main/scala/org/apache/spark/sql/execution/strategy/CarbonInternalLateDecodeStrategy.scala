@@ -21,7 +21,7 @@ import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference,
 import org.apache.spark.sql.catalyst.planning.{ExtractEquiJoinKeys, PhysicalOperation}
 import org.apache.spark.sql.catalyst.plans.{Inner, LeftSemi}
 import org.apache.spark.sql.catalyst.plans.logical.{Filter => LogicalFilter, _}
-import org.apache.spark.sql.execution.{FilterExec, GlobalLimitExec, LocalLimitExec, SparkPlan}
+import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.execution.joins.{BroadCastFilterPushJoin, BroadCastSIFilterPushJoin, BuildLeft, BuildRight}
 import org.apache.spark.sql.hive.{CarbonInternalMetaUtil, MatchLogicalRelation}
@@ -61,12 +61,32 @@ private[sql] class CarbonInternalLateDecodeStrategy extends CarbonLateDecodeStra
           LOGGER.info(s"pushing down for ExtractEquiJoinKeys:right")
           val carbon = apply(left).head
           val pushedDownJoin = if (CarbonInternalScalaUtil.checkIsIndexTable(right)) {
+            // in case of SI Filter push join remove projection list from the physical plan
+            // no need to have the project list in the main table physical plan execution
+            // only join uses the projection list
+            var carbonChild = carbon.asInstanceOf[ProjectExec].child
+            // check if the outer and the inner project are matching, only then remove project
+            if (left.isInstanceOf[Project]) {
+              val leftOutput = left.output
+                .filterNot(attr => attr.name
+                  .equalsIgnoreCase(CarbonInternalCommonConstants.POSITION_ID))
+                .map(_.name.toLowerCase)
+              val childOutput = carbonChild.output
+                .filterNot(attr => attr.name
+                  .equalsIgnoreCase(CarbonInternalCommonConstants.POSITION_ID))
+                .map(_.name.toLowerCase)
+              if (!leftOutput.equals(childOutput)) {
+                // if the projection list and the scan list are different(in case of alias)
+                // we should not skip the project, so we are taking the original plan with project
+                carbonChild = carbon
+              }
+            }
             BroadCastSIFilterPushJoin(
               leftKeys: Seq[Expression],
               rightKeys: Seq[Expression],
               Inner,
               BuildRight,
-              carbon,
+              carbonChild,
               planLater(right),
               condition)
           } else {

@@ -647,6 +647,12 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
   def transformFilterToJoin(plan: LogicalPlan): LogicalPlan = {
     var resolvedRelations: Set[LogicalPlan] = Set.empty
     val isRowDeletedInTableMap = scala.collection.mutable.Map.empty[String, Boolean]
+    // if the join pushdown is enabled, then no need to add projection list to the logical plan as
+    // we can directly map the join output with the required projections
+    // if it is false then the join will not be pushed down to carbon and
+    // there it is required to add projection list to map the output from the join
+    val pushDownJoinEnabled = sparkSession.sparkContext.getConf
+      .getBoolean("spark.carbon.pushdown.join.as.filter", defaultValue = true)
     val transformedPlan = plan transform {
       case filter@Filter(condition, logicalRelation@MatchIndexableRelation(indexableRelation))
         if !condition.isInstanceOf[IsNotNull] &&
@@ -657,7 +663,11 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
             .asInstanceOf[CarbonDatasourceHadoopRelation].carbonRelation.databaseName)
         if (reWrittenPlan.isInstanceOf[Join]) {
           resolvedRelations = resolvedRelations. + (logicalRelation)
-          addProjectForStarQuery(filter.output, reWrittenPlan)
+          if (pushDownJoinEnabled) {
+            reWrittenPlan
+          } else {
+            Project(filter.output, reWrittenPlan)
+          }
         } else {
           filter
         }
@@ -674,7 +684,11 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
         // Else all columns from left & right table will be returned in output columns
         if (reWrittenPlan.isInstanceOf[Join]) {
           resolvedRelations = resolvedRelations. + (logicalRelation)
-          Project(projection.output, reWrittenPlan)
+          if (pushDownJoinEnabled) {
+            reWrittenPlan
+          } else {
+            Project(projection.output, reWrittenPlan)
+          }
         } else {
           projection
         }
@@ -703,7 +717,11 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
         }
         if (reWrittenPlan.isInstanceOf[Join]) {
           resolvedRelations = resolvedRelations. + (logicalRelation)
-          Limit(literal, addProjectForStarQuery(limit.output, reWrittenPlan))
+          if (pushDownJoinEnabled) {
+            Limit(literal, reWrittenPlan)
+          } else {
+            Limit(literal, Project(limit.output, reWrittenPlan))
+          }
         } else {
           limit
         }
@@ -728,7 +746,11 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
         }
         if (reWrittenPlan.isInstanceOf[Join]) {
           resolvedRelations = resolvedRelations. + (logicalRelation)
-          Limit(literal, Project(projection.output, reWrittenPlan))
+          if (pushDownJoinEnabled) {
+            Limit(literal, reWrittenPlan)
+          } else {
+            Limit(literal, Project(projection.output, reWrittenPlan))
+          }
         } else {
           limit
         }
@@ -737,11 +759,6 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
       case filter: Filter =>
         Filter(CarbonInternalHiveMetadataUtil.transformToRemoveNI(filter.condition), filter.child)
     }
-  }
-
-  private def addProjectForStarQuery(output: Seq[Attribute],
-      reWrittenPlan: LogicalPlan): LogicalPlan = {
-    Project(output, reWrittenPlan)
   }
 }
 
