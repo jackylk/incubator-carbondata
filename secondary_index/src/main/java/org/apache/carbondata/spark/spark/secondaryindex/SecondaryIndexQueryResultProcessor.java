@@ -28,6 +28,7 @@ import org.apache.carbondata.core.metadata.schema.table.column.CarbonDimension;
 import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema;
 import org.apache.carbondata.core.scan.result.RowBatch;
 import org.apache.carbondata.core.scan.wrappers.ByteArrayWrapper;
+import org.apache.carbondata.core.util.CarbonProperties;
 import org.apache.carbondata.core.util.CarbonUtil;
 import org.apache.carbondata.core.util.DataTypeUtil;
 import org.apache.carbondata.processing.loading.TableProcessingOperations;
@@ -467,11 +468,12 @@ public class SecondaryIndexQueryResultProcessor {
    * @return
    */
   private SortParameters createSortParameters() {
+    int numberOfCompactingCores = CarbonProperties.getInstance().getNumberOfCompactingCores();
     SortParameters parameters = SortParameters
         .createSortParameters(indexTable, databaseName, indexTable.getTableName(),
             dimensionColumnCount, complexDimensionCount, measureCount, noDictionaryCount, segmentId,
             carbonLoadModel.getTaskNo(), noDictionaryColMapping, sortColumnMapping,
-            isVarcharDimMapping, false);
+            isVarcharDimMapping, false, numberOfCompactingCores / 2);
     return parameters;
   }
 
