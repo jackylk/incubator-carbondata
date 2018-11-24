@@ -269,7 +269,7 @@ object CarbonDataRDDFactory {
     compactionThread.run()
   }
 
-  private def prepareCarbonLoadModel(
+  def prepareCarbonLoadModel(
       table: CarbonTable
   ): CarbonLoadModel = {
     val loadModel = new CarbonLoadModel

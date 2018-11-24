@@ -382,6 +382,87 @@ public final class CarbonDataMergerUtil {
     return tableStatusUpdationStatus;
   }
 
+  public static boolean updateLoadMetadataWithOptimizeStatus(List<LoadMetadataDetails> loadsToMerge,
+      String metaDataFilepath, String mergedLoadNumber, CarbonLoadModel carbonLoadModel,
+      String segmentFile) throws IOException {
+    boolean tableStatusUpdationStatus = false;
+    AbsoluteTableIdentifier identifier =
+        carbonLoadModel.getCarbonDataLoadSchema().getCarbonTable().getAbsoluteTableIdentifier();
+    SegmentStatusManager segmentStatusManager = new SegmentStatusManager(identifier);
+
+    ICarbonLock carbonLock = segmentStatusManager.getTableStatusLock();
+
+    try {
+      if (carbonLock.lockWithRetries()) {
+        LOGGER.info("Acquired lock for the table " + carbonLoadModel.getDatabaseName() + "."
+            + carbonLoadModel.getTableName() + " for table status updation ");
+
+        String statusFilePath = CarbonTablePath.getTableStatusFilePath(identifier.getTablePath());
+
+        LoadMetadataDetails[] loadDetails = SegmentStatusManager.readLoadMetadata(metaDataFilepath);
+
+        long modificationOrDeletionTimeStamp = CarbonUpdateUtil.readCurrentTime();
+
+        LoadMetadataDetails loadMetadataDetails = null;
+        for (LoadMetadataDetails loadDetail : loadDetails) {
+          // check if this segment is merged.
+          if (loadsToMerge.contains(loadDetail)) {
+            // if the compacted load is deleted after the start of the compaction process,
+            // then need to discard the compaction process and treat it as failed compaction.
+            if (loadDetail.getSegmentStatus() == SegmentStatus.MARKED_FOR_DELETE) {
+              LOGGER.error("Compaction is aborted as the segment " + loadDetail.getLoadName()
+                  + " is deleted after the compaction is started.");
+              return false;
+            }
+            loadDetail.setSegmentStatus(SegmentStatus.COMPACTED);
+            loadDetail.setModificationOrdeletionTimesStamp(modificationOrDeletionTimeStamp);
+            loadDetail.setMergedLoadName(mergedLoadNumber);
+          }
+
+          if (mergedLoadNumber.equals(loadDetail.getLoadName())) {
+            loadMetadataDetails = loadDetail;
+          }
+        }
+
+        // create entry for merged one.
+        loadMetadataDetails.setPartitionCount(CarbonTablePath.DEPRECATED_PATITION_ID);
+        loadMetadataDetails.setSegmentStatus(SegmentStatus.SUCCESS);
+        long loadEnddate = CarbonUpdateUtil.readCurrentTime();
+        loadMetadataDetails.setLoadEndTime(loadEnddate);
+        CarbonTable carbonTable = carbonLoadModel.getCarbonDataLoadSchema().getCarbonTable();
+        loadMetadataDetails.setSegmentFile(segmentFile);
+        CarbonLoaderUtil
+            .addDataIndexSizeIntoMetaEntry(loadMetadataDetails, mergedLoadNumber, carbonTable);
+        loadMetadataDetails.setPartitionCount("0");
+
+        List<LoadMetadataDetails> updatedDetailsList = new ArrayList<>(Arrays.asList(loadDetails));
+
+        try {
+          SegmentStatusManager.writeLoadDetailsIntoFile(statusFilePath,
+              updatedDetailsList.toArray(new LoadMetadataDetails[updatedDetailsList.size()]));
+          tableStatusUpdationStatus = true;
+        } catch (IOException e) {
+          LOGGER.error("Error while writing metadata");
+          tableStatusUpdationStatus = false;
+        }
+      } else {
+        LOGGER.error(
+            "Could not able to obtain lock for table" + carbonLoadModel.getDatabaseName() + "."
+                + carbonLoadModel.getTableName() + "for table status updation");
+      }
+    } finally {
+      if (carbonLock.unlock()) {
+        LOGGER.info("Table unlocked successfully after table status updation" + carbonLoadModel
+            .getDatabaseName() + "." + carbonLoadModel.getTableName());
+      } else {
+        LOGGER.error(
+            "Unable to unlock Table lock for table" + carbonLoadModel.getDatabaseName() + "."
+                + carbonLoadModel.getTableName() + " during table status updation");
+      }
+    }
+    return tableStatusUpdationStatus;
+  }
+
   /**
    * Get the load number from load name.
    * @param loadName
