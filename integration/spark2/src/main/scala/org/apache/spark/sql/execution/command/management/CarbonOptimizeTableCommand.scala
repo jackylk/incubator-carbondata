@@ -19,8 +19,8 @@ package org.apache.spark.sql.execution.command.management
 
 import scala.collection.JavaConverters._
 
-import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.{CarbonEnv, Row, SparkSession}
+import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.execution.command.AtomicRunnableCommand
 import org.apache.spark.sql.hive.CarbonRelation
 
@@ -72,7 +72,7 @@ case class CarbonOptimizeTableCommand(
     relation.carbonTable
   }
 
-  def parseOptions() = {
+  def parseOptions(): Unit = {
     val segmentOption = options.get("segment")
     if (segmentOption.isEmpty) {
       throw new MalformedCarbonCommandException("not found segment option")

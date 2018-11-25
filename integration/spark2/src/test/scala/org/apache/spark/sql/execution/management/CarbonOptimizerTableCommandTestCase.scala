@@ -45,7 +45,7 @@ class CarbonOptimizerTableCommandTestCase extends QueryTest with BeforeAndAfterA
 
   test("repartition table segment") {
     val l5 = System.currentTimeMillis()
-    sql("optimize table LINEITEM_optimized options('segment'='0', 'partition_column'='L_SHIPDATE')")
+    sql("optimize table LINEITEM2 options('segment'='1', 'partition_column'='L_SHIPDATE')")
     val l6 = System.currentTimeMillis()
     t3 = l6 - l5
   }

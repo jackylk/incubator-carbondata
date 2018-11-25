@@ -62,13 +62,13 @@ class CarbonSegmentRawReaderRDD(
     private val carbonTable: CarbonTable,
     private val segment: Segment,
     var maxSegmentColCardinality: Array[Int] = null,
-    var maxSegmentColumnSchemaList: List[ColumnSchema]= new util.ArrayList[ColumnSchema](),
+    var maxSegmentColumnSchemaList: List[ColumnSchema] = new util.ArrayList[ColumnSchema](),
     var totalLength: Long = 0
 ) extends CarbonRDD[Array[Object]](sparkSession, Nil) {
 
   private val queryId = System.nanoTime() + ""
 
-  private def getCarbonInputSplits() = {
+  private def getCarbonInputSplits(): Array[CarbonInputSplit] = {
     val absoluteTableIdentifier = carbonTable.getAbsoluteTableIdentifier
     val jobConf: JobConf = new JobConf(getConf)
     SparkHadoopUtil.get.addCredentials(jobConf)
