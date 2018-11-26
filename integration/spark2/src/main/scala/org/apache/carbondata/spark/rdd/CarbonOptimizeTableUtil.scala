@@ -39,19 +39,14 @@ import org.apache.carbondata.core.scan.result.iterator.RawResultIterator
 import org.apache.carbondata.core.scan.wrappers.ByteArrayWrapper
 import org.apache.carbondata.core.statusmanager.LoadMetadataDetails
 import org.apache.carbondata.core.util.ByteUtil.UnsafeComparer
-import org.apache.carbondata.events.{
-  BuildDataMapPostExecutionEvent, OperationContext,
-  OperationListenerBus
-}
+import org.apache.carbondata.events.{BuildDataMapPostExecutionEvent, OperationContext, OperationListenerBus}
 import org.apache.carbondata.processing.loading.TableProcessingOperations
 import org.apache.carbondata.processing.loading.events.LoadEvents.LoadTablePostExecutionEvent
 import org.apache.carbondata.processing.loading.exception.CarbonDataLoadingException
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel
-import org.apache.carbondata.processing.merger.{
-  CarbonDataMergerUtil,
-  CompactionResultSortProcessor, CompactionType
-}
+import org.apache.carbondata.processing.merger.{CarbonDataMergerUtil, CompactionResultSortProcessor, CompactionType}
 import org.apache.carbondata.processing.util.CarbonLoaderUtil
+import org.apache.carbondata.spark.util.CommonUtil
 
 object CarbonOptimizeTableUtil {
 
@@ -62,12 +57,10 @@ object CarbonOptimizeTableUtil {
       table: CarbonTable,
       segment: Segment,
       column: CarbonColumn): Unit = {
-
     var isUpdateTableStatusRequired = false
     val carbonLoadModel = CarbonDataRDDFactory.prepareCarbonLoadModel(table)
     openSegment(carbonLoadModel)
     isUpdateTableStatusRequired = true
-
     val operationContext: OperationContext = new OperationContext
     val uuid = if (table.isChildDataMap) {
       Option(operationContext.getProperty("uuid")).getOrElse("").toString
@@ -77,7 +70,6 @@ object CarbonOptimizeTableUtil {
       ""
     }
     operationContext.setProperty("uuid", uuid)
-
     var numPartitions: Int = 0
     var statusList: Array[Boolean] = Array.empty
     try {
@@ -85,18 +77,13 @@ object CarbonOptimizeTableUtil {
       val segmentRDD = new CarbonSegmentRawReaderRDD(sparkSession, table, segment)
       segmentRDD.getPartitions
       numPartitions = calculateNumPartitions(table, segmentRDD.totalLength)
-
       val rowKey = rowKeyOfColumn(
         table,
         column,
         segmentRDD.maxSegmentColCardinality,
         segmentRDD.maxSegmentColumnSchemaList)
-
       val pairRDD = segmentRDD.keyBy(rowKey.key(_))
-
       val columnOrdering = orderingOfColumn(column)
-
-
       statusList = pairRDD
         .partitionBy(
           new RangePartitioner(numPartitions, pairRDD)(columnOrdering, classTag[Object]))
@@ -158,7 +145,6 @@ object CarbonOptimizeTableUtil {
       table,
       carbonLoadModel.getTaskNo,
       carbonLoadModel.getFactTimeStamp.toString)
-
     val loadsToMerge = new util.ArrayList[LoadMetadataDetails]()
     loadsToMerge.add(segment.getLoadMetadataDetails)
     CarbonDataMergerUtil.updateLoadMetadataWithOptimizeStatus(
@@ -167,7 +153,6 @@ object CarbonOptimizeTableUtil {
       carbonLoadModel.getSegmentId,
       carbonLoadModel,
       segmentFileName)
-
     val loadTablePostExecutionEvent: LoadTablePostExecutionEvent =
       new LoadTablePostExecutionEvent(
         table.getCarbonTableIdentifier,
@@ -196,13 +181,11 @@ object CarbonOptimizeTableUtil {
       maxSegmentColCardinality: Array[Int],
       maxSegmentColumnSchemaList: List[ColumnSchema],
       taskIndex: Int): Boolean = {
-
+    carbonLoadModel.setTaskNo(taskIndex + "")
+    CommonUtil.setTempStoreLocation(taskIndex, carbonLoadModel, true, false)
     val segmentProperties = new SegmentProperties(
       maxSegmentColumnSchemaList,
       maxSegmentColCardinality)
-
-    carbonLoadModel.setTaskNo(taskIndex + "")
-
     val processor = new CompactionResultSortProcessor(
       carbonLoadModel,
       carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable,
@@ -210,13 +193,11 @@ object CarbonOptimizeTableUtil {
       CompactionType.NONE,
       carbonLoadModel.getTableName,
       null)
-
+    // add task completion listener to release resource
     TaskContext.get().addTaskCompletionListener(_ => close(carbonLoadModel, processor))
-
     val iteratorList = new util.ArrayList[RawResultIterator](1)
     iteratorList.add(new RawResultIterator(null, null, null) {
       override def next(): Array[AnyRef] = iterator.next()
-
       override def hasNext: Boolean = iterator.hasNext
     })
     try {
@@ -226,7 +207,6 @@ object CarbonOptimizeTableUtil {
         LOGGER.error("localSortAndWriteDataFile Failed ", e)
         throw e
     }
-
   }
 
   private def close(carbonLoadModel: CarbonLoadModel,
@@ -288,22 +268,24 @@ object CarbonOptimizeTableUtil {
     val segmentProperties = new SegmentProperties(
       maxSegmentColumnSchemaList,
       maxSegmentColCardinality)
-    val columnValueSize = segmentProperties.getEachDimColumnValueSize
-    var dictIndex = -1
+    val columnValueSizes = segmentProperties.getEachDimColumnValueSize
+    var columnValueSize: Int = 0
     var offset = 0
     breakable {
       (0 to dimensions.size()).foreach { index =>
         if ((dimensions.get(index).isDirectDictionaryEncoding) ||
             (dimensions.get(index).isGlobalDictionaryEncoding)) {
-          dictIndex = dictIndex + 1
+          columnValueSize = columnValueSizes(index)
           if (dimension.getColName.equals(dimensions.get(index).getColName)) {
             break
           }
-          offset = offset + columnValueSize(index)
+          if (columnValueSize > 0) {
+            offset = offset + columnValueSize
+          }
         }
       }
     }
-    new DictRowKey(offset, columnValueSize(dictIndex))
+    new DictRowKey(offset, columnValueSize)
   }
 
   private def getRowKeyOfNoDictDimension(

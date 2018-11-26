@@ -17,7 +17,6 @@
 
 package org.apache.spark.sql.execution.management
 
-import org.apache.spark.sql.execution.command.management.CarbonOptimizeTableCommand
 import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
 
@@ -36,7 +35,7 @@ class CarbonOptimizerTableCommandTestCase extends QueryTest with BeforeAndAfterA
     t1 = l2 - l1
 
     sql("drop table if exists LINEITEM_optimized")
-    sql("create table if not exists LINEITEM_optimized(L_ORDERKEY INT , L_PARTKEY INT , L_SUPPKEY string, L_LINENUMBER int, L_QUANTITY double, L_EXTENDEDPRICE double, L_DISCOUNT double, L_TAX double, L_RETURNFLAG string, L_LINESTATUS string, L_SHIPDATE date, L_COMMITDATE date, L_RECEIPTDATE date, L_SHIPINSTRUCT string, L_SHIPMODE string, L_COMMENT string) STORED AS carbondata TBLPROPERTIES('table_blocklet_size'='32', 'table_blocksize'='128', 'SORT_COLUMNS'='L_SHIPDATE, L_RECEIPTDATE')")
+    sql("create table if not exists LINEITEM_optimized(L_ORDERKEY INT , L_PARTKEY INT , L_SUPPKEY string, L_LINENUMBER int, L_QUANTITY double, L_EXTENDEDPRICE double, L_DISCOUNT double, L_TAX double, L_RETURNFLAG string, L_LINESTATUS string, L_SHIPDATE date, L_COMMITDATE date, L_RECEIPTDATE date, L_SHIPINSTRUCT string, L_SHIPMODE string, L_COMMENT string) STORED AS carbondata TBLPROPERTIES('table_blocklet_size'='32', 'table_blocksize'='128', 'SORT_COLUMNS'='')")
     val l3 = System.currentTimeMillis()
     sql("load data inpath '/opt/bigdata/spark-2.2.1-bin-hadoop2.7/spark-warehouse/tpchhive.db/lineitem/lineitem.tbl' into table LINEITEM_optimized options('dateformat'='yyyy-MM-dd', 'header'='false', 'bad_records_action'='force', 'delimiter'='|')")
     val l4 = System.currentTimeMillis()
@@ -45,7 +44,7 @@ class CarbonOptimizerTableCommandTestCase extends QueryTest with BeforeAndAfterA
 
   test("repartition table segment") {
     val l5 = System.currentTimeMillis()
-    sql("optimize table LINEITEM2 options('segment'='1', 'partition_column'='L_SHIPDATE')")
+    sql("optimize table LINEITEM_optimized options('segment'='0', 'partition_column'='L_ORDERKEY')")
     val l6 = System.currentTimeMillis()
     t3 = l6 - l5
   }
