@@ -197,6 +197,15 @@ class TestNIQueryWithSecondaryIndex extends QueryTest with BeforeAndAfterAll{
     }
   }
 
+  // DTS2018112703907  Jinling Issue
+  test("creation of parquet table with filter on SI column") {
+    sql("drop table if exists testParq")
+    sql(
+      "create table testParq stored as parquet select * from seccust where " +
+      "c_phone='25-989-741-2988'")
+    sql("drop table if exists testParq")
+  }
+
   def isIndexTablePresent(plan: DataFrame): Boolean = {
     plan.queryExecution.optimizedPlan.find {
       case PhysicalOperation(projects, filters, l: LogicalRelation)
