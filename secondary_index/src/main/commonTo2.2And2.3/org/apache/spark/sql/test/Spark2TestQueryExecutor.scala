@@ -63,10 +63,8 @@ object Spark2TestQueryExecutor {
     .enableHiveSupport()
     .config("spark.sql.warehouse.dir", warehouse)
     .config("spark.sql.crossJoin.enabled", "true")
-    .config("spark.carbon.sessionstate.classname",
-      "org.apache.spark.sql.hive.CarbonACLInternalSessionStateBuilder")
     .config("spark.sql.session.state.builder",
-      "org.apache.spark.sql.hive.HiveACLSessionStateBuilder")
+      "org.apache.spark.sql.hive.CarbonACLInternalSessionStateBuilder")
     .config("spark.sql.catalog.class", "org.apache.spark.sql.hive.HiveACLExternalCatalog")
      .config("spark.sql.hive.implementation", "org.apache.spark.sql.hive.HiveACLClientImpl")
     .config("spark.sql.hiveClient.isolation.enabled", "false")

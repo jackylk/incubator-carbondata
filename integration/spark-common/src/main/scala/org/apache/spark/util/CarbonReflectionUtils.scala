@@ -214,9 +214,18 @@ object CarbonReflectionUtils {
       createObject(className, carbonSession)._1
     } else if (SparkUtil.isSparkVersionXandAbove("2.2")) {
       if (useHiveMetaStore) {
-        val className = sparkContext.conf.get(
-          CarbonCommonConstants.CARBON_SESSIONSTATE_CLASSNAME,
-          "org.apache.spark.sql.hive.CarbonSessionStateBuilder")
+        var className = new String
+        // If CARBON_SESSIONSTATE_CLASSNAME is not set in SparkContext configuration, then make
+        // use of "spark_sql_session_state_builder" parameter to create object,
+        // else CARBON_SESSIONSTATE_CLASSNAME creates object using
+        // hive session state builder leading to invalid arguments mismatch.
+        if (sparkContext.conf.contains("spark.sql.session.state.builder")) {
+          className = sparkContext.conf.get("spark.sql.session.state.builder")
+        } else {
+          className = sparkContext.conf.get(
+            CarbonCommonConstants.CARBON_SESSIONSTATE_CLASSNAME,
+            "org.apache.spark.sql.hive.CarbonSessionStateBuilder")
+        }
         val tuple = createObject(className, carbonSession, None)
         val method = tuple._2.getMethod("build")
         method.invoke(tuple._1)
