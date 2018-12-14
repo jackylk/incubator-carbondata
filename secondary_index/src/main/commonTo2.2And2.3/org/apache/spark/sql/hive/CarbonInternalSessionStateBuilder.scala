@@ -11,14 +11,12 @@
  */
 package org.apache.spark.sql.hive
 
-import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.spark.acl.CarbonUserGroupInformation
 import org.apache.carbondata.spark.util.CarbonScalaUtil
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
-import org.apache.hadoop.hive.ql.metadata.HiveException
 import org.apache.spark.sql._
 import org.apache.spark.sql.acl._
 import org.apache.spark.sql.catalyst.TableIdentifier

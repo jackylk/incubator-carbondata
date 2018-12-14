@@ -226,6 +226,12 @@ object CarbonCommonInitializer {
       operationListenerBus
         .addListener(classOf[AlterTableRenamePostEvent], new AlterTableRenameEventListener)
       operationListenerBus
+        .addListener(classOf[AlterTableColRenameAndDataTypeChangePreEvent],
+          new AlterTableColumnRenameEventListener)
+      operationListenerBus
+        .addListener(classOf[AlterTableColRenameAndDataTypeChangePostEvent],
+          new AlterTableColumnRenameEventListener)
+      operationListenerBus
         .addListener(classOf[DeleteSegmentByIdPostEvent], new DeleteSegmentByIdListener)
       operationListenerBus
         .addListener(classOf[DeleteSegmentByDatePostEvent], new DeleteSegmentByDateListener)

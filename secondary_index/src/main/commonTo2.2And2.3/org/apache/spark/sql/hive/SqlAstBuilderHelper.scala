@@ -11,7 +11,6 @@
  */
 package org.apache.spark.sql.hive
 
-import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.spark.sql.SparkACLSqlAstBuilder
