@@ -60,4 +60,14 @@ class DropTableTest extends QueryTest with BeforeAndAfterAll {
       .forall(row => !row.getString(1).equals("i1") && !row.getString(1).equals("i2") && row.getString(1).equals("t1")))
     assert(sql("show indexes on t1 in cd").collect().isEmpty)
   }
+
+  test("test drop index command") {
+    sql("drop table if exists testDrop")
+    sql("create table testDrop (a string, b string, c string) stored by 'carbondata'")
+    val exception = intercept[RuntimeException] {
+      sql("drop index indTestDrop on testDrop")
+    }
+    assert(exception.getMessage().contains("Table or view 'indtestdrop' not found"))
+    sql("drop table if exists testDrop")
+  }
 }

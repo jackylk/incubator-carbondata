@@ -136,7 +136,7 @@ private[sql] case class DropIndex(ifExistsSet: Boolean,
       // in case if the the physical folders still exists for the index table
       // but the carbon and hive info for the index table is removed,
       // DROP INDEX IF EXISTS should clean up those physical directories
-      if (!carbonTable.isDefined && ifExistsSet) {
+      if (ifExistsSet && !carbonTable.isDefined) {
         val databaseLoc = CarbonEnv
           .getDatabaseLocation(dbName, sparkSession)
         val tablePath = databaseLoc + CarbonCommonConstants.FILE_SEPARATOR +
