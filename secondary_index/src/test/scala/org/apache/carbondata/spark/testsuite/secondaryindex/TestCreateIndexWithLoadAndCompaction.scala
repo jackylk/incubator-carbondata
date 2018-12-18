@@ -233,7 +233,7 @@ class TestCreateIndexWithLoadAndCompaction extends QueryTest with BeforeAndAfter
       sql("alter table si_compaction_test compact 'minor'")
 
       // get index table from relation
-      val indexCarbonTable = CarbonEnv.getInstance(Spark2TestQueryExecutor.spark).carbonMetastore
+      val indexCarbonTable = CarbonEnv.getInstance(Spark2TestQueryExecutor.spark).carbonMetaStore
         .lookupRelation(Option("default"), "alter_i1")(Spark2TestQueryExecutor.spark)
         .asInstanceOf[CarbonRelation].carbonTable
       // read load metadata details

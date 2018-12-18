@@ -342,7 +342,7 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
     var isCarbonTable: Boolean = false
     isCarbonTable =
       try {
-        CarbonEnv.getInstance(sparkSession).carbonMetastore
+        CarbonEnv.getInstance(sparkSession).carbonMetaStore
           .tableExists(TableIdentifier(tableName,
             Some(CarbonEnv.getDatabaseName(dbNameOp)(sparkSession))))(
             sparkSession)
@@ -361,7 +361,7 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
         tableName,
         null,
         Set(privType))))
-      val carbonTable = CarbonEnv.getInstance(sparkSession).carbonMetastore
+      val carbonTable = CarbonEnv.getInstance(sparkSession).carbonMetaStore
         .lookupRelation(dbNameOp, tableName)(sparkSession).asInstanceOf[CarbonRelation]
         .carbonTable
       val tableList = CarbonInternalScalaUtil.getIndexesTables(carbonTable)

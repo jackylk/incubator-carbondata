@@ -47,7 +47,7 @@ object CarbonInternalHiveMetadataUtil {
    */
   def invalidateAndUpdateIndexInfo(indexTableIdentifier: TableIdentifier,
       indexInfo: String, parentCarbonTable: CarbonTable)(sparkSession: SparkSession): Unit = {
-    val catalog = CarbonEnv.getInstance(sparkSession).carbonMetastore
+    val catalog = CarbonEnv.getInstance(sparkSession).carbonMetaStore
     val dbName = indexTableIdentifier.database
       .getOrElse(CarbonCommonConstants.DATABASE_DEFAULT_NAME)
     val tableName = indexTableIdentifier.table

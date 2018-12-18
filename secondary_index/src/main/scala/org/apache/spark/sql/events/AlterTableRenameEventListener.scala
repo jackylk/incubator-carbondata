@@ -44,7 +44,7 @@ class AlterTableRenameEventListener extends OperationEventListener with Logging 
         val newTablePath = alterTableRenamePreEvent.newTablePath
         val oldDatabaseName = carbonTable.getDatabaseName
         val newTableName = alterTableRenameModel.newTableIdentifier.table
-        val metastore = CarbonEnv.getInstance(sparkSession).carbonMetastore
+        val metastore = CarbonEnv.getInstance(sparkSession).carbonMetaStore
         val table: CarbonTable = metastore
           .lookupRelation(Some(oldDatabaseName), newTableName)(sparkSession)
           .asInstanceOf[CarbonRelation].carbonTable

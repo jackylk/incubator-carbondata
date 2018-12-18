@@ -58,7 +58,7 @@ class AlterTableDropColumnEventListener extends OperationEventListener with Logg
       alterTableDropColumnModel: AlterTableDropColumnModel)
     (sparkSession: SparkSession) = {
     var indexTableToDrop: Seq[String] = Seq.empty
-    val catalog = CarbonEnv.getInstance(sparkSession).carbonMetastore
+    val catalog = CarbonEnv.getInstance(sparkSession).carbonMetaStore
     val parentCarbonTable = catalog.lookupRelation(Some(dbName), tableName)(sparkSession)
       .asInstanceOf[CarbonRelation].carbonTable
     CarbonInternalScalaUtil.getIndexesMap(parentCarbonTable).asScala

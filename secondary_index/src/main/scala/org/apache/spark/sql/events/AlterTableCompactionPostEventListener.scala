@@ -71,7 +71,7 @@ class AlterTableCompactionPostEventListener extends OperationEventListener with 
                 indexTableAndColumns._2.asScala.toList,
                 indexTableAndColumns._1)
               val metastore = CarbonEnv.getInstance(sQLContext.sparkSession)
-                .carbonMetastore
+                .carbonMetaStore
               val indexCarbonTable = metastore
                 .lookupRelation(Some(carbonLoadModel.getDatabaseName),
                   secondaryIndex.indexTableName)(sQLContext

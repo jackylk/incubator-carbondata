@@ -45,7 +45,7 @@ case class RegisterIndexTableCommand(dbName: Option[String], indexTableName: Str
   }
 
   override def processData(sparkSession: SparkSession): Seq[Row] = {
-    val metaStore = CarbonEnv.getInstance(sparkSession).carbonMetastore
+    val metaStore = CarbonEnv.getInstance(sparkSession).carbonMetaStore
     val databaseName = CarbonEnv.getDatabaseName(dbName)(sparkSession)
     val databaseLocation = CarbonEnv.getDatabaseLocation(databaseName, sparkSession)
     val tablePath = databaseLocation + CarbonCommonConstants.FILE_SEPARATOR + indexTableName

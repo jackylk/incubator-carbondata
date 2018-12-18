@@ -42,7 +42,7 @@ class DeleteSegmentByIdListener extends OperationEventListener with Logging {
         val loadIds = deleteSegmentPostEvent.loadIds
         val sparkSession = deleteSegmentPostEvent.sparkSession
         CarbonInternalScalaUtil.getIndexesTables(carbonTable).asScala.foreach { tableName =>
-          val metastore = CarbonEnv.getInstance(sparkSession).carbonMetastore
+          val metastore = CarbonEnv.getInstance(sparkSession).carbonMetaStore
           val table = metastore
             .lookupRelation(Some(carbonTable.getDatabaseName), tableName)(sparkSession)
             .asInstanceOf[CarbonRelation].carbonTable

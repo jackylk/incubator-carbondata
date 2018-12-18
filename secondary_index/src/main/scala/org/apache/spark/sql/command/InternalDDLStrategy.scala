@@ -28,7 +28,7 @@ class InternalDDLStrategy(sparkSession: SparkSession) extends SparkStrategy {
   override def apply(plan: LogicalPlan): Seq[SparkPlan] = {
     plan match {
       case CreateIndexTable(indexModel, tableProperties, createIndexSql, isCreateSIndex) =>
-        val isCarbonTable = CarbonEnv.getInstance(sparkSession).carbonMetastore
+        val isCarbonTable = CarbonEnv.getInstance(sparkSession).carbonMetaStore
           .tableExists(TableIdentifier(indexModel.tableName, indexModel.databaseName))(
             sparkSession)
         if (isCarbonTable) {
@@ -42,7 +42,7 @@ class InternalDDLStrategy(sparkSession: SparkSession) extends SparkStrategy {
           // if table exist and permission is provided after launching spark-sql,
           // then below method will refresh carbonCatalog metadata for new ACL
           // Else throws table not found exception, which means not carbon table.
-          CarbonEnv.getInstance(sparkSession).carbonMetastore
+          CarbonEnv.getInstance(sparkSession).carbonMetaStore
             .lookupRelation(TableIdentifier(table, databaseName))(sparkSession)
           ExecutedCommandExec(ShowIndexes(databaseName, table, showIndexSql, plan.output)) ::
           Nil
@@ -61,10 +61,10 @@ class InternalDDLStrategy(sparkSession: SparkSession) extends SparkStrategy {
             sys.error("Table does not exist or Missing privileges : " + dropIndexSql)
           }
         } else {
-          val isCarbonTable = CarbonEnv.getInstance(sparkSession).carbonMetastore
+          val isCarbonTable = CarbonEnv.getInstance(sparkSession).carbonMetaStore
             .tableExists(tableIdentifier)(sparkSession)
           if (isCarbonTable) {
-            val isIndexTableExist = CarbonEnv.getInstance(sparkSession).carbonMetastore
+            val isIndexTableExist = CarbonEnv.getInstance(sparkSession).carbonMetaStore
               .tableExists(TableIdentifier(tableName, databaseNameOp))(sparkSession)
             if (!isIndexTableExist && !ifExistsSet) {
               val dbName = CarbonEnv.getDatabaseName(databaseNameOp)(sparkSession)

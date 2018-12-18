@@ -70,7 +70,7 @@ class AlterTableMergeIndexSIEventListener
                 indexTableAndColumns._2.asScala.toList,
                 indexTableAndColumns._1)
               val metastore = CarbonEnv.getInstance(sparkSession)
-                .carbonMetastore
+                .carbonMetaStore
               val indexCarbonTable = metastore
                 .lookupRelation(Some(carbonMainTable.getDatabaseName),
                   secondaryIndex.indexTableName)(sparkSession).asInstanceOf[CarbonRelation]

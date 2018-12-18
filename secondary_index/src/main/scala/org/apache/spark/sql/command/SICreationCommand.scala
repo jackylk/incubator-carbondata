@@ -75,7 +75,7 @@ class ErrorMessage(message: String) extends Exception(message) {
        "SI Table Properties" -> tableProperties.toString()))
     LOGGER.info(
       s"Creating Index with Database name [$databaseName] and Index name [$indexTableName]")
-    val catalog = CarbonEnv.getInstance(sparkSession).carbonMetastore
+    val catalog = CarbonEnv.getInstance(sparkSession).carbonMetaStore
     val identifier = TableIdentifier(tableName, indexModel.databaseName)
     catalog.checkSchemasModifiedTimeAndReloadTable(identifier)
     var carbonTable: CarbonTable = null
@@ -84,7 +84,7 @@ class ErrorMessage(message: String) extends Exception(message) {
 
     try {
       carbonTable =
-        CarbonEnv.getInstance(sparkSession).carbonMetastore
+        CarbonEnv.getInstance(sparkSession).carbonMetaStore
           .lookupRelation(indexModel.databaseName, tableName)(sparkSession)
           .asInstanceOf[CarbonRelation].metaData.carbonTable
       if (carbonTable == null) {
@@ -119,7 +119,7 @@ class ErrorMessage(message: String) extends Exception(message) {
       }
       // get carbon table again to reflect any changes during lock acquire.
       carbonTable =
-        CarbonEnv.getInstance(sparkSession).carbonMetastore
+        CarbonEnv.getInstance(sparkSession).carbonMetaStore
           .lookupRelation(indexModel.databaseName, tableName)(sparkSession)
           .asInstanceOf[CarbonRelation].metaData.carbonTable
       if (carbonTable == null) {
@@ -259,7 +259,7 @@ class ErrorMessage(message: String) extends Exception(message) {
         val tableIdentifier = AbsoluteTableIdentifier
           .from(tablePath, databaseName, indexTableName)
         // Add Database to catalog and persist
-        val catalog = CarbonEnv.getInstance(sparkSession).carbonMetastore
+        val catalog = CarbonEnv.getInstance(sparkSession).carbonMetaStore
         //        val tablePath = tableIdentifier.getTablePath
         val carbonSchemaString = catalog.generateTableSchemaString(tableInfo, tableIdentifier)
         val indexCarbonTable = CarbonInternalScalaUtil

@@ -36,7 +36,7 @@ private[sql] case class ShowIndexes(
     val databaseName = CarbonEnv.getDatabaseName(databaseNameOp)(sparkSession)
     // Here using checkSchemasModifiedTimeAndReloadTables in tableExists to reload metadata if
     // schema is changed by other process, so that tableInfoMap woulb be refilled.
-    val catalog = CarbonEnv.getInstance(sparkSession).carbonMetastore
+    val catalog = CarbonEnv.getInstance(sparkSession).carbonMetaStore
     val identifier = TableIdentifier(tableName, databaseNameOp)
     val tableExists = catalog
       .tableExists(identifier)(sparkSession)

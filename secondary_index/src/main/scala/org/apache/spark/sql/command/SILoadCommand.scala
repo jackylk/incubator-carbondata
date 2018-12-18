@@ -49,7 +49,7 @@ private[sql] case class LoadDataForSecondaryIndex(indexModel: SecondaryIndex) ex
     val tableName = indexModel.tableName
     val databaseName = CarbonEnv.getDatabaseName(indexModel.databaseName)(sparkSession)
     val relation =
-      CarbonEnv.getInstance(sparkSession).carbonMetastore
+      CarbonEnv.getInstance(sparkSession).carbonMetaStore
         .lookupRelation(indexModel.databaseName, tableName)(sparkSession)
         .asInstanceOf[CarbonRelation]
     if (relation == null) {
@@ -105,7 +105,7 @@ private[sql] case class LoadDataForSecondaryIndex(indexModel: SecondaryIndex) ex
             String]()
           SecondaryIndexCreator
             .createSecondaryIndex(secondaryIndexModel, segmentToSegmentTimestampMap)
-          val indexTableMeta = CarbonEnv.getInstance(sparkSession).carbonMetastore
+          val indexTableMeta = CarbonEnv.getInstance(sparkSession).carbonMetaStore
             .getTableFromMetadataCache(secondaryIndexModel.carbonLoadModel.getDatabaseName,
               secondaryIndexModel.secondaryIndex.indexTableName).getOrElse(null)
           val indexCarbonTable = if (null != indexTableMeta) {

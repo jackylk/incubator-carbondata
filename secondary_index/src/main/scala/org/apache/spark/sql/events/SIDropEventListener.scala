@@ -49,7 +49,7 @@ class SIDropEventListener extends OperationEventListener with Logging {
             Some(parentCarbonTable.getDatabaseName))
           val tablePath = dropTablePreEvent.carbonTable.getTablePath
           val sparkSession = dropTablePreEvent.sparkSession
-          val metastore = CarbonEnv.getInstance(sparkSession).carbonMetastore
+          val metastore = CarbonEnv.getInstance(sparkSession).carbonMetaStore
           var isValidDeletion = false
 
           CarbonInternalScalaUtil.getIndexesTables(parentCarbonTable).asScala

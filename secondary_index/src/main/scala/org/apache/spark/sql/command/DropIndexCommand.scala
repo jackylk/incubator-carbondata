@@ -50,7 +50,7 @@ private[sql] case class DropIndex(ifExistsSet: Boolean,
     val carbonTableIdentifier = new CarbonTableIdentifier(dbName, tableName, "")
     var tableIdentifierForAcquiringLock = carbonTableIdentifier
     val locksToBeAcquired = List(LockUsage.METADATA_LOCK, LockUsage.DROP_TABLE_LOCK)
-    val catalog = CarbonEnv.getInstance(sparkSession).carbonMetastore
+    val catalog = CarbonEnv.getInstance(sparkSession).carbonMetaStore
     val databaseLoc = CarbonEnv.getDatabaseLocation(dbName, sparkSession)
     // flag to check if folders and files can be successfully deleted
     var isValidDeletion = false
@@ -102,7 +102,7 @@ private[sql] case class DropIndex(ifExistsSet: Boolean,
 
         val tableIdentifier = TableIdentifier(tableName, Some(dbName))
         // drop carbon table
-        val parentCarbonTable = CarbonEnv.getInstance(sparkSession).carbonMetastore
+        val parentCarbonTable = CarbonEnv.getInstance(sparkSession).carbonMetaStore
           .lookupRelation(Some(dbName), parentTableName)(sparkSession).asInstanceOf[CarbonRelation]
           .carbonTable
         val tablePath = carbonTable.get.getTablePath

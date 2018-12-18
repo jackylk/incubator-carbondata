@@ -60,11 +60,11 @@ object CarbonInternalMetastore {
       if (indexCarbonTable != null) {
         ManageDictionaryAndBTree.clearBTreeAndDictionaryLRUCache(indexCarbonTable)
         LOGGER.info(s"Deleting index table $dbName.$tableName")
-        CarbonEnv.getInstance(sparkSession).carbonMetastore
+        CarbonEnv.getInstance(sparkSession).carbonMetaStore
           .dropTable(indexCarbonTable.getAbsoluteTableIdentifier)(sparkSession)
         if (removeEntryFromParentTable && parentCarbonTable != null) {
           val parentTableName = parentCarbonTable.getTableName
-          val relation: LogicalPlan = CarbonEnv.getInstance(sparkSession).carbonMetastore
+          val relation: LogicalPlan = CarbonEnv.getInstance(sparkSession).carbonMetaStore
             .lookupRelation(Some(dbName), parentTableName)(sparkSession)
           val indexInfo = if (relation != null) {
             CarbonInternalScalaUtil
@@ -97,7 +97,7 @@ object CarbonInternalMetastore {
 
   def removeTableFromMetadataCache(dbName: String, tableName: String)
     (sparkSession: SparkSession): Unit = {
-    CarbonEnv.getInstance(sparkSession).carbonMetastore.removeTableFromMetadata(dbName, tableName)
+    CarbonEnv.getInstance(sparkSession).carbonMetaStore.removeTableFromMetadata(dbName, tableName)
   }
 
   /**
@@ -115,7 +115,7 @@ object CarbonInternalMetastore {
     val indexTable = carbonTableIdentifier.table
     var indexCarbonTable: CarbonTable = null
     try {
-      indexCarbonTable = CarbonEnv.getInstance(sparkSession).carbonMetastore
+      indexCarbonTable = CarbonEnv.getInstance(sparkSession).carbonMetaStore
         .lookupRelation(dbName, indexTable)(sparkSession)
         .asInstanceOf[CarbonRelation].carbonTable
     } catch {
@@ -262,7 +262,7 @@ object CarbonInternalMetastore {
     if (FileFactory.isFileExist(metadataFilePath, fileType)) {
       // while drop we should refresh the schema modified time so that if any thing has changed
       // in the other beeline need to update.
-      CarbonEnv.getInstance(sparkSession).carbonMetastore
+      CarbonEnv.getInstance(sparkSession).carbonMetaStore
         .checkSchemasModifiedTimeAndReloadTable(TableIdentifier(tableName, Option(dbName)))
       val file = FileFactory.getCarbonFile(metadataFilePath, fileType)
       CarbonUtil.deleteFoldersAndFilesSilent(file.getParentFile)

@@ -116,7 +116,7 @@ object SecondaryIndexCreator {
     // create executor service to parallely run the segments
     val executorService = java.util.concurrent.Executors.newFixedThreadPool(threadPoolSize)
     val metastore = CarbonEnv.getInstance(secondaryIndexModel.sqlContext.sparkSession)
-      .carbonMetastore
+      .carbonMetaStore
     val indexCarbonTable = metastore
       .lookupRelation(Some(secondaryIndexModel.carbonLoadModel.getDatabaseName),
         secondaryIndexModel.secondaryIndex.indexTableName)(secondaryIndexModel.sqlContext

@@ -206,12 +206,12 @@ object CarbonInternalScalaUtil {
   def getCompressorForIndexTable(secondaryIndexModel: SecondaryIndexModel)
     (sparkSession: SparkSession): String = {
     val relation =
-      CarbonEnv.getInstance(sparkSession).carbonMetastore
+      CarbonEnv.getInstance(sparkSession).carbonMetaStore
         .lookupRelation(Some(secondaryIndexModel.carbonLoadModel.getDatabaseName),
           secondaryIndexModel.carbonLoadModel.getTableName)(sparkSession)
         .asInstanceOf[CarbonRelation]
     val indexTableRelation =
-      CarbonEnv.getInstance(sparkSession).carbonMetastore
+      CarbonEnv.getInstance(sparkSession).carbonMetaStore
         .lookupRelation(secondaryIndexModel.secondaryIndex.databaseName,
           secondaryIndexModel.secondaryIndex.indexTableName)(sparkSession)
         .asInstanceOf[CarbonRelation]
