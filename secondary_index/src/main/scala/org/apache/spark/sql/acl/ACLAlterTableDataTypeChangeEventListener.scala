@@ -26,7 +26,8 @@ object ACLAlterTableDataTypeChangeEventListener {
 
     override def onEvent(event: Event,
         operationContext: OperationContext): Unit = {
-      val alterTableAddColumnPreEvent = event.asInstanceOf[AlterTableDataTypeChangePreEvent]
+      val alterTableAddColumnPreEvent = event
+        .asInstanceOf[AlterTableColRenameAndDataTypeChangePreEvent]
       val carbonTable: CarbonTable = alterTableAddColumnPreEvent.carbonTable
       val carbonTableIdentifier: CarbonTableIdentifier = carbonTable.getCarbonTableIdentifier
       val sparkSession: SparkSession = alterTableAddColumnPreEvent.sparkSession
@@ -42,7 +43,8 @@ object ACLAlterTableDataTypeChangeEventListener {
 
     override def onEvent(event: Event,
         operationContext: OperationContext): Unit = {
-      val alterTablePostExecutionEvent = event.asInstanceOf[AlterTableDataTypeChangePostEvent]
+      val alterTablePostExecutionEvent = event
+        .asInstanceOf[AlterTableColRenameAndDataTypeChangePostEvent]
       val sparkSession = alterTablePostExecutionEvent.sparkSession
       ACLFileUtils
         .takeSnapAfterOperationAndApplyACL(sparkSession,

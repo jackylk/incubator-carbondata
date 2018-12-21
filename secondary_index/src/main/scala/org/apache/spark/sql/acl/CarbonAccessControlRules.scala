@@ -25,7 +25,7 @@ import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.command.datamap.{CarbonCreateDataMapCommand, CarbonDataMapRebuildCommand, CarbonDataMapShowCommand, CarbonDropDataMapCommand}
 import org.apache.spark.sql.execution.command.management._
 import org.apache.spark.sql.execution.command.partition.CarbonAlterTableSplitPartitionCommand
-import org.apache.spark.sql.execution.command.schema.{CarbonAlterTableAddColumnCommand, CarbonAlterTableDataTypeChangeCommand, CarbonAlterTableDropColumnCommand, CarbonAlterTableRenameCommand}
+import org.apache.spark.sql.execution.command.schema.{CarbonAlterTableAddColumnCommand, CarbonAlterTableColRenameDataTypeChangeCommand, CarbonAlterTableDropColumnCommand, CarbonAlterTableRenameCommand}
 import org.apache.spark.sql.execution.command.table.{CarbonCreateTableCommand, CarbonDropTableCommand}
 import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.sql.hive.acl.{HiveACLInterface, ObjectType, PrivObject, PrivType}
@@ -233,7 +233,7 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
             null,
             command.ifExists)
 
-        case c@CarbonAlterTableDataTypeChangeCommand(alterTableChangeDataTypeModel) =>
+        case c@CarbonAlterTableColRenameDataTypeChangeCommand(alterTableChangeDataTypeModel, _) =>
           checkPrivilegeRecursively(c, Some(
             CarbonEnv.getDatabaseName(alterTableChangeDataTypeModel.databaseName)(sparkSession)),
             alterTableChangeDataTypeModel.tableName,

@@ -107,13 +107,13 @@ object CarbonCommonInitializer {
         )
 
       operationListenerBus
-        .addListener(classOf[AlterTableDataTypeChangePreEvent],
+        .addListener(classOf[AlterTableColRenameAndDataTypeChangePreEvent],
           new ACLAlterTableDataTypeChangeEventListener
           .ACLPreAlterTableDataTypeChangeEventListener
         )
 
       operationListenerBus
-        .addListener(classOf[AlterTableDataTypeChangePostEvent],
+        .addListener(classOf[AlterTableColRenameAndDataTypeChangePostEvent],
           new ACLAlterTableDataTypeChangeEventListener
           .ACLPostAlterTableDataTypeChangeEventListener
         )
