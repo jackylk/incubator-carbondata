@@ -459,6 +459,9 @@ class NewInputProcessorStepImpl(configuration: CarbonDataLoadConfiguration,
       override def hasNext: Boolean = {
         rows.hasNext
       }
+
+      override def remove(): Unit = {
+      }
     }
 
     iteratorArray
