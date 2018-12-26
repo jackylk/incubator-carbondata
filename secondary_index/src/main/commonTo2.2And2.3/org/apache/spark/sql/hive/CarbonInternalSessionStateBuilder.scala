@@ -15,6 +15,7 @@ import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.spark.acl.CarbonUserGroupInformation
 import org.apache.carbondata.spark.util.CarbonScalaUtil
+import org.apache.carbondata.core.metadata.schema.table.column.{ColumnSchema => ColumnSchema}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql._
@@ -182,47 +183,42 @@ class CarbonACLSessionCatalog(
       dbName: String): CatalogStorageFormat = {
     storage.copy(locationUri = Some(path.toUri))
   }
-  def alterTableRename(oldTableIdentifier: TableIdentifier,
-    newTableIdentifier: TableIdentifier,
-    newTablePath: String): Unit = {
-    getClient().runSqlHive(
-      s"ALTER TABLE ${ oldTableIdentifier.database.get }.${ oldTableIdentifier.table } " +
-      s"RENAME TO ${ oldTableIdentifier.database.get }.${ newTableIdentifier.table }")
-    getClient().runSqlHive(
-      s"ALTER TABLE ${ oldTableIdentifier.database.get }.${ newTableIdentifier.table} " +
-      s"SET SERDEPROPERTIES" +
-      s"('tableName'='${ newTableIdentifier.table }', " +
-      s"'dbName'='${ oldTableIdentifier.database.get }', 'tablePath'='${ newTablePath }')")
-  }
-
-  override def alterTable(tableIdentifier: TableIdentifier,
-    schemaParts: String,
-    cols: Option[Seq[org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema]])
-  : Unit = {
-    getClient()
-      .runSqlHive(s"ALTER TABLE ${tableIdentifier.database.get}.${ tableIdentifier.table } " +
-                  s"SET TBLPROPERTIES(${ schemaParts })")
-  }
 
   override def alterAddColumns(tableIdentifier: TableIdentifier,
     schemaParts: String,
-    cols: Option[Seq[org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema]])
-  : Unit = {
-    alterTable(tableIdentifier, schemaParts, cols)
+    cols: Option[Seq[ColumnSchema]]): Unit = {
+    updateCatalogTableForAlter(tableIdentifier, schemaParts, cols)
   }
 
   override def alterDropColumns(tableIdentifier: TableIdentifier,
     schemaParts: String,
-    cols: Option[Seq[org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema]])
-  : Unit = {
-    alterTable(tableIdentifier, schemaParts, cols)
+    cols: Option[Seq[ColumnSchema]]): Unit = {
+    updateCatalogTableForAlter(tableIdentifier, schemaParts, cols)
   }
 
-  override def alterColumnChangeDataType(tableIdentifier: TableIdentifier,
+  override def alterColumnChangeDataTypeOrRename(tableIdentifier: TableIdentifier,
+      schemaParts: String,
+      cols: Option[Seq[ColumnSchema]]): Unit = {
+    updateCatalogTableForAlter(tableIdentifier, schemaParts, cols)
+  }
+
+  /**
+   * This method alters table to set serde properties and updates the catalog table with new updated
+   * schema for all the alter operations like add column, drop column, change datatype or rename
+   * column
+   * @param tableIdentifier
+   * @param schemaParts
+   * @param cols
+   */
+  private def updateCatalogTableForAlter(tableIdentifier: TableIdentifier,
     schemaParts: String,
-    cols: Option[Seq[org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema]])
-  : Unit = {
+    cols: Option[Seq[ColumnSchema]]) = {
     alterTable(tableIdentifier, schemaParts, cols)
+    CarbonSessionUtil
+      .alterExternalCatalogForTableWithUpdatedSchema(tableIdentifier,
+        cols,
+        schemaParts,
+        sparkSession)
   }
 }
 
