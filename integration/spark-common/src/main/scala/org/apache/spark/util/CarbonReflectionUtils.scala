@@ -365,8 +365,16 @@ object CarbonReflectionUtils {
       case Some(field) =>
         val serdeMap =
           instanceMirror.reflectField(field.asTerm).get.asInstanceOf[Map[String, HiveSerDe]]
+        var serdeMapNew: Map[String, HiveSerDe] = null
+        if (serdeMap.contains("carbondata_serde")) {
+          // Internal spark has carbondata_serde with wrong input output format.
+          // Hence, carbon is updating it properly. check HiveSerDe class
+          serdeMapNew = serdeMap - "carbondata_serde"
+        } else {
+          serdeMapNew = serdeMap
+        }
         val updatedSerdeMap =
-          serdeMap ++ Map[String, HiveSerDe](
+          serdeMapNew ++ Map[String, HiveSerDe](
             ("org.apache.spark.sql.carbonsource", HiveSerDe(Some(
               classOf[MapredCarbonInputFormat].getName),
               Some(classOf[MapredCarbonOutputFormat[_]].getName),
@@ -378,7 +386,10 @@ object CarbonReflectionUtils {
             ("carbondata", HiveSerDe(Some(
               classOf[MapredCarbonInputFormat].getName),
               Some(classOf[MapredCarbonOutputFormat[_]].getName),
-              Some(classOf[CarbonHiveSerDe].getName))))
+              Some(classOf[CarbonHiveSerDe].getName))),
+            ("carbondata_serde", HiveSerDe(Some(
+              classOf[MapredCarbonInputFormat].getName),
+              Some(classOf[MapredCarbonOutputFormat[_]].getName))))
         instanceMirror.reflectField(field.asTerm).set(updatedSerdeMap)
       case _ =>
     }

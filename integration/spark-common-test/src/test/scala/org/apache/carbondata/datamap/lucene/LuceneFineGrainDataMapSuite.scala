@@ -31,7 +31,7 @@ import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.core.datamap.DataMapStoreManager
 import org.apache.carbondata.core.datamap.status.DataMapStatusManager
-
+anyway
 @Ignore
 class LuceneFineGrainDataMapSuite extends QueryTest with BeforeAndAfterAll {
 
