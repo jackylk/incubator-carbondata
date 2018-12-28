@@ -231,12 +231,12 @@ case class BroadCastFilterPushJoin(
       s"""
          |$eval
          |${ ev.code }
-         |if ($skipRow) continue;
+         |if (!$skipRow)
        """.stripMargin
     } else if (anti) {
-      "continue;"
+      "if (false)"
     } else {
-      ""
+      "if (true)"
     }
     (matched, checkCondition, buildVars)
   }
@@ -261,10 +261,12 @@ case class BroadCastFilterPushJoin(
          |${ keyEv.code }
          |// find matches from HashedRelation
          |UnsafeRow $matched = $anyNull ? null: (UnsafeRow)$relationTerm.getValue(${ keyEv.value });
-         |if ($matched == null) continue;
-         |$checkCondition
+         |if ($matched != null) {
+         |$checkCondition {
          |$numOutput.add(1);
          |${ consume(ctx, resultVars) }
+         |}
+         |}
        """.stripMargin
 
     } else {
@@ -279,12 +281,14 @@ case class BroadCastFilterPushJoin(
         keyEv
           .value
       });
-         |if ($matches == null) continue;
+         |if ($matches != null) {
          |while ($matches.hasNext()) {
          |  UnsafeRow $matched = (UnsafeRow) $matches.next();
-         |  $checkCondition
+         |  $checkCondition {
          |  $numOutput.add(1);
          |  ${ consume(ctx, resultVars) }
+         | }
+         |}
          |}
        """.stripMargin
     }
@@ -383,16 +387,19 @@ case class BroadCastFilterPushJoin(
          |${ keyEv.code }
          |// find matches from HashedRelation
          |UnsafeRow $matched = $anyNull ? null: (UnsafeRow)$relationTerm.getValue(${ keyEv.value });
-         |if ($matched == null) continue;
-         |$checkCondition
+         |if ($matched != null) {
+         |$checkCondition {
          |$numOutput.add(1);
          |${ consume(ctx, input) }
+         |}
+         |}
        """.stripMargin
     } else {
       val matches = ctx.freshName("matches")
       val iteratorCls = classOf[Iterator[UnsafeRow]].getName
       val found = ctx.freshName("found")
       s"""
+         |boolean $found = false;
          |// generate join key for stream side
          |${ keyEv.code }
          |// find matches from HashRelation
@@ -400,16 +407,18 @@ case class BroadCastFilterPushJoin(
         keyEv
           .value
       });
-         |if ($matches == null) continue;
-         |boolean $found = false;
+         |if ($matches != null) {
          |while (!$found && $matches.hasNext()) {
          |  UnsafeRow $matched = (UnsafeRow) $matches.next();
-         |  $checkCondition
+         |  $checkCondition {
          |  $found = true;
+         |  }
          |}
-         |if (!$found) continue;
+         |if ($found) {
          |$numOutput.add(1);
          |${ consume(ctx, input) }
+         |}
+         |}
        """.stripMargin
     }
   }
@@ -425,7 +434,9 @@ case class BroadCastFilterPushJoin(
     val numOutput = metricTerm(ctx, "numOutputRows")
 
     if (uniqueKeyCodePath) {
+      val found = ctx.freshName("found")
       s"""
+         | boolean $found = false;
          |// generate join key for stream side
          |${ keyEv.code }
          |// Check if the key has nulls.
@@ -434,17 +445,22 @@ case class BroadCastFilterPushJoin(
          |  UnsafeRow $matched = (UnsafeRow)$relationTerm.getValue(${ keyEv.value });
          |  if ($matched != null) {
          |    // Evaluate the condition.
-         |    $checkCondition
+         |    $checkCondition {
+         |      $found = true;
+         |    }
          |  }
          |}
+         |if (!$found) {
          |$numOutput.add(1);
          |${ consume(ctx, input) }
+         |}
        """.stripMargin
     } else {
       val matches = ctx.freshName("matches")
       val iteratorCls = classOf[Iterator[UnsafeRow]].getName
       val found = ctx.freshName("found")
       s"""
+         | boolean $found = false;
          |// generate join key for stream side
          |${ keyEv.code }
          |// Check if the key has nulls.
@@ -453,17 +469,18 @@ case class BroadCastFilterPushJoin(
          |  $iteratorCls $matches = ($iteratorCls)$relationTerm.get(${ keyEv.value });
          |  if ($matches != null) {
          |    // Evaluate the condition.
-         |    boolean $found = false;
          |    while (!$found && $matches.hasNext()) {
          |      UnsafeRow $matched = (UnsafeRow) $matches.next();
-         |      $checkCondition
-         |      $found = true;
+         |      $checkCondition {
+         |        $found = true;
+         |      }
          |    }
-         |    if ($found) continue;
          |  }
          |}
+         |if (!$found) {
          |$numOutput.add(1);
          |${ consume(ctx, input) }
+         |}
        """.stripMargin
     }
   }
