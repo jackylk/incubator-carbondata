@@ -91,6 +91,8 @@ object CarbonInternalMetastore {
       sparkSession.sessionState.catalog
         .dropTable(indexTableIdentifier, ignoreIfNotExists = true, purge = false)
       sparkSession.sessionState.catalog.refreshTable(indexTableIdentifier)
+      // delete the physical directories of the SI table after removing the instance of the table
+      CarbonInternalMetastore.deleteTableDirectory(dbName, tableName, sparkSession)
       LOGGER.info(s"Deleted index table $dbName.$tableName")
     }
   }
@@ -249,10 +251,8 @@ object CarbonInternalMetastore {
     keysParts
   }
 
-  def deleteTableDirectory(carbonTableIdentifier: CarbonTableIdentifier,
-      sparkSession: SparkSession): Unit = {
-    val dbName = carbonTableIdentifier.getDatabaseName
-    val tableName = carbonTableIdentifier.getTableName
+  def deleteTableDirectory(dbName: String, tableName: String,
+    sparkSession: SparkSession): Unit = {
     val databaseLocation = CarbonEnv.getDatabaseLocation(dbName, sparkSession)
     val tablePath = databaseLocation + CarbonCommonConstants.FILE_SEPARATOR + tableName.toLowerCase
     val tableIdentifier = AbsoluteTableIdentifier.from(tablePath, dbName, tableName)

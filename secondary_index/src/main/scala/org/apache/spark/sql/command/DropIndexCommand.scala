@@ -125,8 +125,7 @@ private[sql] case class DropIndex(ifExistsSet: Boolean,
           logInfo("Table MetaData Unlocked Successfully")
           if (isValidDeletion) {
             if (carbonTable != null && carbonTable.isDefined) {
-              CarbonInternalMetastore
-                .deleteTableDirectory(carbonTable.get.getCarbonTableIdentifier, sparkSession)
+              CarbonInternalMetastore.deleteTableDirectory(dbName, tableName, sparkSession)
             }
           }
         } else {
@@ -137,13 +136,7 @@ private[sql] case class DropIndex(ifExistsSet: Boolean,
       // but the carbon and hive info for the index table is removed,
       // DROP INDEX IF EXISTS should clean up those physical directories
       if (ifExistsSet && !carbonTable.isDefined) {
-        val databaseLoc = CarbonEnv
-          .getDatabaseLocation(dbName, sparkSession)
-        val tablePath = databaseLoc + CarbonCommonConstants.FILE_SEPARATOR +
-                        tableName
-        if (FileFactory.isFileExist(tablePath)) {
-          CarbonUtil.deleteFoldersAndFilesSilent(FileFactory.getCarbonFile(tablePath))
-        }
+        CarbonInternalMetastore.deleteTableDirectory(dbName, tableName, sparkSession)
       }
     }
     Seq.empty
