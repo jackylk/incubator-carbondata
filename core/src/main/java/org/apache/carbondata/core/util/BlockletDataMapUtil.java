@@ -560,17 +560,7 @@ public class BlockletDataMapUtil {
    * @return
    */
   public static boolean loadDataMapsParallel(CarbonTable carbonTable) {
-    String parentTableName;
-    String clsName = "org.apache.spark.util.CarbonInternalScalaUtil";
-    try {
-      Method getParentTableNameMethod =
-          Class.forName(clsName).getDeclaredMethod("getParentTableName", CarbonTable.class);
-      getParentTableNameMethod.setAccessible(true);
-      parentTableName =
-          getParentTableNameMethod.invoke(getParentTableNameMethod, carbonTable).toString();
-    } catch (Throwable e) {
-      parentTableName = null;
-    }
+    String parentTableName = getParentTableName(carbonTable);
     String tableName;
     String dbName;
     if (null != parentTableName && !parentTableName.isEmpty()) {
@@ -593,6 +583,21 @@ public class BlockletDataMapUtil {
     return Boolean.parseBoolean(CarbonProperties.getInstance()
         .getProperty(CarbonCommonConstants.CARBON_LOAD_DATAMAPS_PARALLEL + dbName + "." + tableName,
             "false"));
+  }
+
+  public static String getParentTableName(CarbonTable carbonTable) {
+    String parentTableName;
+    String clsName = "org.apache.spark.util.CarbonInternalScalaUtil";
+    try {
+      Method getParentTableNameMethod =
+          Class.forName(clsName).getDeclaredMethod("getParentTableName", CarbonTable.class);
+      getParentTableNameMethod.setAccessible(true);
+      parentTableName =
+          getParentTableNameMethod.invoke(getParentTableNameMethod, carbonTable).toString();
+    } catch (Throwable e) {
+      parentTableName = null;
+    }
+    return parentTableName;
   }
 
 }

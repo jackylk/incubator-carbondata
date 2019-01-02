@@ -200,6 +200,21 @@ class TestSecondaryIndexWithIUD extends QueryTest with BeforeAndAfterAll {
     assertResult(count)(sql("select * from sitestmain where name='Revathi'").count())
   }
 
+  // DTS2019010208198
+  test("test set segments with SI") {
+    sql("drop table if exists dest")
+    sql("create table dest (c1 string,c2 int,c3 string,c5 string) STORED BY " +
+        "'org.apache.carbondata.format'")
+    sql(s"""LOAD DATA LOCAL INPATH '$resourcesPath/IUD/dest.csv' INTO table dest""")
+    sql(s"""LOAD DATA LOCAL INPATH '$resourcesPath/IUD/dest.csv' INTO table dest""")
+    sql("drop index if exists index_dest1 on dest")
+    sql("create index index_dest1 on table dest (c3) AS 'org.apache.carbondata.format'")
+    checkAnswer(sql("select count(*) from dest"), Seq(Row(10)))
+    sql("set carbon.input.segments.default.dest=0")
+    checkAnswer(sql("select count(*) from dest"), Seq(Row(5)))
+    checkAnswer(sql("select count(*) from index_dest1"), Seq(Row(5)))
+  }
+
   override def afterAll: Unit = {
     sql("drop table if exists dest")
     sql("drop table if exists source")

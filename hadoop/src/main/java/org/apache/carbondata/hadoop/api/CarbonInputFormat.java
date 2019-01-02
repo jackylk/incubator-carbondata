@@ -876,6 +876,12 @@ m filterExpression
    */
   public static void setQuerySegment(Configuration conf, CarbonTable carbonTable) {
     String tableName = carbonTable.getTableName();
+    // The below change is for Secondary Index table. If CARBON_INPUT_SEGMENTS is set to main table,
+    // then the same has to be reflected for index tables.
+    String parentTableName = BlockletDataMapUtil.getParentTableName(carbonTable);
+    if (null != parentTableName && !parentTableName.isEmpty()) {
+      tableName = parentTableName;
+    }
     getQuerySegmentToAccess(conf, carbonTable.getDatabaseName(), tableName);
   }
 
