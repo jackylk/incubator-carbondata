@@ -68,7 +68,7 @@ object Spark2TestQueryExecutor {
     .config("spark.sql.catalog.class", "org.apache.spark.sql.hive.HiveACLExternalCatalog")
      .config("spark.sql.hive.implementation", "org.apache.spark.sql.hive.HiveACLClientImpl")
     .config("spark.sql.hiveClient.isolation.enabled", "false")
-    .getOrCreateCarbonSession(null, TestQueryExecutor.metastoredb)
+    .getOrCreateCarbonSession(null, TestQueryExecutor.metaStoreDB)
   if (warehouse.startsWith("hdfs://")) {
     System.setProperty(CarbonCommonConstants.HDFS_TEMP_LOCATION, warehouse)
     CarbonProperties.getInstance().addProperty(CarbonCommonConstants.LOCK_TYPE,

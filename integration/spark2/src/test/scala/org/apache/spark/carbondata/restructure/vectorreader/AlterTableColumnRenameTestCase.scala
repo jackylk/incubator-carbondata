@@ -23,6 +23,7 @@ import org.scalatest.BeforeAndAfterAll
 
 import org.apache.carbondata.core.metadata.CarbonMetadata
 import org.apache.carbondata.spark.exception.ProcessMetaDataException
+import org.apache.spark.util.SparkUtil
 
 class AlterTableColumnRenameTestCase extends Spark2QueryTest with BeforeAndAfterAll {
 
