@@ -19,9 +19,8 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.mapred.JobConf
 import org.apache.hadoop.mapreduce.Job
 import org.apache.spark.deploy.SparkHadoopUtil
-import org.apache.spark.sql.{CarbonEnv, DataFrame, SparkSession}
+import org.apache.spark.sql.{CarbonEnv, SparkSession}
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.execution.joins.BroadCastSIFilterPushJoin
 import org.apache.spark.sql.execution.strategy.CarbonDataSourceScan
 
 import org.apache.carbondata.common.logging.LogServiceFactory
@@ -36,13 +35,14 @@ import org.apache.carbondata.spark.rdd.CarbonScanRDD
 object CarbonSegmentUtil {
 
   /**
-   * This method is used to get the valid segments for the query based on the filter condition.
+   * Return's the valid segments for the query based on the filter condition
+   * present in carbonScanRdd.
    *
    * @param carbonScanRdd
    * @return Array of valid segments
    */
-  def getFilteredSegments(carbonScanRdd: CarbonScanRDD[InternalRow]): Array[Segment] = {
-    val LOGGER = LogServiceFactory.getLogService(BroadCastSIFilterPushJoin.getClass.getName)
+  def getFilteredSegments(carbonScanRdd: CarbonScanRDD[InternalRow]): Array[String] = {
+    val LOGGER = LogServiceFactory.getLogService(CarbonSegmentUtil.getClass.getName)
     val conf = new Configuration()
     val jobConf = new JobConf(conf)
     SparkHadoopUtil.get.addCredentials(jobConf)
@@ -51,109 +51,108 @@ object CarbonSegmentUtil {
     val startTime = System.currentTimeMillis()
     val segmentsToAccess: Array[Segment] = CarbonTableInputFormatExtended
       .getFilteredSegments(job, format).asScala.toArray
-    LOGGER
-      .info("Time taken for getting the splits: " + (System.currentTimeMillis - startTime) +
-            " ,Total split: " + segmentsToAccess.length)
-    segmentsToAccess
+    LOGGER.info(
+      "Time taken for getting the Filtered segments"
+      + (System.currentTimeMillis - startTime) + " ,Total segments: " + segmentsToAccess.length)
+    val segmentIdtoAccess = new Array[String](segmentsToAccess.length)
+    for (i <- 0 until segmentsToAccess.length) {
+      segmentIdtoAccess(i) = segmentsToAccess(i).getSegmentNo
+    }
+    segmentIdtoAccess
   }
 
   /**
-   * This method is used to get the valid segments for the query based on the filter condition.
+   * Return's the valid segments for the query based on the filter condition
+   * present in carbonScanRdd.
    *
    * @param query
+   * @param sparkSession
    * @return Array of valid segments
+   * @throws RuntimeException for Unsupported operation on this API
    */
-  def getFilteredSegments(query: DataFrame): Array[Segment] = {
-    val scanRDD = query.queryExecution.sparkPlan.collect {
+  def getFilteredSegments(query: String, sparkSession: SparkSession): Array[String] = {
+    var countRDD: Int = 0
+    val dataFrame = sparkSession.sql(s"$query")
+    val scanRDD = dataFrame.queryExecution.sparkPlan.collect {
       case scan: CarbonDataSourceScan if scan.rdd.isInstanceOf[CarbonScanRDD[InternalRow]] =>
+        if (countRDD > 1) {
+          sys.error("Unsupported operation as table contains multiple CarbonRDDs")
+        }
+        countRDD = countRDD + 1
         scan.rdd.asInstanceOf[CarbonScanRDD[InternalRow]]
+      case _ =>
+        sys.error("Unsupported operation for non-carbon tables")
     }.head
     getFilteredSegments(scanRDD)
   }
 
   /**
-   * To identify which all segments can be merged with compaction type - MINOR/MAJOR.
+   * Identifies all segments which can be merged with compaction type - MAJOR.
    *
    * @param sparkSession
    * @param tableName
    * @param dbName
-   * @param compactionType
    * @return list of LoadMetadataDetails
    */
   def identifySegmentsToBeMerged(sparkSession: SparkSession,
       tableName: String,
-      dbName: String,
-      compactionType: CompactionType): util.List[LoadMetadataDetails] = {
-    compactionType match {
-      case CompactionType.MINOR | CompactionType.MAJOR => true
-      case CompactionType.CUSTOM =>
-        sys.error(
-          "Unsupported Compaction Type. Please Use identifySegmentsToBeMergedCustom API " +
-          "for Custom Compaction type")
-      case _ => sys.error("Unsupported Compaction type")
-    }
+      dbName: String): util.List[LoadMetadataDetails] = {
     val (carbonLoadModel: CarbonLoadModel, compactionSize: Long, segments:
       Array[LoadMetadataDetails]) = getSegmentDetails(
       sparkSession,
       tableName,
       dbName,
-      compactionType)
+      CompactionType.MAJOR)
     CarbonDataMergerUtil
       .identifySegmentsToBeMerged(carbonLoadModel,
         compactionSize,
         segments.toList.asJava,
-        compactionType,
+        CompactionType.MAJOR,
         new util.ArrayList[String]())
   }
 
   /**
-   * To identify which all segments can be merged for compaction type - CUSTOM.
+   * Identifies all segments which can be merged for compaction type - CUSTOM.
    *
    * @param sparkSession
    * @param tableName
    * @param dbName
-   * @param compactionType
+   * @param customSegments
    * @return list of LoadMetadataDetails
+   * @throws RuntimeException if customSegments is null
    */
   def identifySegmentsToBeMergedCustom(sparkSession: SparkSession,
       tableName: String,
       dbName: String,
-      compactionType: CompactionType,
-      customSegments: util.List[LoadMetadataDetails]): util.List[LoadMetadataDetails] = {
-    compactionType match {
-      case CompactionType.CUSTOM => true
-      case CompactionType.MINOR | CompactionType.MINOR =>
-        sys.error(
-          "Unsupported Compaction Type. Please Use identifySegmentsToBeMerged API " +
-          "for MINOR/MAJOR Compaction")
-      case _ => sys.error("Unsupported Compaction Type.")
-    }
+      customSegments: util.List[String]): util.List[LoadMetadataDetails] = {
     val (carbonLoadModel: CarbonLoadModel, compactionSize: Long, segments:
       Array[LoadMetadataDetails]) = getSegmentDetails(
       sparkSession,
       tableName,
       dbName,
-      compactionType)
-    val customSegment = customSegments.asScala.map(_.getLoadName).toList.asJava
-    if (customSegment.equals(null) || customSegment.isEmpty) {
+      CompactionType.CUSTOM)
+    if (customSegments.equals(null) || customSegments.isEmpty) {
       sys.error("Custom Segments cannot be null")
     }
     CarbonDataMergerUtil
       .identifySegmentsToBeMerged(carbonLoadModel,
         compactionSize,
-        customSegments,
-        compactionType,
-        customSegment)
+        segments.toList.asJava,
+        CompactionType.CUSTOM,
+        customSegments)
   }
 
   /**
-   * To get the Merged Load Name
+   * Returns the Merged Load Name for given list of segments
    *
    * @param list
    * @return Merged Load Name
    */
-  def getMergedLoadName(list: util.ArrayList[LoadMetadataDetails]): String = {
-    CarbonDataMergerUtil.getMergedLoadName(list)
+  def getMergedLoadName(list: util.List[LoadMetadataDetails]): String = {
+    val sortedSegments: java.util.List[LoadMetadataDetails] =
+      new java.util.ArrayList[LoadMetadataDetails](list)
+    CarbonDataMergerUtil.sortSegments(sortedSegments)
+    CarbonDataMergerUtil.getMergedLoadName(sortedSegments)
   }
 
   private def getSegmentDetails(sparkSession: SparkSession,
