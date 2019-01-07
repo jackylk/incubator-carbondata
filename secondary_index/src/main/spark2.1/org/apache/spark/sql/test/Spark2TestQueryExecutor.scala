@@ -55,7 +55,7 @@ object Spark2TestQueryExecutor {
     FileFactory.getConfiguration.
       set("dfs.client.block.write.replace-datanode-on-failure.policy", "NEVER")
   }
-  val metastoredb = s"$integrationPath/spark-common-cluster-test/target"
+  val metaStoreDB = s"$integrationPath/spark-common-cluster-test/target"
   val spark = SparkSession
     .builder().config(conf)
     .master(TestQueryExecutor.masterUrl)

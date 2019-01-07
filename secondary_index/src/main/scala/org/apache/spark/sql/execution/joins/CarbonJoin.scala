@@ -707,28 +707,28 @@ object BroadCastFilterPushJoin {
 
     val tableScan = carbonScan.collectFirst {
       case ProjectExec(projectList, batchData: CarbonDataSourceScan)
-        if (filterKey.isDefined && projectList.exists(x =>
+        if (filterKey.isDefined && (isIndexTable || projectList.exists(x =>
           x.name.equalsIgnoreCase(filterKey.get.name) &&
           x.exprId.id == filterKey.get.exprId.id &&
-          x.exprId.jvmId.equals(filterKey.get.exprId.jvmId))) =>
+          x.exprId.jvmId.equals(filterKey.get.exprId.jvmId)))) =>
         batchData
       case ProjectExec(projectList, rowData: RowDataSourceScanExec)
-        if (filterKey.isDefined && projectList.exists(x =>
+        if (filterKey.isDefined && (isIndexTable || projectList.exists(x =>
           x.name.equalsIgnoreCase(filterKey.get.name) &&
           x.exprId.id == filterKey.get.exprId.id &&
-          x.exprId.jvmId.equals(filterKey.get.exprId.jvmId))) =>
+          x.exprId.jvmId.equals(filterKey.get.exprId.jvmId)))) =>
         rowData
       case batchData: CarbonDataSourceScan
-        if (filterKey.isDefined && batchData.output.attrs.exists(x =>
+        if (filterKey.isDefined && (isIndexTable || batchData.output.attrs.exists(x =>
           x.name.equalsIgnoreCase(filterKey.get.name) &&
           x.exprId.id == filterKey.get.exprId.id &&
-          x.exprId.jvmId.equals(filterKey.get.exprId.jvmId))) =>
+          x.exprId.jvmId.equals(filterKey.get.exprId.jvmId)))) =>
         batchData
       case rowData: RowDataSourceScanExec
-        if (filterKey.isDefined && rowData.output.exists(x =>
+        if (filterKey.isDefined && (isIndexTable || rowData.output.exists(x =>
           x.name.equalsIgnoreCase(filterKey.get.name) &&
           x.exprId.id == filterKey.get.exprId.id &&
-          x.exprId.jvmId.equals(filterKey.get.exprId.jvmId))) =>
+          x.exprId.jvmId.equals(filterKey.get.exprId.jvmId)))) =>
         rowData
     }
     val configuredFilterRecordSize = CarbonProperties.getInstance.getProperty(

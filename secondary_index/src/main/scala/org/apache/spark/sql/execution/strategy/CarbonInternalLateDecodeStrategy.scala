@@ -15,9 +15,9 @@ import scala.collection.mutable.ArrayBuffer
 
 import org.apache.hadoop.security.AccessControlException
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{AnalysisException, CarbonDatasourceHadoopRelation, CarbonDictionaryCatalystDecoder, SparkSession}
+import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, Expression, IntegerLiteral}
+import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, AttributeSet, Expression, IntegerLiteral}
 import org.apache.spark.sql.catalyst.planning.{ExtractEquiJoinKeys, PhysicalOperation}
 import org.apache.spark.sql.catalyst.plans.{Inner, LeftSemi}
 import org.apache.spark.sql.catalyst.plans.logical.{Filter => LogicalFilter, _}
@@ -205,5 +205,47 @@ private[sql] class CarbonInternalLateDecodeStrategy extends CarbonLateDecodeStra
   private def isAllCarbonPlan(plan: LogicalPlan): Boolean = {
     val allRelations = plan.collect { case logicalRelation: LogicalRelation => logicalRelation }
     !allRelations.exists(x => !x.relation.isInstanceOf[CarbonDatasourceHadoopRelation])
+  }
+
+  override def getRequestedColumns(relation: LogicalRelation,
+    projectsAttr: Seq[Attribute],
+    filterSet: AttributeSet,
+    handledSet: AttributeSet,
+    newProjectList: Seq[Attribute]): Seq[Attribute] = {
+    val sparkSession = SparkSession.getActiveSession.get
+    val pushDownJoinEnabled = sparkSession.sparkContext.getConf
+      .getBoolean("spark.carbon.pushdown.join.as.filter", defaultValue = true)
+
+    // positionId column can be added in two cases
+    // case 1: SI pushdown case, SI rewritten plan adds positionId column
+    // case 2: if the user requested positionId column thru getPositionId() UDF
+    // positionId column should be removed only in case 1, as it is manually added
+    // Below code is added to handle case 2. But getPositionId() UDF is almost used only for testing
+    val isPositionIDRequested = relation.catalogTable match {
+      case Some(table) =>
+        val tblProperties = CarbonEnv.getCarbonTable(table.identifier)(sparkSession).getTableInfo
+          .getFactTable
+          .getTableProperties
+        val isPosIDRequested = if (tblProperties.containsKey("isPositionIDRequested")) {
+          val flag = java.lang.Boolean.parseBoolean(tblProperties.get("isPositionIDRequested"))
+          tblProperties.remove("isPositionIDRequested")
+          flag
+        } else {
+          false
+        }
+        isPosIDRequested
+      case _ => false
+    }
+    // remove positionId col only if pushdown is enabled and
+    // positionId col is not requested in the query
+    if (pushDownJoinEnabled && !isPositionIDRequested) {
+      ((projectsAttr.to[scala.collection.mutable.LinkedHashSet] ++ filterSet -- handledSet)
+         .map(relation.attributeMap).toSeq ++ newProjectList
+         .filterNot(attr => attr.name
+           .equalsIgnoreCase(CarbonInternalCommonConstants.POSITION_ID)))
+    } else {
+      ((projectsAttr.to[scala.collection.mutable.LinkedHashSet] ++ filterSet -- handledSet)
+         .map(relation.attributeMap).toSeq ++ newProjectList)
+    }
   }
 }
