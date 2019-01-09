@@ -211,7 +211,8 @@ private[sql] class CarbonInternalLateDecodeStrategy extends CarbonLateDecodeStra
     projectsAttr: Seq[Attribute],
     filterSet: AttributeSet,
     handledSet: AttributeSet,
-    newProjectList: Seq[Attribute]): Seq[Attribute] = {
+    newProjectList: Seq[Attribute],
+    updatedProjects: Seq[Expression]): (Seq[Attribute], Seq[Expression]) = {
     val sparkSession = SparkSession.getActiveSession.get
     val pushDownJoinEnabled = sparkSession.sparkContext.getConf
       .getBoolean("spark.carbon.pushdown.join.as.filter", defaultValue = true)
@@ -242,10 +243,13 @@ private[sql] class CarbonInternalLateDecodeStrategy extends CarbonLateDecodeStra
       ((projectsAttr.to[scala.collection.mutable.LinkedHashSet] ++ filterSet -- handledSet)
          .map(relation.attributeMap).toSeq ++ newProjectList
          .filterNot(attr => attr.name
-           .equalsIgnoreCase(CarbonInternalCommonConstants.POSITION_ID)))
+           .equalsIgnoreCase(CarbonInternalCommonConstants.POSITION_ID)), updatedProjects
+        .filterNot(attr => attr.isInstanceOf[AttributeReference] &&
+                           attr.asInstanceOf[AttributeReference].name
+                             .equalsIgnoreCase(CarbonInternalCommonConstants.POSITION_ID)))
     } else {
       ((projectsAttr.to[scala.collection.mutable.LinkedHashSet] ++ filterSet -- handledSet)
-         .map(relation.attributeMap).toSeq ++ newProjectList)
+         .map(relation.attributeMap).toSeq ++ newProjectList, updatedProjects)
     }
   }
 }
