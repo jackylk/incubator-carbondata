@@ -49,11 +49,10 @@ trait CarbonBroadCastFilterPushJoin extends BinaryExecNode with HashJoin with Co
     streamedPlanOutput: RDD[InternalRow],
     broadcastRelation: Broadcast[HashedRelation],
     numOutputRows: SQLMetric): RDD[InternalRow] = {
-    val averageMetric = SQLMetrics.createAverageMetric(sparkContext, "join")
     streamedPlanOutput.mapPartitions { streamedIter =>
       val hashedRelation = broadcastRelation.value.asReadOnlyCopy()
       TaskContext.get().taskMetrics().incPeakExecutionMemory(hashedRelation.estimatedSize)
-      join(streamedIter, hashedRelation, numOutputRows, averageMetric)
+      join(streamedIter, hashedRelation, numOutputRows)
     }
   }
 
