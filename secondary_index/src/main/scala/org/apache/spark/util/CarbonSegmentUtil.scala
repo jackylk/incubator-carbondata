@@ -21,10 +21,13 @@ import org.apache.hadoop.mapreduce.Job
 import org.apache.spark.deploy.SparkHadoopUtil
 import org.apache.spark.sql.{CarbonEnv, SparkSession}
 import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.execution.RowDataSourceScanExec
 import org.apache.spark.sql.execution.strategy.CarbonDataSourceScan
 
+import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.datamap.Segment
+import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatusManager}
 import org.apache.carbondata.hadoop.api.CarbonTableInputFormatExtended
 import org.apache.carbondata.processing.loading.model.{CarbonDataLoadSchema, CarbonLoadModel}
@@ -62,28 +65,48 @@ object CarbonSegmentUtil {
   }
 
   /**
-   * Return's the valid segments for the query based on the filter condition
-   * present in carbonScanRdd.
+   * Return's an array of valid segment numbers based on the filter condition provided in the sql
    *
    * @param query
    * @param sparkSession
    * @return Array of valid segments
-   * @throws RuntimeException for Unsupported operation on this API
+   * @throws UnsupportedOperationException because Get Filter Segments API supports if and only
+   *                                       if only one carbon main table is present in query.
    */
   def getFilteredSegments(query: String, sparkSession: SparkSession): Array[String] = {
-    var countRDD: Int = 0
     val dataFrame = sparkSession.sql(s"$query")
-    val scanRDD = dataFrame.queryExecution.sparkPlan.collect {
-      case scan: CarbonDataSourceScan if scan.rdd.isInstanceOf[CarbonScanRDD[InternalRow]] =>
-        if (countRDD > 1) {
-          sys.error("Unsupported operation as table contains multiple CarbonRDDs")
+    def isMainTableRDD(rdd: CarbonScanRDD[InternalRow]): Boolean = {
+      val tableInfo = rdd.getTableInfo
+      val carbonTable = CarbonTable.buildFromTableInfo(tableInfo)
+      if (!CarbonInternalScalaUtil.isIndexTable(carbonTable)) {
+        return true
+      }
+      false
+    }
+    val scanRDD =
+      try {
+        val collectRDD: Seq[CarbonScanRDD[InternalRow]] = dataFrame.queryExecution.sparkPlan
+          .collect {
+            case scan: CarbonDataSourceScan
+              if scan.rdd.isInstanceOf[CarbonScanRDD[InternalRow]] &&
+                 isMainTableRDD(scan.rdd.asInstanceOf[CarbonScanRDD[InternalRow]]) =>
+              scan.rdd.asInstanceOf[CarbonScanRDD[InternalRow]]
+            case scan: RowDataSourceScanExec
+              if scan.rdd.isInstanceOf[CarbonScanRDD[InternalRow]] &&
+                 isMainTableRDD(scan.rdd.asInstanceOf[CarbonScanRDD[InternalRow]]) =>
+              scan.rdd.asInstanceOf[CarbonScanRDD[InternalRow]]
+          }
+        // If collectRDD length is 0 or greater than 1 then throw exception
+        if (1 != collectRDD.length) {
+          sys.error("Get Filter Segments API supports if and only if only " +
+                    "one carbon main table is present in query.")
         }
-        countRDD = countRDD + 1
-        scan.rdd.asInstanceOf[CarbonScanRDD[InternalRow]]
-      case _ =>
-        sys.error("Unsupported operation for non-carbon tables")
-    }.head
-    getFilteredSegments(scanRDD)
+        collectRDD
+      } catch {
+        case ex: Exception =>
+          throw new UnsupportedOperationException(ex.getMessage)
+      }
+    getFilteredSegments(scanRDD.head)
   }
 
   /**
@@ -93,6 +116,7 @@ object CarbonSegmentUtil {
    * @param tableName
    * @param dbName
    * @return list of LoadMetadataDetails
+   * @throws UnsupportedOperationException if Segment length is 0 or 1
    */
   def identifySegmentsToBeMerged(sparkSession: SparkSession,
       tableName: String,
@@ -103,6 +127,10 @@ object CarbonSegmentUtil {
       tableName,
       dbName,
       CompactionType.MAJOR)
+    if (segments.toList.isEmpty || segments.length.equals(1)) {
+      throw new UnsupportedOperationException(
+        "Compaction requires atleast 2 segments.But the input list size is " + segments.length)
+    }
     CarbonDataMergerUtil
       .identifySegmentsToBeMerged(carbonLoadModel,
         compactionSize,
@@ -119,7 +147,8 @@ object CarbonSegmentUtil {
    * @param dbName
    * @param customSegments
    * @return list of LoadMetadataDetails
-   * @throws RuntimeException if customSegments is null
+   * @throws UnsupportedOperationException   if customSegments is null or empty
+   * @throws MalformedCarbonCommandException if segment does not exist or is not valid
    */
   def identifySegmentsToBeMergedCustom(sparkSession: SparkSession,
       tableName: String,
@@ -132,7 +161,7 @@ object CarbonSegmentUtil {
       dbName,
       CompactionType.CUSTOM)
     if (customSegments.equals(null) || customSegments.isEmpty) {
-      sys.error("Custom Segments cannot be null")
+      throw new UnsupportedOperationException("Custom Segments cannot be null or empty")
     }
     CarbonDataMergerUtil
       .identifySegmentsToBeMerged(carbonLoadModel,
@@ -147,12 +176,19 @@ object CarbonSegmentUtil {
    *
    * @param list
    * @return Merged Load Name
+   * @throws UnsupportedOperationException if list of segments is less than 1
    */
   def getMergedLoadName(list: util.List[LoadMetadataDetails]): String = {
-    val sortedSegments: java.util.List[LoadMetadataDetails] =
-      new java.util.ArrayList[LoadMetadataDetails](list)
-    CarbonDataMergerUtil.sortSegments(sortedSegments)
-    CarbonDataMergerUtil.getMergedLoadName(sortedSegments)
+    if (list.size() > 1) {
+      val sortedSegments: java.util.List[LoadMetadataDetails] =
+        new java.util.ArrayList[LoadMetadataDetails](list)
+      CarbonDataMergerUtil.sortSegments(sortedSegments)
+      CarbonDataMergerUtil.getMergedLoadName(sortedSegments)
+    } else {
+      throw new UnsupportedOperationException(
+        "Compaction requires atleast 2 segments to be merged.But the input list size is " +
+        list.size())
+    }
   }
 
   private def getSegmentDetails(sparkSession: SparkSession,
