@@ -12,6 +12,7 @@
 
 package org.apache.spark.sql.command
 
+import java.io.{File, IOException}
 import java.util.{ArrayList, UUID}
 
 import scala.collection.JavaConverters._
@@ -25,6 +26,7 @@ import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
+import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.locks.{CarbonLockFactory, CarbonLockUtil, ICarbonLock, LockUsage}
 import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier
 import org.apache.carbondata.core.metadata.datatype.{DataType, DataTypes}
@@ -294,14 +296,23 @@ class ErrorMessage(message: String) extends Exception(message) {
         // do not create index table for register table call
         // only the alter the existing table to set index related info
         if (isCreateSIndex) {
-          sparkSession.sql(
-            s"""CREATE TABLE $databaseName.$indexTableName
-                |(${ fields.mkString(",") })
-                |USING org.apache.spark.sql.CarbonSource OPTIONS (tableName "$indexTableName",
-                |dbName "$databaseName", tablePath "$tablePath", path "$tablePath",
-                |parentTablePath "${ carbonTable.getTablePath }", isIndexTable "true",
-                |parentTableId "${ carbonTable.getCarbonTableIdentifier.getTableId }",
-                |parentTableName "$tableName"$carbonSchemaString) """.stripMargin)
+          try {
+            sparkSession.sql(
+              s"""CREATE TABLE $databaseName.$indexTableName
+                 |(${fields.mkString(",")})
+                 |USING org.apache.spark.sql.CarbonSource OPTIONS (tableName "$indexTableName",
+                 |dbName "$databaseName", tablePath "$tablePath", path "$tablePath",
+                 |parentTablePath "${carbonTable.getTablePath}", isIndexTable "true",
+                 |parentTableId "${carbonTable.getCarbonTableIdentifier.getTableId}",
+                 |parentTableName "$tableName"$carbonSchemaString) """.stripMargin)
+          } catch {
+            case e: IOException =>
+              if (FileFactory.isFileExist(tablePath)) {
+                val si_dir = FileFactory.getCarbonFile(tablePath)
+                CarbonUtil.deleteFoldersAndFilesSilent(si_dir)
+              }
+              throw e
+          }
         } else {
           sparkSession.sql(
             s"""ALTER TABLE $databaseName.$indexTableName SET SERDEPROPERTIES (
