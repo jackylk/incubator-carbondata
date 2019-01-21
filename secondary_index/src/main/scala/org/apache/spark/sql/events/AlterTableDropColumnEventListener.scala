@@ -15,9 +15,8 @@ import scala.collection.JavaConverters._
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.{CarbonEnv, SparkSession}
-import org.apache.spark.sql.catalyst.TableIdentifier
+import org.apache.spark.sql.command.DropIndex
 import org.apache.spark.sql.execution.command.AlterTableDropColumnModel
-import org.apache.spark.sql.hive.CarbonInternalMetastore
 import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.util.CarbonInternalScalaUtil
 
@@ -82,16 +81,8 @@ class AlterTableDropColumnEventListener extends OperationEventListener with Logg
         }
       })
     indexTableToDrop.foreach { indexTable =>
-      val indexCarbonTable = catalog.getTableFromMetadataCache(dbName, indexTable).orNull
-      CarbonInternalMetastore.refreshIndexInfo(dbName, indexTable, indexCarbonTable)(sparkSession)
-      val indexTableIdentifier = TableIdentifier(indexTable, Some(dbName))
-      // drop carbon table
-      CarbonInternalMetastore
-        .dropIndexTable(indexTableIdentifier,
-          indexCarbonTable,
-          tablePath,
-          parentCarbonTable,
-          removeEntryFromParentTable = true)(sparkSession)
+      DropIndex(ifExistsSet = true, Some(dbName), indexTable.toLowerCase, tableName)
+        .run(sparkSession)
     }
   }
 }
