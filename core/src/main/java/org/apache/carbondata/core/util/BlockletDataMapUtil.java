@@ -580,9 +580,7 @@ public class BlockletDataMapUtil {
       tableName = carbonTable.getTableName();
       dbName = carbonTable.getDatabaseName();
     }
-    return Boolean.parseBoolean(CarbonProperties.getInstance()
-        .getProperty(CarbonCommonConstants.CARBON_LOAD_DATAMAPS_PARALLEL + dbName + "." + tableName,
-            "false"));
+    return CarbonProperties.getInstance().isDataMapParallelLoadingEnabled(dbName, tableName);
   }
 
   public static String getParentTableName(CarbonTable carbonTable) {

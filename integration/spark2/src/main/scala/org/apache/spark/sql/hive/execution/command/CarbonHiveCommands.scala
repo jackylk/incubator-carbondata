@@ -106,7 +106,7 @@ object CarbonSetCommand {
           " = <true/false> \" format")
       }
     } else if (key.startsWith(CarbonCommonConstants.CARBON_LOAD_DATAMAPS_PARALLEL)) {
-      if (key.split("\\.").length == 6) {
+      if (key.split("\\.").length == 6 || key.split("\\.").length == 4) {
         sessionParams.addProperty(key.toLowerCase(), value)
       }
       else {

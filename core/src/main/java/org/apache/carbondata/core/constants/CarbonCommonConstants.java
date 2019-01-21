@@ -1521,9 +1521,9 @@ public final class CarbonCommonConstants {
 
   public static final String CARBON_SHOW_DATAMAPS_DEFAULT = "true";
 
-  // Property to enable parallel datamap loading for a table
+  // Property to enable parallel datamap loading.
   @CarbonProperty(dynamicConfigurable = true)
-  public static final String CARBON_LOAD_DATAMAPS_PARALLEL = "carbon.load.datamaps.parallel.";
+  public static final String CARBON_LOAD_DATAMAPS_PARALLEL = "carbon.load.datamaps.parallel";
 
   // by default lucene will not store or create index for stop words like "is","the", if this
   // property is set to true lucene will index for stop words also and gives result for the filter

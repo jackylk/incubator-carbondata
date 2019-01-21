@@ -906,6 +906,23 @@ public final class CarbonProperties {
     }
   }
 
+  public boolean isDataMapParallelLoadingEnabled(String databaseName, String tableName) {
+    // Check for propertyKey.dbname.table name for session based set for a specific table.
+    String loadDataMapsParallel = getSessionPropertyValue(
+        CarbonCommonConstants.CARBON_LOAD_DATAMAPS_PARALLEL + "." + databaseName + "." + tableName);
+    // If table table property is not specified then check for session for all the tables
+    // otherwise check in carbon.properties
+    if (loadDataMapsParallel == null) {
+      loadDataMapsParallel =
+          getProperty(CarbonCommonConstants.CARBON_LOAD_DATAMAPS_PARALLEL, "false");
+    }
+    boolean configuredValue = Boolean.parseBoolean(loadDataMapsParallel);
+    if (configuredValue) {
+      LOGGER.info("Loading datamaps in parallel for " + databaseName + "." + tableName);
+    }
+    return configuredValue;
+  }
+
   /**
    * returns major compaction size value from carbon properties or default value if it is not valid
    *
