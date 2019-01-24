@@ -134,10 +134,7 @@ public class UnsafeSortDataRows {
         UnsafeMemoryManager.allocateMemoryWithRetry(this.taskId, inMemoryChunkSize);
     boolean isMemoryAvailable =
         UnsafeSortMemoryManager.INSTANCE.isMemoryAvailable(baseBlock.size());
-    if (isMemoryAvailable) {
-      UnsafeSortMemoryManager.INSTANCE.allocateDummyMemory(baseBlock.size());
-    }
-    this.rowPage = new UnsafeCarbonRowPage(tableFieldStat, baseBlock, !isMemoryAvailable, taskId);
+    this.rowPage = new UnsafeCarbonRowPage(tableFieldStat, baseBlock, taskId, isMemoryAvailable);
     // Delete if any older file exists in sort temp folder
     deleteSortLocationIfExists();
 
@@ -156,13 +153,11 @@ public class UnsafeSortDataRows {
         UnsafeMemoryManager.allocateMemoryWithRetry(this.taskId, inMemoryChunkSize);
     boolean isSaveToDisk =
         UnsafeSortMemoryManager.INSTANCE.isMemoryAvailable(baseBlock.size());
-    if (!isSaveToDisk) {
-      UnsafeSortMemoryManager.INSTANCE.allocateDummyMemory(baseBlock.size());
-    } else {
+    if (isSaveToDisk) {
       // merge and spill in-memory pages to disk if memory is not enough
-      unsafeInMemoryIntermediateFileMerger.tryTriggerInmemoryMerging(true);
+      unsafeInMemoryIntermediateFileMerger.tryTriggerInMemoryMerging(true);
     }
-    return new UnsafeCarbonRowPage(tableFieldStat, baseBlock, isSaveToDisk, taskId);
+    return new UnsafeCarbonRowPage(tableFieldStat, baseBlock, taskId, true);
   }
 
   public boolean canAdd() {
@@ -400,9 +395,12 @@ public class UnsafeSortDataRows {
         // get sort storage memory block if memory is available in sort storage manager
         // if space is available then store it in memory, if memory is not available
         // then spill to disk
-        MemoryBlock sortStorageMemoryBlock =
-            UnsafeSortMemoryManager.INSTANCE.allocateMemory(taskId, page.getDataBlock().size());
-        if (null == sortStorageMemoryBlock) {
+        MemoryBlock sortStorageMemoryBlock = null;
+        if (!page.isSaveToDisk()) {
+          sortStorageMemoryBlock =
+              UnsafeSortMemoryManager.INSTANCE.allocateMemory(taskId, page.getDataBlock().size());
+        }
+        if (null == sortStorageMemoryBlock || page.isSaveToDisk()) {
           // create a new file every time
           // create a new file and pick a temp directory randomly every time
           String tmpDir = parameters.getTempFileLocation()[
