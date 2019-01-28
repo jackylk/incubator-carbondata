@@ -17,11 +17,6 @@
 
 package org.apache.carbondata.examples
 
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-
-import alluxio.cli.fs.FileSystemShell
 import org.apache.spark.sql.SparkSession
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
@@ -29,104 +24,50 @@ import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.examples.util.ExampleUtils
 
+
 /**
  * configure alluxio:
  * 1.start alluxio
- * 2. Please upload data to alluxio if you set runShell as false
- * ./bin/alluxio fs copyFromLocal /carbondata_path/hadoop/src/test/resources/data.csv /
- * 3.Get more details at: https://www.alluxio.org/docs/1.8/en/compute/Spark.html
+ * 2.upload the jar :"/alluxio_path/core/client/target/
+ * alluxio-core-client-YOUR-VERSION-jar-with-dependencies.jar"
+ * 3.Get more detail at:http://www.alluxio.org/docs/master/en/Running-Spark-on-Alluxio.html
  */
+
 object AlluxioExample {
-  def main (args: Array[String]) {
-    val carbon = ExampleUtils.createCarbonSession("AlluxioExample",
-      storePath = "alluxio://localhost:19998/carbondata")
-    val runShell: Boolean = if (null != args && args.length > 0) {
-      args(0).toBoolean
-    } else {
-      true
-    }
-    exampleBody(carbon, runShell)
-    carbon.close()
+  def main(args: Array[String]) {
+    val spark = ExampleUtils.createCarbonSession("AlluxioExample")
+    exampleBody(spark)
+    spark.close()
   }
 
-  def exampleBody (spark: SparkSession, runShell: Boolean = true): Unit = {
-    val rootPath = new File(this.getClass.getResource("/").getPath
-      + "../../../..").getCanonicalPath
+  def exampleBody(spark : SparkSession): Unit = {
     spark.sparkContext.hadoopConfiguration.set("fs.alluxio.impl", "alluxio.hadoop.FileSystem")
     FileFactory.getConfiguration.set("fs.alluxio.impl", "alluxio.hadoop.FileSystem")
 
     // Specify date format based on raw data
     CarbonProperties.getInstance()
-            .addProperty(CarbonCommonConstants.CARBON_DATE_FORMAT, "yyyy/MM/dd")
-    val time = new SimpleDateFormat("yyyyMMddHHmmssSSS").format(new Date())
-    val alluxioPath = "alluxio://localhost:19998"
-    var alluxioFile = alluxioPath + "/data.csv"
+      .addProperty(CarbonCommonConstants.CARBON_DATE_FORMAT, "yyyy/MM/dd")
 
-    val remoteFile = "/carbon_alluxio" + time + ".csv"
+    spark.sql("DROP TABLE IF EXISTS alluxio_table")
 
-    var mFsShell: FileSystemShell = null
+    spark.sql("""
+           CREATE TABLE IF NOT EXISTS alluxio_table
+           (ID Int, date Date, country String,
+           name String, phonetype String, serialname String, salary Int)
+           STORED BY 'carbondata'
+           """)
 
-    // avoid dependency alluxio shell when running it with spark-submit
-    if (runShell) {
-      mFsShell = new FileSystemShell()
-      alluxioFile = alluxioPath + remoteFile
-      val localFile = rootPath + "/hadoop/src/test/resources/data.csv"
-      mFsShell.run("copyFromLocal", localFile, remoteFile)
-    }
+    spark.sql(s"""
+           LOAD DATA LOCAL INPATH 'alluxio://localhost:19998/data.csv' into table alluxio_table
+           """)
 
-    import spark._
+    spark.sql("""
+           SELECT country, count(salary) AS amount
+           FROM alluxio_table
+           WHERE country IN ('china','france')
+           GROUP BY country
+           """).show()
 
-    sql("DROP TABLE IF EXISTS alluxio_table")
-
-    sql(
-      s"""
-         | CREATE TABLE IF NOT EXISTS alluxio_table(
-         |    ID Int,
-         |    date Date,
-         |    country String,
-         |    name String,
-         |    phonetype String,
-         |    serialname String,
-         |    salary Int)
-         | STORED BY 'carbondata'
-         | TBLPROPERTIES(
-         |    'SORT_COLUMNS' = 'phonetype,name',
-         |    'DICTIONARY_INCLUDE'='phonetype',
-         |    'TABLE_BLOCKSIZE'='32',
-         |    'AUTO_LOAD_MERGE'='true')
-       """.stripMargin)
-
-    for (i <- 0 until 2) {
-      sql(
-        s"""
-           | LOAD DATA LOCAL INPATH '$alluxioFile'
-           | into table alluxio_table
-         """.stripMargin)
-    }
-
-    sql("SELECT * FROM alluxio_table").show()
-
-    sql("SHOW SEGMENTS FOR TABLE alluxio_table").show()
-    sql(
-      """
-        | SELECT country, count(salary) AS amount
-        | FROM alluxio_table
-        | WHERE country IN ('china','france')
-        | GROUP BY country
-      """.stripMargin).show()
-
-    for (i <- 0 until 2) {
-      sql(
-        s"""
-           | LOAD DATA LOCAL INPATH '$alluxioFile'
-           | into table alluxio_table
-         """.stripMargin)
-    }
-    sql("SHOW SEGMENTS FOR TABLE alluxio_table").show()
-    if (runShell) {
-      mFsShell.run("rm", remoteFile)
-      mFsShell.close()
-    }
-    sql("DROP TABLE IF EXISTS alluxio_table")
+    spark.sql("DROP TABLE IF EXISTS alluxio_table")
   }
 }
