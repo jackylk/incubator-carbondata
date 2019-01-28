@@ -116,7 +116,6 @@ object CarbonSegmentUtil {
    * @param tableName
    * @param dbName
    * @return list of LoadMetadataDetails
-   * @throws UnsupportedOperationException if Segment length is 0 or 1
    */
   def identifySegmentsToBeMerged(sparkSession: SparkSession,
       tableName: String,
@@ -127,16 +126,16 @@ object CarbonSegmentUtil {
       tableName,
       dbName,
       CompactionType.MAJOR)
-    if (segments.toList.isEmpty || segments.length.equals(1)) {
-      throw new UnsupportedOperationException(
-        "Compaction requires atleast 2 segments.But the input list size is " + segments.length)
-    }
-    CarbonDataMergerUtil
+    val identifiedSegments = CarbonDataMergerUtil
       .identifySegmentsToBeMerged(carbonLoadModel,
         compactionSize,
         segments.toList.asJava,
         CompactionType.MAJOR,
         new util.ArrayList[String]())
+    if (identifiedSegments.size().equals(1)) {
+      return new util.ArrayList[LoadMetadataDetails]()
+    }
+    identifiedSegments
   }
 
   /**
@@ -163,12 +162,16 @@ object CarbonSegmentUtil {
     if (customSegments.equals(null) || customSegments.isEmpty) {
       throw new UnsupportedOperationException("Custom Segments cannot be null or empty")
     }
-    CarbonDataMergerUtil
+    val identifiedSegments = CarbonDataMergerUtil
       .identifySegmentsToBeMerged(carbonLoadModel,
         compactionSize,
         segments.toList.asJava,
         CompactionType.CUSTOM,
         customSegments)
+    if (identifiedSegments.size().equals(1)) {
+      return new util.ArrayList[LoadMetadataDetails]()
+    }
+    identifiedSegments
   }
 
   /**

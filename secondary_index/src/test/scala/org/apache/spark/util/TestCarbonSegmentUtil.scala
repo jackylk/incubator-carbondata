@@ -100,6 +100,22 @@ class TestCarbonSegmentUtil extends QueryTest {
   }
 
   @Test
+  // Test identify segments to be merged with Major Compaction
+  def test_identifySegmentsToBeMerged_Major_With_one_segment() {
+    createTable(tableName)
+    sql(s"delete from table $tableName where SEGMENT.ID in (3)")
+    sql(s"delete from table $tableName where SEGMENT.ID in (2)")
+    sql(s"delete from table $tableName where SEGMENT.ID in (1)")
+    sql(s"show segments for table $tableName").show(false)
+    val expected = CarbonSegmentUtil
+      .identifySegmentsToBeMerged(Spark2TestQueryExecutor.spark,
+        tableName,
+        databaseName)
+    assert(expected.size() == 0)
+    dropTables(tableName)
+  }
+
+  @Test
   // Test identify segments to be merged with Custom Compaction type
   def test_identifySegmentsToBeMergedCustom() {
     createTable(tableName)

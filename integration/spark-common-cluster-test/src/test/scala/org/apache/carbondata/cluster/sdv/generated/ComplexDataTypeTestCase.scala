@@ -33,6 +33,7 @@ import org.apache.spark.sql.test.TestQueryExecutor
 import org.scalatest.BeforeAndAfterAll
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
+import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.sdk.file.CarbonWriter
 
@@ -316,6 +317,7 @@ class ComplexDataTypeTestCase extends QueryTest with BeforeAndAfterAll {
 
   // check create table with complex data type through SDK
   test("test Complex_DataType-010") {
+    FileFactory.deleteAllCarbonFilesOfDir(FileFactory.getCarbonFile(writerPath))
     val mySchema =
       """ {
         |	"name": "address",
