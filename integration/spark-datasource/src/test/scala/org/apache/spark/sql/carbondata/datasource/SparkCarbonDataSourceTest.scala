@@ -186,7 +186,7 @@ class SparkCarbonDataSourceTest extends FunSuite with BeforeAndAfterAll {
       case e: Exception =>
         if (SparkUtil.isSparkVersionEqualTo("2.1")) {
           assert(e.getMessage.contains("Operation not allowed: ALTER TABLE ADD COLUMNS"))
-        } else if (SparkUtil.isSparkVersionXandAbove("2.2")) {
+        } else if (SparkUtil.isSparkVersionEqualTo("2.2")) {
           assert(e.getMessage.contains("ALTER ADD COLUMNS does not support datasource table with type carbon."))
         }
     } finally {
@@ -1306,6 +1306,12 @@ class SparkCarbonDataSourceTest extends FunSuite with BeforeAndAfterAll {
     assert(spark.sql("select * from sdkout").collect().length == 20)
     assert(spark.sql("select * from sdkout where salary=100").collect().length == 4)
     assert(spark.sql("select * from sdkout where address='address1'").collect().length == 4)
+    if (SparkUtil.isSparkVersionXandAbove("2.3")) {
+      spark.sql("alter table sdkout add columns(ch string)")
+      spark.sql("insert into sdkout select true, 1,0.5,'name1','address1',100, 1.1, 1,'tg'")
+      assert(spark.sql("select * from sdkout where salary=100").count() == 5)
+      assert(spark.sql("select * from sdkout where ch='tg'").count() == 1)
+    }
     FileFactory.deleteAllFilesOfDir(new File(warehouse1+"/sdk"))
   }
 
