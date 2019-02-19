@@ -64,11 +64,11 @@ public class DistributableBlockletDataMapLoader
 
   private CarbonTable table;
 
-  private DataMapExprWrapper dataMapExprWrapper;
+  private transient DataMapExprWrapper dataMapExprWrapper;
 
-  private List<Segment> validSegments;
+  private transient List<Segment> validSegments;
 
-  private Set<String> keys;
+  private transient Set<String> keys;
 
   public DistributableBlockletDataMapLoader(CarbonTable table,
       DataMapExprWrapper dataMapExprWrapper, List<Segment> validSegments,
