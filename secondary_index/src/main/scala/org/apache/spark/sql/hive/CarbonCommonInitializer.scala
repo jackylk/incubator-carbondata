@@ -37,14 +37,10 @@ object CarbonCommonInitializer {
 
       val operationListenerBus = OperationListenerBus.getInstance()
 
-      // Listeners added for blocking features(insert overwrite, bucketing, partition, complex type)
+      // Listener added for blocking bucketing feature
       if(SparkUtil.isFI) {
         operationListenerBus
           .addListener(classOf[CreateTablePreExecutionEvent],
-            new BlockEventListener
-          )
-        operationListenerBus
-          .addListener(classOf[LoadTablePreExecutionEvent],
             new BlockEventListener
           )
       }
