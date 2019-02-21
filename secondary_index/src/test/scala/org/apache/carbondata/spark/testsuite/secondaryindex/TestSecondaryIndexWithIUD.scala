@@ -11,11 +11,15 @@
  */
 package org.apache.carbondata.spark.testsuite.secondaryindex
 
+import java.io.File
+
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.common.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
 
+import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.core.statusmanager.SegmentStatus
+import org.apache.carbondata.sdk.file.{CarbonWriter, Schema}
 
 /**
  * test cases for IUD data retention on SI tables
@@ -27,6 +31,9 @@ class TestSecondaryIndexWithIUD extends QueryTest with BeforeAndAfterAll {
     sql("drop table if exists source")
     sql("drop table if exists test")
     sql("drop table if exists sitestmain")
+    sql("drop table if exists dest1")
+    sql("drop table if exists dest_parquet")
+    sql("drop table if exists dest_parquet1")
   }
 
   test("test index with IUD delete all_rows") {
@@ -215,10 +222,172 @@ class TestSecondaryIndexWithIUD extends QueryTest with BeforeAndAfterAll {
     checkAnswer(sql("select count(*) from index_dest1"), Seq(Row(5)))
   }
 
+  test("Test block secondary index creation on external table") {
+    var writerPath = new File(this.getClass.getResource("/").getPath
+                              +
+                              "../." +
+                              "./target/SparkCarbonFileFormat/WriterOutput/")
+      .getCanonicalPath
+    writerPath = writerPath.replace("\\", "/")
+    val schema = new StringBuilder()
+      .append("[ \n")
+      .append("   {\"NaMe\":\"string\"},\n")
+      .append("   {\"age\":\"int\"},\n")
+      .append("   {\"height\":\"double\"}\n")
+      .append("]")
+      .toString()
+
+    try {
+      val builder = CarbonWriter.builder()
+      val writer =
+        builder.outputPath(writerPath)
+          .uniqueIdentifier(
+            System.currentTimeMillis).withBlockSize(2)
+          .withCsvInput(Schema.parseJson(schema)).writtenBy("TestNonTransactionalCarbonTable")
+          .build()
+      var i = 0
+      while (i < 2) {
+        writer.write(Array[String]("robot" + i, String.valueOf(i), String.valueOf(i.toDouble / 2)))
+        i = i + 1
+      }
+      writer.close()
+    } catch {
+      case ex: Throwable => throw new RuntimeException(ex)
+    }
+    sql("drop table if exists test")
+    sql(s"create external table test stored by 'carbondata' location '$writerPath'")
+    val exception = intercept[MalformedCarbonCommandException] {
+      sql("create index idx on table test(cert_no) as 'org.apache.carbondata.format'")
+    }
+    assert(exception.getMessage
+      .contains("Unsupported operation on non transactional table"))
+  }
+
+  test("test SI with Union and Union All with same table") {
+    sql("drop table if exists dest")
+    sql("drop table if exists dest_parquet")
+    sql("create table dest (c1 string,c2 int,c3 string,c5 string) STORED BY " +
+        "'org.apache.carbondata.format'")
+    sql("insert into dest values('a',1,'abc','b')")
+    sql("create table dest_parquet stored as parquet select * from dest")
+    sql("create index index_dest on table dest (c3) AS 'org.apache.carbondata.format'")
+    checkAnswer(sql(
+      "select c3 from dest where c3 = 'abc' union select c3 from dest  where c3 = 'abc'"),
+      sql("select c3 from dest_parquet where c3 = 'abc' union select c3 from " +
+          "dest_parquet where c3 = 'abc'"))
+    checkAnswer(sql("select c3 from dest where c3 = 'abc' union all " +
+                    "select c3 from dest where c3 = 'abc'"),
+      sql("select c3 from dest_parquet where c3 = 'abc' union all select c3 from " +
+          "dest_parquet  where c3 = 'abc'"))
+    sql("drop table if exists dest_parquet")
+    sql("drop table if exists dest")
+  }
+
+  test("test SI with Union and Union All with different table") {
+    sql("drop table if exists dest")
+    sql("drop table if exists dest1")
+    sql("drop table if exists dest_parquet")
+    sql("drop table if exists dest_parquet1")
+    sql("create table dest (c1 string,c2 int,c3 string,c5 string) STORED BY " +
+        "'org.apache.carbondata.format'")
+    sql("insert into dest values('a',1,'abc','b')")
+    sql("create table dest_parquet stored as parquet select * from dest")
+    sql("create table dest_parquet1 stored as parquet select * from dest")
+    sql("create table dest1 stored by 'carbondata' select * from dest")
+    sql("create index index_dest on table dest (c3) AS 'org.apache.carbondata.format'")
+    sql("create index index_dest1 on table dest1 (c3) AS 'org.apache.carbondata.format'")
+    checkAnswer(sql(
+      "select c3 from dest where c3 = 'abc' union select c3 from dest1  where c3 = 'abc'"),
+      sql(
+        "select c3 from dest_parquet where c3 = 'abc' union select c3 from " +
+        "dest_parquet1 where c3 = 'abc'"))
+    checkAnswer(sql("select c3 from dest where c3 = 'abc' union all select c3 from dest1 " +
+                    "where c3 = 'abc'"),
+      sql(
+        "select c3 from dest_parquet where c3 = 'abc' union all select c3 " +
+        "from dest_parquet1 where c3 = 'abc'"))
+    sql("drop table if exists dest")
+    sql("drop table if exists dest1")
+    sql("drop table if exists dest_parquet1")
+    sql("drop table if exists dest_parquet")
+  }
+
+  test("test SI with more than 2 Union and Union All with different table") {
+    sql("drop table if exists dest")
+    sql("drop table if exists dest1")
+    sql("drop table if exists dest_parquet")
+    sql("create table dest (c1 string,c2 int,c3 string,c5 string) STORED BY " +
+        "'org.apache.carbondata.format'")
+    sql("insert into dest values('a',1,'abc','b')")
+    sql("create table dest_parquet stored as parquet select * from dest")
+    sql("create table dest_parquet1 stored as parquet select * from dest")
+    sql("create table dest1 stored by 'carbondata' select * from dest")
+    sql("create index index_dest on table dest (c3) AS 'org.apache.carbondata.format'")
+    sql("create index index_dest1 on table dest1 (c3) AS 'org.apache.carbondata.format'")
+    checkAnswer(sql(
+      "select c3 from dest where c3 = 'abc' union select c3 from dest1  " +
+      "where c3 = 'abc' union select c3 from dest1  where c3 = 'abc'"),
+      sql(
+        "select c3 from dest_parquet where c3 = 'abc' union select c3 from dest_parquet1" +
+        " where c3 = 'abc' union select c3 from dest_parquet1  where c3 = 'abc'"))
+
+    checkAnswer(sql(
+      "select c3 from dest where c3 = 'abc' union all select c3 from dest1 " +
+      "where c3 = 'abc' union all select c3 from dest1  where c3 = 'abc'"),
+      sql(
+        "select c3 from dest_parquet where c3 = 'abc' union all select c3 from " +
+        "dest_parquet1 where c3 = 'abc' union all select c3 from dest_parquet1 " +
+        "where c3 = 'abc'"))
+    sql("drop table if exists dest_parquet")
+    sql("drop table if exists dest")
+    sql("drop table if exists dest1")
+  }
+
+  test("test SI with more than 2 Union and Union All with same table") {
+    sql("drop table if exists dest")
+    sql("drop table if exists dest_parquet")
+    sql("create table dest (c1 string,c2 int,c3 string,c5 string) STORED BY " +
+        "'org.apache.carbondata.format'")
+    sql("insert into dest values('a',1,'abc','b')")
+    sql("create table dest_parquet stored as parquet select * from dest")
+    sql("create index index_dest on table dest (c3) AS 'org.apache.carbondata.format'")
+    checkAnswer(sql(
+      "select c3 from dest where c3 = 'abc' union select c3 from dest  where c3 = 'abc' " +
+      "union select c3 from dest  where c3 = 'abc'"),
+      sql(
+        "select c3 from dest_parquet where c3 = 'abc' union select c3 from dest_parquet " +
+        "where c3 = 'abc'"))
+    checkAnswer(sql(
+      "select c3 from dest where c3 = 'abc' union all select c3 from dest  where c3 = 'abc' " +
+      "union all select c3 from dest  where c3 = 'abc'"),
+      sql(
+        "select c3 from dest_parquet where c3 = 'abc' union all select c3 from dest_parquet  " +
+        "where c3 = 'abc' union all select c3 from dest_parquet  where c3 = 'abc'"))
+    sql("drop table if exists dest_parquet")
+    sql("drop table if exists dest")
+  }
+
+  test("test SI with join") {
+    sql("drop table if exists dest")
+    sql("drop table if exists dest_parquet")
+    sql("create table dest (c1 string,c2 int,c3 string,c5 string) STORED BY " +
+        "'org.apache.carbondata.format'")
+    sql("insert into dest values('a',1,'abc','b')")
+    sql("create table dest_parquet stored as parquet select * from dest")
+    sql("create index index_dest on table dest (c3) AS 'org.apache.carbondata.format'")
+    checkAnswer(sql("select t1.c3,t2.c3 from dest t1, dest t2 where t1.c3=t2.c3 and t1.c3 = 'abc'"),
+      sql("select t1.c3,t2.c3 from dest_parquet t1, dest t2 where t1.c3=t2.c3 and t1.c3 = 'abc'"))
+    sql("drop table if exists dest")
+    sql("drop table if exists dest_parquet")
+  }
+
   override def afterAll: Unit = {
     sql("drop table if exists dest")
     sql("drop table if exists source")
     sql("drop table if exists test")
     sql("drop table if exists sitestmain")
+    sql("drop table if exists dest1")
+    sql("drop table if exists dest_parquet")
+    sql("drop table if exists dest_parquet1")
   }
 }

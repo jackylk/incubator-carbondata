@@ -20,6 +20,7 @@ import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.encoders.RowEncoder
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.plans.logical._
+import org.apache.spark.sql.catalyst.trees.CurrentOrigin
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.hive.{CarbonHiveMetadataUtil, CarbonInternalHiveMetadataUtil, CarbonInternalMetaUtil, CarbonRelation}
 import org.apache.spark.sql.optimizer.NodeType.NodeType
@@ -654,7 +655,6 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
   }
 
   def transformFilterToJoin(plan: LogicalPlan): LogicalPlan = {
-    var resolvedRelations: Set[LogicalPlan] = Set.empty
     val isRowDeletedInTableMap = scala.collection.mutable.Map.empty[String, Boolean]
     // if the join pushdown is enabled, then no need to add projection list to the logical plan as
     // we can directly map the join output with the required projections
@@ -662,29 +662,27 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
     // there it is required to add projection list to map the output from the join
     val pushDownJoinEnabled = sparkSession.sparkContext.getConf
       .getBoolean("spark.carbon.pushdown.join.as.filter", defaultValue = true)
-    val transformedPlan = plan transform {
+    val transformChild = false
+    val transformedPlan = transformPlan(plan, {
       case filter@Filter(condition, logicalRelation@MatchIndexableRelation(indexableRelation))
         if !condition.isInstanceOf[IsNotNull] &&
-           CarbonInternalScalaUtil.getIndexes(indexableRelation).nonEmpty &&
-           !resolvedRelations.contains(logicalRelation) =>
+           CarbonInternalScalaUtil.getIndexes(indexableRelation).nonEmpty =>
         val reWrittenPlan = rewritePlanForSecondaryIndex(filter, indexableRelation,
           filter.child.asInstanceOf[LogicalRelation].relation
             .asInstanceOf[CarbonDatasourceHadoopRelation].carbonRelation.databaseName)
         if (reWrittenPlan.isInstanceOf[Join]) {
-          resolvedRelations = resolvedRelations. + (logicalRelation)
           if (pushDownJoinEnabled) {
-            reWrittenPlan
+            (reWrittenPlan, transformChild)
           } else {
-            Project(filter.output, reWrittenPlan)
+            (Project(filter.output, reWrittenPlan), transformChild)
           }
         } else {
-          filter
+          (filter, transformChild)
         }
       case projection@Project(cols, filter@Filter(condition,
       logicalRelation@MatchIndexableRelation(indexableRelation)))
         if !condition.isInstanceOf[IsNotNull] &&
-           CarbonInternalScalaUtil.getIndexes(indexableRelation).nonEmpty &&
-           !resolvedRelations.contains(logicalRelation) =>
+           CarbonInternalScalaUtil.getIndexes(indexableRelation).nonEmpty =>
         val reWrittenPlan = rewritePlanForSecondaryIndex(filter, indexableRelation,
           filter.child.asInstanceOf[LogicalRelation].relation
             .asInstanceOf[CarbonDatasourceHadoopRelation].carbonRelation.databaseName, cols)
@@ -692,14 +690,13 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
         // Adding projection over join to return only selected columns from query.
         // Else all columns from left & right table will be returned in output columns
         if (reWrittenPlan.isInstanceOf[Join]) {
-          resolvedRelations = resolvedRelations. + (logicalRelation)
           if (pushDownJoinEnabled) {
-            reWrittenPlan
+            (reWrittenPlan, transformChild)
           } else {
-            Project(projection.output, reWrittenPlan)
+            (Project(projection.output, reWrittenPlan), transformChild)
           }
         } else {
-          projection
+          (projection, transformChild)
         }
       // When limit is provided in query, this limit literal can be pushed down to index table
       // if all the filter columns have index table, then limit can be pushed down before grouping
@@ -708,8 +705,7 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
       case limit@Limit(literal: Literal,
       filter@Filter(condition, logicalRelation@MatchIndexableRelation(indexableRelation)))
         if !condition.isInstanceOf[IsNotNull] &&
-           CarbonInternalScalaUtil.getIndexes(indexableRelation).nonEmpty &&
-           !resolvedRelations.contains(logicalRelation) =>
+           CarbonInternalScalaUtil.getIndexes(indexableRelation).nonEmpty =>
         val carbonRelation = filter.child.asInstanceOf[LogicalRelation].relation
           .asInstanceOf[CarbonDatasourceHadoopRelation].carbonRelation
         val uniqueTableName = s"${ carbonRelation.databaseName }.${ carbonRelation.tableName }"
@@ -725,20 +721,18 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
             carbonRelation.databaseName)
         }
         if (reWrittenPlan.isInstanceOf[Join]) {
-          resolvedRelations = resolvedRelations. + (logicalRelation)
           if (pushDownJoinEnabled) {
-            Limit(literal, reWrittenPlan)
+            (Limit(literal, reWrittenPlan), transformChild)
           } else {
-            Limit(literal, Project(limit.output, reWrittenPlan))
+            (Limit(literal, Project(limit.output, reWrittenPlan)), transformChild)
           }
         } else {
-          limit
+          (limit, transformChild)
         }
       case limit@Limit(literal: Literal, projection@Project(cols, filter@Filter(condition,
       logicalRelation@MatchIndexableRelation(indexableRelation))))
         if !condition.isInstanceOf[IsNotNull] &&
-           CarbonInternalScalaUtil.getIndexes(indexableRelation).nonEmpty &&
-           !resolvedRelations.contains(logicalRelation) =>
+           CarbonInternalScalaUtil.getIndexes(indexableRelation).nonEmpty =>
         val carbonRelation = filter.child.asInstanceOf[LogicalRelation].relation
           .asInstanceOf[CarbonDatasourceHadoopRelation].carbonRelation
         val uniqueTableName = s"${ carbonRelation.databaseName }.${ carbonRelation.tableName }"
@@ -754,21 +748,52 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
             carbonRelation.databaseName, cols)
         }
         if (reWrittenPlan.isInstanceOf[Join]) {
-          resolvedRelations = resolvedRelations. + (logicalRelation)
           if (pushDownJoinEnabled) {
-            Limit(literal, reWrittenPlan)
+            (Limit(literal, reWrittenPlan), transformChild)
           } else {
-            Limit(literal, Project(projection.output, reWrittenPlan))
+            (Limit(literal, Project(projection.output, reWrittenPlan)), transformChild)
           }
         } else {
-          limit
+          (limit, transformChild)
         }
-    }
+    })
     transformedPlan.transform {
       case filter: Filter =>
         Filter(CarbonInternalHiveMetadataUtil.transformToRemoveNI(filter.condition), filter.child)
     }
   }
+
+  /**
+   * Returns a copy of this node where `rule` has been applied to the tree and all of
+   * its children (pre-order). When `rule` does not apply to a given node it is left unchanged. If
+   * rule is already applied to the node, then boolean value 'transformChild' decides whether to
+   * apply rule to its children nodes or not.
+   *
+   * @param plan
+   * @param rule the function used to transform this nodes children. Boolean value
+   *             decides if need to traverse children nodes or not
+   */
+  def transformPlan(plan: LogicalPlan,
+      rule: PartialFunction[LogicalPlan, (LogicalPlan, Boolean)]): LogicalPlan = {
+    val func: LogicalPlan => (LogicalPlan, Boolean) = {
+      a => (a, true)
+    }
+    val (afterRule, transformChild) = CurrentOrigin.withOrigin(CurrentOrigin.get) {
+      rule.applyOrElse(plan, func)
+    }
+    if (plan fastEquals afterRule) {
+      plan.mapChildren(transformPlan(_, rule))
+    } else {
+      // If node is not changed, then traverse the children nodes to transform the plan. Else
+      // return the changed plan
+      if (transformChild) {
+        afterRule.mapChildren(transformPlan(_, rule))
+      } else {
+        afterRule
+      }
+    }
+  }
+
 }
 
 object MatchIndexableRelation {

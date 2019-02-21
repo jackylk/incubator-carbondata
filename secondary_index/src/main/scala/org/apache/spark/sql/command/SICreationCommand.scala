@@ -24,6 +24,7 @@ import org.apache.spark.sql.execution.command.AtomicRunnableCommand
 import org.apache.spark.sql.hive.{CarbonInternalHiveMetadataUtil, CarbonInternalMetastore, CarbonRelation}
 import org.apache.spark.util.CarbonInternalScalaUtil
 
+import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.impl.FileFactory
@@ -91,6 +92,12 @@ class ErrorMessage(message: String) extends Exception(message) {
           .asInstanceOf[CarbonRelation].metaData.carbonTable
       if (carbonTable == null) {
         throw new ErrorMessage(s"Parent Table $databaseName.$tableName is not found")
+      }
+
+      if (carbonTable != null &&
+          (carbonTable.isFileLevelFormat || !carbonTable.getTableInfo.isTransactionalTable)) {
+        throw new MalformedCarbonCommandException(
+          "Unsupported operation on non transactional table")
       }
 
       if (carbonTable.isStreamingSink) {
