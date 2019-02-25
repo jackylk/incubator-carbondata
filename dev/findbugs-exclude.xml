@@ -116,4 +116,6 @@
     <Class name="org.apache.carbondata.core.datamap.Segment"/>
     <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED"/>
   </Match>
+  <Match> <Class name="~org.apache.carbondata.hadoop.DistributableBlockletDataMapLoader"/> <Field name="dataMapExprWrapper"/> <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED"/> </Match>
+  <Match> <Class name="~org.apache.carbondata.hadoop.DistributableBlockletDataMapLoader"/> <Field name="validSegments"/> <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED"/> </Match>
 </FindBugsFilter>
