@@ -13,12 +13,9 @@ package org.apache.carbondata.spark.rdd
 
 import java.util.concurrent.Callable
 
-import scala.collection.JavaConverters._
-import scala.util.control.Breaks.{break, breakable}
-
 import org.apache.spark.rdd.CarbonMergeFilesRDD
 import org.apache.spark.sql.{CarbonEnv, SQLContext}
-import org.apache.spark.sql.command.{SecondaryIndex, SecondaryIndexModel}
+import org.apache.spark.sql.command.SecondaryIndexModel
 import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.sql.util.SparkSQLUtil
 import org.apache.spark.util.CarbonInternalScalaUtil
@@ -27,14 +24,13 @@ import org.apache.spark.util.si.FileInternalUtil
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.metadata.SegmentFileStore
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
-import org.apache.carbondata.core.statusmanager.{SegmentStatus, SegmentStatusManager}
+import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatus, SegmentStatusManager}
 import org.apache.carbondata.core.util.{CarbonProperties, ThreadLocalSessionInfo}
 import org.apache.carbondata.processing.loading.TableProcessingOperations
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 import org.apache.carbondata.processing.util.CarbonLoaderUtil
 import org.apache.carbondata.spark.SecondaryIndexCreationResultImpl
 import org.apache.carbondata.spark.core.CarbonInternalCommonConstants
-import org.apache.carbondata.spark.util.CommonUtil
 
 /**
  * This class is aimed at creating secondary index for specified segments
@@ -43,70 +39,12 @@ object SecondaryIndexCreator {
 
   private val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
 
-  /**
-   * This method will create secondary index for all the index tables after compaction is completed
-   *
-   * @param sqlContext
-   * @param carbonLoadModel
-   * @param loadName
-   * @param mergeLoadStartTime
-   */
-  def createSecondaryIndexAfterCompaction(sqlContext: SQLContext,
-      carbonLoadModel: CarbonLoadModel,
-      loadName: String,
-      mergeLoadStartTime: java.lang.Long): Unit = {
-    val carbonMainTable = carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable
-    // get list from carbonTable.getIndexes method
-    if (null == CarbonInternalScalaUtil.getIndexesMap(carbonMainTable)) {
-      throw new Exception("Secondary index load failed")
-    }
-    val segmentIdToLoadStartTimeMapping: scala.collection.mutable.Map[String, java.lang.Long] =
-      scala.collection.mutable.Map((loadName, mergeLoadStartTime))
-    val indexTablesList = CarbonInternalScalaUtil.getIndexesMap(carbonMainTable).asScala
-    indexTablesList.foreach { indexTableAndColumns =>
-      val secondaryIndex = SecondaryIndex(Some(carbonLoadModel.getDatabaseName),
-        carbonLoadModel.getTableName,
-        indexTableAndColumns._2.asScala.toList,
-        indexTableAndColumns._1)
-      val secondaryIndexModel = SecondaryIndexModel(sqlContext,
-        carbonLoadModel,
-        carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable,
-        secondaryIndex,
-        List(loadName),
-        segmentIdToLoadStartTimeMapping)
-      try {
-        val segmentToSegmentTimestampMap: java.util.Map[String, String] = new java.util
-        .HashMap[String, String]()
-        val indexCarbonTable = createSecondaryIndex(secondaryIndexModel,
-          segmentToSegmentTimestampMap)
-        val tableStatusUpdation = FileInternalUtil.updateTableStatus(
-          secondaryIndexModel.validSegments,
-          secondaryIndexModel.carbonLoadModel.getDatabaseName,
-          secondaryIndexModel.secondaryIndex.indexTableName,
-          SegmentStatus.SUCCESS,
-          secondaryIndexModel.segmentIdToLoadStartTimeMapping,
-          segmentToSegmentTimestampMap,
-          carbonMainTable,
-          sqlContext.sparkSession)
-        // merge index files
-        CarbonMergeFilesRDD.mergeIndexFiles(sqlContext.sparkSession,
-          secondaryIndexModel.validSegments,
-          segmentToSegmentTimestampMap,
-          indexCarbonTable.getTablePath,
-          indexCarbonTable, false)
-        if (!tableStatusUpdation) {
-          throw new Exception("Table status updation failed while creating secondary index")
-        }
-      } catch {
-        case ex: Exception =>
-          throw ex
-      }
-    }
-  }
-
   def createSecondaryIndex(secondaryIndexModel: SecondaryIndexModel,
     segmentToLoadStartTimeMap: java.util.Map[String, String],
-    forceAccessSegment: Boolean = false): CarbonTable = {
+    indexTable: CarbonTable,
+    forceAccessSegment: Boolean = false,
+    isCompactionCall: Boolean): CarbonTable = {
+    var indexCarbonTable = indexTable
     val sc = secondaryIndexModel.sqlContext
     // get the thread pool size for secondary index creation
     val threadPoolSize = getThreadPoolSize(sc)
@@ -115,12 +53,15 @@ object SecondaryIndexCreator {
             s"is $threadPoolSize")
     // create executor service to parallely run the segments
     val executorService = java.util.concurrent.Executors.newFixedThreadPool(threadPoolSize)
-    val metastore = CarbonEnv.getInstance(secondaryIndexModel.sqlContext.sparkSession)
-      .carbonMetaStore
-    val indexCarbonTable = metastore
-      .lookupRelation(Some(secondaryIndexModel.carbonLoadModel.getDatabaseName),
-        secondaryIndexModel.secondaryIndex.indexTableName)(secondaryIndexModel.sqlContext
-        .sparkSession).asInstanceOf[CarbonRelation].carbonTable
+    if (null == indexCarbonTable) {
+      // avoid more lookupRelation to table
+      val metastore = CarbonEnv.getInstance(secondaryIndexModel.sqlContext.sparkSession)
+        .carbonMetaStore
+      indexCarbonTable = metastore
+        .lookupRelation(Some(secondaryIndexModel.carbonLoadModel.getDatabaseName),
+          secondaryIndexModel.secondaryIndex.indexTableName)(secondaryIndexModel.sqlContext
+          .sparkSession).asInstanceOf[CarbonRelation].carbonTable
+    }
 
     try {
       FileInternalUtil
@@ -151,20 +92,19 @@ object SecondaryIndexCreator {
           LOGGER.info("spark.dynamicAllocation.maxExecutors property is set to =" + execInstance)
         }
       }
-      var futureObjectList = List[java.util.concurrent.Future[Boolean]]()
+      var futureObjectList = List[java.util.concurrent.Future[Array[(String, Boolean)]]]()
       for (eachSegment <- secondaryIndexModel.validSegments) {
         val segId = eachSegment
-        futureObjectList :+= executorService.submit(new Callable[Boolean] {
+        futureObjectList :+= executorService.submit(new Callable[Array[(String, Boolean)]] {
           @throws(classOf[Exception])
-          override def call(): Boolean = {
+          override def call(): Array[(String, Boolean)] = {
             ThreadLocalSessionInfo.getOrCreateCarbonSessionInfo().getNonSerializableExtraInfo
               .put("carbonConf", SparkSQLUtil.sessionState(sc.sparkSession).newHadoopConf())
-            var eachSegmentSecondaryIndexCreationStatus = false
+            var eachSegmentSecondaryIndexCreationStatus: Array[(String, Boolean)] = Array.empty
             CarbonLoaderUtil.checkAndCreateCarbonDataLocation(segId, indexCarbonTable)
             val carbonLoadModel = getCopyObject(secondaryIndexModel)
             carbonLoadModel
-              .setFactTimeStamp(secondaryIndexModel.segmentIdToLoadStartTimeMapping.get(eachSegment)
-                .get)
+              .setFactTimeStamp(secondaryIndexModel.segmentIdToLoadStartTimeMapping(eachSegment))
             carbonLoadModel.setTablePath(secondaryIndexModel.carbonTable.getTablePath)
             val secondaryIndexCreationStatus = new CarbonSecondaryIndexRDD(sc.sparkSession,
               new SecondaryIndexCreationResultImpl,
@@ -178,28 +118,81 @@ object SecondaryIndexCreator {
                   String.valueOf(carbonLoadModel.getFactTimeStamp))
             segmentToLoadStartTimeMap.put(segId, String.valueOf(carbonLoadModel.getFactTimeStamp))
             if (secondaryIndexCreationStatus.length > 0) {
-              eachSegmentSecondaryIndexCreationStatus = secondaryIndexCreationStatus.forall(_._2)
+              eachSegmentSecondaryIndexCreationStatus = secondaryIndexCreationStatus
             }
             eachSegmentSecondaryIndexCreationStatus
           }
         })
       }
 
-      // check the secondary index creation from each segment, break if any segment returns false
-      var secondaryIndexCreationStatus = false
-      breakable {
-        futureObjectList
-          .foreach { future =>
-            secondaryIndexCreationStatus = future.get()
-            if (!secondaryIndexCreationStatus) {
-              break
-            }
+      val segmentSecondaryIndexCreationStatus = futureObjectList.groupBy(a => a.get().head._2)
+      val hasSuccessSegments = segmentSecondaryIndexCreationStatus.contains("true".toBoolean)
+      val hasFailedSegments = segmentSecondaryIndexCreationStatus.contains("false".toBoolean)
+      var successSISegments: List[String] = List()
+      var failedSISegments: List[String] = List()
+      if (hasSuccessSegments) {
+        successSISegments =
+          segmentSecondaryIndexCreationStatus("true".toBoolean).collect {
+            case segments: java.util.concurrent.Future[Array[(String, Boolean)]] =>
+              segments.get().head._1
           }
       }
 
-      // handle success and failure scenarios for each segment secondary index creation status
-      if (!secondaryIndexCreationStatus) {
-        throw new Exception("Secondary index creation failed")
+      if (hasFailedSegments) {
+        if (isCompactionCall) {
+          throw new Exception("Secondary index creation failed")
+        } else {
+          failedSISegments =
+            segmentSecondaryIndexCreationStatus("false".toBoolean).collect {
+              case segments: java.util.concurrent.Future[Array[(String, Boolean)]] =>
+                segments.get().head._1
+            }
+        }
+      }
+      // what and all segments the load failed, only for those need make status as marked
+      // for delete, remaining let them be SUCCESS
+      var tableStatusUpdateForSuccess = false
+      var tableStatusUpdateForFailure = false
+
+      if (successSISegments.nonEmpty && !isCompactionCall) {
+        tableStatusUpdateForSuccess = FileInternalUtil.updateTableStatus(
+          successSISegments,
+          secondaryIndexModel.carbonLoadModel.getDatabaseName,
+          secondaryIndexModel.secondaryIndex.indexTableName,
+          SegmentStatus.SUCCESS,
+          secondaryIndexModel.segmentIdToLoadStartTimeMapping,
+          segmentToLoadStartTimeMap,
+          indexCarbonTable,
+          secondaryIndexModel.sqlContext.sparkSession)
+      }
+
+      // update the status of all the segments to marked for delete if data load fails, so that
+      // next load which is triggered for SI table in post event of main table data load clears
+      // all the segments of marked for delete and retriggers the load to same segments again in
+      // that event
+      if (failedSISegments.nonEmpty && !isCompactionCall) {
+        tableStatusUpdateForFailure = FileInternalUtil.updateTableStatus(
+          failedSISegments,
+          secondaryIndexModel.carbonLoadModel.getDatabaseName,
+          secondaryIndexModel.secondaryIndex.indexTableName,
+          SegmentStatus.MARKED_FOR_DELETE,
+          secondaryIndexModel.segmentIdToLoadStartTimeMapping,
+          segmentToLoadStartTimeMap,
+          indexCarbonTable,
+          secondaryIndexModel.sqlContext.sparkSession)
+      }
+
+      // merge index files for success segments in case of only load
+      if (!isCompactionCall) {
+        CarbonMergeFilesRDD.mergeIndexFiles(secondaryIndexModel.sqlContext.sparkSession,
+          successSISegments,
+          segmentToLoadStartTimeMap,
+          indexCarbonTable.getTablePath,
+          indexCarbonTable, mergeIndexProperty = false)
+      }
+
+      if (failedSISegments.nonEmpty) {
+        LOGGER.error("Dataload to secondary index creation has failed")
       }
       indexCarbonTable
     } catch {

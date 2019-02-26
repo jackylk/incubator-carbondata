@@ -19,6 +19,7 @@ import scala.collection.JavaConverters._
 import scala.language.implicitConversions
 
 import org.apache.spark.sql._
+import org.apache.spark.sql.catalyst.parser.ParseException
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.execution.command.AtomicRunnableCommand
 import org.apache.spark.sql.hive.{CarbonInternalHiveMetadataUtil, CarbonInternalMetastore, CarbonRelation}
@@ -310,7 +311,8 @@ class ErrorMessage(message: String) extends Exception(message) {
                  |USING org.apache.spark.sql.CarbonSource OPTIONS (tableName "$indexTableName",
                  |dbName "$databaseName", tablePath "$tablePath", path "$tablePath",
                  |parentTablePath "${carbonTable.getTablePath}", isIndexTable "true",
-                 |parentTableId "${carbonTable.getCarbonTableIdentifier.getTableId}",
+                 |isSITableEnabled "false", parentTableId
+                 |"${carbonTable.getCarbonTableIdentifier.getTableId}",
                  |parentTableName "$tableName"$carbonSchemaString) """.stripMargin)
           } catch {
             case e: IOException =>
@@ -323,17 +325,13 @@ class ErrorMessage(message: String) extends Exception(message) {
         } else {
           sparkSession.sql(
             s"""ALTER TABLE $databaseName.$indexTableName SET SERDEPROPERTIES (
-                'parentTableName'='$tableName', 'isIndexTable' = 'true',
-                'parentTablePath' = '${carbonTable.getTablePath}',
+                'parentTableName'='$tableName', 'isIndexTable' = 'true', 'isSITableEnabled' =
+                'false', 'parentTablePath' = '${carbonTable.getTablePath}',
                 'parentTableId' = '${carbonTable.getCarbonTableIdentifier.getTableId}')""")
         }
 
         CarbonInternalScalaUtil.addIndexTableInfo(carbonTable, indexTableName, indexTableCols)
         CarbonInternalHiveMetadataUtil.refreshTable(databaseName, indexTableName, sparkSession)
-        // load data for secondary index
-        if (isCreateSIndex) {
-          LoadDataForSecondaryIndex(indexModel).run(sparkSession)
-        }
 
         sparkSession.sql(
           s"""ALTER TABLE $databaseName.$tableName SET SERDEPROPERTIES ('indexInfo' =
@@ -350,6 +348,14 @@ class ErrorMessage(message: String) extends Exception(message) {
         CarbonInternalMetastore.removeTableFromMetadataCache(databaseName, tableName)(sparkSession)
         // refersh the parent table relation
         sparkSession.sessionState.catalog.refreshTable(identifier)
+        // load data for secondary index
+        if (isCreateSIndex) {
+          LoadDataForSecondaryIndex(indexModel).run(sparkSession)
+        }
+        // enable the SI table
+        sparkSession.sql(
+          s"""ALTER TABLE $databaseName.$indexTableName SET
+             |SERDEPROPERTIES ('isSITableEnabled' = 'true')""".stripMargin)
         val createTablePostExecutionEvent: CreateTablePostExecutionEvent =
           new CreateTablePostExecutionEvent(sparkSession, tableIdentifier)
         OperationListenerBus.getInstance.fireEvent(createTablePostExecutionEvent, operationContext)
@@ -359,30 +365,13 @@ class ErrorMessage(message: String) extends Exception(message) {
     } catch {
       case err@(_: ErrorMessage | _: IndexTableExistException) =>
         sys.error(err.getMessage)
-      case e: Exception =>
-        val identifier: TableIdentifier = TableIdentifier(indexTableName, Some(databaseName))
-        var relation: CarbonRelation = null
-        try {
-          relation = catalog
-            .lookupRelation(identifier)(sparkSession).asInstanceOf[CarbonRelation]
-        } catch {
-          case e: Exception =>
-            LOGGER.error(s"Index table [$indexTableName] does not exist under Database " +
-                         s"[$databaseName]")
-        }
-        if (relation != null) {
-          LOGGER.error(s"Deleting Index [$indexTableName] under Database [$databaseName]" +
-                       "as create Index failed")
-          CarbonInternalMetastore.dropIndexTable(identifier, relation.metaData.carbonTable,
-            storePath,
-            parentCarbonTable = carbonTable, removeEntryFromParentTable = true)(sparkSession)
-          sparkSession.sql(
-            s"""ALTER TABLE $databaseName.$tableName SET SERDEPROPERTIES ('indexInfo' =
-           '$oldIndexInfo')""")
-        }
-        CarbonInternalScalaUtil.removeIndexTableInfo(carbonTable, indexTableName)
+      case ex@(_: IOException | _: ParseException) =>
         LOGGER.error(s"Index creation with Database name [$databaseName] " +
-                     s"and Index name [$indexTableName] failed")
+                     s"and Index name [$indexTableName] is failed")
+      case e: Exception =>
+        LOGGER.error(s"Index creation with Database name [$databaseName] " +
+                     s"and Index name [$indexTableName] is Successful, But the data load to index" +
+                     s" table is failed")
         throw e
     }
     finally {

@@ -17,17 +17,23 @@ import scala.collection.JavaConverters._
 
 import org.apache.spark.sql.{CarbonDatasourceHadoopRelation, CarbonEnv, SparkSession}
 import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, LogicalPlan}
-import org.apache.spark.sql.command.SecondaryIndexModel
+import org.apache.spark.sql.command.{SecondaryIndex, SecondaryIndexModel}
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.hive.CarbonRelation
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.compression.CompressorFactory
+import org.apache.carbondata.core.metadata.CarbonTableIdentifier
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.mutate.CarbonUpdateUtil
-import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatusManager}
+import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatus, SegmentStatusManager}
+import org.apache.carbondata.core.util.CarbonProperties
+import org.apache.carbondata.events.{LoadTableSIPostExecutionEvent, LoadTableSIPreExecutionEvent, OperationContext, OperationListenerBus}
+import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 import org.apache.carbondata.spark.core.metadata.IndexMetadata
+import org.apache.carbondata.spark.rdd.SecondaryIndexCreator
 import org.apache.carbondata.spark.spark.indextable.{IndexTableInfo, IndexTableUtil}
+import org.apache.carbondata.spark.spark.load.CarbonInternalLoaderUtil
 
 /**
  *
@@ -247,6 +253,96 @@ object CarbonInternalScalaUtil {
             sparkSession))
     }
     indexTables
+  }
+
+  /**
+   * This method loads data to SI table, if isLoadToFailedSISegments is true, then load to only
+   * failed segments, if false, just load the data to current segment of main table load
+   */
+  def LoadToSITable(sparkSession: SparkSession,
+    carbonLoadModel: CarbonLoadModel,
+    indexTableName: String,
+    isLoadToFailedSISegments: Boolean,
+    secondaryIndex: SecondaryIndex,
+    carbonTable: CarbonTable): Unit = {
+
+    val metaStore = CarbonEnv.getInstance(sparkSession).carbonMetaStore
+    var indexTable = metaStore
+      .lookupRelation(Some(carbonLoadModel.getDatabaseName),
+        indexTableName)(sparkSession).asInstanceOf[CarbonRelation].carbonTable
+
+    val details = SegmentStatusManager.readLoadMetadata(indexTable.getMetadataPath)
+
+    var segmentIdToLoadStartTimeMapping: scala.collection.mutable.Map[String, java.lang.Long] =
+      scala.collection.mutable.Map()
+
+    val segmentsToReload: scala.collection.mutable.ListBuffer[String] = scala
+      .collection
+      .mutable.ListBuffer[String]()
+
+    if (isLoadToFailedSISegments) {
+      // read the details of SI table and get all the failed segments during SI creation which are
+      // MARKED_FOR_DELETE
+      details.collect {
+        case loadMetaDetail: LoadMetadataDetails =>
+          if (loadMetaDetail.getSegmentStatus == SegmentStatus.MARKED_FOR_DELETE) {
+            segmentsToReload.append(loadMetaDetail.getLoadName)
+          }
+      }
+      segmentIdToLoadStartTimeMapping = CarbonInternalLoaderUtil
+        .getSegmentToLoadStartTimeMapping(carbonLoadModel.getLoadMetadataDetails.asScala.toArray)
+        .asScala
+    } else {
+      segmentIdToLoadStartTimeMapping = scala.collection.mutable
+        .Map((carbonLoadModel.getSegmentId, carbonLoadModel.getFactTimeStamp))
+    }
+    val secondaryIndexModel = if (isLoadToFailedSISegments) {
+      SecondaryIndexModel(
+        sparkSession.sqlContext,
+        carbonLoadModel,
+        carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable,
+        secondaryIndex,
+        segmentsToReload.toList,
+        segmentIdToLoadStartTimeMapping)
+    } else {
+      SecondaryIndexModel(
+        sparkSession.sqlContext,
+        carbonLoadModel,
+        carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable,
+        secondaryIndex,
+        List(carbonLoadModel.getSegmentId),
+        segmentIdToLoadStartTimeMapping)
+    }
+
+    val factTablePath = CarbonProperties.getStorePath +
+                        CarbonCommonConstants.FILE_SEPARATOR +
+                        secondaryIndex.databaseName +
+                        CarbonCommonConstants.FILE_SEPARATOR +
+                        secondaryIndex.indexTableName
+    val operationContext = new OperationContext
+    val loadTableSIPreExecutionEvent: LoadTableSIPreExecutionEvent =
+      LoadTableSIPreExecutionEvent(sparkSession,
+        new CarbonTableIdentifier(carbonTable.getDatabaseName, indexTableName, ""),
+        carbonLoadModel,
+        factTablePath)
+    OperationListenerBus.getInstance
+      .fireEvent(loadTableSIPreExecutionEvent, operationContext)
+
+    val segmentToSegmentTimestampMap: java.util.Map[String, String] = new java.util
+    .HashMap[String, String]()
+    val indexCarbonTable = SecondaryIndexCreator
+      .createSecondaryIndex(secondaryIndexModel,
+        segmentToSegmentTimestampMap,
+        indexTable,
+        forceAccessSegment = true,
+        isCompactionCall = false)
+
+    val loadTableACLPostExecutionEvent: LoadTableSIPostExecutionEvent =
+      LoadTableSIPostExecutionEvent(sparkSession,
+        indexCarbonTable.getCarbonTableIdentifier,
+        carbonLoadModel)
+    OperationListenerBus.getInstance
+      .fireEvent(loadTableACLPostExecutionEvent, operationContext)
   }
 
 }

@@ -209,6 +209,9 @@ object CarbonCommonInitializer {
       operationListenerBus
         .addListener(classOf[LoadTablePreStatusUpdateEvent], new SILoadEventListener)
       operationListenerBus
+        .addListener(classOf[LoadTablePostStatusUpdateEvent],
+          new SILoadEventListenerForFailedSegments)
+      operationListenerBus
         .addListener(classOf[LookupRelationPostEvent], new SIRefreshEventListener)
       // TODO: get create relation event
       operationListenerBus

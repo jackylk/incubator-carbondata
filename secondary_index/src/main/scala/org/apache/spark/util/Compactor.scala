@@ -65,21 +65,25 @@ object Compactor {
         .HashMap[String, String]()
         val indexCarbonTable = SecondaryIndexCreator
           .createSecondaryIndex(secondaryIndexModel,
-            segmentToSegmentTimestampMap,
-            forceAccessSegment)
+            segmentToSegmentTimestampMap, null,
+            forceAccessSegment, isCompactionCall = true)
         CarbonInternalLoaderUtil.updateLoadMetadataWithMergeStatus(
           indexCarbonTable,
           loadsToMerge,
           validSegments.head,
           carbonLoadModel,
           segmentToSegmentTimestampMap,
-          segmentIdToLoadStartTimeMapping.get(validSegments.head).get)
+          segmentIdToLoadStartTimeMapping(validSegments.head))
         // merge index files
         CarbonMergeFilesRDD.mergeIndexFiles(sqlContext.sparkSession,
           secondaryIndexModel.validSegments,
           segmentToSegmentTimestampMap,
           indexCarbonTable.getTablePath,
           indexCarbonTable, false)
+        // enable the SI table after compaction
+        sqlContext.sparkSession.sql(
+          s"""ALTER TABLE ${carbonLoadModel.getDatabaseName}.${indexCarbonTable.getTableName} SET
+             |SERDEPROPERTIES ('isSITableEnabled' = 'true')""".stripMargin)
       } catch {
         case ex: Exception =>
           LOGGER.error(s"Compaction failed for SI table ${secondaryIndex.indexTableName}", ex)

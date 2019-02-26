@@ -13,11 +13,9 @@ package org.apache.spark.sql.command
 
 import scala.collection.JavaConverters._
 
-import org.apache.spark.rdd.CarbonMergeFilesRDD
 import org.apache.spark.sql.{CarbonEnv, Row, SparkSession, SQLContext}
 import org.apache.spark.sql.execution.command.RunnableCommand
 import org.apache.spark.sql.hive.CarbonRelation
-import org.apache.spark.util.si.FileInternalUtil
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.compression.CompressorFactory
@@ -84,6 +82,10 @@ private[sql] case class LoadDataForSecondaryIndex(indexModel: SecondaryIndex) ex
       secondaryIndex: SecondaryIndex,
       carbonLoadModel: CarbonLoadModel): Unit = {
     var details: Array[LoadMetadataDetails] = null
+    var secondaryIndexModel: SecondaryIndexModel = null
+    val segmentToSegmentTimestampMap: java.util.Map[String, String] = new java.util
+    .HashMap[String, String]()
+    var indexCarbonTable: CarbonTable = null
     // read table status file to validate for no load scenario and get valid segments
     if (null == carbonLoadModel.getLoadMetadataDetails) {
       details = readTableStatusFile(carbonLoadModel)
@@ -97,42 +99,23 @@ private[sql] case class LoadDataForSecondaryIndex(indexModel: SecondaryIndex) ex
           val segmentIdToLoadStartTimeMapping:
             scala.collection.mutable.Map[String, java.lang.Long] =
             CarbonInternalLoaderUtil.getSegmentToLoadStartTimeMapping(details).asScala
-          val secondaryIndexModel = SecondaryIndexModel(sparkSession.sqlContext, carbonLoadModel,
+          secondaryIndexModel = SecondaryIndexModel(sparkSession.sqlContext, carbonLoadModel,
             carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable,
             secondaryIndex, validSegments, segmentIdToLoadStartTimeMapping)
-          val segmentToSegmentTimestampMap: java.util.Map[String, String] = new java.util
-          .HashMap[String,
-            String]()
           SecondaryIndexCreator
-            .createSecondaryIndex(secondaryIndexModel, segmentToSegmentTimestampMap)
+            .createSecondaryIndex(secondaryIndexModel,
+              segmentToSegmentTimestampMap, null,
+              isCompactionCall = false)
           val indexTableMeta = CarbonEnv.getInstance(sparkSession).carbonMetaStore
             .getTableFromMetadataCache(secondaryIndexModel.carbonLoadModel.getDatabaseName,
               secondaryIndexModel.secondaryIndex.indexTableName).getOrElse(null)
-          val indexCarbonTable = if (null != indexTableMeta) {
+          indexCarbonTable = if (null != indexTableMeta) {
             indexTableMeta
           } else {
             null
           }
           if (null == indexCarbonTable) {
             throw new Exception("Not able to load Index carbon table from metadata table cache")
-          }
-          val tableStatusUpdation = FileInternalUtil.updateTableStatus(
-            secondaryIndexModel.validSegments,
-            secondaryIndexModel.carbonLoadModel.getDatabaseName,
-            secondaryIndexModel.secondaryIndex.indexTableName,
-            SegmentStatus.SUCCESS,
-            secondaryIndexModel.segmentIdToLoadStartTimeMapping,
-            segmentToSegmentTimestampMap,
-            indexCarbonTable,
-            sparkSession)
-          // merge index files
-          CarbonMergeFilesRDD.mergeIndexFiles(sparkSession,
-            secondaryIndexModel.validSegments,
-            segmentToSegmentTimestampMap,
-            indexCarbonTable.getTablePath,
-            indexCarbonTable, false)
-          if (!tableStatusUpdation) {
-            throw new Exception("Table status updation failed while creating secondary index")
           }
         }
       } catch {

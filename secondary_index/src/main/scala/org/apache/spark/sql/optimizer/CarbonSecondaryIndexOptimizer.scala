@@ -101,9 +101,15 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
     matchingIndexTables = CarbonCostBasedOptimizer.identifyRequiredTables(
       filterAttributes.asJava,
       CarbonInternalScalaUtil.getIndexes(indexableRelation).mapValues(_.toList.asJava).asJava)
-      .asScala.toSeq
+      .asScala
 
-    if (matchingIndexTables.size == 0) {
+    // filter out all the index tables which are disabled
+    val enabledMatchingIndexTables = matchingIndexTables
+      .filter(table => sparkSession.sessionState.catalog
+        .getTableMetadata(TableIdentifier(table, None)).storage.properties("isSITableEnabled")
+        .equalsIgnoreCase("true"))
+
+    if (enabledMatchingIndexTables.isEmpty) {
       filter
     } else {
       var isPositionIDPresent = false
@@ -111,7 +117,7 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
         cols.foreach { element =>
           element match {
             case a@Alias(s: ScalaUDF, name)
-              if (name.equalsIgnoreCase(CarbonCommonConstants.POSITION_ID)) =>
+              if name.equalsIgnoreCase(CarbonCommonConstants.POSITION_ID) =>
               isPositionIDPresent = true
             case _ =>
           }
@@ -147,7 +153,7 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
       // mapping of all the index tables and its columns created on the main table
       val allIndexTableToColumnMapping = CarbonInternalScalaUtil.getIndexes(indexableRelation)
 
-      matchingIndexTables.foreach { matchedTable =>
+      enabledMatchingIndexTables.foreach { matchedTable =>
         // create index table to index column mapping
         val indexTableColumns = allIndexTableToColumnMapping.getOrElse(matchedTable, Array())
         indexTableToColumnsMapping.put(matchedTable, indexTableColumns.toSet)

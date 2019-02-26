@@ -11,9 +11,6 @@
  */
 package org.apache.carbondata.spark.testsuite.secondaryindex
 
-import org.apache.carbondata.core.metadata.CarbonMetadata
-import org.apache.carbondata.core.util.path.CarbonTablePath
-import org.apache.carbondata.core.util.CarbonUtil
 import org.apache.spark.sql.common.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
 

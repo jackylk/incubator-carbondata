@@ -167,7 +167,7 @@ class CarbonSecondaryIndexRDD[K, V](
 
       override def next(): (K, V) = {
         finished = true
-        result.getKey(uniqueStatusId, secondaryIndexCreationStatus)
+        result.getKey(segmentId, secondaryIndexCreationStatus)
       }
 
 

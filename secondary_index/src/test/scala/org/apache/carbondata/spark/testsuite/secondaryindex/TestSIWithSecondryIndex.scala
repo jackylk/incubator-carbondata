@@ -19,7 +19,11 @@ import org.apache.spark.sql.common.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
+import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatus, SegmentStatusManager}
 import org.apache.carbondata.core.util.CarbonProperties
+import org.apache.carbondata.core.util.path.CarbonTablePath
+import org.apache.spark.sql.execution.SparkPlan
+import org.apache.spark.sql.execution.joins.BroadCastSIFilterPushJoin
 
 /**
  * Created by K00900841 on 2017/9/1.
@@ -122,12 +126,82 @@ class TestSIWithSecondryIndex extends QueryTest with BeforeAndAfterAll {
     assert(isExpectedValueValid("default", "indexCache", "cache_level", "BLOCKLET"))
   }
 
+  test("test parallel load of SI to main table") {
+    sql("drop table if exists uniqdata")
+    sql("CREATE table uniqdata (empno int, empname String, " +
+        "designation String, doj Timestamp, workgroupcategory int, " +
+        "workgroupcategoryname String, deptno int, deptname String, projectcode int, " +
+        "projectjoindate Timestamp, projectenddate Timestamp, attendance int, " +
+        "utilization int,salary int) STORED BY 'org.apache.carbondata.format'")
+    sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/data.csv' INTO " +
+        "TABLE uniqdata OPTIONS('DELIMITER'=',', 'BAD_RECORDS_LOGGER_ENABLE'='FALSE', 'BAD_RECORDS_ACTION'='FORCE')")
+    sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/data.csv' INTO " +
+        "TABLE uniqdata OPTIONS('DELIMITER'=',', 'BAD_RECORDS_LOGGER_ENABLE'='FALSE', 'BAD_RECORDS_ACTION'='FORCE')")
+    sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/data.csv' INTO " +
+        "TABLE uniqdata OPTIONS('DELIMITER'=',', 'BAD_RECORDS_LOGGER_ENABLE'='FALSE', 'BAD_RECORDS_ACTION'='FORCE')")
+    sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/data.csv' INTO " +
+        "TABLE uniqdata OPTIONS('DELIMITER'=',', 'BAD_RECORDS_LOGGER_ENABLE'='FALSE', 'BAD_RECORDS_ACTION'='FORCE')")
+    sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/data.csv' INTO " +
+        "TABLE uniqdata OPTIONS('DELIMITER'=',', 'BAD_RECORDS_LOGGER_ENABLE'='FALSE', 'BAD_RECORDS_ACTION'='FORCE')")
+    sql("create index index1 on table uniqdata (workgroupcategoryname) AS 'org.apache.carbondata.format'")
+    val indexTable = CarbonEnv.getCarbonTable(Some("default"), "index1")(sqlContext.sparkSession)
+    val carbontable = CarbonEnv.getCarbonTable(Some("default"), "uniqdata")(sqlContext.sparkSession)
+    val details = SegmentStatusManager.readLoadMetadata(indexTable.getMetadataPath)
+    val failSegments = List("3","4")
+    var loadMetadataDetailsList = Array[LoadMetadataDetails]()
+    details.foreach{detail =>
+      if(failSegments.contains(detail.getLoadName)){
+        val loadmetadatadetail = detail
+        loadmetadatadetail.setSegmentStatus(SegmentStatus.MARKED_FOR_DELETE)
+        loadMetadataDetailsList +:= loadmetadatadetail
+      } else {
+        loadMetadataDetailsList +:= detail
+      }
+    }
+
+    SegmentStatusManager.writeLoadDetailsIntoFile(
+      indexTable.getMetadataPath + CarbonCommonConstants.FILE_SEPARATOR +
+      CarbonTablePath.TABLE_STATUS_FILE,
+      loadMetadataDetailsList)
+
+    sql(s"""ALTER TABLE default.index1 SET
+           |SERDEPROPERTIES ('isSITableEnabled' = 'false')""".stripMargin)
+    sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/data.csv' INTO " +
+        "TABLE uniqdata OPTIONS('DELIMITER'=',', 'BAD_RECORDS_LOGGER_ENABLE'='FALSE', 'BAD_RECORDS_ACTION'='FORCE')")
+    val count1 = sql("select * from uniqdata where workgroupcategoryname = 'developer'").count()
+    val df1 = sql("select * from uniqdata where workgroupcategoryname = 'developer'").queryExecution.sparkPlan
+    sql(s"""ALTER TABLE default.index1 SET
+           |SERDEPROPERTIES ('isSITableEnabled' = 'false')""".stripMargin)
+    val count2 = sql("select * from uniqdata where workgroupcategoryname = 'developer'").count()
+    val df2 = sql("select * from uniqdata where workgroupcategoryname = 'developer'").queryExecution.sparkPlan
+    assert(count1 == count2)
+    assert(isFilterPushedDownToSI(df1))
+    assert(!isFilterPushedDownToSI(df2))
+  }
+
   override def afterAll {
     sql("drop index si_altercolumn on table_WithSIAndAlter")
     sql("drop table if exists table_WithSIAndAlter")
     sql("drop table if exists maintable")
     sql("drop table if exists maintableeee")
     sql("drop table if exists column_meta_cache")
+    sql("drop table if exists uniqdata")
+  }
+
+  /**
+    * Method to check whether the filter is push down to SI table or not
+    *
+    * @param sparkPlan
+    * @return
+    */
+  private def isFilterPushedDownToSI(sparkPlan: SparkPlan): Boolean = {
+    var isValidPlan = false
+    sparkPlan.transform {
+      case broadCastSIFilterPushDown: BroadCastSIFilterPushJoin =>
+        isValidPlan = true
+        broadCastSIFilterPushDown
+    }
+    isValidPlan
   }
 
 }

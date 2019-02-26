@@ -135,6 +135,11 @@ public class CarbonInternalLoaderUtil {
         LOGGER.info("Acquired lock for table" + databaseName + "." + tableName
             + " for table status updation");
 
+        if (isSegmentsAlreadyCompactedForNewMetaDataDetails(indexCarbonTables, tableName,
+            newLoadMetadataDetails)) {
+          return false;
+        }
+
         LoadMetadataDetails[] currentLoadMetadataDetails =
             SegmentStatusManager.readLoadMetadata(metaDataFilepath);
 
@@ -207,6 +212,45 @@ public class CarbonInternalLoaderUtil {
       }
     }
     return status;
+  }
+
+  /**
+   * This method read the details of SI table and check whether new metadatadetails are already
+   * compacted, if it is, then already compaction for SI is completed and updating with new segment
+   * status is useless, this can happen in case of updating the status of index while loading
+   * segments for failed segments, so do not update anything, just exit gracefully
+   */
+  private static boolean isSegmentsAlreadyCompactedForNewMetaDataDetails(
+      List<CarbonTable> indexTables, String indexTableName,
+      List<LoadMetadataDetails> newLoadMetadataDetails) {
+    CarbonTable currentIndexTable = null;
+    for (CarbonTable indexTable : indexTables) {
+      if (indexTable.getTableName().equalsIgnoreCase(indexTableName)) {
+        currentIndexTable = indexTable;
+        break;
+      }
+    }
+    boolean isIndexTableSegmentsCompacted = false;
+    if (null != currentIndexTable) {
+      LoadMetadataDetails[] existingLoadMetaDataDetails =
+          SegmentStatusManager.readLoadMetadata(currentIndexTable.getMetadataPath());
+      for (int i = 0; i < existingLoadMetaDataDetails.length; i++) {
+        for (int j = 0; j < newLoadMetadataDetails.size(); j++) {
+          if (newLoadMetadataDetails.get(j).getLoadName()
+              .equalsIgnoreCase(existingLoadMetaDataDetails[j].getLoadName())
+              && existingLoadMetaDataDetails[j].getSegmentStatus() == SegmentStatus.COMPACTED) {
+            isIndexTableSegmentsCompacted = true;
+            break;
+          }
+        }
+        if (isIndexTableSegmentsCompacted) {
+          break;
+        }
+      }
+      return isIndexTableSegmentsCompacted;
+    } else {
+      return false;
+    }
   }
 
   /**
