@@ -46,12 +46,12 @@ public class Segment implements Serializable, Writable {
 
   private String segmentNo;
 
-  private String segmentFileName;
+  private transient String segmentFileName;
 
   /**
    * List of index shards which are already got filtered through CG index operation.
    */
-  private Set<String> filteredIndexShardNames = new HashSet<>();
+  private transient Set<String> filteredIndexShardNames = new HashSet<>();
 
   /**
    * Points to the Read Committed Scope of the segment. This is a flavor of

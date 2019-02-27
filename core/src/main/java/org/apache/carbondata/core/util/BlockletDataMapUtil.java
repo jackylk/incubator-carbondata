@@ -73,6 +73,13 @@ public class BlockletDataMapUtil {
   private static final Logger LOG =
       LogServiceFactory.getLogService(BlockletDataMapUtil.class.getName());
 
+  public static Set<TableBlockIndexUniqueIdentifier> getSegmentUniqueIdentifiers(Segment segment)
+      throws IOException {
+    Set<TableBlockIndexUniqueIdentifier> set = new HashSet<>();
+    set.add(new TableBlockIndexUniqueIdentifier(segment.getSegmentNo()));
+    return set;
+  }
+
   public static Map<String, BlockMetaInfo> getBlockMetaInfoMap(
       TableBlockIndexUniqueIdentifierWrapper identifierWrapper,
       SegmentIndexFileStore indexFileStore, Set<String> filesRead,

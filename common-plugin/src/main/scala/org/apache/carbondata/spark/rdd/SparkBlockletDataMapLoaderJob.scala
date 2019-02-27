@@ -26,10 +26,11 @@ import org.apache.spark.{Partition, TaskContext, TaskKilledException}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.util.SparkSQLUtil
 
+import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.datamap.{AbstractDataMapJob, DataMapStoreManager}
 import org.apache.carbondata.core.datamap.dev.CacheableDataMap
 import org.apache.carbondata.core.datastore.block.SegmentPropertiesAndSchemaHolder
-import org.apache.carbondata.core.indexstore.{BlockletDataMapIndexWrapper, TableBlockIndexUniqueIdentifier, TableBlockIndexUniqueIdentifierWrapper}
+import org.apache.carbondata.core.indexstore.{BlockletDataMapIndexStore, BlockletDataMapIndexWrapper, TableBlockIndexUniqueIdentifier, TableBlockIndexUniqueIdentifierWrapper}
 import org.apache.carbondata.core.indexstore.blockletindex.{BlockDataMap, BlockletDataMapDistributable}
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.util.{BlockletDataMapDetailsWithSchema, CarbonUtil}
@@ -58,15 +59,21 @@ class ColumnCardinality(val cardinality: Array[Int]) {
 }
 
 class SparkBlockletDataMapLoaderJob extends AbstractDataMapJob {
-
+  private val LOGGER = LogServiceFactory
+    .getLogService(classOf[SparkBlockletDataMapLoaderJob].getName)
   override def execute(carbonTable: CarbonTable,
     dataMapFormat: FileInputFormat[Void, BlockletDataMapIndexWrapper]): Unit = {
-    val dataMapFactory = DataMapStoreManager.getInstance().getDefaultDataMap(carbonTable)
-      .getDataMapFactory
-    val cacheableDataMap = dataMapFactory.asInstanceOf[CacheableDataMap]
     val loader: DistributableBlockletDataMapLoader = dataMapFormat
       .asInstanceOf[DistributableBlockletDataMapLoader]
     val dataMapIndexWrappers = new DataMapLoaderRDD(SparkSQLUtil.getSparkSession, loader).collect()
+    val cacheableDataMap = DataMapStoreManager.getInstance.getDefaultDataMap(carbonTable)
+      .getDataMapFactory.asInstanceOf[CacheableDataMap]
+    val tableBlockIndexUniqueIdentifiers = dataMapIndexWrappers.map {
+      case (tableBlockIndexUniqueIdentifier, _) => tableBlockIndexUniqueIdentifier
+    }
+    val groupBySegment = tableBlockIndexUniqueIdentifiers.toSet.groupBy[String](x => x.getSegmentId)
+      .map(a => (a._1, a._2.asJava)).asJava
+    cacheableDataMap.updateSegmentDataMap(groupBySegment)
     // add segmentProperties in single thread if carbon table schema is not modified
     if (!carbonTable.getTableInfo.isSchemaModified) {
       addSegmentProperties(carbonTable, dataMapIndexWrappers)
@@ -188,21 +195,15 @@ class DataMapLoaderRDD(
     splits.asScala.zipWithIndex.map(f => new DataMapLoaderPartition(id, f._2, f._1)).toArray
   }
 
-  override def getPreferredLocations(split: Partition): Seq[String] = {
-    split.asInstanceOf[DataMapLoaderPartition].inputSplit.getLocations.filter(_ != "localhost")
-  }
-
   override def internalCompute(split: Partition, context: TaskContext):
   Iterator[(TableBlockIndexUniqueIdentifier, BlockletDataMapDetailsWithSchema)] = {
     val attemptId = new TaskAttemptID(jobTrackerId, id, TaskType.MAP, split.index, 0)
     val attemptContext = new TaskAttemptContextImpl(new Configuration(), attemptId)
-    val distributable = split.asInstanceOf[DataMapLoaderPartition].inputSplit
-      .asInstanceOf[BlockletDataMapDistributable]
     val inputSplit = split.asInstanceOf[DataMapLoaderPartition].inputSplit
     val reader = dataMapFormat.createRecordReader(inputSplit, attemptContext)
     val iter = new Iterator[(TableBlockIndexUniqueIdentifier, BlockletDataMapDetailsWithSchema)] {
       // in case of success, failure or cancelation clear memory and stop execution
-      context.addTaskCompletionListener { context =>
+      context.addTaskCompletionListener { _ =>
         reader.close()
       }
       reader.initialize(inputSplit, attemptContext)

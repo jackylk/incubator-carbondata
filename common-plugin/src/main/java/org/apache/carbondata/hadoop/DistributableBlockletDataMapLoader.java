@@ -28,7 +28,6 @@ import org.apache.carbondata.core.datamap.DataMapStoreManager;
 import org.apache.carbondata.core.datamap.Segment;
 import org.apache.carbondata.core.datamap.dev.CacheableDataMap;
 import org.apache.carbondata.core.datamap.dev.DataMapFactory;
-import org.apache.carbondata.core.datamap.dev.expr.DataMapDistributableWrapper;
 import org.apache.carbondata.core.datamap.dev.expr.DataMapExprWrapper;
 import org.apache.carbondata.core.datastore.block.SegmentPropertiesAndSchemaHolder;
 import org.apache.carbondata.core.indexstore.BlockletDataMapIndexWrapper;
@@ -37,7 +36,9 @@ import org.apache.carbondata.core.indexstore.TableBlockIndexUniqueIdentifier;
 import org.apache.carbondata.core.indexstore.TableBlockIndexUniqueIdentifierWrapper;
 import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMapDistributable;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
+import org.apache.carbondata.core.readcommitter.TableStatusReadCommittedScope;
 import org.apache.carbondata.core.util.BlockletDataMapDetailsWithSchema;
+import org.apache.carbondata.core.util.BlockletDataMapUtil;
 import org.apache.carbondata.core.util.CarbonBlockLoaderHelper;
 
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -79,17 +80,11 @@ public class DistributableBlockletDataMapLoader
   }
 
   @Override public List<InputSplit> getSplits(JobContext job) throws IOException {
-    List<DataMapDistributableWrapper> distributables =
-        dataMapExprWrapper.toDistributable(validSegments);
-    List<DataMapDistributable> distributableList = new ArrayList<>();
-    for (DataMapDistributableWrapper wrapper : distributables) {
-      distributableList.add(wrapper.getDistributable());
-    }
     DataMapFactory dataMapFactory =
         DataMapStoreManager.getInstance().getDefaultDataMap(table).getDataMapFactory();
     CacheableDataMap factory = (CacheableDataMap) dataMapFactory;
     List<DataMapDistributable> validDistributables =
-        factory.getAllUncachedDistributables(distributableList);
+        factory.getAllUncachedDistributables(validSegments, dataMapExprWrapper);
     CarbonBlockLoaderHelper instance = CarbonBlockLoaderHelper.getInstance();
     int distributableSize = validDistributables.size();
     List<InputSplit> inputSplits = new ArrayList<>(distributableSize);
@@ -97,7 +92,7 @@ public class DistributableBlockletDataMapLoader
     Iterator<DataMapDistributable> iterator = validDistributables.iterator();
     while (iterator.hasNext()) {
       BlockletDataMapDistributable next = (BlockletDataMapDistributable) iterator.next();
-      String key = next.getFilePath();
+      String key = next.getSegmentPath();
       if (instance.checkAlreadySubmittedBlock(table.getAbsoluteTableIdentifier(), key)) {
         inputSplits.add(next);
         keys.add(key);
@@ -119,27 +114,35 @@ public class DistributableBlockletDataMapLoader
       private TableBlockIndexUniqueIdentifierWrapper tableBlockIndexUniqueIdentifierWrapper;
       Cache<TableBlockIndexUniqueIdentifierWrapper, BlockletDataMapIndexWrapper> cache =
           CacheProvider.getInstance().createCache(CacheType.DRIVER_BLOCKLET_DATAMAP);
-      boolean finished = false;
+      private Iterator<TableBlockIndexUniqueIdentifier> iterator;
 
       @Override public void initialize(InputSplit inputSplit, TaskAttemptContext taskAttemptContext)
           throws IOException, InterruptedException {
-        BlockletDataMapDistributable blockletDistributable =
+        BlockletDataMapDistributable segmentDistributable =
             (BlockletDataMapDistributable) inputSplit;
-        tableBlockIndexUniqueIdentifier =
-            blockletDistributable.getTableBlockIndexUniqueIdentifier();
-        tableBlockIndexUniqueIdentifierWrapper =
-            new TableBlockIndexUniqueIdentifierWrapper(tableBlockIndexUniqueIdentifier, table,
-                false);
-        wrapper = cache.get(tableBlockIndexUniqueIdentifierWrapper);
+        TableBlockIndexUniqueIdentifier tableSegmentUniqueIdentifier =
+            segmentDistributable.getTableBlockIndexUniqueIdentifier();
+        TableStatusReadCommittedScope readCommittedScope =
+            new TableStatusReadCommittedScope(table.getAbsoluteTableIdentifier(),
+                taskAttemptContext.getConfiguration());
+        Segment segment =
+            Segment.toSegment(tableSegmentUniqueIdentifier.getSegmentId(), readCommittedScope);
+        iterator =
+            BlockletDataMapUtil.getTableBlockUniqueIdentifiers(segment).iterator();
       }
 
       @Override public boolean nextKeyValue() throws IOException, InterruptedException {
-        if (!finished) {
-          finished = true;
-          return finished;
-        } else {
-          return false;
+        if (iterator.hasNext()) {
+          TableBlockIndexUniqueIdentifier tableBlockIndexUniqueIdentifier = iterator.next();
+          this.tableBlockIndexUniqueIdentifier  = tableBlockIndexUniqueIdentifier;
+          TableBlockIndexUniqueIdentifierWrapper tableBlockIndexUniqueIdentifierWrapper =
+              new TableBlockIndexUniqueIdentifierWrapper(tableBlockIndexUniqueIdentifier, table,
+                  false);
+          this.tableBlockIndexUniqueIdentifierWrapper = tableBlockIndexUniqueIdentifierWrapper;
+          wrapper = cache.get(tableBlockIndexUniqueIdentifierWrapper);
+          return true;
         }
+        return false;
       }
 
       @Override public TableBlockIndexUniqueIdentifier getCurrentKey()

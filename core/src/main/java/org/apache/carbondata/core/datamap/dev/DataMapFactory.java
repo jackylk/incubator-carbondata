@@ -29,8 +29,10 @@ import org.apache.carbondata.core.datamap.DataMapLevel;
 import org.apache.carbondata.core.datamap.DataMapMeta;
 import org.apache.carbondata.core.datamap.Segment;
 import org.apache.carbondata.core.datamap.dev.cgdatamap.CoarseGrainDataMap;
+import org.apache.carbondata.core.datamap.dev.expr.DataMapDistributableWrapper;
 import org.apache.carbondata.core.datastore.block.SegmentProperties;
 import org.apache.carbondata.core.features.TableOperation;
+import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.metadata.schema.table.DataMapSchema;
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonColumn;
@@ -60,6 +62,11 @@ public abstract class DataMapFactory<T extends DataMap> {
 
   public DataMapSchema getDataMapSchema() {
     return dataMapSchema;
+  }
+
+  public DataMapDistributableWrapper toDistributableSegment(Segment segment,
+      DataMapSchema schema, AbsoluteTableIdentifier identifier, String uniqueId) {
+    return null;
   }
 
   /**

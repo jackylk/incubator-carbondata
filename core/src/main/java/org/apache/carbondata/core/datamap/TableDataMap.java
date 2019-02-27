@@ -36,6 +36,7 @@ import org.apache.carbondata.core.datamap.dev.BlockletSerializer;
 import org.apache.carbondata.core.datamap.dev.DataMap;
 import org.apache.carbondata.core.datamap.dev.DataMapFactory;
 import org.apache.carbondata.core.datamap.dev.cgdatamap.CoarseGrainDataMap;
+import org.apache.carbondata.core.datamap.dev.expr.DataMapDistributableWrapper;
 import org.apache.carbondata.core.datamap.dev.fgdatamap.FineGrainBlocklet;
 import org.apache.carbondata.core.datastore.block.SegmentProperties;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
@@ -116,8 +117,8 @@ public final class TableDataMap extends OperationEventListener {
     final Map<Segment, List<DataMap>> dataMaps = dataMapFactory.getDataMaps(segments);
     // for non-filter queries
     // for filter queries
-    int totalFiles = 0;
     int datamapsCount = 0;
+    int totalFiles = 0;
     for (Segment segment : segments) {
       for (DataMap dataMap: dataMaps.get(segment)) {
         totalFiles += dataMap.getNumberOfEntries();
@@ -401,6 +402,11 @@ public final class TableDataMap extends OperationEventListener {
     return detailedBlocklets;
   }
 
+  public DataMapDistributableWrapper toDistributableSegment(Segment segment, String uniqueId)
+      throws IOException {
+    return dataMapFactory.toDistributableSegment(segment, dataMapSchema, identifier, uniqueId);
+  }
+
   /**
    * Clear only the datamaps of the segments
    * @param segmentIds list of segmentIds to be cleared from cache.
@@ -452,6 +458,28 @@ public final class TableDataMap extends OperationEventListener {
 
   @Override public void onEvent(Event event, OperationContext opContext) throws Exception {
     dataMapFactory.fireEvent(event);
+  }
+
+  /**
+   * Method to prune the segments based on task min/max values
+   *
+   * @param segments
+   * @param filterExp
+   * @return
+   * @throws IOException
+   */
+  public List<Segment> pruneSegments(List<Segment> segments, FilterResolverIntf filterExp)
+      throws IOException {
+    List<Segment> prunedSegments = new ArrayList<>(CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);
+    for (Segment segment : segments) {
+      List<DataMap> dataMaps = dataMapFactory.getDataMaps(segment);
+      if (dataMaps.get(0).isScanRequired(filterExp)) {
+        // If any one task in a given segment contains the data that means the segment need to
+        // be scanned and we need to validate further data maps in the same segment
+        prunedSegments.add(segment);
+      }
+    }
+    return prunedSegments;
   }
 
   /**

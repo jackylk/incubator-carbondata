@@ -34,7 +34,7 @@ public abstract class DataMapDistributable extends InputSplit
 
   private String tablePath;
 
-  private transient Segment segment;
+  private Segment segment;
 
   private String[] locations;
 
