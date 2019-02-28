@@ -17,6 +17,7 @@
 package org.apache.carbondata.spark.testsuite.datamap
 
 import java.io.{ByteArrayInputStream, DataOutputStream, ObjectInputStream, ObjectOutputStream}
+import java.util
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
@@ -272,6 +273,7 @@ class FGDataMap extends FineGrainDataMap {
   }
 
   override def getNumberOfEntries: Int = 1
+
 }
 
 class FGDataMapWriter(carbonTable: CarbonTable,

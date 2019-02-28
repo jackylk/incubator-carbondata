@@ -45,6 +45,8 @@ public class BlockletDataMapModel extends DataMapModel {
    */
   private List<DataFileFooter> indexInfos;
 
+  private boolean serializeDmStore = false;
+
   public BlockletDataMapModel(CarbonTable carbonTable, String filePath, byte[] fileData,
       Map<String, BlockMetaInfo> blockMetaInfoMap, String segmentId, Configuration configuration) {
     super(filePath, configuration);
@@ -56,9 +58,10 @@ public class BlockletDataMapModel extends DataMapModel {
 
   public BlockletDataMapModel(CarbonTable carbonTable, String filePath,
       byte[] fileData, Map<String, BlockMetaInfo> blockMetaInfoMap, String segmentId,
-      boolean addToUnsafe, Configuration configuration) {
+      boolean addToUnsafe, Configuration configuration, boolean serializeDmStore) {
     this(carbonTable, filePath, fileData, blockMetaInfoMap, segmentId, configuration);
     this.addToUnsafe = addToUnsafe;
+    this.serializeDmStore = serializeDmStore;
   }
 
   public byte[] getFileData() {
@@ -87,5 +90,9 @@ public class BlockletDataMapModel extends DataMapModel {
 
   public List<DataFileFooter> getIndexInfos() {
     return indexInfos;
+  }
+  
+  public boolean isSerializeDmStore() {
+    return serializeDmStore;
   }
 }

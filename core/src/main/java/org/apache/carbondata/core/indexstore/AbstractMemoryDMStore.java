@@ -18,6 +18,8 @@
 package org.apache.carbondata.core.indexstore;
 
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.carbondata.core.indexstore.row.DataMapRow;
 import org.apache.carbondata.core.indexstore.schema.CarbonRowSchema;
@@ -31,7 +33,15 @@ public abstract class AbstractMemoryDMStore implements Serializable {
 
   protected boolean isMemoryFreed;
 
+  protected boolean isSerialized;
+
   protected final String taskId = ThreadLocalTaskInfo.getCarbonTaskInfo().getTaskId();
+
+  private Map<String, Integer> filePathToRowCountMap;
+
+  public AbstractMemoryDMStore() {
+    this.filePathToRowCountMap = new HashMap<>();
+  }
 
   public abstract void addIndexRow(CarbonRowSchema[] schema, DataMapRow indexRow)
       throws MemoryException;
@@ -51,5 +61,29 @@ public abstract class AbstractMemoryDMStore implements Serializable {
   public UnsafeMemoryDMStore convertToUnsafeDMStore(CarbonRowSchema[] schema)
       throws MemoryException {
     throw new UnsupportedOperationException("Operation not allowed");
+  }
+
+  public void setRowCount(String filePath, int rowCount) {
+    this.filePathToRowCountMap.put(filePath, rowCount);
+  }
+
+  public Map<String, Integer> getRowCountMap() {
+    return filePathToRowCountMap;
+  }
+
+  public void setRowCountMap(Map<String, Integer> filePathToRowCountMap) {
+    this.filePathToRowCountMap = filePathToRowCountMap;
+  }
+
+  public void serializeMemoryBlock() {
+
+  }
+
+  public void copyToMemoryBlock() {
+
+  }
+
+  public boolean isSerialized() {
+    return isSerialized;
   }
 }

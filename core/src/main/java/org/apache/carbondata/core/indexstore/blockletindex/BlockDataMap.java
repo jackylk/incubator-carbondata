@@ -153,6 +153,9 @@ public class BlockDataMap extends CoarseGrainDataMap
       DataMapRowImpl summaryRow =
           loadMetadata(taskSummarySchema, segmentProperties, blockletDataMapInfo, indexInfo);
       finishWriting(taskSummarySchema, filePath, fileName, segmentId, summaryRow);
+      if (((BlockletDataMapModel) dataMapModel).isSerializeDmStore()) {
+        serializeDmStore();
+      }
     }
     if (LOGGER.isDebugEnabled()) {
       LOGGER.debug(
@@ -170,6 +173,15 @@ public class BlockDataMap extends CoarseGrainDataMap
       addTaskSummaryRowToUnsafeMemoryStore(taskSummarySchema, summaryRow, filePath, fileName,
           segmentId);
       taskSummaryDMStore.finishWriting();
+    }
+  }
+
+  private void serializeDmStore() {
+    if (memoryDMStore != null) {
+      memoryDMStore.serializeMemoryBlock();
+    }
+    if (null != taskSummaryDMStore) {
+      taskSummaryDMStore.serializeMemoryBlock();
     }
   }
 
@@ -1076,7 +1088,19 @@ public class BlockDataMap extends CoarseGrainDataMap
       UnsafeMemoryDMStore unsafeSummaryMemoryDMStore =
           taskSummaryDMStore.convertToUnsafeDMStore(getTaskSummarySchema());
       taskSummaryDMStore.freeMemory();
+      unsafeSummaryMemoryDMStore.setRowCountMap(taskSummaryDMStore.getRowCountMap());
       taskSummaryDMStore = unsafeSummaryMemoryDMStore;
+    }
+
+    if (memoryDMStore instanceof UnsafeMemoryDMStore) {
+      if (memoryDMStore.isSerialized()) {
+        memoryDMStore.copyToMemoryBlock();
+      }
+    }
+    if (taskSummaryDMStore instanceof UnsafeMemoryDMStore) {
+      if (taskSummaryDMStore.isSerialized()) {
+        taskSummaryDMStore.copyToMemoryBlock();
+      }
     }
   }
 

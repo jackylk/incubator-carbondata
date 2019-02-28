@@ -137,7 +137,7 @@ public class DistributableBlockletDataMapLoader
           this.tableBlockIndexUniqueIdentifier  = tableBlockIndexUniqueIdentifier;
           TableBlockIndexUniqueIdentifierWrapper tableBlockIndexUniqueIdentifierWrapper =
               new TableBlockIndexUniqueIdentifierWrapper(tableBlockIndexUniqueIdentifier, table,
-                  false);
+                  false, true, true);
           this.tableBlockIndexUniqueIdentifierWrapper = tableBlockIndexUniqueIdentifierWrapper;
           wrapper = cache.get(tableBlockIndexUniqueIdentifierWrapper);
           return true;

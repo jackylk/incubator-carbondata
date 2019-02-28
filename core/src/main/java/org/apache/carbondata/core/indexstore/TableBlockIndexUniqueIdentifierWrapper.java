@@ -46,6 +46,10 @@ public class TableBlockIndexUniqueIdentifierWrapper implements Serializable {
    */
   private boolean addTableBlockToUnsafeAndLRUCache = true;
 
+  private boolean addToUnsafe = false;
+
+  private boolean serializeDmStore = false;
+
   public TableBlockIndexUniqueIdentifierWrapper(
       TableBlockIndexUniqueIdentifier tableBlockIndexUniqueIdentifier, CarbonTable carbonTable) {
     this.tableBlockIndexUniqueIdentifier = tableBlockIndexUniqueIdentifier;
@@ -70,6 +74,18 @@ public class TableBlockIndexUniqueIdentifierWrapper implements Serializable {
     this.addTableBlockToUnsafeAndLRUCache = addTableBlockToUnsafeAndLRUCache;
   }
 
+  // Note: The constructor is getting used in extensions with other functionalities.
+  // Kindly do not remove
+  public TableBlockIndexUniqueIdentifierWrapper(
+      TableBlockIndexUniqueIdentifier tableBlockIndexUniqueIdentifier, CarbonTable carbonTable,
+      boolean addTableBlockToUnsafeAndLRUCache, boolean addToUnsafe, boolean serializeDmStore) {
+    this(tableBlockIndexUniqueIdentifier, carbonTable);
+    this.configuration = FileFactory.getConfiguration();
+    this.addTableBlockToUnsafeAndLRUCache = addTableBlockToUnsafeAndLRUCache;
+    this.addToUnsafe = addToUnsafe;
+    this.serializeDmStore = serializeDmStore;
+  }
+
 
   public TableBlockIndexUniqueIdentifier getTableBlockIndexUniqueIdentifier() {
     return tableBlockIndexUniqueIdentifier;
@@ -81,6 +97,14 @@ public class TableBlockIndexUniqueIdentifierWrapper implements Serializable {
 
   public boolean isAddTableBlockToUnsafeAndLRUCache() {
     return addTableBlockToUnsafeAndLRUCache;
+  }
+
+  public boolean isAddToUnsafe() {
+    return addToUnsafe;
+  }
+
+  public boolean isSerializeDmStore() {
+    return serializeDmStore;
   }
 
   public Configuration getConfiguration() {

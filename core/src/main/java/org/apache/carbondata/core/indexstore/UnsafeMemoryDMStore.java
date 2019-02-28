@@ -20,6 +20,7 @@ import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.indexstore.row.DataMapRow;
 import org.apache.carbondata.core.indexstore.row.UnsafeDataMapRow;
 import org.apache.carbondata.core.indexstore.schema.CarbonRowSchema;
+import org.apache.carbondata.core.memory.CarbonUnsafe;
 import org.apache.carbondata.core.memory.MemoryBlock;
 import org.apache.carbondata.core.memory.MemoryException;
 import org.apache.carbondata.core.memory.MemoryType;
@@ -48,6 +49,7 @@ public class UnsafeMemoryDMStore extends AbstractMemoryDMStore {
   private int[] pointers;
 
   private int rowCount;
+  private byte[] data;
 
   public UnsafeMemoryDMStore() throws MemoryException {
     this.allocatedSize = capacity;
@@ -278,4 +280,22 @@ public class UnsafeMemoryDMStore extends AbstractMemoryDMStore {
     return rowCount;
   }
 
+  public void serializeMemoryBlock() {
+    this.data = new byte[runningLength];
+    CarbonUnsafe.getUnsafe().copyMemory(memoryBlock.getBaseObject(),
+        memoryBlock.getBaseOffset(), data,
+        CarbonUnsafe.BYTE_ARRAY_OFFSET, data.length);
+    freeMemory();
+    isSerialized = true;
+  }
+
+  public void copyToMemoryBlock() {
+    this.memoryBlock =
+        UnsafeMemoryManager.allocateMemoryWithRetry(MemoryType.ONHEAP, taskId, this.data.length);
+    isMemoryFreed = false;
+    CarbonUnsafe.getUnsafe()
+        .copyMemory(data, CarbonUnsafe.BYTE_ARRAY_OFFSET, memoryBlock.getBaseObject(),
+            memoryBlock.getBaseOffset(), this.data.length);
+    isSerialized = false;
+  }
 }
