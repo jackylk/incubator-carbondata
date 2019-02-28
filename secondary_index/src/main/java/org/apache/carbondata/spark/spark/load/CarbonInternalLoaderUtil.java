@@ -236,9 +236,9 @@ public class CarbonInternalLoaderUtil {
           SegmentStatusManager.readLoadMetadata(currentIndexTable.getMetadataPath());
       for (int i = 0; i < existingLoadMetaDataDetails.length; i++) {
         for (int j = 0; j < newLoadMetadataDetails.size(); j++) {
-          if (newLoadMetadataDetails.get(j).getLoadName()
-              .equalsIgnoreCase(existingLoadMetaDataDetails[j].getLoadName())
-              && existingLoadMetaDataDetails[j].getSegmentStatus() == SegmentStatus.COMPACTED) {
+          if (existingLoadMetaDataDetails[i].getLoadName()
+              .equalsIgnoreCase(newLoadMetadataDetails.get(j).getLoadName())
+              && existingLoadMetaDataDetails[i].getSegmentStatus() == SegmentStatus.COMPACTED) {
             isIndexTableSegmentsCompacted = true;
             break;
           }
