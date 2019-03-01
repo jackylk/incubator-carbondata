@@ -121,4 +121,5 @@
   <Match> <Class name="~org.apache.carbondata.core.datamap.Segment"/> <Field name="filteredIndexShardNames"/> <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED"/> </Match>
   <Match> <Class name="~org.apache.carbondata.core.datamap.Segment"/> <Field name="loadMetadataDetails"/> <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED"/> </Match>
   <Match> <Class name="~org.apache.carbondata.core.datamap.Segment"/> <Field name="segmentFileName"/> <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED"/> </Match>
+  <Match> <Class name="~org.apache.carbondata.core.indexstore.UnsafeMemoryDMStore"/> <Field name="memoryBlock"/> <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED"/> </Match>
 </FindBugsFilter>

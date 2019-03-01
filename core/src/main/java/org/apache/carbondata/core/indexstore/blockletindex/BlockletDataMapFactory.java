@@ -487,9 +487,6 @@ public class BlockletDataMapFactory extends CoarseGrainDataMapFactory
         segmentMap.get(segment.getSegmentNo());
     if (tableBlockIndexUniqueIdentifiers == null) {
       tableBlockIndexUniqueIdentifiers = BlockletDataMapUtil.getSegmentUniqueIdentifiers(segment);
-      if (tableBlockIndexUniqueIdentifiers.size() > 0) {
-        segmentMap.put(segment.getSegmentNo(), tableBlockIndexUniqueIdentifiers);
-      }
     }
     return tableBlockIndexUniqueIdentifiers;
   }
@@ -509,7 +506,6 @@ public class BlockletDataMapFactory extends CoarseGrainDataMapFactory
     for (Segment segment : validSegments) {
       DataMapDistributableWrapper dataMapDistributableWrappers =
           dataMapExprWrapper.toDistributableSegment(segment);
-
       Set<TableBlockIndexUniqueIdentifier> tableBlockIndexUniqueIdentifiers =
           getTableSegmentUniqueIdentifiers(segment);
       for (TableBlockIndexUniqueIdentifier identifier : tableBlockIndexUniqueIdentifiers) {
