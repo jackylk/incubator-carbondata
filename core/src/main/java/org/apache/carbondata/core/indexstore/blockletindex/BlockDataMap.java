@@ -1088,7 +1088,7 @@ public class BlockDataMap extends CoarseGrainDataMap
       UnsafeMemoryDMStore unsafeSummaryMemoryDMStore =
           taskSummaryDMStore.convertToUnsafeDMStore(getTaskSummarySchema());
       taskSummaryDMStore.freeMemory();
-      unsafeSummaryMemoryDMStore.setRowCountMap(taskSummaryDMStore.getRowCountMap());
+      unsafeSummaryMemoryDMStore.setTotalRowCount(taskSummaryDMStore.getTotalRowCount());
       taskSummaryDMStore = unsafeSummaryMemoryDMStore;
     }
 

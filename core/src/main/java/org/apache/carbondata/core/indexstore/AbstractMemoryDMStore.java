@@ -18,8 +18,6 @@
 package org.apache.carbondata.core.indexstore;
 
 import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.apache.carbondata.core.indexstore.row.DataMapRow;
 import org.apache.carbondata.core.indexstore.schema.CarbonRowSchema;
@@ -37,11 +35,7 @@ public abstract class AbstractMemoryDMStore implements Serializable {
 
   protected final String taskId = ThreadLocalTaskInfo.getCarbonTaskInfo().getTaskId();
 
-  private Map<String, Integer> filePathToRowCountMap;
-
-  public AbstractMemoryDMStore() {
-    this.filePathToRowCountMap = new HashMap<>();
-  }
+  private long totalRowCount;
 
   public abstract void addIndexRow(CarbonRowSchema[] schema, DataMapRow indexRow)
       throws MemoryException;
@@ -63,16 +57,12 @@ public abstract class AbstractMemoryDMStore implements Serializable {
     throw new UnsupportedOperationException("Operation not allowed");
   }
 
-  public void setRowCount(String filePath, int rowCount) {
-    this.filePathToRowCountMap.put(filePath, rowCount);
+  public void setTotalRowCount(long rowCount) {
+    this.totalRowCount += rowCount;
   }
 
-  public Map<String, Integer> getRowCountMap() {
-    return filePathToRowCountMap;
-  }
-
-  public void setRowCountMap(Map<String, Integer> filePathToRowCountMap) {
-    this.filePathToRowCountMap = filePathToRowCountMap;
+  public long getTotalRowCount() {
+    return this.totalRowCount;
   }
 
   public void serializeMemoryBlock() {

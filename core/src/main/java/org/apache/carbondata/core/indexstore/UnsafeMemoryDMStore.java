@@ -297,5 +297,6 @@ public class UnsafeMemoryDMStore extends AbstractMemoryDMStore {
         .copyMemory(data, CarbonUnsafe.BYTE_ARRAY_OFFSET, memoryBlock.getBaseObject(),
             memoryBlock.getBaseOffset(), this.data.length);
     isSerialized = false;
+    this.data = null;
   }
 }
