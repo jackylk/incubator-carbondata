@@ -473,10 +473,13 @@ public final class TableDataMap extends OperationEventListener {
     List<Segment> prunedSegments = new ArrayList<>(CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);
     for (Segment segment : segments) {
       List<DataMap> dataMaps = dataMapFactory.getDataMaps(segment);
-      if (dataMaps.get(0).isScanRequired(filterExp)) {
-        // If any one task in a given segment contains the data that means the segment need to
-        // be scanned and we need to validate further data maps in the same segment
-        prunedSegments.add(segment);
+      for (DataMap dataMap : dataMaps) {
+        if (dataMap.isScanRequired(filterExp)) {
+          // If any one task in a given segment contains the data that means the segment need to
+          // be scanned and we need to validate further data maps in the same segment
+          prunedSegments.add(segment);
+          break;
+        }
       }
     }
     return prunedSegments;

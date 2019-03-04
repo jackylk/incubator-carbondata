@@ -17,7 +17,7 @@
 
 package org.apache.carbondata.datamap
 
-import java.io.{File, IOException}
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util
 
@@ -26,7 +26,6 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 import org.apache.commons.lang3.ArrayUtils
-import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.mapred.JobConf
 import org.apache.hadoop.mapreduce.{Job, TaskAttemptID, TaskType}
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl
@@ -42,14 +41,15 @@ import org.apache.carbondata.core.datamap.{DataMapStoreManager, Segment}
 import org.apache.carbondata.core.datamap.dev.DataMapBuilder
 import org.apache.carbondata.core.datastore.block.SegmentProperties
 import org.apache.carbondata.core.datastore.impl.FileFactory
-import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMapFactory
 import org.apache.carbondata.core.indexstore.SegmentPropertiesFetcher
+import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMapFactory
 import org.apache.carbondata.core.keygenerator.KeyGenerator
 import org.apache.carbondata.core.keygenerator.mdkey.MultiDimKeyVarLengthGenerator
 import org.apache.carbondata.core.metadata.datatype.{DataType, DataTypes}
 import org.apache.carbondata.core.metadata.encoder.Encoding
 import org.apache.carbondata.core.metadata.schema.table.{CarbonTable, DataMapSchema, TableInfo}
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonColumn
+import org.apache.carbondata.core.readcommitter.ReadCommittedScope
 import org.apache.carbondata.core.scan.wrappers.ByteArrayWrapper
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager
 import org.apache.carbondata.core.util.{CarbonUtil, DataTypeUtil, TaskMetricsMap}
@@ -326,6 +326,8 @@ class IndexDataMapRebuildRDD[K, V](
     formatter.format(new util.Date())
   }
 
+  private var readCommittedScope: ReadCommittedScope = _
+
   override def internalCompute(split: Partition, context: TaskContext): Iterator[(K, V)] = {
     val LOGGER = LogServiceFactory.getLogService(this.getClass.getName)
     val carbonTable = CarbonTable.buildFromTableInfo(getTableInfo)
@@ -343,7 +345,7 @@ class IndexDataMapRebuildRDD[K, V](
       val attemptId = new TaskAttemptID(jobTrackerId, id, TaskType.MAP, split.index, 0)
       val attemptContext = new TaskAttemptContextImpl(FileFactory.getConfiguration, attemptId)
       val format = createInputFormat(segment.get, attemptContext)
-
+      segment.get.setReadCommittedScope(readCommittedScope)
       val model = format.createQueryModel(inputSplit, attemptContext)
       // one query id per table
       model.setQueryId(queryId)
@@ -489,9 +491,9 @@ class IndexDataMapRebuildRDD[K, V](
       job.getConfiguration,
       tableInfo.getFactTable.getTableName)
 
-    format
-      .getSplits(job)
-      .asScala
+    val splits = format.getSplits(job)
+    readCommittedScope = format.getReadCommitted(job, null)
+    splits.asScala
       .map(_.asInstanceOf[CarbonInputSplit])
       .groupBy(p => (p.getSegmentId, p.taskId))
       .map { group =>

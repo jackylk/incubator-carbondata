@@ -46,7 +46,7 @@ public class Segment implements Serializable, Writable {
 
   private String segmentNo;
 
-  private transient String segmentFileName;
+  private String segmentFileName;
 
   /**
    * List of index shards which are already got filtered through CG index operation.
