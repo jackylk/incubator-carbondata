@@ -381,6 +381,107 @@ class TestSecondaryIndexWithIUD extends QueryTest with BeforeAndAfterAll {
     sql("drop table if exists dest_parquet")
   }
 
+  test("test SI with Union and Union All with donotPushtoSI operations") {
+    sql("drop table if exists dest")
+    sql("drop table if exists dest_parquet")
+    sql("create table dest (c1 string,c2 int,c3 string,c5 string) STORED BY " +
+        "'org.apache.carbondata.format'")
+    sql("insert into dest values('a',1,'abc','b')")
+    sql("create table dest_parquet stored as parquet select * from dest")
+    sql("create index index_dest on table dest (c3) AS 'org.apache.carbondata.format'")
+    checkAnswer(sql(
+      "select c3 from dest where c3 = 'abc' union select c3 from dest  where c3 != 'abc'"),
+      sql("select c3 from dest_parquet where c3 = 'abc' union select c3 from " +
+          "dest_parquet where c3 != 'abc'"))
+    checkAnswer(sql("select c3 from dest where c3 = 'abc' union all " +
+                    "select c3 from dest where c3 != 'abc'"),
+      sql("select c3 from dest_parquet where c3 = 'abc' union all select c3 from " +
+          "dest_parquet  where c3 != 'abc'"))
+    checkAnswer(sql(
+      "select c3 from dest where c3 like '%bc' union select c3 from dest  where c3 not like '%bc'"),
+      sql("select c3 from dest_parquet where c3 like '%bc' union select c3 from " +
+          "dest_parquet where c3 not like '%bc'"))
+    checkAnswer(sql("select c3 from dest where c3 like '%bc' union all " +
+                    "select c3 from dest where c3 not like '%bc'"),
+      sql("select c3 from dest_parquet where c3 like '%bc' union all select c3 from " +
+          "dest_parquet  where c3 not like '%bc'"))
+    checkAnswer(sql(
+      "select c3 from dest where c3 in ('abc') union select c3 from dest  where c3 not in ('abc')"),
+      sql("select c3 from dest_parquet where c3 in ('abc') union select c3 from " +
+          "dest_parquet where c3 not in ('abc')"))
+    checkAnswer(sql("select c3 from dest where c3 in ('abc') union all " +
+                    "select c3 from dest where c3 not in ('abc')"),
+      sql("select c3 from dest_parquet where c3 in ('abc') union all select c3 from " +
+          "dest_parquet  where c3 not in ('abc')"))
+    checkAnswer(sql(
+      "select c3 from dest where c3 = 'abc' union select c3 from dest  where ni(c3 = 'abc')"),
+      sql("select c3 from dest_parquet where c3 = 'abc' union select c3 from " +
+          "dest_parquet where c3 = 'abc'"))
+    checkAnswer(sql("select c3 from dest where c3 = 'abc' union all " +
+                    "select c3 from dest where ni(c3 ='abc')"),
+      sql("select c3 from dest_parquet where c3 = 'abc' union all select c3 from " +
+          "dest_parquet  where c3 = 'abc'"))
+    sql("drop table if exists dest_parquet")
+    sql("drop table if exists dest")
+  }
+
+  test("test SI with more than 2 Union and Union All with different table donotPushtoSI operations") {
+    sql("drop table if exists dest")
+    sql("drop table if exists dest1")
+    sql("drop table if exists dest_parquet")
+    sql("drop table if exists dest_parquet1")
+    sql("create table dest (c1 string,c2 int,c3 string,c5 string) STORED BY " +
+        "'org.apache.carbondata.format'")
+    sql("insert into dest values('a',1,'abc','b')")
+    sql("create table dest_parquet stored as parquet select * from dest")
+    sql("create table dest_parquet1 stored as parquet select * from dest")
+    sql("create table dest1 stored by 'carbondata' select * from dest")
+    sql("create index index_dest on table dest (c3) AS 'org.apache.carbondata.format'")
+    sql("create index index_dest1 on table dest1 (c3) AS 'org.apache.carbondata.format'")
+    checkAnswer(sql(
+      "select c3 from dest where c3 = 'abc' union select c3 from dest1  " +
+      "where c3 = 'abc' union select c3 from dest1  where c3 != 'abc'"),
+      sql(
+        "select c3 from dest_parquet where c3 = 'abc' union select c3 from dest_parquet1" +
+        " where c3 = 'abc' union select c3 from dest_parquet1  where c3 != 'abc'"))
+
+    checkAnswer(sql(
+      "select c3 from dest where c3 = 'abc' union all select c3 from dest1 " +
+      "where c3 = 'abc' union all select c3 from dest1  where c3 != 'abc'"),
+      sql(
+        "select c3 from dest_parquet where c3 = 'abc' union all select c3 from " +
+        "dest_parquet1 where c3 = 'abc' union all select c3 from dest_parquet1 " +
+        "where c3 != 'abc'"))
+    checkAnswer(sql(
+      "select c3 from dest where c3 like '%bc' union select c3 from dest1  where c3 not like '%bc'"),
+      sql("select c3 from dest_parquet where c3 like '%bc' union select c3 from " +
+          "dest_parquet1 where c3 not like '%bc'"))
+    checkAnswer(sql("select c3 from dest where c3 like '%bc' union all " +
+                    "select c3 from dest1 where c3 not like '%bc'"),
+      sql("select c3 from dest_parquet where c3 like '%bc' union all select c3 from " +
+          "dest_parquet1  where c3 not like '%bc'"))
+    checkAnswer(sql(
+      "select c3 from dest where c3 in ('abc') union select c3 from dest1  where c3 not in ('abc')"),
+      sql("select c3 from dest_parquet where c3 in ('abc') union select c3 from " +
+          "dest_parquet1 where c3 not in ('abc')"))
+    checkAnswer(sql("select c3 from dest where c3 in ('abc') union all " +
+                    "select c3 from dest1 where c3 not in ('abc')"),
+      sql("select c3 from dest_parquet where c3 in ('abc') union all select c3 from " +
+          "dest_parquet1  where c3 not in ('abc')"))
+    checkAnswer(sql(
+      "select c3 from dest where c3 = 'abc' union select c3 from dest1  where ni(c3 = 'abc')"),
+      sql("select c3 from dest_parquet where c3 = 'abc' union select c3 from " +
+          "dest_parquet1 where c3 = 'abc'"))
+    checkAnswer(sql("select c3 from dest where c3 = 'abc' union all " +
+                    "select c3 from dest1 where ni(c3 ='abc')"),
+      sql("select c3 from dest_parquet where c3 = 'abc' union all select c3 from " +
+          "dest_parquet1  where c3 = 'abc'"))
+    sql("drop table if exists dest_parquet")
+    sql("drop table if exists dest")
+    sql("drop table if exists dest1")
+  }
+
+
   override def afterAll: Unit = {
     sql("drop table if exists dest")
     sql("drop table if exists source")

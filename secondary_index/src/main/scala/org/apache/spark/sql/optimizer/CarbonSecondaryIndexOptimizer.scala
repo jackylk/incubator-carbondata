@@ -669,7 +669,13 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
     val pushDownJoinEnabled = sparkSession.sparkContext.getConf
       .getBoolean("spark.carbon.pushdown.join.as.filter", defaultValue = true)
     val transformChild = false
+    var isUnion = false
     val transformedPlan = transformPlan(plan, {
+      case union@Union(children) =>
+        // In case of Union, Extra Project has to be added to the Plan. Because if left table is
+        // pushed to SI and right table is not pushed, then Output Attribute mismatch will happen
+        isUnion = true
+        (union, true)
       case filter@Filter(condition, logicalRelation@MatchIndexableRelation(indexableRelation))
         if !condition.isInstanceOf[IsNotNull] &&
            CarbonInternalScalaUtil.getIndexes(indexableRelation).nonEmpty =>
@@ -677,7 +683,7 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
           filter.child.asInstanceOf[LogicalRelation].relation
             .asInstanceOf[CarbonDatasourceHadoopRelation].carbonRelation.databaseName)
         if (reWrittenPlan.isInstanceOf[Join]) {
-          if (pushDownJoinEnabled) {
+          if (pushDownJoinEnabled && !isUnion) {
             (reWrittenPlan, transformChild)
           } else {
             (Project(filter.output, reWrittenPlan), transformChild)
@@ -696,7 +702,7 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
         // Adding projection over join to return only selected columns from query.
         // Else all columns from left & right table will be returned in output columns
         if (reWrittenPlan.isInstanceOf[Join]) {
-          if (pushDownJoinEnabled) {
+          if (pushDownJoinEnabled && !isUnion) {
             (reWrittenPlan, transformChild)
           } else {
             (Project(projection.output, reWrittenPlan), transformChild)
@@ -727,7 +733,7 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
             carbonRelation.databaseName)
         }
         if (reWrittenPlan.isInstanceOf[Join]) {
-          if (pushDownJoinEnabled) {
+          if (pushDownJoinEnabled && !isUnion) {
             (Limit(literal, reWrittenPlan), transformChild)
           } else {
             (Limit(literal, Project(limit.output, reWrittenPlan)), transformChild)
@@ -754,7 +760,7 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
             carbonRelation.databaseName, cols)
         }
         if (reWrittenPlan.isInstanceOf[Join]) {
-          if (pushDownJoinEnabled) {
+          if (pushDownJoinEnabled && !isUnion) {
             (Limit(literal, reWrittenPlan), transformChild)
           } else {
             (Limit(literal, Project(projection.output, reWrittenPlan)), transformChild)

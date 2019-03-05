@@ -64,7 +64,12 @@ private[sql] class CarbonInternalLateDecodeStrategy extends CarbonLateDecodeStra
             // in case of SI Filter push join remove projection list from the physical plan
             // no need to have the project list in the main table physical plan execution
             // only join uses the projection list
-            var carbonChild = carbon.asInstanceOf[ProjectExec].child
+            var carbonChild = carbon match {
+              case projectExec: ProjectExec =>
+                projectExec.child
+              case _ =>
+                carbon
+            }
             // check if the outer and the inner project are matching, only then remove project
             if (left.isInstanceOf[Project]) {
               val leftOutput = left.output

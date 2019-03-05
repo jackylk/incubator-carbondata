@@ -193,12 +193,18 @@ object CarbonInternalScalaUtil {
     }
   }
 
+  /**
+   * Collect all logical relation and check for if plan contains index table join
+   *
+   * @param plan
+   * @return false if there are no index tables found in the plan or if logical relation is empty.
+   */
   def isIndexTablesJoin(plan: LogicalPlan): Boolean = {
     val allRelations = plan.collect { case logicalRelation: LogicalRelation => logicalRelation }
-    !allRelations.exists(x =>
+    allRelations.nonEmpty && !allRelations.exists(x =>
       !(x.relation.isInstanceOf[CarbonDatasourceHadoopRelation]
         && CarbonInternalScalaUtil
-        .isIndexTable(x.relation.asInstanceOf[CarbonDatasourceHadoopRelation].carbonTable)))
+          .isIndexTable(x.relation.asInstanceOf[CarbonDatasourceHadoopRelation].carbonTable)))
   }
 
   /**
