@@ -64,6 +64,8 @@ object SecondaryIndexCreator {
     }
 
     try {
+      SegmentStatusManager.deleteLoadsAndUpdateMetadata(indexCarbonTable, false, null)
+      TableProcessingOperations.deletePartialLoadDataIfExist(indexCarbonTable, false)
       FileInternalUtil
         .updateTableStatus(secondaryIndexModel.validSegments,
           secondaryIndexModel.carbonLoadModel.getDatabaseName,
@@ -75,8 +77,6 @@ object SecondaryIndexCreator {
             String](),
           indexCarbonTable,
           sc.sparkSession)
-      SegmentStatusManager.deleteLoadsAndUpdateMetadata(indexCarbonTable, false, null)
-      TableProcessingOperations.deletePartialLoadDataIfExist(indexCarbonTable, false)
       var execInstance = "1"
       // in case of non dynamic executor allocation, number of executors are fixed.
       if (sc.sparkContext.getConf.contains("spark.executor.instances")) {
@@ -197,6 +197,17 @@ object SecondaryIndexCreator {
       indexCarbonTable
     } catch {
       case ex: Exception =>
+        FileInternalUtil
+          .updateTableStatus(secondaryIndexModel.validSegments,
+            secondaryIndexModel.carbonLoadModel.getDatabaseName,
+            secondaryIndexModel.secondaryIndex.indexTableName,
+            SegmentStatus.MARKED_FOR_DELETE,
+            secondaryIndexModel.segmentIdToLoadStartTimeMapping,
+            new java.util
+            .HashMap[String,
+              String](),
+            indexCarbonTable,
+            sc.sparkSession)
         try {
           SegmentStatusManager
             .deleteLoadsAndUpdateMetadata(indexCarbonTable, false, null)
