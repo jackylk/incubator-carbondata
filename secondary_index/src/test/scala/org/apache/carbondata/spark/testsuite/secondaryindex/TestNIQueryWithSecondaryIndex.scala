@@ -206,6 +206,23 @@ class TestNIQueryWithSecondaryIndex extends QueryTest with BeforeAndAfterAll{
     sql("drop table if exists testParq")
   }
 
+  // DTS2019030809425
+  test("order by with SI filter") {
+    sql("drop table if exists testOrderBy")
+    sql(s"CREATE TABLE testOrderBy(empno int, empname String, designation String, " +
+        s"doj Timestamp, workgroupcategory int, workgroupcategoryname String, deptno int, " +
+        s"deptname String, projectcode int, projectjoindate Timestamp, projectenddate Timestamp," +
+        s"attendance int, utilization int, salary int) stored by 'carbondata'")
+    sql(s"LOAD DATA INPATH '$resourcesPath/data.csv' INTO TABLE testOrderBy")
+    sql("CREATE INDEX index_orderBy ON TABLE testOrderBy (workgroupcategoryname) AS 'org.apache.carbondata.format'")
+    sql("CREATE INDEX index1_orderBy ON TABLE testOrderBy (deptname) AS 'org.apache.carbondata.format'")
+    sql(
+      "select designation from testOrderBy where deptname IN ('network', " +
+      "'protocol','security') OR workgroupcategoryname IN ('developer','tester','manager') " +
+      "order by designation desc limit 1").show(false)
+    sql("drop table if exists testOrderBy")
+  }
+
   def isIndexTablePresent(plan: DataFrame): Boolean = {
     plan.queryExecution.optimizedPlan.find {
       case PhysicalOperation(projects, filters, l: LogicalRelation)
