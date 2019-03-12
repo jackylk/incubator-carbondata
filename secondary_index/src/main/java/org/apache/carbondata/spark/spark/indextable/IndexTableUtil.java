@@ -95,8 +95,8 @@ public class IndexTableUtil {
     List<IndexTableInfo> indexTables =
         new ArrayList<IndexTableInfo>(Arrays.asList(indexTableInfos));
     for (IndexTableInfo indexTable : indexTableInfos) {
-      if (indexTable.getDatabaseName().equals(dbName) && indexTable.getTableName()
-          .equals(tableName)) {
+      if (indexTable.getDatabaseName().equalsIgnoreCase(dbName) && indexTable.getTableName()
+          .equalsIgnoreCase(tableName)) {
         indexTables.remove(indexTable);
       }
     }
