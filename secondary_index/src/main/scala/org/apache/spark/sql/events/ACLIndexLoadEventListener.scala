@@ -27,13 +27,17 @@ object ACLIndexLoadEventListener {
     override def onEvent(event: Event,
         operationContext: OperationContext): Unit = {
       val createSITablePreExecutionEvent = event.asInstanceOf[LoadTableSIPreExecutionEvent]
-      val tablePath: String = createSITablePreExecutionEvent.tablePath
+      val tablePath: String = createSITablePreExecutionEvent.indexCarbonTable.getMetadataPath
       val carbonTableIdentifier: CarbonTableIdentifier = createSITablePreExecutionEvent
         .carbonTableIdentifier
       val sparkSession: SparkSession = createSITablePreExecutionEvent.sparkSession
       ACLFileUtils
         .takeSnapshotBeforeOperation(operationContext,
-          sparkSession, tablePath, null, carbonTableIdentifier)
+          sparkSession,
+          tablePath,
+          null,
+          carbonTableIdentifier,
+          true)
     }
   }
 
@@ -43,8 +47,12 @@ object ACLIndexLoadEventListener {
         operationContext: OperationContext): Unit = {
       val alterTablePostExecutionEvent = event.asInstanceOf[LoadTableSIPostExecutionEvent]
       val sparkSession = alterTablePostExecutionEvent.sparkSession
-      ACLFileUtils.takeSnapAfterOperationAndApplyACL(sparkSession, operationContext,
-        alterTablePostExecutionEvent.carbonTableIdentifier)
+      val carbonTable = alterTablePostExecutionEvent.carbonTable
+      ACLFileUtils.takeSnapAfterOperationAndApplyACL(sparkSession,
+        operationContext,
+        carbonTable.getCarbonTableIdentifier,
+        false,
+        true)
 
     }
   }

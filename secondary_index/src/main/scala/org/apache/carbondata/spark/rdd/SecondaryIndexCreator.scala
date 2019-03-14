@@ -74,7 +74,7 @@ object SecondaryIndexCreator {
         new CarbonTableIdentifier(indexCarbonTable.getDatabaseName,
           indexCarbonTable.getTableName, ""),
         secondaryIndexModel.carbonLoadModel,
-        indexCarbonTable.getTablePath)
+        indexCarbonTable)
     OperationListenerBus.getInstance
       .fireEvent(loadTableSIPreExecutionEvent, operationContext)
 
@@ -236,7 +236,8 @@ object SecondaryIndexCreator {
       val loadTableACLPostExecutionEvent: LoadTableSIPostExecutionEvent =
         LoadTableSIPostExecutionEvent(sc.sparkSession,
           indexCarbonTable.getCarbonTableIdentifier,
-          secondaryIndexModel.carbonLoadModel)
+          secondaryIndexModel.carbonLoadModel,
+          indexCarbonTable)
       OperationListenerBus.getInstance
         .fireEvent(loadTableACLPostExecutionEvent, operationContext)
 

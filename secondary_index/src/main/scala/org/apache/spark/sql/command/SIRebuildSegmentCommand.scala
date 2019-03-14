@@ -125,7 +125,7 @@ case class SIRebuildSegmentCommand(
           LoadTableSIPreExecutionEvent(sparkSession,
             new CarbonTableIdentifier(indexTable.getDatabaseName, indexTable.getTableName, ""),
             null,
-            indexTable.getTablePath)
+            indexTable)
         OperationListenerBus.getInstance
           .fireEvent(loadTableSIPreExecutionEvent, operationContext)
 
@@ -183,7 +183,8 @@ case class SIRebuildSegmentCommand(
         val loadTableACLPostExecutionEvent: LoadTableSIPostExecutionEvent =
           LoadTableSIPostExecutionEvent(sparkSession,
             indexTable.getCarbonTableIdentifier,
-            null)
+            null,
+            indexTable)
         OperationListenerBus.getInstance
           .fireEvent(loadTableACLPostExecutionEvent, operationContext)
 

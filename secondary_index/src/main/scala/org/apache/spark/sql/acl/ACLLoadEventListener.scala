@@ -17,10 +17,10 @@ import scala.collection.JavaConverters._
 
 import org.apache.commons.lang.StringUtils
 import org.apache.hadoop.fs.Path
-import org.apache.spark.sql.{SparkSession, SQLContext}
 import org.apache.spark.sql.acl.ACLFileUtils.{getPermissionsOnTable, setACLGroupRights}
-import org.apache.spark.sql.hive.{CarbonInternalMetaUtil}
+import org.apache.spark.sql.hive.CarbonInternalMetaUtil
 import org.apache.spark.sql.hive.acl._
+import org.apache.spark.sql.{SQLContext, SparkSession}
 
 import org.apache.carbondata.common.constants.LoggerAction
 import org.apache.carbondata.common.logging.LogServiceFactory
@@ -28,13 +28,13 @@ import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.metadata.CarbonTableIdentifier
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
-import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
 import org.apache.carbondata.core.util.path.CarbonTablePath
+import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
 import org.apache.carbondata.events._
 import org.apache.carbondata.events.exception.PreEventException
 import org.apache.carbondata.processing.loading.events.LoadEvents.{LoadTablePostExecutionEvent, LoadTablePreExecutionEvent}
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel
-import org.apache.carbondata.processing.util.{CarbonBadRecordUtil, CarbonQueryUtil}
+import org.apache.carbondata.processing.util.CarbonQueryUtil
 import org.apache.carbondata.spark.acl.{CarbonUserGroupInformation, InternalCarbonConstant}
 
 
@@ -140,11 +140,11 @@ object ACLLoadEventListener {
           bad_record_path)(sparkSession)
       }
 
-        val partitionDirectoryPath = if (carbonTable.isHivePartitionTable) {
-          createPartitionDirectory(carbonLoadModel)(sparkSession)
-        } else {
-          ""
-        }
+      val partitionDirectoryPath = if (carbonTable.isHivePartitionTable) {
+        createPartitionDirectory(carbonLoadModel)(sparkSession)
+      } else {
+        ""
+      }
 
 
       val folderListBeforLoad = takeSnapshotBeforeLoad(sparkSession.sqlContext,
@@ -211,8 +211,8 @@ object ACLLoadEventListener {
       val tablePath = carbonTable.getTablePath
       val currentUser = CarbonUserGroupInformation.getInstance.getCurrentUser
       var list = ACLFileUtils
-        .getTablePathListForSnapshot(tablePath,
-          carbonTable.getPartitionInfo(carbonTable.getTableName))
+        .getTablePathListForSnapshot(carbonTable.getMetadataPath,
+          carbonTable.getPartitionInfo(carbonTable.getTableName), true)
       if (null != carbonBadRecordTablePath) {
         list = list ::: ACLFileUtils
           .getBadRecordsPathListForSnapshot(carbonBadRecordTablePath, carbonTableIdentifier)
@@ -232,16 +232,20 @@ object ACLLoadEventListener {
       list
     }
   }
-
   class ACLPostLoadEventListener extends OperationEventListener {
 
     override def onEvent(event: Event,
         operationContext: OperationContext): Unit = {
       val loadTablePostExecutionEvent = event.asInstanceOf[LoadTablePostExecutionEvent]
+      val carbonTable = loadTablePostExecutionEvent.getCarbonLoadModel.getCarbonDataLoadSchema
+        .getCarbonTable
       ACLFileUtils
         .takeSnapAfterOperationAndApplyACL(SparkSession.getActiveSession.get,
           operationContext,
-          loadTablePostExecutionEvent.getCarbonTableIdentifier)
+          carbonTable.getCarbonTableIdentifier,
+          false,
+          true
+        )
     }
   }
 

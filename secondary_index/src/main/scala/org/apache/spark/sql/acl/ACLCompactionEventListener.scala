@@ -11,10 +11,7 @@
  */
 package org.apache.spark.sql.acl
 
-import scala.collection.mutable.ArrayBuffer
-
-import org.apache.hadoop.fs.Path
-import org.apache.spark.sql.{CarbonEnv, SparkSession}
+import org.apache.spark.sql.SparkSession
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.metadata.CarbonTableIdentifier
@@ -37,8 +34,6 @@ object ACLCompactionEventListener {
       val carbonTableIdentifier: CarbonTableIdentifier = carbonTable
         .getCarbonTableIdentifier
       val sparkSession: SparkSession = compactionPreExecutionEvent.sparkSession
-      val carbonTablePath = carbonTable.getAbsoluteTableIdentifier.getTablePath
-
       if (!ACLFileUtils.isCarbonDataLoadGroupExist(sparkSession.sparkContext)) {
         val carbonDataLoadGroup = CarbonProperties.getInstance.
           getProperty(InternalCarbonConstant.CARBON_DATALOAD_GROUP_NAME,
@@ -49,8 +44,8 @@ object ACLCompactionEventListener {
       }
 
       ACLFileUtils
-          .takeSnapshotBeforeOperation(operationContext, sparkSession, carbonTablePath,
-            carbonTable.getPartitionInfo(carbonTable.getTableName), carbonTableIdentifier)
+        .takeSnapshotBeforeOperation(operationContext, sparkSession, carbonTable.getMetadataPath,
+          carbonTable.getPartitionInfo(carbonTable.getTableName), carbonTableIdentifier, true)
     }
   }
 
@@ -60,10 +55,14 @@ object ACLCompactionEventListener {
         operationContext: OperationContext): Unit = {
       val compactionPostExecutionEvent = event.asInstanceOf[AlterTableCompactionPostEvent]
       val sparkSession = compactionPostExecutionEvent.sparkSession
+      val carbonTable = compactionPostExecutionEvent.carbonTable
       ACLFileUtils
         .takeSnapAfterOperationAndApplyACL(sparkSession,
           operationContext,
-          compactionPostExecutionEvent.carbonTable.getCarbonTableIdentifier)
+          carbonTable.getCarbonTableIdentifier,
+          false,
+          true
+        )
 
     }
   }

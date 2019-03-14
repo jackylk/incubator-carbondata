@@ -13,8 +13,8 @@ package org.apache.carbondata.events
 
 import org.apache.spark.sql.SparkSession
 
-import org.apache.carbondata.core.dictionary.server.DictionaryServer
 import org.apache.carbondata.core.metadata.CarbonTableIdentifier
+import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 
 /**
@@ -24,7 +24,7 @@ import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 case class LoadTableSIPreExecutionEvent(sparkSession: SparkSession,
     carbonTableIdentifier: CarbonTableIdentifier,
     carbonLoadModel: CarbonLoadModel,
-    tablePath: String) extends Event with LoadEventInfo
+    indexCarbonTable: CarbonTable) extends Event with LoadEventInfo
 
 /**
  * Class for handling operations after data load completion and before final
@@ -32,7 +32,8 @@ case class LoadTableSIPreExecutionEvent(sparkSession: SparkSession,
  */
 case class LoadTableSIPostExecutionEvent(sparkSession: SparkSession,
     carbonTableIdentifier: CarbonTableIdentifier,
-    carbonLoadModel: CarbonLoadModel)
+    carbonLoadModel: CarbonLoadModel,
+    carbonTable: CarbonTable)
   extends Event with LoadEventInfo
 
 /**

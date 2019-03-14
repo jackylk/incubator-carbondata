@@ -11,28 +11,30 @@
  */
 package org.apache.spark.sql.acl
 
-import java.io.{File, FileNotFoundException}
+import java.io.FileNotFoundException
 import java.security.PrivilegedExceptionAction
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
 import org.apache.commons.lang3.StringUtils
 import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.{FileStatus, FileSystem, Path, PathFilter}
 import org.apache.hadoop.fs.permission.{AclEntry, AclEntryType, FsAction, FsPermission}
 import org.apache.hadoop.fs.viewfs.ViewFileSystem
+import org.apache.hadoop.fs.{FileStatus, FileSystem, Path, PathFilter}
 import org.apache.hadoop.hdfs.DistributedFileSystem
 import org.apache.hadoop.security.UserGroupInformation
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod
 import org.apache.spark.SparkContext
-import org.apache.spark.sql.{SparkSession, SQLContext}
+import org.apache.spark.sql.{SQLContext, SparkSession}
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.locks.LockUsage
-import org.apache.carbondata.core.metadata.CarbonTableIdentifier
 import org.apache.carbondata.core.metadata.schema.PartitionInfo
+import org.apache.carbondata.core.metadata.schema.table.CarbonTable
+import org.apache.carbondata.core.metadata.{CarbonTableIdentifier, SegmentFileStore}
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.events.OperationContext
 import org.apache.carbondata.spark.acl.{CarbonUserGroupInformation, InternalCarbonConstant, UserGroupUtils}
@@ -136,15 +138,37 @@ object ACLFileUtils {
     pathArray
   }
 
-  def changeOwnerRecursivelyAfterOperation(sqlContext: SQLContext,
-      oriPathArr: ArrayBuffer[String], curPathArr: ArrayBuffer[String], delimiter: String = "#~#") {
+  def changeOwnerRecursivelyAfterOperation(isLoadOrCompaction: Boolean = false,
+      sqlContext: SQLContext,
+      oriPathArr: ArrayBuffer[String],
+      curPathArr: ArrayBuffer[String],
+      tablePath: String = "",
+      delimiter: String = "#~#") {
+
       val loginUser = CarbonUserGroupInformation.getInstance.getLoginUser
       val currentUser = CarbonUserGroupInformation.getInstance.getCurrentUser
       Utils.proxyOperate(loginUser, currentUser,
         s"Use login user ${loginUser.getShortUserName} as a proxy user as we need " +
         s"permission to operate the given path", true) {
-        val diffPathArr = curPathArr.toSeq.diff(oriPathArr.toSeq)
-        LOGGER.info(s"We have chmod ${diffPathArr.size} path(s) to current user")
+        val diffPathArr = curPathArr.diff(oriPathArr)
+        // Only for Load and Compaction we list for all the files of the table as we only have
+        // the metadata folder path for them, rest all other operations we can use the diffPathArr
+        val finalDirsList = if (isLoadOrCompaction) {
+          val segmentFilePaths = diffPathArr.collect {
+            case a if a.contains(".segment") =>
+              SegmentFileStore.readSegmentFile(a.split(delimiter)(0))
+                .getLocationMap.keySet().asScala.map(path => tablePath + path) ++
+              Seq(a.split(delimiter)(0))
+            case others => Seq(others.split(delimiter)(0))
+          }.flatten
+          takeRecurTraverseSnapshot(sqlContext,
+            segmentFilePaths.toList,
+            delimiter,
+            recursive = true).toSet
+        } else {
+          diffPathArr
+        }
+        LOGGER.info(s"We have chmod ${finalDirsList.size} path(s) to current user")
         val user = currentUser.getShortUserName
         val groups = currentUser.getGroupNames
         val group = if (groups.isEmpty) {
@@ -153,7 +177,7 @@ object ACLFileUtils {
           groups.head
         }
         var hdfs: FileSystem = null
-        diffPathArr.foreach { pathStr =>
+        finalDirsList.foreach { pathStr =>
           val path = new Path(pathStr.split(delimiter)(0))
         try {
           hdfs = path.getFileSystem(sqlContext.sparkContext.hadoopConfiguration)
@@ -300,7 +324,7 @@ object ACLFileUtils {
    * @return
    */
   def getTablePathListForSnapshot(tablePath: String,
-      partitionInfo: PartitionInfo): List[String] = {
+      partitionInfo: PartitionInfo, isLoadOrCompaction: Boolean = false): List[String] = {
     // e.g 1. dbName/tableName/Fact/Part0/Segment_0/carbondata_files
     // e.g 2. dbName/tableName/Metadata/{
     //                dictionary_files, tableStatus, schema, segments/partition_segment_files }
@@ -310,7 +334,7 @@ object ACLFileUtils {
                              partitionInfo.getColumnSchemaList.size() > 4) {
       partitionInfo.getColumnSchemaList.size()
     } else {
-      4
+      if (isLoadOrCompaction) { 2 } else { 4 }
     }
 
     var path = tablePath
@@ -532,21 +556,26 @@ object ACLFileUtils {
       sparkSession: SparkSession,
       carbonTablePath: String,
       partitionInfo: PartitionInfo,
-      carbonTableIdentifier: CarbonTableIdentifier): Unit = {
-
+      carbonTableIdentifier: CarbonTableIdentifier, isLoadOrCompaction : Boolean = false): Unit = {
+    val start = System.currentTimeMillis()
     val folderListbeforeCreate: List[String] = ACLFileUtils
-      .getTablePathListForSnapshot(carbonTablePath, partitionInfo)
+      .getTablePathListForSnapshot(carbonTablePath, partitionInfo, isLoadOrCompaction)
     val pathArrBeforeCreateOperation = ACLFileUtils
       .takeRecurTraverseSnapshot(sparkSession.sqlContext, folderListbeforeCreate)
     operationContext.setProperty(getFolderListKey(carbonTableIdentifier), folderListbeforeCreate)
     operationContext
       .setProperty(getPathListKey(carbonTableIdentifier), pathArrBeforeCreateOperation)
+    LOGGER
+      .info("----------- Before Applying ACL : " + (System.currentTimeMillis() - start) +
+            " for table :" + carbonTableIdentifier.getTableName)
   }
 
   def takeSnapAfterOperationAndApplyACL(sparkSession: SparkSession,
       operationContext: OperationContext,
       carbonTableIdentifier: CarbonTableIdentifier,
-      recursive: Boolean = false): Unit = {
+      recursive: Boolean = false,
+      isLoadOrCompaction: Boolean = false): Unit = {
+    val start = System.currentTimeMillis()
     val folderPathsBeforeCreate = operationContext
       .getProperty(getFolderListKey(carbonTableIdentifier))
       .asInstanceOf[List[String]]
@@ -556,9 +585,11 @@ object ACLFileUtils {
       .takeRecurTraverseSnapshot(sparkSession.sqlContext,
         folderPathsBeforeCreate,
         recursive = recursive)
-
-    changeOwnerRecursivelyAfterOperation(sparkSession.sqlContext,
+    changeOwnerRecursivelyAfterOperation(isLoadOrCompaction, sparkSession.sqlContext,
       pathArrBeforeCreate, pathArrAfterCreate)
+    LOGGER
+      .info("----------- After Applying ACL : " + (System.currentTimeMillis() - start) +
+            " for table :" + carbonTableIdentifier.getTableName)
   }
 
   def isACLSupported(tablePath: String): Boolean = {
