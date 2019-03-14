@@ -95,7 +95,7 @@ public final class CarbonDataProcessorUtil {
         LOGGER.warn("dir already exists, skip dir creation: " + loc);
       } else {
         if (!dir.mkdirs()) {
-          LOGGER.error("Error occurs while creating dir: " + loc);
+          LOGGER.warn("Error occurs while creating dir: " + loc);
         }
       }
     }

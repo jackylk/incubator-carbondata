@@ -229,7 +229,7 @@ object CarbonInternalMetastore {
         }
         optionsCombined.asScala.toMap
       case None =>
-        LOGGER.warn(s"spark.sql.sources.options.keys expected, but read nothing")
+        LOGGER.info(s"spark.sql.sources.options.keys expected, but read nothing")
         table.storage.properties
     }
   }
