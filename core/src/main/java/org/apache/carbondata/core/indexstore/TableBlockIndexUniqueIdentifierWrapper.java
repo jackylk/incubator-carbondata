@@ -46,7 +46,7 @@ public class TableBlockIndexUniqueIdentifierWrapper implements Serializable {
    */
   private boolean addTableBlockToUnsafeAndLRUCache = true;
 
-  private boolean addToUnsafe = false;
+  private boolean addToUnsafe = true;
 
   private boolean serializeDmStore = false;
 
