@@ -19,7 +19,7 @@ import org.apache.spark.sql.execution.command.cache.CarbonDropCacheCommand
 import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
-import org.apache.carbondata.events.{DropCacheEvent, Event, OperationContext, OperationEventListener}
+import org.apache.carbondata.events.{DropTableCacheEvent, Event, OperationContext, OperationEventListener}
 
 
 object DropCacheSIEventListener extends OperationEventListener {
@@ -29,7 +29,7 @@ object DropCacheSIEventListener extends OperationEventListener {
   override protected def onEvent(event: Event, operationContext: OperationContext): Unit = {
 
     event match {
-      case dropCacheEvent: DropCacheEvent =>
+      case dropCacheEvent: DropTableCacheEvent =>
         val carbonTable = dropCacheEvent.carbonTable
         val sparkSession = dropCacheEvent.sparkSession
         val internalCall = dropCacheEvent.internalCall
