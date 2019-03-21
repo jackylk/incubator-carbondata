@@ -341,7 +341,8 @@ object CarbonInternalScalaUtil {
         segmentToSegmentTimestampMap,
         indexTable,
         forceAccessSegment = true,
-        isCompactionCall = false)
+        isCompactionCall = false,
+        isLoadToFailedSISegments)
 
     val loadTableACLPostExecutionEvent: LoadTableSIPostExecutionEvent =
       LoadTableSIPostExecutionEvent(sparkSession,

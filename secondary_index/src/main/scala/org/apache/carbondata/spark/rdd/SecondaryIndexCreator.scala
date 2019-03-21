@@ -43,7 +43,8 @@ object SecondaryIndexCreator {
     segmentToLoadStartTimeMap: java.util.Map[String, String],
     indexTable: CarbonTable,
     forceAccessSegment: Boolean = false,
-    isCompactionCall: Boolean): CarbonTable = {
+    isCompactionCall: Boolean,
+    isLoadToFailedSISegments: Boolean): CarbonTable = {
     var indexCarbonTable = indexTable
     val sc = secondaryIndexModel.sqlContext
     // get the thread pool size for secondary index creation
@@ -139,7 +140,13 @@ object SecondaryIndexCreator {
       }
 
       if (hasFailedSegments) {
-        if (isCompactionCall) {
+        // if the call is from compaction, we need to fail the main table compaction also, and if
+        // the load is called from SIloadEventListener, which is for corresponding main table
+        // segment, then if SI load fails, we need to fail main table load also, so throw exception,
+        // if load is called from SI creation or SILoadEventListenerForFailedSegments, no need to
+        // fail, just make the segement as marked for delete, so that next load to main table will
+        // take care
+        if (isCompactionCall || !isLoadToFailedSISegments) {
           throw new Exception("Secondary index creation failed")
         } else {
           failedSISegments =

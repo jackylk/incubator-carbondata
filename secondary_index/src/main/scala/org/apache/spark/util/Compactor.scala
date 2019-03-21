@@ -66,7 +66,8 @@ object Compactor {
         val indexCarbonTable = SecondaryIndexCreator
           .createSecondaryIndex(secondaryIndexModel,
             segmentToSegmentTimestampMap, null,
-            forceAccessSegment, isCompactionCall = true)
+            forceAccessSegment, isCompactionCall = true,
+            isLoadToFailedSISegments = false)
         CarbonInternalLoaderUtil.updateLoadMetadataWithMergeStatus(
           indexCarbonTable,
           loadsToMerge,

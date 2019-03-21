@@ -105,7 +105,7 @@ private[sql] case class LoadDataForSecondaryIndex(indexModel: SecondaryIndex) ex
           SecondaryIndexCreator
             .createSecondaryIndex(secondaryIndexModel,
               segmentToSegmentTimestampMap, null,
-              isCompactionCall = false)
+              isCompactionCall = false, isLoadToFailedSISegments = false)
           val indexTableMeta = CarbonEnv.getInstance(sparkSession).carbonMetaStore
             .getTableFromMetadataCache(secondaryIndexModel.carbonLoadModel.getDatabaseName,
               secondaryIndexModel.secondaryIndex.indexTableName).getOrElse(null)

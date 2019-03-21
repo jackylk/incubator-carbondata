@@ -62,7 +62,7 @@ class SILoadEventListenerForFailedSegments extends OperationEventListener with L
                 val isLoadSIForFailedSegments = sparkSession.sessionState.catalog
                   .getTableMetadata(TableIdentifier(indexTableName,
                     Some(carbonLoadModel.getDatabaseName))).storage.properties
-                  .getOrElse("isSITableEnabled", "false").toBoolean
+                  .getOrElse("isSITableEnabled", "true").toBoolean
 
                 if (!isLoadSIForFailedSegments) {
                   val secondaryIndex = SecondaryIndex(Some(carbonTable.getDatabaseName),
