@@ -265,6 +265,14 @@ public class CarbonTableInputFormat<T> extends CarbonInputFormat<T> {
           }
         }
       }
+      // TODO: add validation for set segments access based on valid segments in table status
+      if (filteredSegmentToAccess.size() != segmentToAccessSet.size() && !validationRequired) {
+        for (Segment segment : segmentToAccessSet) {
+          if (!filteredSegmentToAccess.contains(segment)) {
+            filteredSegmentToAccess.add(segment);
+          }
+        }
+      }
       if (!filteredSegmentToAccess.containsAll(segmentToAccessSet)) {
         List<Segment> filteredSegmentToAccessTemp = new ArrayList<>(filteredSegmentToAccess);
         filteredSegmentToAccessTemp.removeAll(segmentToAccessSet);
