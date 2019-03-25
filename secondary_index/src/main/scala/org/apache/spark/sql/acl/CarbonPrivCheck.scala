@@ -88,8 +88,8 @@ private[sql] case class CarbonPrivCheck(sparkSession: SparkSession,
         overwrite: Boolean, _)) =>
           doCheckPrivilege(c, Set(new PrivObject(
             ObjectType.TABLE,
-            CarbonEnv.getDatabaseName(Some(relation.databaseName))(sparkSession),
-            relation.tableName,
+            CarbonEnv.getDatabaseName(Some(relation.identifier.getDatabaseName))(sparkSession),
+            relation.identifier.getTableName,
             null,
             Set(PrivType.INSERT_NOGRANT))))
         case c@ExecutedCommandExec(CarbonAlterTableRenameCommand(renameModel)) =>
