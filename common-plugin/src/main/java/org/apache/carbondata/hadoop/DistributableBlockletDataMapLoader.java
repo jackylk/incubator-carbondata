@@ -36,7 +36,7 @@ import org.apache.carbondata.core.indexstore.TableBlockIndexUniqueIdentifier;
 import org.apache.carbondata.core.indexstore.TableBlockIndexUniqueIdentifierWrapper;
 import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMapDistributable;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
-import org.apache.carbondata.core.readcommitter.TableStatusReadCommittedScope;
+import org.apache.carbondata.core.readcommitter.ReadCommittedScope;
 import org.apache.carbondata.core.util.BlockletDataMapDetailsWithSchema;
 import org.apache.carbondata.core.util.BlockletDataMapUtil;
 import org.apache.carbondata.core.util.CarbonBlockLoaderHelper;
@@ -71,6 +71,8 @@ public class DistributableBlockletDataMapLoader
 
   private transient Set<String> keys;
 
+  private ReadCommittedScope readCommittedScope;
+
   public DistributableBlockletDataMapLoader(CarbonTable table,
       DataMapExprWrapper dataMapExprWrapper, List<Segment> validSegments,
       List<Segment> invalidSegments, List<PartitionSpec> partitions, boolean isJobToClearDataMaps) {
@@ -85,6 +87,9 @@ public class DistributableBlockletDataMapLoader
     CacheableDataMap factory = (CacheableDataMap) dataMapFactory;
     List<DataMapDistributable> validDistributables =
         factory.getAllUncachedDistributables(validSegments, dataMapExprWrapper);
+    if (!validSegments.isEmpty()) {
+      this.readCommittedScope = validSegments.get(0).getReadCommittedScope();
+    }
     CarbonBlockLoaderHelper instance = CarbonBlockLoaderHelper.getInstance();
     int distributableSize = validDistributables.size();
     List<InputSplit> inputSplits = new ArrayList<>(distributableSize);
@@ -122,9 +127,6 @@ public class DistributableBlockletDataMapLoader
             (BlockletDataMapDistributable) inputSplit;
         TableBlockIndexUniqueIdentifier tableSegmentUniqueIdentifier =
             segmentDistributable.getTableBlockIndexUniqueIdentifier();
-        TableStatusReadCommittedScope readCommittedScope =
-            new TableStatusReadCommittedScope(table.getAbsoluteTableIdentifier(),
-                taskAttemptContext.getConfiguration());
         Segment segment =
             Segment.toSegment(tableSegmentUniqueIdentifier.getSegmentId(), readCommittedScope);
         iterator =
