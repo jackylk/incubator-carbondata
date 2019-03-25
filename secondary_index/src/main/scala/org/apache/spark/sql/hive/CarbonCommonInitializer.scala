@@ -250,7 +250,8 @@ object CarbonCommonInitializer {
         .addListener(classOf[DeleteFromTablePreEvent], new DeleteFromTableEventListener)
       operationListenerBus
         .addListener(classOf[DropTableCacheEvent], DropCacheSIEventListener)
-      operationListenerBus.addListener(classOf[ShowTableCacheEvent], new SIShowCacheEventListener)
+      operationListenerBus
+        .addListener(classOf[ShowTableCacheEvent], ShowCacheSIEventListener)
       // refresh table listner
       operationListenerBus
         .addListener(classOf[RefreshTablePreExecutionEvent],
