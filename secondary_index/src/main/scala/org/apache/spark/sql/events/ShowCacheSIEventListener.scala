@@ -15,23 +15,23 @@ package org.apache.spark.sql.events
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-import org.apache.carbondata.common.logging.LogServiceFactory
-import org.apache.carbondata.events.{Event, OperationContext, OperationEventListener, ShowTableCacheEvent}
-import org.apache.carbondata.spark.core.metadata.IndexMetadata
 import org.apache.spark.sql.CarbonEnv
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.execution.command.cache.CarbonShowCacheCommand
 import org.apache.spark.util.CarbonInternalScalaUtil
 
+import org.apache.carbondata.common.logging.LogServiceFactory
+import org.apache.carbondata.events.{Event, OperationContext, OperationEventListener, ShowTableCacheEvent}
+import org.apache.carbondata.spark.core.metadata.IndexMetadata
 
 object ShowCacheSIEventListener extends OperationEventListener {
   val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
 
   /**
-    * Called on a specified event occurrence
-    *
-    * @param event
-    */
+   * Called on a specified event occurrence
+   *
+   * @param event
+   */
   override def onEvent(event: Event, operationContext: OperationContext): Unit = {
     event match {
       case showTableCacheEvent: ShowTableCacheEvent =>

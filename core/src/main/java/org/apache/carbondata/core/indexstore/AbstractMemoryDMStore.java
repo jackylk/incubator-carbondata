@@ -35,8 +35,6 @@ public abstract class AbstractMemoryDMStore implements Serializable {
 
   protected final String taskId = ThreadLocalTaskInfo.getCarbonTaskInfo().getTaskId();
 
-  private long totalRowCount;
-
   public abstract void addIndexRow(CarbonRowSchema[] schema, DataMapRow indexRow)
       throws MemoryException;
 
@@ -55,14 +53,6 @@ public abstract class AbstractMemoryDMStore implements Serializable {
   public UnsafeMemoryDMStore convertToUnsafeDMStore(CarbonRowSchema[] schema)
       throws MemoryException {
     throw new UnsupportedOperationException("Operation not allowed");
-  }
-
-  public void setTotalRowCount(long rowCount) {
-    this.totalRowCount += rowCount;
-  }
-
-  public long getTotalRowCount() {
-    return this.totalRowCount;
   }
 
   public void serializeMemoryBlock() {
