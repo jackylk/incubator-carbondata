@@ -660,7 +660,7 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
     (!CarbonInternalScalaUtil.isIndexTable(carbonTable) && !updateStatusFileExists)
   }
 
-  def transformFilterToJoin(plan: LogicalPlan): LogicalPlan = {
+  def transformFilterToJoin(plan: LogicalPlan, needProjection: Boolean): LogicalPlan = {
     val isRowDeletedInTableMap = scala.collection.mutable.Map.empty[String, Boolean]
     // if the join pushdown is enabled, then no need to add projection list to the logical plan as
     // we can directly map the join output with the required projections
@@ -669,7 +669,7 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
     val pushDownJoinEnabled = sparkSession.sparkContext.getConf
       .getBoolean("spark.carbon.pushdown.join.as.filter", defaultValue = true)
     val transformChild = false
-    var addProjection = false
+    var addProjection = needProjection
     val transformedPlan = transformPlan(plan, {
       case union@Union(children) =>
         // In case of Union, Extra Project has to be added to the Plan. Because if left table is
