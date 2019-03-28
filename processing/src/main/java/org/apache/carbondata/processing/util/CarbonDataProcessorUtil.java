@@ -731,5 +731,4 @@ public final class CarbonDataProcessorUtil {
     }
     return complexKeyGenerators;
   }
-
 }

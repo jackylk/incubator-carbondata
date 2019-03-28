@@ -55,6 +55,8 @@ public class UnsafeCarbonRowPage {
 
   private boolean isSaveToDisk;
 
+  private SortTempRowUpdater sortTempRowUpdater;
+
   public UnsafeCarbonRowPage(TableFieldStat tableFieldStat, MemoryBlock memoryBlock,
       String taskId, boolean isSaveToDisk) {
     this.tableFieldStat = tableFieldStat;
@@ -67,6 +69,7 @@ public class UnsafeCarbonRowPage {
     this.managerType = MemoryManagerType.UNSAFE_MEMORY_MANAGER;
     this.sortTempRowUpdater = tableFieldStat.getSortTempRowUpdater();
     this.isSaveToDisk = isSaveToDisk;
+    this.sortTempRowUpdater = tableFieldStat.getSortTempRowUpdater();
   }
 
   public int addRow(Object[] row,
