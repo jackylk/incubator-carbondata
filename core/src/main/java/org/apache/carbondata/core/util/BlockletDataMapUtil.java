@@ -605,4 +605,19 @@ public class BlockletDataMapUtil {
     return parentTableName;
   }
 
+  public static boolean isIndexTable(CarbonTable carbonTable) {
+    boolean isIndexTable;
+    String clsName = "org.apache.spark.util.CarbonInternalScalaUtil";
+    try {
+      Method getParentTableNameMethod =
+          Class.forName(clsName).getDeclaredMethod("isIndexTable", CarbonTable.class);
+      getParentTableNameMethod.setAccessible(true);
+      isIndexTable = Boolean.parseBoolean(
+          getParentTableNameMethod.invoke(getParentTableNameMethod, carbonTable).toString());
+    } catch (Throwable e) {
+      isIndexTable = false;
+    }
+    return isIndexTable;
+  }
+
 }
