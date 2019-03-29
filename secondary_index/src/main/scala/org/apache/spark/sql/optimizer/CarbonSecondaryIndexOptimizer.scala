@@ -106,7 +106,7 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
     // filter out all the index tables which are disabled
     val enabledMatchingIndexTables = matchingIndexTables
       .filter(table => sparkSession.sessionState.catalog
-        .getTableMetadata(TableIdentifier(table, None)).storage.properties
+        .getTableMetadata(TableIdentifier(table, Some(dbName))).storage.properties
         .getOrElse("isSITableEnabled", "true").equalsIgnoreCase("true"))
 
     if (enabledMatchingIndexTables.isEmpty) {

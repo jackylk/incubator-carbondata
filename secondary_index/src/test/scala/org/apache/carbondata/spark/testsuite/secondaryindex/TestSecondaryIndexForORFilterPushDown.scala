@@ -211,6 +211,23 @@ class TestSecondaryIndexForORFilterPushDown extends QueryTest with BeforeAndAfte
     checkAnswer(query, Row(5))
   }
 
+  test("test query with database name in query when current database is different") {
+    sql("create database if not exists diff_database")
+    sql("use diff_database")
+    val query = sql(
+      "select count(*) from default.or_filter_pushDownValidation where designation='SE' OR empname='pramod' OR workgroupcategoryname='developer' OR deptno='14' and deptname='network'")
+    val df = query.queryExecution.sparkPlan
+    query.show(false)
+    if (!isFilterPushedDownToSI(df)) {
+      assert(false)
+    } else {
+      assert(true)
+    }
+    checkAnswer(query, Row(5))
+    sql("drop database if exists diff_database")
+    sql("use default")
+  }
+
   override def afterAll: Unit = {
     dropTables
   }
