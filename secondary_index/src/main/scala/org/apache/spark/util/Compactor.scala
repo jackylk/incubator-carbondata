@@ -11,6 +11,8 @@
  */
 package org.apache.spark.util
 
+import java.util
+
 import scala.collection.JavaConverters._
 
 import org.apache.spark.rdd.CarbonMergeFilesRDD
@@ -18,6 +20,7 @@ import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.command.{SecondaryIndex, SecondaryIndexModel}
 
 import org.apache.carbondata.common.logging.LogServiceFactory
+import org.apache.carbondata.core.statusmanager.SegmentStatusManager
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 import org.apache.carbondata.spark.rdd.SecondaryIndexCreator
 import org.apache.carbondata.spark.spark.load.CarbonInternalLoaderUtil
@@ -60,7 +63,7 @@ object Compactor {
         validSegments,
         segmentIdToLoadStartTimeMapping)
       try {
-        val segmentToSegmentTimestampMap: java.util.Map[String, String] = new java.util
+        val segmentToSegmentTimestampMap: util.Map[String, String] = new java.util
         .HashMap[String, String]()
         val indexCarbonTable = SecondaryIndexCreator
           .createSecondaryIndex(secondaryIndexModel,
@@ -74,6 +77,22 @@ object Compactor {
           carbonLoadModel,
           segmentToSegmentTimestampMap,
           segmentIdToLoadStartTimeMapping(validSegments.head))
+
+        val loadMetadataDetails = (SegmentStatusManager
+          .readLoadMetadata(indexCarbonTable.getMetadataPath))
+          .filter(loadMetadataDetail => validSegments.head
+            .equalsIgnoreCase(loadMetadataDetail.getLoadName))
+
+        val carbonLoadModelForMergeDataFiles = CarbonInternalMergerUtil
+          .getCarbonLoadModel(indexCarbonTable,
+            loadMetadataDetails.toList.asJava,
+            System.currentTimeMillis())
+
+        CarbonInternalMergerUtil.mergeDataFilesSISegments(
+          secondaryIndexModel.segmentIdToLoadStartTimeMapping,
+          indexCarbonTable,
+          loadMetadataDetails.toList.asJava, carbonLoadModelForMergeDataFiles)(sqlContext)
+
         // merge index files
         CarbonMergeFilesRDD.mergeIndexFiles(sqlContext.sparkSession,
           secondaryIndexModel.validSegments,

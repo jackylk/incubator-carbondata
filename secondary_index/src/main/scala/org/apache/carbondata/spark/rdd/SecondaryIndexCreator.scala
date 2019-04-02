@@ -13,18 +13,21 @@ package org.apache.carbondata.spark.rdd
 
 import java.util.concurrent.Callable
 
+import scala.collection.JavaConverters._
+
 import org.apache.spark.rdd.CarbonMergeFilesRDD
 import org.apache.spark.sql.{CarbonEnv, SQLContext}
 import org.apache.spark.sql.command.SecondaryIndexModel
 import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.sql.util.SparkSQLUtil
+import org.apache.spark.util.CarbonInternalMergerUtil
 import org.apache.spark.util.CarbonInternalScalaUtil
 import org.apache.spark.util.si.FileInternalUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.metadata.SegmentFileStore
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
-import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatus, SegmentStatusManager}
+import org.apache.carbondata.core.statusmanager.{SegmentStatus, SegmentStatusManager}
 import org.apache.carbondata.core.util.{CarbonProperties, ThreadLocalSessionInfo}
 import org.apache.carbondata.processing.loading.TableProcessingOperations
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel
@@ -191,6 +194,19 @@ object SecondaryIndexCreator {
 
       // merge index files for success segments in case of only load
       if (!isCompactionCall) {
+        val loadMetadataDetails = (SegmentStatusManager
+          .readLoadMetadata(indexCarbonTable.getMetadataPath))
+          .filter(loadMetadataDetail => successSISegments.contains(loadMetadataDetail.getLoadName))
+
+        val carbonLoadModelForMergeDataFiles = CarbonInternalMergerUtil
+          .getCarbonLoadModel(indexCarbonTable,
+            loadMetadataDetails.toList.asJava,
+            System.currentTimeMillis())
+        CarbonInternalMergerUtil
+          .mergeDataFilesSISegments(secondaryIndexModel.segmentIdToLoadStartTimeMapping,
+            indexCarbonTable,
+            loadMetadataDetails.toList.asJava, carbonLoadModelForMergeDataFiles)(sc)
+
         CarbonMergeFilesRDD.mergeIndexFiles(secondaryIndexModel.sqlContext.sparkSession,
           successSISegments,
           segmentToLoadStartTimeMap,

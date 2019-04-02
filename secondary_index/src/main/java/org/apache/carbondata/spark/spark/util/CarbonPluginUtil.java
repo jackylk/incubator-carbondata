@@ -15,9 +15,14 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.carbondata.common.logging.LogServiceFactory;
+import org.apache.carbondata.core.constants.CarbonCommonConstants;
+import org.apache.carbondata.core.datamap.Segment;
+import org.apache.carbondata.core.datastore.filesystem.CarbonFile;
+import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.statusmanager.LoadMetadataDetails;
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager;
+import org.apache.carbondata.core.util.CarbonUtil;
 import org.apache.carbondata.core.util.DeleteLoadFolders;
 import org.apache.carbondata.core.util.path.CarbonTablePath;
 
@@ -58,5 +63,65 @@ public final class CarbonPluginUtil {
         }
       }
     }
+  }
+
+  /**
+   * To delete the stale carbondata and carbonindex files from the segment
+   *
+   * @param indexTable
+   */
+  public static void deleteStaleIndexOrDataFiles(CarbonTable indexTable,
+      List<Segment> validSegments) throws IOException {
+    for (Segment validSegment : validSegments) {
+      String segmentPath = CarbonTablePath
+          .getSegmentPath(indexTable.getAbsoluteTableIdentifier().getTablePath(),
+              validSegment.getSegmentNo());
+      CarbonFile segmentDirPath =
+          FileFactory.getCarbonFile(segmentPath, FileFactory.getFileType(segmentPath));
+      CarbonFile[] allFilesOfSegment = segmentDirPath.listFiles();
+      long startTimeStampFinal = validSegment.getLoadMetadataDetails().getLoadStartTime();
+      long endTimeStampFinal = validSegment.getLoadMetadataDetails().getLoadEndTime();
+      boolean deleteFile;
+      for (CarbonFile file : allFilesOfSegment) {
+        deleteFile = false;
+        long fileTimestamp = getTimestamp(file);
+        // check for old files before load start time and the aborted files after end time
+        if ((file.getName().endsWith(CarbonTablePath.CARBON_DATA_EXT) || file.getName()
+            .endsWith(CarbonTablePath.INDEX_FILE_EXT)) && (
+            Long.compare(fileTimestamp, startTimeStampFinal) < 0
+                || Long.compare(fileTimestamp, endTimeStampFinal) > 0)) {
+          deleteFile = true;
+        } else if (file.getName().endsWith(CarbonTablePath.MERGE_INDEX_FILE_EXT)
+            && Long.compare(fileTimestamp, startTimeStampFinal) < 0) {
+          deleteFile = true;
+        }
+        if (deleteFile) {
+          // delete the files and folders.
+          try {
+            LOG.info("Deleting the invalid file : " + file.getName());
+            CarbonUtil.deleteFoldersAndFiles(file);
+          } catch (IOException e) {
+            LOG.error("Error in clean up of merged files." + e.getMessage(), e);
+          } catch (InterruptedException e) {
+            LOG.error("Error in clean up of merged files." + e.getMessage(), e);
+          }
+        }
+      }
+    }
+  }
+
+  public static long getTimestamp(CarbonFile eachFile) {
+    String fileName = eachFile.getName();
+    long timestamp = 0L;
+    if (fileName.endsWith(CarbonTablePath.INDEX_FILE_EXT) || fileName
+        .endsWith(CarbonTablePath.CARBON_DATA_EXT)) {
+      timestamp = Long.parseLong(CarbonTablePath.DataFileUtil.getTimeStampFromFileName(fileName));
+    } else if (fileName.endsWith(CarbonTablePath.MERGE_INDEX_FILE_EXT)) {
+      String firstPart = fileName.substring(0, fileName.lastIndexOf('.'));
+      timestamp = Long.parseLong(firstPart
+          .substring(firstPart.lastIndexOf(CarbonCommonConstants.UNDERSCORE) + 1,
+              firstPart.length()));
+    }
+    return timestamp;
   }
 }

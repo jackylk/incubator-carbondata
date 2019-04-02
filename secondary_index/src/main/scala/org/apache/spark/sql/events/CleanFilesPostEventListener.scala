@@ -16,8 +16,9 @@ import org.apache.spark.util.CarbonInternalScalaUtil
 import org.apache.spark.util.si.FileInternalUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
-import org.apache.carbondata.events.{CleanFilesPostEvent, Event, OperationContext,
-OperationEventListener}
+import org.apache.carbondata.core.statusmanager.SegmentStatusManager
+import org.apache.carbondata.events.{CleanFilesPostEvent, Event, OperationContext, OperationEventListener}
+import org.apache.carbondata.spark.spark.util.CarbonPluginUtil
 
 /**
  *
@@ -40,6 +41,16 @@ class CleanFilesPostEventListener extends OperationEventListener with Logging {
           .getIndexCarbonTables(carbonTable, cleanFilesPostEvent.sparkSession)
         FileInternalUtil
           .cleanIndexFiles(carbonTable, indexTables, carbonTable.getTablePath, true)
+        // Below case is to handle the merge data files case.
+        // This case is possible only on the SI table.
+        // If CLEAN FILES is triggered on the index table, we need to clear the old data files
+        // and index files of that index table
+        if (CarbonInternalScalaUtil.isIndexTable(carbonTable)) {
+          val segmentStatusManager: SegmentStatusManager = new SegmentStatusManager(carbonTable
+            .getAbsoluteTableIdentifier)
+          val validSegments = segmentStatusManager.getValidAndInvalidSegments.getValidSegments
+          CarbonPluginUtil.deleteStaleIndexOrDataFiles(carbonTable, validSegments);
+        }
     }
   }
 }

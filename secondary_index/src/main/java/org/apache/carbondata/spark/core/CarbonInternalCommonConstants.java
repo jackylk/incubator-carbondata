@@ -86,4 +86,15 @@ public final class CarbonInternalCommonConstants {
 
   public static final String USER_UNIQUE_UGI_OBJECT = "userUniqueUGIObject";
 
+  /**
+   * Enable SI segment Compaction / merge small files
+   */
+  @CarbonProperty
+  public static final String CARBON_SI_SEGMENT_MERGE = "carbon.si.segment.merge";
+
+  /**
+   * Default value for SI segment Compaction / merge small files
+   */
+  public static final String DEFAULT_CARBON_SI_SEGMENT_MERGE = "true";
+
 }

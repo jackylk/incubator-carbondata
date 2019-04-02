@@ -13,7 +13,8 @@ package org.apache.spark.sql.parser
 
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.ShowIndexesCommand
-import org.apache.spark.sql.command.{CreateIndexTable, DropIndex, RegisterIndexTableCommand, SecondaryIndex}
+import org.apache.spark.sql.command._
+import org.apache.spark.sql.execution.command.AlterTableModel
 
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.core.constants.CarbonCommonConstants
@@ -48,6 +49,9 @@ class CarbonInternalSpark2SqlParser extends CarbonSpark2SqlParser {
           case x: RegisterIndexTableCommand =>
             x.registerSql = input
             x
+          case x: SIRebuildSegmentCommand =>
+            x.rebuildSIsql = input
+            x
           case _ => super.parse(input)
         }
         case failureOrError =>
@@ -69,7 +73,7 @@ class CarbonInternalSpark2SqlParser extends CarbonSpark2SqlParser {
   protected lazy val internalStartCommand: Parser[LogicalPlan] = indexCommands | start
 
   protected lazy val indexCommands: Parser[LogicalPlan] =
-    showIndexes | createIndexTable | dropIndexTable | registerIndexes
+    showIndexes | createIndexTable | dropIndexTable | registerIndexes | rebuildIndex
 
   protected lazy val createIndexTable: Parser[LogicalPlan] =
     CREATE ~> INDEX ~> ident ~ (ON ~> TABLE ~> (ident <~ ".").? ~ ident) ~
@@ -187,4 +191,17 @@ class CarbonInternalSpark2SqlParser extends CarbonSpark2SqlParser {
         }
         RegisterIndexTableCommand(dbName, indexTable, tableName)
     }
+
+  protected lazy val rebuildIndex: Parser[LogicalPlan] =
+    REBUILD ~> INDEX ~> (ident <~ ".").? ~ ident ~
+    (WHERE ~> (SEGMENT ~ "." ~ ID) ~> IN ~> "(" ~> repsep(segmentId, ",") <~ ")").? <~
+    opt(";") ^^ {
+      case dbName ~ table ~ segs =>
+        val alterTableModel =
+          AlterTableModel(convertDbNameToLowerCase(dbName), table, None, null,
+            Some(System.currentTimeMillis()), null, segs)
+        SIRebuildSegmentCommand(alterTableModel)
+    }
+
+
 }

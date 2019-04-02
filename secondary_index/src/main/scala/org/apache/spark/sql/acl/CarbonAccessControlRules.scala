@@ -20,7 +20,7 @@ import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.catalog.SessionCatalog
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.rules.Rule
-import org.apache.spark.sql.command.{CreateIndexTable, DropIndex}
+import org.apache.spark.sql.command.{CreateIndexTable, DropIndex, SIRebuildSegmentCommand}
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.command.datamap.{CarbonCreateDataMapCommand, CarbonDataMapRebuildCommand, CarbonDataMapShowCommand, CarbonDropDataMapCommand}
 import org.apache.spark.sql.execution.command.management._
@@ -78,6 +78,12 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
             indexModel.tableName,
             null,
             Set(PrivType.OWNER_PRIV))))
+
+        case r@SIRebuildSegmentCommand(alterTableModel, tableInfoOp, _, _) =>
+          checkPrivilegeRecursively(r,
+            alterTableModel.dbName,
+            alterTableModel.tableName,
+            PrivType.INSERT_NOGRANT)
 
         case c@CarbonLoadDataCommand(dbNameOp: Option[String],
         tableName: String, _, _, _, _, _, _, _, _, _, _, _, _) =>
