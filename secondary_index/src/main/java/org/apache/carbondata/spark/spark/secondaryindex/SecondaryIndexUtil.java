@@ -201,12 +201,14 @@ public class SecondaryIndexUtil {
       }
       LoadMetadataDetails[] loadFolderDetailsArray =
           SegmentStatusManager.readLoadMetadata(indexTable.getMetadataPath());
+
       if (null != loadFolderDetailsArray && loadFolderDetailsArray.length > 0) {
         List<String> invalidLoads = new ArrayList<>(CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);
         try {
           SegmentStatusManager.writeLoadDetailsIntoFile(
               CarbonTablePath.getTableStatusFilePath(indexTable.getTablePath()),
-              loadFolderDetailsArrayMainTable);
+              updateTimeStampForIndexTable(loadFolderDetailsArrayMainTable,
+                  loadFolderDetailsArray));
           if (invalidLoads.size() > 0) {
             LOG.info("Delete segment by Id is successfull for $dbName.$tableName.");
           } else {
@@ -217,6 +219,26 @@ public class SecondaryIndexUtil {
         }
       }
     }
+  }
+
+  // For the compacted segment the timestamp in the main table segment
+  // and index table segment may be different. This method updates the
+  // correct timestamp for index segment while updating the tablestatus
+  // in the metadata of index table.
+  public static LoadMetadataDetails[] updateTimeStampForIndexTable(
+      LoadMetadataDetails[] mainTableLoad, LoadMetadataDetails[] indexTableLoads) {
+    LoadMetadataDetails[] newLoadMetaDetails = new LoadMetadataDetails[mainTableLoad.length];
+    int index = 0;
+    for (LoadMetadataDetails mainLoad : mainTableLoad) {
+      for (LoadMetadataDetails indexLoad : indexTableLoads) {
+        if (mainLoad.getLoadName().equals(indexLoad.getLoadName())) {
+          mainLoad.setSegmentFile(indexLoad.getSegmentFile());
+          break;
+        }
+      }
+      newLoadMetaDetails[index++] = mainLoad;
+    }
+    return newLoadMetaDetails;
   }
 
   /**
