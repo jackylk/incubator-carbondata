@@ -51,8 +51,6 @@ public class UnsafeCarbonRowPage {
   private SortStepRowHandler sortStepRowHandler;
   private boolean convertNoSortFields;
 
-  private SortTempRowUpdater sortTempRowUpdater;
-
   private boolean isSaveToDisk;
 
   private SortTempRowUpdater sortTempRowUpdater;

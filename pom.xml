@@ -35,11 +35,11 @@
   <inceptionYear>2016</inceptionYear>
   <packaging>pom</packaging>
 
-  <version>1.5.3.0100</version>
+  <version>1.5.4.0100</version>
 
   <licenses>
     <license>
-      <name>Apache License, Version 2.0</name>
+      <name>Apache Lic1ense, Version 2.0</name>
       <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
       <distribution>repo</distribution>
     </license>
