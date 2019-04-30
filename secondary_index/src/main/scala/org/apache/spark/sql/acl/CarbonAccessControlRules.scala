@@ -63,7 +63,7 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
         dmproperties: Map[String, String],
         queryString: Option[String],
         ifNotExistsSet: Boolean,
-        deferredRebuild: Boolean) =>
+        deferredRebuild: Boolean) if tableIdentifier.isDefined =>
           checkPrivilege(c, Set(new PrivObject(
             ObjectType.TABLE,
             CarbonEnv.getDatabaseName(tableIdentifier.get.database)(sparkSession),
@@ -118,7 +118,7 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
         dataMapName: String,
         ifExistsSet: Boolean,
         table: Option[TableIdentifier],
-        forceDrop: Boolean) =>
+        forceDrop: Boolean) if table.isDefined =>
           checkPrivilege(c, Set(new PrivObject(
             ObjectType.TABLE,
             CarbonEnv.getDatabaseName(table.get.database)(sparkSession),
@@ -189,7 +189,7 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
             PrivType.SELECT_NOGRANT)
         case c@CarbonDataMapRebuildCommand(
         dataMapName: String,
-        table: Option[TableIdentifier]) =>
+        table: Option[TableIdentifier]) if table.isDefined =>
           checkPrivilegeRecursively(c, Some(
             CarbonEnv.getDatabaseName(table.get.database)(sparkSession)),
             table.get.table,

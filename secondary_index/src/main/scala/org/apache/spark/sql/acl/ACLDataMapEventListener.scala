@@ -96,7 +96,9 @@ object ACLDataMapEventListener {
         case createDataMapPostExecutionEvent: CreateDataMapPostExecutionEvent =>
           val sparkSession = createDataMapPostExecutionEvent.sparkSession
           val tableIdentifier = createDataMapPostExecutionEvent.tableIdentifier
-          if (tableIdentifier.isDefined) {
+          // Todo: Remove the below MV datamap check once ACL is handled
+          if (tableIdentifier.isDefined && !createDataMapPostExecutionEvent.dmProviderName
+            .equalsIgnoreCase(DataMapClassProvider.MV.getShortName)) {
             val carbonTable = CarbonEnv
               .getCarbonTable(tableIdentifier.get.database, tableIdentifier.get.table)(sparkSession)
             val carbonTableIdentifier = carbonTable.getCarbonTableIdentifier
