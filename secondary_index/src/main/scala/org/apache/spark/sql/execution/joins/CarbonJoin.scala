@@ -13,18 +13,18 @@ package org.apache.spark.sql.execution.joins
 
 import scala.Array.canBuildFrom
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.mapred.JobConf
 import org.apache.hadoop.mapreduce.Job
-import org.apache.spark.TaskContext
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.deploy.SparkHadoopUtil
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{CarbonDecoderRDD, SparkSession}
+import org.apache.spark.sql.CarbonDecoderRDD
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.expressions.{And, Attribute, BindReferences, BoundReference, Expression, In, Literal, UnsafeRow}
+import org.apache.spark.sql.catalyst.expressions.{Alias, And, Attribute, AttributeReference, BindReferences, BoundReference, Expression, In, Literal, UnsafeRow}
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodegenContext, ExprCode, GenerateUnsafeProjection}
 import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.physical.{BroadcastDistribution, BroadcastMode, Distribution, UnspecifiedDistribution}
@@ -700,9 +700,29 @@ object BroadCastFilterPushJoin {
       case BuildRight => leftKeys
     }).collectFirst { case a: Attribute => a }
 
+    def resolveAlias(expressions: Seq[Expression]) = {
+      val aliasMap = new mutable.HashMap[Attribute, Expression]()
+        carbonScan.transformExpressions {
+        case alias: Alias =>
+          aliasMap.put(alias.toAttribute, alias.child)
+          alias
+      }
+      expressions.map {
+        case at: AttributeReference =>
+          // cannot use Map.get() as qualifier is different.
+          aliasMap.find(_._1.semanticEquals(at)) match {
+            case Some(child) => child._2
+            case _ => at
+          }
+        case others => others
+      }
+    }
+
     val filterKeys = buildSide match {
-      case BuildLeft => rightKeys
-      case BuildRight => leftKeys
+      case BuildLeft =>
+        resolveAlias(rightKeys)
+      case BuildRight =>
+        resolveAlias(leftKeys)
     }
 
     val tableScan = carbonScan.collectFirst {
