@@ -21,7 +21,6 @@ import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 import org.apache.carbondata.spark.rdd.SecondaryIndexCreator
 import org.apache.carbondata.spark.spark.load.CarbonInternalLoaderUtil
-import org.apache.carbondata.spark.util.CommonUtil
 
 /**
  *
@@ -81,10 +80,6 @@ object Compactor {
           segmentToSegmentTimestampMap,
           indexCarbonTable.getTablePath,
           indexCarbonTable, false)
-        // enable the SI table after compaction
-        sqlContext.sparkSession.sql(
-          s"""ALTER TABLE ${carbonLoadModel.getDatabaseName}.${indexCarbonTable.getTableName} SET
-             |SERDEPROPERTIES ('isSITableEnabled' = 'true')""".stripMargin)
       } catch {
         case ex: Exception =>
           LOGGER.error(s"Compaction failed for SI table ${secondaryIndex.indexTableName}", ex)

@@ -78,20 +78,22 @@ class SILoadEventListenerForFailedSegments extends OperationEventListener with L
                         isLoadToFailedSISegments = true,
                         secondaryIndex,
                         carbonTable)
+
+                    // enable the SI table if it was disabled earlier due to failure during SI
+                    // creation time
+                    sparkSession.sql(
+                      s"""ALTER TABLE ${carbonLoadModel.getDatabaseName}.$indexTableName SET
+                          |SERDEPROPERTIES ('isSITableEnabled' = 'true')""".stripMargin)
+
                   } catch {
                     case ex: Exception =>
                       // in case of SI load only for for failed segments, catch the exception, but
                       // do not fail the main table load, as main table segments should be available
                       // for query
-                      LOGGER.error(s"Load to SI table to $indexTableName is failed", ex)
+                      LOGGER.error(s"Load to SI table to $indexTableName is failed " +
+                               s"or SI table ENABLE is failed. ", ex)
                       return
                   }
-
-                  // enable the SI table if it was disabled earlier due to failure during SI
-                  // creation time
-                  sparkSession.sql(
-                    s"""ALTER TABLE ${carbonLoadModel.getDatabaseName}.$indexTableName SET
-                       |SERDEPROPERTIES ('isSITableEnabled' = 'true')""".stripMargin)
                 }
             }
           }
