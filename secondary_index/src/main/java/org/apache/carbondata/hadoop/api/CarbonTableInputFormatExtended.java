@@ -125,8 +125,8 @@ public class CarbonTableInputFormatExtended {
       LoadMetadataDetails[] loadMetadataDetails = readCommittedScope.getSegmentList();
       SegmentUpdateStatusManager updateStatusManager =
           new SegmentUpdateStatusManager(carbonTable, loadMetadataDetails);
-      carbonTableInputFormat
-          .refreshSegmentCacheIfRequired(job, carbonTable, updateStatusManager, segmentIds);
+      DataMapStoreManager.getInstance()
+          .refreshSegmentCacheIfRequired(carbonTable, updateStatusManager, segmentIds);
       List<Segment> setSegID =
           isSegmentValidAfterFilter(job.getConfiguration(), carbonTable, filterInterface,
               segmentIds);

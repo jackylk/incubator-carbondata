@@ -233,7 +233,7 @@ object CarbonInternalMergerUtil {
           if (carbonMergerMapping.validSegments.size > 0) {
             DataMapStoreManager.getInstance
               .clearInvalidSegments(indexCarbonTable,
-                carbonMergerMapping.validSegments.toList.asJava)
+                carbonMergerMapping.validSegments.map(_.getSegmentNo).toList.asJava)
           }
         }
 

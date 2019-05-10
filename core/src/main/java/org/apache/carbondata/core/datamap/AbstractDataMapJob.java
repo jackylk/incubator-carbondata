@@ -22,7 +22,6 @@ import java.util.List;
 import org.apache.carbondata.core.indexstore.BlockletDataMapIndexWrapper;
 import org.apache.carbondata.core.indexstore.ExtendedBlocklet;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
-import org.apache.carbondata.core.scan.filter.resolver.FilterResolverIntf;
 
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 
