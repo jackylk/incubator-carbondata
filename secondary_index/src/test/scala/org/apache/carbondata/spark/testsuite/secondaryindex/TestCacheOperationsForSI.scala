@@ -107,7 +107,7 @@ class TestCacheOperationsForSI extends QueryTest with BeforeAndAfterAll {
     // Ensure there is not separate entry for SI table
     assert(result2.size() == 3)
     // Ensure table has summed up index size for SI
-    assert(result2.get(1).getString(2).equalsIgnoreCase(result2.get(2).getString(2)))
+    assert(result2.get(0).getString(2).equalsIgnoreCase(result2.get(2).getString(2)))
 
     sql(s"DROP TABLE $tableName")
   }
