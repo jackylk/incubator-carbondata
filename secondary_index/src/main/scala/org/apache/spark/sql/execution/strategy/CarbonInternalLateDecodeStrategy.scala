@@ -75,11 +75,11 @@ private[sql] class CarbonInternalLateDecodeStrategy extends CarbonLateDecodeStra
               val leftOutput = left.output
                 .filterNot(attr => attr.name
                   .equalsIgnoreCase(CarbonInternalCommonConstants.POSITION_ID))
-                .map(_.name.toLowerCase)
+                .map(c => (c.name.toLowerCase, c.dataType))
               val childOutput = carbonChild.output
                 .filterNot(attr => attr.name
                   .equalsIgnoreCase(CarbonInternalCommonConstants.POSITION_ID))
-                .map(_.name.toLowerCase)
+                .map(c => (c.name.toLowerCase, c.dataType))
               if (!leftOutput.equals(childOutput)) {
                 // if the projection list and the scan list are different(in case of alias)
                 // we should not skip the project, so we are taking the original plan with project

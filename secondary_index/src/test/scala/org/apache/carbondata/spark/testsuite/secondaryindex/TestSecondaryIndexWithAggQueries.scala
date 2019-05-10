@@ -142,6 +142,17 @@ class TestSecondaryIndexWithAggQueries extends QueryTest with BeforeAndAfterAll 
     assert(exceptionMessage.contains("Datamap creation on Pre-aggregate table or Secondary Index table is not supported"))
   }
 
+  test("test CTAS when use cast in select with SI table present on main table") {
+    sql("drop table if exists cast_si")
+    sql("drop index if exists index5 on cast_si")
+    sql("create table if not exists cast_si (RECORD_ID bigint,CDR_ID string,LOCATION_CODE int,USER_NUM string) STORED BY 'org.apache.carbondata.format' " +
+        "TBLPROPERTIES('table_blocksize'='256','dictionary_exclude'='CDR_ID','SORT_SCOPE'='NO_SORT')")
+    sql("create index index5 on table cast_si(USER_NUM) as 'org.apache.carbondata.format' tblproperties('table_blocksize' = '256')")
+    sql("insert into cast_si select  1, 'gb3e5135-5533-4ee7-51b3-F61F1355b471', 2, '26557544541'")
+    sql("create table ctas_cast select cast(location_code as string) as location_code from cast_si where ((user_num in ('26557544541')))")
+    checkAnswer(sql("select count(*) from cast_si where ((user_num in ('26557544541')))"), sql("select count(*) from ctas_cast"))
+  }
+
   override def afterAll: Unit = {
     sql("drop table if exists source")
     sql("drop table if exists catalog_return")
@@ -150,6 +161,7 @@ class TestSecondaryIndexWithAggQueries extends QueryTest with BeforeAndAfterAll 
     sql("drop table if exists date_dim")
     sql("drop table if exists test_si_1")
     sql("drop table if exists test_pre_agg")
+    sql("drop table if exists cast_si")
   }
 
 }
