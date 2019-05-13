@@ -32,6 +32,7 @@ class CarbonDataFileMergeTestCaseOnSI
   override protected def beforeAll(): Unit = {
     val n = 160000
     createFile(file2, n * 4, n)
+    sql("drop database if exists dataFileMerge cascade")
     sql("create database dataFileMerge")
     sql("use dataFileMerge")
     sql("DROP INDEX IF EXISTS nonindexmerge_index on nonindexmerge")
@@ -62,7 +63,7 @@ class CarbonDataFileMergeTestCaseOnSI
         CarbonCommonConstants.DEFAULT_SEGMENT_LEVEL_THRESHOLD)
   }
 
-  test("Verify correctness of index merge") {
+  test("Verify correctness of data file merge") {
     sql("DROP TABLE IF EXISTS indexmerge")
     sql(
       """
@@ -78,10 +79,10 @@ class CarbonDataFileMergeTestCaseOnSI
     val rows = sql("""Select count(*) from indexmerge where name='n164419'""").collect()
     sql("clean files for table indexmerge_index1")
     checkAnswer(sql("""Select count(*) from indexmerge where name='n164419'"""), rows)
-    assert(getDataFileCount("indexmerge_index1", "0") == 11)
+    assert(getDataFileCount("indexmerge_index1", "0") == 5)
   }
 
-  test("Verify command of index merge") {
+  test("Verify command of data file merge") {
     CarbonProperties.getInstance()
       .addProperty(CarbonInternalCommonConstants.CARBON_SI_SEGMENT_MERGE, "false")
     sql("DROP TABLE IF EXISTS nonindexmerge")
@@ -104,12 +105,12 @@ class CarbonDataFileMergeTestCaseOnSI
     sql("REBUILD INDEX nonindexmerge_index1").collect()
     checkAnswer(sql("""Select count(*) from nonindexmerge where name='n164419'"""), rows)
     sql("clean files for table nonindexmerge_index1")
-    assert(getDataFileCount("nonindexmerge_index1", "0") == 11)
-    assert(getDataFileCount("nonindexmerge_index1", "1") == 11)
+    assert(getDataFileCount("nonindexmerge_index1", "0") == 5)
+    assert(getDataFileCount("nonindexmerge_index1", "1") == 5)
     checkAnswer(sql("""Select count(*) from nonindexmerge where name='n164419'"""), rows)
   }
 
-  test("Verify command of index merge on segments") {
+  test("Verify command of data file merge on segments") {
     CarbonProperties.getInstance()
       .addProperty(CarbonInternalCommonConstants.CARBON_SI_SEGMENT_MERGE, "false")
     sql("DROP TABLE IF EXISTS nonindexmerge")
@@ -132,17 +133,40 @@ class CarbonDataFileMergeTestCaseOnSI
     sql("REBUILD INDEX nonindexmerge_index2 WHERE SEGMENT.ID IN(0)").collect()
     checkAnswer(sql("""Select count(*) from nonindexmerge where name='n164419'"""), rows)
     sql("clean files for table nonindexmerge_index2")
-    assert(getDataFileCount("nonindexmerge_index2", "0") == 11)
+    assert(getDataFileCount("nonindexmerge_index2", "0") == 5)
     assert(getDataFileCount("nonindexmerge_index2", "1") == 100)
     sql("REBUILD INDEX nonindexmerge_index2 WHERE SEGMENT.ID IN(1)").collect()
     checkAnswer(sql("""Select count(*) from nonindexmerge where name='n164419'"""), rows)
     sql("clean files for table nonindexmerge_index2")
-    assert(getDataFileCount("nonindexmerge_index2", "1") == 11)
+    assert(getDataFileCount("nonindexmerge_index2", "1") == 5)
     sql("clean files for table nonindexmerge_index2")
     checkAnswer(sql("""Select count(*) from nonindexmerge where name='n164419'"""), rows)
   }
 
-  test("Verify index index merge with compaction") {
+  test("Verify command of REBUILD INDEX command with invalid segments") {
+    CarbonProperties.getInstance()
+      .addProperty(CarbonInternalCommonConstants.CARBON_SI_SEGMENT_MERGE, "false")
+    sql("DROP TABLE IF EXISTS nonindexmerge")
+    sql(
+      """
+        | CREATE TABLE nonindexmerge(id INT, name STRING, city STRING, age INT)
+        | STORED BY 'org.apache.carbondata.format'
+        | TBLPROPERTIES('SORT_COLUMNS'='city,name', 'SORT_SCOPE'='GLOBAL_SORT')
+      """.stripMargin)
+    sql(
+      "CREATE INDEX nonindexmerge_index2 on table nonindexmerge (name) as 'carbondata' " +
+      "tblproperties('table_blocksize'='1')")
+    sql(s"LOAD DATA LOCAL INPATH '$file2' INTO TABLE nonindexmerge OPTIONS('header'='false', " +
+        s"'GLOBAL_SORT_PARTITIONS'='100')")
+    CarbonProperties.getInstance()
+      .addProperty(CarbonInternalCommonConstants.CARBON_SI_SEGMENT_MERGE, "true")
+    val exceptionMessage = intercept[RuntimeException] {
+      sql("REBUILD INDEX nonindexmerge_index2 WHERE SEGMENT.ID IN(1,2)").collect()
+    }.getMessage
+    assert(exceptionMessage.contains("Rebuild index by segment id is failed. Invalid ID:"))
+  }
+
+  test("Verify index data file merge with compaction") {
     CarbonProperties.getInstance()
       .addProperty(CarbonCommonConstants.COMPACTION_SEGMENT_LEVEL_THRESHOLD, "2,2")
       .addProperty(CarbonInternalCommonConstants.CARBON_SI_SEGMENT_MERGE, "false")
@@ -165,14 +189,14 @@ class CarbonDataFileMergeTestCaseOnSI
       .addProperty(CarbonInternalCommonConstants.CARBON_SI_SEGMENT_MERGE, "true")
     sql("ALTER TABLE nonindexmerge COMPACT 'minor'").collect()
     sql("clean files for table nonindexmerge_index3")
-    assert(getDataFileCount("nonindexmerge_index3", "0.1") < 20)
+    assert(getDataFileCount("nonindexmerge_index3", "0.1") < 10)
     checkAnswer(sql("""Select count(*) from nonindexmerge where name='n164419'"""), rows)
     CarbonProperties.getInstance()
       .addProperty(CarbonCommonConstants.COMPACTION_SEGMENT_LEVEL_THRESHOLD,
         CarbonCommonConstants.DEFAULT_SEGMENT_LEVEL_THRESHOLD)
   }
 
-  test("Verify index index merge for compacted segments") {
+  test("Verify index data file merge for compacted segments") {
     CarbonProperties.getInstance()
       .addProperty(CarbonCommonConstants.COMPACTION_SEGMENT_LEVEL_THRESHOLD, "2,2")
       .addProperty(CarbonCommonConstants.ENABLE_AUTO_LOAD_MERGE, "true")
@@ -197,7 +221,7 @@ class CarbonDataFileMergeTestCaseOnSI
     "CREATE INDEX nonindexmerge_index4 on table nonindexmerge (name) as 'carbondata' " +
     "tblproperties('table_blocksize'='1')")
     sql("clean files for table nonindexmerge_index4")
-    assert(getDataFileCount("nonindexmerge_index4", "0.2") < 25)
+    assert(getDataFileCount("nonindexmerge_index4", "0.2") < 15)
     checkAnswer(sql("""Select count(*) from nonindexmerge where name='n164419'"""), rows)
     CarbonProperties.getInstance()
       .addProperty(CarbonCommonConstants.COMPACTION_SEGMENT_LEVEL_THRESHOLD,

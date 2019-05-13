@@ -71,6 +71,25 @@ case class SIRebuildSegmentCommand(
         "Unsupported rebuild operation on carbon table: Merge data files is not supported on V1 " +
         "V2 store segments")
     }
+    // check if the list of given segments in the command are valid
+    val segmentIds: List[String] = {
+      if (alterTableModel.customSegmentIds.isDefined) {
+        alterTableModel.customSegmentIds.get
+      } else {
+        List.empty
+      }
+    }
+    if (!segmentIds.isEmpty) {
+      val segmentStatusManager = new SegmentStatusManager(indexTable.getAbsoluteTableIdentifier)
+      val validSegments = (segmentStatusManager.getValidAndInvalidSegments.getValidSegments).asScala
+        .map(_.getSegmentNo)
+      segmentIds.foreach(segmentId =>
+        if (!validSegments.contains(segmentId)) {
+          throw new RuntimeException(s"Rebuild index by segment id is failed. " +
+                                     s"Invalid ID: $segmentId")
+        }
+      )
+    }
     Seq.empty
   }
 
