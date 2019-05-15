@@ -11,7 +11,8 @@
  */
 package org.apache.carbondata.spark.testsuite.secondaryindex
 
-import org.apache.spark.sql.Row
+import org.apache.carbondata.core.datastore.impl.FileFactory
+import org.apache.spark.sql.{CarbonEnv, Row}
 import org.apache.spark.sql.command.ErrorMessage
 import org.apache.spark.sql.common.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
@@ -153,6 +154,32 @@ class TestSecondaryIndexWithAggQueries extends QueryTest with BeforeAndAfterAll 
     checkAnswer(sql("select count(*) from cast_si where ((user_num in ('26557544541')))"), sql("select count(*) from ctas_cast"))
   }
 
+  test("test clean files for index for marked for delete segments") {
+    sql("drop table if exists clean")
+    sql("create table clean(name string, age int, add string) stored by 'carbondata'")
+    sql("create index clean_index on table clean(add) as 'carbondata'")
+    sql("insert into clean select 'ca',5,'de'")
+    sql("insert into clean select 'ca',5,'de'")
+    sql("delete from table clean where segment.id in (0)")
+    val showSegments1 = sql("show segments for table clean").collect
+    showSegments1.find(_.get(0).toString.contains("0")) match {
+      case Some(row) => assert(row.get(1).toString.contains("Marked for Delete"))
+      case None => assert(false)
+    }
+    val showSegments2 = sql("show segments for table clean_index").collect
+    showSegments2.find(_.get(0).toString.contains("0")) match {
+      case Some(row) => assert(row.get(1).toString.contains("Marked for Delete"))
+      case None => assert(false)
+    }
+    sql("clean files for table clean")
+    val mainTable = CarbonEnv.getCarbonTable(Some("default"), "clean")(sqlContext.sparkSession)
+    val indexTable = CarbonEnv.getCarbonTable(Some("default"), "clean_index")(sqlContext.sparkSession)
+    assert(!FileFactory.isFileExist(mainTable.getSegmentPath("0")))
+    assert(!FileFactory.isFileExist(indexTable.getSegmentPath("0")))
+    assert(FileFactory.isFileExist(mainTable.getSegmentPath("1")))
+    assert(FileFactory.isFileExist(indexTable.getSegmentPath("1")))
+  }
+
   override def afterAll: Unit = {
     sql("drop table if exists source")
     sql("drop table if exists catalog_return")
@@ -162,6 +189,7 @@ class TestSecondaryIndexWithAggQueries extends QueryTest with BeforeAndAfterAll 
     sql("drop table if exists test_si_1")
     sql("drop table if exists test_pre_agg")
     sql("drop table if exists cast_si")
+    sql("drop table if exists clean")
   }
 
 }

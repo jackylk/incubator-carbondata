@@ -23,7 +23,6 @@ import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.statusmanager.LoadMetadataDetails;
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager;
 import org.apache.carbondata.core.util.CarbonUtil;
-import org.apache.carbondata.core.util.DeleteLoadFolders;
 import org.apache.carbondata.core.util.path.CarbonTablePath;
 
 import org.apache.log4j.Logger;
@@ -50,15 +49,11 @@ public final class CarbonPluginUtil {
         LoadMetadataDetails[] loadMetadataDetails =
             SegmentStatusManager.readLoadMetadata(indexTable.getMetadataPath());
         // Delete marked loads
-        boolean isUpdationRequired = DeleteLoadFolders
-            .deleteLoadFoldersFromFileSystem(indexTable.getAbsoluteTableIdentifier(),
-                isForceDeletion, loadMetadataDetails, indexTable.getMetadataPath());
-        if (isUpdationRequired) {
-          SegmentStatusManager.writeLoadDetailsIntoFile(
-              CarbonTablePath.getTableStatusFilePath(indexTable.getTablePath()),
-              loadMetadataDetails);
+        try {
+          SegmentStatusManager.deleteLoadsAndUpdateMetadata(indexTable, isForceDeletion, null);
           LOG.info("Clean up files successful for index table: " + indexTable.getTableName());
-        } else {
+        } catch (Exception ex) {
+          LOG.error(ex);
           LOG.info("Clean up files failed for index table: " + indexTable.getTableName());
         }
       }
