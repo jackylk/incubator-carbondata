@@ -43,14 +43,17 @@ object ACLDataMapEventListener {
           val sparkSession: SparkSession = createDataMapPreExecutionEvent.sparkSession
           val systemDirectoryPath: String = createDataMapPreExecutionEvent.storePath
           val tableIdentifier = createDataMapPreExecutionEvent.tableIdentifier
-          val dbName: String = tableIdentifier.database
-            .getOrElse(sparkSession.catalog.currentDatabase)
-          val carbonTableIdentifier = new CarbonTableIdentifier(dbName, tableIdentifier.table, "")
-          val carbonTable = CarbonEnv
-            .getCarbonTable(Some(dbName), tableIdentifier.table)(sparkSession)
-          if(carbonTable.isChildDataMap || CarbonInternalScalaUtil.isIndexTable(carbonTable)) {
-            throw new ErrorMessage(
-              "Datamap creation on Pre-aggregate table or Secondary Index table is not supported")
+          var carbonTableIdentifier: CarbonTableIdentifier = null
+            if (null != tableIdentifier) {
+            val dbName: String = tableIdentifier.database
+              .getOrElse(sparkSession.catalog.currentDatabase)
+            carbonTableIdentifier = new CarbonTableIdentifier(dbName, tableIdentifier.table, "")
+            val carbonTable = CarbonEnv
+              .getCarbonTable(Some(dbName), tableIdentifier.table)(sparkSession)
+            if (carbonTable.isChildDataMap || CarbonInternalScalaUtil.isIndexTable(carbonTable)) {
+              throw new ErrorMessage(
+                "Datamap creation on Pre-aggregate table or Secondary Index table is not supported")
+            }
           }
           if (!FileFactory.isFileExist(systemDirectoryPath)) {
             CarbonUserGroupInformation.getInstance.getCurrentUser
@@ -64,10 +67,14 @@ object ACLDataMapEventListener {
           val folderListBeforeReBuild = List[String](systemDirectoryPath)
           val pathArrBeforeLoadOperation = ACLFileUtils
             .takeRecurTraverseSnapshot(sparkSession.sqlContext, folderListBeforeReBuild)
+          // Incase of MV datamap, the identifier cannot be defined, as it can build MV on multiple
+          // tables also. So handling that also
           operationContext.setProperty(ACLFileUtils.getFolderListKey(carbonTableIdentifier),
             folderListBeforeReBuild)
           operationContext.setProperty(ACLFileUtils.getPathListKey(carbonTableIdentifier),
             pathArrBeforeLoadOperation)
+
+          // This event will be for index datamaps, so no need to handle specially for MV datamap
         case updateDataMapPreExecutionEvent: UpdateDataMapPreExecutionEvent =>
           val sparkSession: SparkSession = updateDataMapPreExecutionEvent.sparkSession
           val systemDirectoryPath: String = updateDataMapPreExecutionEvent.storePath
@@ -96,12 +103,11 @@ object ACLDataMapEventListener {
         case createDataMapPostExecutionEvent: CreateDataMapPostExecutionEvent =>
           val sparkSession = createDataMapPostExecutionEvent.sparkSession
           val tableIdentifier = createDataMapPostExecutionEvent.tableIdentifier
-          // Todo: Remove the below MV datamap check once ACL is handled
-          if (tableIdentifier.isDefined && !createDataMapPostExecutionEvent.dmProviderName
-            .equalsIgnoreCase(DataMapClassProvider.MV.getShortName)) {
+          var carbonTableIdentifier: CarbonTableIdentifier = null
+          if (tableIdentifier.isDefined) {
             val carbonTable = CarbonEnv
               .getCarbonTable(tableIdentifier.get.database, tableIdentifier.get.table)(sparkSession)
-            val carbonTableIdentifier = carbonTable.getCarbonTableIdentifier
+            carbonTableIdentifier = carbonTable.getCarbonTableIdentifier
             val dmProviderName = createDataMapPostExecutionEvent.dmProviderName
             // Checking only for preaggregate as for preagregate only requires to take snapshot
             // of schema file. PredataMapEvent is already skipped in case of Preaggreagte and here
@@ -117,11 +123,11 @@ object ACLDataMapEventListener {
                 .setProperty(getPathListKey(carbonTable.getCarbonTableIdentifier),
                   ArrayBuffer(""))
             }
-            ACLFileUtils
-              .takeSnapAfterOperationAndApplyACL(sparkSession,
-                operationContext,
-                carbonTableIdentifier)
           }
+          ACLFileUtils
+            .takeSnapAfterOperationAndApplyACL(sparkSession,
+              operationContext,
+              carbonTableIdentifier)
 
         case updateDataMapPostExecutionEvent: UpdateDataMapPostExecutionEvent =>
           val sparkSession = updateDataMapPostExecutionEvent.sparkSession

@@ -50,14 +50,35 @@ object ACLFileUtils {
 
   def getFolderListKey(carbonTable: CarbonTableIdentifier): String = {
     val folderListBeforeOperation = "folderListBeforeOperation"
-    (folderListBeforeOperation + '_' + carbonTable.getDatabaseName + '.' +
-    carbonTable.getTableName).toLowerCase
+    if (null != carbonTable) {
+      (folderListBeforeOperation + '_' + carbonTable.getDatabaseName + '.' +
+       carbonTable.getTableName).toLowerCase
+    } else {
+      // This is added for special case like MV, because identifier cannot formed in case of MV
+      // because MV can be built on more than one table
+      (folderListBeforeOperation + '_').toLowerCase
+    }
   }
 
   def getPathListKey(carbonTable: CarbonTableIdentifier): String = {
     val pathArrBeforeOperation = "pathArrBeforeOperation"
-    (pathArrBeforeOperation + '_' + carbonTable.getDatabaseName + '.' +
-    carbonTable.getTableName).toLowerCase
+    if (null != carbonTable) {
+      (pathArrBeforeOperation + '_' + carbonTable.getDatabaseName + '.' +
+       carbonTable.getTableName).toLowerCase
+    } else {
+      // This method is added for special case like MV, because identifer cannot formed in case of
+      // MV. because MV can be built on more than one table
+      (pathArrBeforeOperation + '_').toLowerCase
+    }
+  }
+
+  /**
+   * This method is added for special case like MV, because identifer cannot formed in case of MV
+   * because MV can be built on more than one table
+   */
+  def getPathListKey: String = {
+    val pathArrBeforeOperation = "pathArrBeforeOperation"
+    (pathArrBeforeOperation + '_').toLowerCase
   }
 
   def takeRecurTraverseSnapshot(sqlContext: SQLContext,
