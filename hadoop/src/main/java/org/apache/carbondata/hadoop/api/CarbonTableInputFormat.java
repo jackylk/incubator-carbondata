@@ -571,7 +571,7 @@ public class CarbonTableInputFormat<T> extends CarbonInputFormat<T> {
 
     DataMapExprWrapper dataMapExprWrapper =
         DataMapChooser.getDefaultDataMap(getOrCreateCarbonTable(job.getConfiguration()), null);
-    DataMapUtil.loadDataMaps(carbonTable, dataMapExprWrapper, filteredSegment, partitions);
+    DataMapUtil.loadDataMaps(table, dataMapExprWrapper, filteredSegment, partitions);
 
     if (isIUDTable || isUpdateFlow) {
       Map<String, Long> blockletToRowCountMap = new HashMap<>();
