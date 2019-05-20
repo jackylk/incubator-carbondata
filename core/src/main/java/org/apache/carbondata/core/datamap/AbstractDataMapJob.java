@@ -34,8 +34,7 @@ public abstract class AbstractDataMapJob implements DataMapJob {
       FileInputFormat<Void, BlockletDataMapIndexWrapper> format) {
   }
 
-  @Override public List<ExtendedBlocklet> execute(DistributableDataMapFormat dataMapFormat,
-      FilterResolverIntf resolverIntf) {
+  @Override public List<ExtendedBlocklet> execute(DistributableDataMapFormat dataMapFormat) {
     return null;
   }
 }
