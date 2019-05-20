@@ -105,6 +105,7 @@
     <module>datamap/examples</module>
     <module>store/sdk</module>
     <module>integration/spark-datasource</module>
+    <module>integration/hive</module>
   </modules>
 
   <properties>
@@ -537,7 +538,7 @@
         <module>integration/spark-datasource</module>
         <module>secondary_index</module>
         <module>common-plugin</module>
-        <module>integration/hive</module>
+        <!--<module>integration/hive</module>-->
        <!-- <module>integration/presto</module> -->
         <!--<module>examples/spark2</module>-->
         <!--<module>datamap/lucene</module>-->
@@ -773,7 +774,7 @@
         <module>integration/spark2</module>
         <module>common-plugin</module>
         <module>secondary_index</module>
-        <module>integration/hive</module>
+        <!--<module>integration/hive</module>-->
         <module>streaming</module>
         <module>examples/spark2</module>
 		    <module>datamap/lucene</module>
