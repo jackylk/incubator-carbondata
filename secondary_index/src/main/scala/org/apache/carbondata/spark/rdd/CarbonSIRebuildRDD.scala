@@ -56,7 +56,7 @@ class CarbonSIRebuildRDD[K, V](
   @transient private val ss: SparkSession,
   result: MergeResult[K, V],
   carbonLoadModel: CarbonLoadModel,
-  carbonMergerMapping: CarbonMergerMapping) extends CarbonRDD[(K, V)](ss, Nil) {
+  carbonMergerMapping: CarbonMergerMapping) extends CarbonRDD[((K, V), String)](ss, Nil) {
 
   ss.sparkContext.setLocalProperty("spark.scheduler.pool", "DDL")
   ss.sparkContext.setLocalProperty("spark.job.interruptOnCancel", "true")
@@ -163,10 +163,10 @@ class CarbonSIRebuildRDD[K, V](
 
 
   override def internalCompute(theSplit: Partition,
-    context: TaskContext): Iterator[(K, V)] = {
+    context: TaskContext): Iterator[((K, V), String)] = {
     val queryStartTime = System.currentTimeMillis()
     val LOGGER = LogServiceFactory.getLogService(this.getClass.getName)
-    val iter = new Iterator[(K, V)] {
+    val iter = new Iterator[((K, V), String)] {
       val carbonSparkPartition = theSplit.asInstanceOf[CarbonSparkPartition]
       val carbonLoadModelCopy: CarbonLoadModel = CarbonInternalMergerUtil
         .getCarbonLoadModel(carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable,
@@ -180,10 +180,12 @@ class CarbonSIRebuildRDD[K, V](
       var exec: CarbonCompactionExecutor = null
       var processor: AbstractResultProcessor = null
       var rawResultIteratorMap: util.Map[String, util.List[RawResultIterator]] = _
+      var segmentId: String = null
       try {
         // sorting the table block info List.
         val splitList = carbonSparkPartition.split.value.getAllSplits
         val tableBlockInfoList = CarbonInputSplit.createBlocks(splitList)
+        segmentId = tableBlockInfoList.get(0).getSegmentId
 
         Collections.sort(tableBlockInfoList)
 
@@ -335,9 +337,9 @@ class CarbonSIRebuildRDD[K, V](
         !finished
       }
 
-      override def next(): (K, V) = {
+      override def next(): ((K, V), String) = {
         finished = true
-        result.getKey(mergeResult, mergeStatus)
+        ((result.getKey(mergeResult, mergeStatus)), segmentId)
       }
     }
     iter

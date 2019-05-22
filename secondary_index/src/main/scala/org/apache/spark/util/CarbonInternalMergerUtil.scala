@@ -143,7 +143,6 @@ object CarbonInternalMergerUtil {
     segmentIdToLoadStartTimeMapping: scala.collection.mutable.Map[String, java.lang.Long])
     (sqlContext: SQLContext): Boolean = {
     val indexCarbonTable = compactionCallableModel.carbonTable
-    val loadsToMerge = compactionCallableModel.loadsToMerge
     val sc = compactionCallableModel.sqlContext
     val carbonLoadModel = compactionCallableModel.carbonLoadModel
     val compactionType = compactionCallableModel.compactionType
@@ -153,7 +152,8 @@ object CarbonInternalMergerUtil {
     var finalMergeStatus = false
     val databaseName: String = indexCarbonTable.getDatabaseName
     val factTableName = indexCarbonTable.getTableName
-    val validSegments: List[Segment] = CarbonDataMergerUtil.getValidSegments(loadsToMerge)
+    val validSegments: List[Segment] = CarbonDataMergerUtil
+      .getValidSegments(compactionCallableModel.loadsToMerge)
     val mergedLoadName: String = ""
     var mergeIndexFilesNeeded = false
     val carbonMergerMapping = CarbonMergerMapping(
@@ -172,6 +172,9 @@ object CarbonInternalMergerUtil {
     carbonLoadModel.setLoadMetadataDetails(
       SegmentStatusManager.readLoadMetadata(indexCarbonTable.getMetadataPath).toList.asJava)
 
+    val mergedSegments: util.Set[LoadMetadataDetails] = new util.HashSet[LoadMetadataDetails]()
+    var rebuiltSegments: Set[String] = Set[String]()
+
     val mergeStatus =
       new CarbonSIRebuildRDD(
         sc.sparkSession,
@@ -182,14 +185,20 @@ object CarbonInternalMergerUtil {
     if (null != mergeStatus && mergeStatus.length == 0) {
       finalMergeStatus = true
     } else {
-      finalMergeStatus = mergeStatus.forall(_._2)
+      finalMergeStatus = mergeStatus.forall(_._1._2)
+      rebuiltSegments = mergeStatus.map(_._2).toSet
+      compactionCallableModel.loadsToMerge.asScala.foreach(metadataDetails => {
+        if (rebuiltSegments.contains(metadataDetails.getLoadName)) {
+          mergedSegments.add(metadataDetails)
+        }
+      })
     }
 
     try {
       if (finalMergeStatus) {
         if (null != mergeStatus && mergeStatus.length != 0) {
           mergeIndexFilesNeeded = true
-          loadsToMerge.asScala.map { seg =>
+          mergedSegments.asScala.map { seg =>
             val file = SegmentFileStore.writeSegmentFile(
               indexCarbonTable,
               seg.getLoadName,
@@ -204,12 +213,6 @@ object CarbonInternalMergerUtil {
             segment
           }
 
-          val rebuiltSegments: Array[String] = new Array[String](validSegments.size())
-          var index: Int = 0
-          validSegments.asScala.foreach(segment => {
-            rebuiltSegments(index) = segment.getSegmentNo
-            index += 1
-          })
           val endTime = System.currentTimeMillis()
           val loadMetadataDetails = SegmentStatusManager
             .readLoadMetadata(indexCarbonTable.getMetadataPath)
@@ -230,15 +233,14 @@ object CarbonInternalMergerUtil {
 
           // clear the datamap cache for the merged segments, as the index files and
           // data files are rewritten after compaction
-          if (carbonMergerMapping.validSegments.size > 0) {
+          if (mergedSegments.size > 0) {
             DataMapStoreManager.getInstance
-              .clearInvalidSegments(indexCarbonTable,
-                carbonMergerMapping.validSegments.map(_.getSegmentNo).toList.asJava)
+              .clearInvalidSegments(indexCarbonTable, rebuiltSegments.toList.asJava)
           }
         }
 
         val endTime = System.nanoTime()
-        LOGGER.info(s"Time taken to merge is ${endTime - startTime}")
+        LOGGER.info(s"Time taken to merge is(in nano) ${endTime - startTime}")
         LOGGER.info(s"Merge data files request completed for table " +
                     s"${indexCarbonTable.getDatabaseName}.${indexCarbonTable.getTableName}")
       } else {
@@ -265,7 +267,7 @@ object CarbonInternalMergerUtil {
    */
   def identifyBlocksToBeMerged(splits: util.List[CarbonInputSplit], mergeSize: Long):
   List[List[CarbonInputSplit]] = {
-    val blocksToBeMerged: List[List[CarbonInputSplit]] = new util.ArrayList()
+    val blockGroupsToMerge: List[List[CarbonInputSplit]] = new util.ArrayList()
     var totalSize: Long = 0L
     var blocksSelected: List[CarbonInputSplit] = new util.ArrayList()
     // sort the splits based on the block size and then make groups based on the threshold
@@ -281,16 +283,21 @@ object CarbonInternalMergerUtil {
       totalSize += blockFileSize
       if (totalSize >= mergeSize) {
         if (!blocksSelected.isEmpty) {
-          blocksToBeMerged.add(blocksSelected)
+          blockGroupsToMerge.add(blocksSelected)
         }
         totalSize = 0L
         blocksSelected = new util.ArrayList()
       }
     }
     if (!blocksSelected.isEmpty) {
-      blocksToBeMerged.add(blocksSelected)
+      blockGroupsToMerge.add(blocksSelected)
     }
-    blocksToBeMerged
+    // check if all the groups are having only one split, then ignore rebuilding that segment
+    if (blockGroupsToMerge.size() == splits.size()) {
+      new util.ArrayList[util.List[CarbonInputSplit]]()
+    } else {
+      blockGroupsToMerge
+    }
   }
 
 }
