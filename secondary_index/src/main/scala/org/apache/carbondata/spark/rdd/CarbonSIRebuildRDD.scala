@@ -170,7 +170,9 @@ class CarbonSIRebuildRDD[K, V](
       val carbonSparkPartition = theSplit.asInstanceOf[CarbonSparkPartition]
       val carbonLoadModelCopy: CarbonLoadModel = CarbonInternalMergerUtil
         .getCarbonLoadModel(carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable,
-          carbonLoadModel.getLoadMetadataDetails, carbonLoadModel.getFactTimeStamp)
+          carbonLoadModel.getLoadMetadataDetails,
+          carbonLoadModel.getFactTimeStamp,
+          carbonLoadModel.getColumnCompressor)
       val indexTable = carbonLoadModelCopy.getCarbonDataLoadSchema.getCarbonTable
       carbonLoadModelCopy.setTablePath(indexTable.getTablePath)
       carbonLoadModelCopy.setTaskNo(String.valueOf(theSplit.index))

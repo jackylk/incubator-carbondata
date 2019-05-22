@@ -212,7 +212,11 @@ object SecondaryIndexCreator {
         val carbonLoadModelForMergeDataFiles = CarbonInternalMergerUtil
           .getCarbonLoadModel(indexCarbonTable,
             loadMetadataDetails.toList.asJava,
-            System.currentTimeMillis())
+            System.currentTimeMillis(),
+            CarbonInternalScalaUtil
+              .getCompressorForIndexTable(indexCarbonTable.getDatabaseName,
+                indexCarbonTable.getTableName,
+                secondaryIndexModel.carbonTable.getTableName)(sc.sparkSession))
         CarbonInternalMergerUtil
           .mergeDataFilesSISegments(secondaryIndexModel.segmentIdToLoadStartTimeMapping,
             indexCarbonTable,
@@ -283,8 +287,9 @@ object SecondaryIndexCreator {
     copyObj.setLoadMetadataDetails(carbonLoadModel.getLoadMetadataDetails)
     copyObj.setCarbonDataLoadSchema(carbonLoadModel.getCarbonDataLoadSchema)
     copyObj.setColumnCompressor(CarbonInternalScalaUtil
-      .getCompressorForIndexTable(secondaryIndexModel)(secondaryIndexModel
-        .sqlContext.sparkSession))
+      .getCompressorForIndexTable(carbonLoadModel.getDatabaseName,
+        secondaryIndexModel.secondaryIndex.indexTableName,
+        carbonLoadModel.getTableName)(secondaryIndexModel.sqlContext.sparkSession))
     copyObj
   }
 

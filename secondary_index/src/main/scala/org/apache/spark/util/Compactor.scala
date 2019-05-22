@@ -86,7 +86,11 @@ object Compactor {
         val carbonLoadModelForMergeDataFiles = CarbonInternalMergerUtil
           .getCarbonLoadModel(indexCarbonTable,
             loadMetadataDetails.toList.asJava,
-            System.currentTimeMillis())
+            System.currentTimeMillis(),
+            CarbonInternalScalaUtil
+              .getCompressorForIndexTable(indexCarbonTable.getDatabaseName,
+                indexCarbonTable.getTableName,
+                carbonMainTable.getTableName)(sqlContext.sparkSession))
 
         CarbonInternalMergerUtil.mergeDataFilesSISegments(
           secondaryIndexModel.segmentIdToLoadStartTimeMapping,

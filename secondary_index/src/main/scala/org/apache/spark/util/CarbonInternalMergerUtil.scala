@@ -23,9 +23,7 @@ import org.apache.spark.sql.execution.command.{CarbonMergerMapping, CompactionCa
 import org.apache.spark.sql.optimizer.CarbonFilters
 
 import org.apache.carbondata.common.logging.LogServiceFactory
-import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datamap.{DataMapStoreManager, Segment}
-import org.apache.carbondata.core.datastore.compression.CompressorFactory
 import org.apache.carbondata.core.metadata.SegmentFileStore
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatusManager}
@@ -121,19 +119,15 @@ object CarbonInternalMergerUtil {
    * @return
    */
   def getCarbonLoadModel(indexCarbonTable: CarbonTable,
-    loadsToMerge: util.List[LoadMetadataDetails], factTimeStamp: Long): CarbonLoadModel = {
+    loadsToMerge: util.List[LoadMetadataDetails],
+    factTimeStamp: Long,
+    columnCompressor: String): CarbonLoadModel = {
     val carbonLoadModel = new CarbonLoadModel
     carbonLoadModel.setCarbonDataLoadSchema(new CarbonDataLoadSchema(indexCarbonTable))
     carbonLoadModel.setTableName(indexCarbonTable.getTableName)
     carbonLoadModel.setDatabaseName(indexCarbonTable.getDatabaseName)
     carbonLoadModel.setLoadMetadataDetails(loadsToMerge)
     carbonLoadModel.setTablePath(indexCarbonTable.getTablePath)
-    var columnCompressor: String = indexCarbonTable.getTableInfo.getFactTable
-      .getTableProperties
-      .get(CarbonCommonConstants.COMPRESSOR)
-    if (null == columnCompressor) {
-      columnCompressor = CompressorFactory.getInstance.getCompressor.getName
-    }
     carbonLoadModel.setFactTimeStamp(factTimeStamp)
     carbonLoadModel.setColumnCompressor(columnCompressor)
     carbonLoadModel

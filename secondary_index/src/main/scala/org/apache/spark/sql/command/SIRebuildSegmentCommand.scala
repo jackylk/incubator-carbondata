@@ -157,7 +157,9 @@ case class SIRebuildSegmentCommand(
         val carbonLoadModelForMergeDataFiles = CarbonInternalMergerUtil
           .getCarbonLoadModel(indexTable,
             loadMetadataDetails.toList.asJava,
-            System.currentTimeMillis())
+            System.currentTimeMillis(), CarbonInternalScalaUtil
+              .getCompressorForIndexTable(indexTable.getDatabaseName, indexTable.getTableName,
+                mainTable.getTableName)(sparkSession))
 
         val mergeIndexFilesNeeded = CarbonInternalMergerUtil
           .mergeDataFilesSISegments(segmentIdToLoadStartTimeMapping,
