@@ -25,10 +25,11 @@ import org.apache.spark.util.CarbonInternalScalaUtil
 import org.apache.spark.util.si.FileInternalUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
-import org.apache.carbondata.core.metadata.SegmentFileStore
+import org.apache.carbondata.core.metadata.{CarbonTableIdentifier, SegmentFileStore}
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.statusmanager.{SegmentStatus, SegmentStatusManager}
 import org.apache.carbondata.core.util.{CarbonProperties, ThreadLocalSessionInfo}
+import org.apache.carbondata.events.{LoadTableSIPostExecutionEvent, LoadTableSIPreExecutionEvent, OperationContext, OperationListenerBus}
 import org.apache.carbondata.processing.loading.TableProcessingOperations
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 import org.apache.carbondata.processing.util.CarbonLoaderUtil
@@ -66,6 +67,16 @@ object SecondaryIndexCreator {
           secondaryIndexModel.secondaryIndex.indexTableName)(secondaryIndexModel.sqlContext
           .sparkSession).asInstanceOf[CarbonRelation].carbonTable
     }
+
+    val operationContext = new OperationContext
+    val loadTableSIPreExecutionEvent: LoadTableSIPreExecutionEvent =
+      LoadTableSIPreExecutionEvent(secondaryIndexModel.sqlContext.sparkSession,
+        new CarbonTableIdentifier(indexCarbonTable.getDatabaseName,
+          indexCarbonTable.getTableName, ""),
+        secondaryIndexModel.carbonLoadModel,
+        indexCarbonTable.getTablePath)
+    OperationListenerBus.getInstance
+      .fireEvent(loadTableSIPreExecutionEvent, operationContext)
 
     try {
       SegmentStatusManager.deleteLoadsAndUpdateMetadata(indexCarbonTable, false, null)
@@ -217,6 +228,14 @@ object SecondaryIndexCreator {
       if (failedSISegments.nonEmpty) {
         LOGGER.error("Dataload to secondary index creation has failed")
       }
+
+      val loadTableACLPostExecutionEvent: LoadTableSIPostExecutionEvent =
+        LoadTableSIPostExecutionEvent(sc.sparkSession,
+          indexCarbonTable.getCarbonTableIdentifier,
+          secondaryIndexModel.carbonLoadModel)
+      OperationListenerBus.getInstance
+        .fireEvent(loadTableACLPostExecutionEvent, operationContext)
+
       indexCarbonTable
     } catch {
       case ex: Exception =>

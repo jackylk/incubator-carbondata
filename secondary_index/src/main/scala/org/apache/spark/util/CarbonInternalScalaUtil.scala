@@ -23,12 +23,9 @@ import org.apache.spark.sql.hive.CarbonRelation
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.compression.CompressorFactory
-import org.apache.carbondata.core.metadata.CarbonTableIdentifier
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.mutate.CarbonUpdateUtil
 import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatus, SegmentStatusManager}
-import org.apache.carbondata.core.util.CarbonProperties
-import org.apache.carbondata.events.{LoadTableSIPostExecutionEvent, LoadTableSIPreExecutionEvent, OperationContext, OperationListenerBus}
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 import org.apache.carbondata.spark.core.metadata.IndexMetadata
 import org.apache.carbondata.spark.rdd.SecondaryIndexCreator
@@ -320,20 +317,6 @@ object CarbonInternalScalaUtil {
         segmentIdToLoadStartTimeMapping)
     }
 
-    val factTablePath = CarbonProperties.getStorePath +
-                        CarbonCommonConstants.FILE_SEPARATOR +
-                        secondaryIndex.databaseName +
-                        CarbonCommonConstants.FILE_SEPARATOR +
-                        secondaryIndex.indexTableName
-    val operationContext = new OperationContext
-    val loadTableSIPreExecutionEvent: LoadTableSIPreExecutionEvent =
-      LoadTableSIPreExecutionEvent(sparkSession,
-        new CarbonTableIdentifier(carbonTable.getDatabaseName, indexTableName, ""),
-        carbonLoadModel,
-        factTablePath)
-    OperationListenerBus.getInstance
-      .fireEvent(loadTableSIPreExecutionEvent, operationContext)
-
     val segmentToSegmentTimestampMap: java.util.Map[String, String] = new java.util
     .HashMap[String, String]()
     val indexCarbonTable = SecondaryIndexCreator
@@ -343,13 +326,6 @@ object CarbonInternalScalaUtil {
         forceAccessSegment = true,
         isCompactionCall = false,
         isLoadToFailedSISegments)
-
-    val loadTableACLPostExecutionEvent: LoadTableSIPostExecutionEvent =
-      LoadTableSIPostExecutionEvent(sparkSession,
-        indexCarbonTable.getCarbonTableIdentifier,
-        carbonLoadModel)
-    OperationListenerBus.getInstance
-      .fireEvent(loadTableACLPostExecutionEvent, operationContext)
   }
 
 }
