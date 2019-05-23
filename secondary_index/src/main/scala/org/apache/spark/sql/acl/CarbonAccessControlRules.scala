@@ -137,12 +137,6 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
         ifExistsSet: Boolean,
         table: Option[TableIdentifier],
         forceDrop: Boolean) =>
-          val databaseName =
-            if (table.isDefined) {
-              table.get.database.getOrElse(sparkSession.sessionState.catalog.getCurrentDatabase)
-            } else {
-              sparkSession.sessionState.catalog.getCurrentDatabase
-            }
           // here just check for datamap owner , because in case of preagg, only owner can create
           // and in case of MV other user can create, so datamap owner check will be more suitable
           // check for drop
@@ -154,6 +148,7 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
             // if not MV datamap, parent tables will be one for preagg, or bloom etc
             dataMapSchema.getParentTables.asScala.head.getTableName
           }
+          val databaseName = dataMapSchema.getRelationIdentifier.getDatabaseName
           checkPrivilege(c, Set(new PrivObject(
             ObjectType.TABLE,
             databaseName,
@@ -220,12 +215,6 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
         case c@CarbonDataMapRebuildCommand(
         dataMapName: String,
         table: Option[TableIdentifier]) =>
-          val databaseName =
-            if (table.isDefined) {
-              table.get.database.getOrElse(sparkSession.sessionState.catalog.getCurrentDatabase)
-            } else {
-              sparkSession.sessionState.catalog.getCurrentDatabase
-            }
           val dataMapSchema = DataMapStoreManager.getInstance().getDataMapSchema(dataMapName)
           val tableName: String = if (dataMapSchema.getProviderName
             .equalsIgnoreCase(DataMapClassProvider.MV.getShortName)) {
@@ -236,7 +225,7 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
           }
           checkPrivilege(c, Set(new PrivObject(
             ObjectType.TABLE,
-            databaseName,
+            dataMapSchema.getRelationIdentifier.getDatabaseName,
             tableName,
             null,
             Set(PrivType.INSERT_NOGRANT))))
@@ -247,7 +236,7 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
             parentRelationIdentifier =>
               checkPrivilege(c, Set(new PrivObject(
                 ObjectType.TABLE,
-                databaseName,
+                parentRelationIdentifier.getDatabaseName,
                 parentRelationIdentifier.getTableName,
                 null,
                 Set(PrivType.SELECT_NOGRANT))))
@@ -460,7 +449,7 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
         }.foreach { datamap =>
           checkPrivilege(plan, Set(new PrivObject(
             ObjectType.TABLE,
-            CarbonEnv.getDatabaseName(dbNameOp)(sparkSession),
+            datamap.getRelationIdentifier.getDatabaseName,
             datamap.getRelationIdentifier.getTableName,
             null,
             Set(privType))))
