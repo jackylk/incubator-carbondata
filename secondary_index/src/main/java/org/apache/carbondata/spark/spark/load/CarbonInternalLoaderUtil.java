@@ -16,12 +16,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
-import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.locks.ICarbonLock;
 import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier;
 import org.apache.carbondata.core.metadata.SegmentFileStore;
@@ -74,39 +72,6 @@ public class CarbonInternalLoaderUtil {
       }
     }
     return segmentToLoadStartTimeMap;
-  }
-
-  /**
-   * Append default File system scheme if not added to the filePath
-   * This required for
-   *
-   * @param filePath
-   */
-  public static String checkAndAppendFileSystemURIScheme(String filePath) {
-    String currentPath = filePath;
-    if (checkIfPrefixExists(filePath)) {
-      return currentPath;
-    }
-    if (!filePath.startsWith("/")) {
-      filePath = "/" + filePath;
-    }
-    currentPath = filePath;
-    String defaultFsUrl = FileFactory.getConfiguration().get(CarbonCommonConstants.FS_DEFAULT_FS);
-    if (defaultFsUrl == null) {
-      return currentPath;
-    }
-    return defaultFsUrl + currentPath;
-  }
-
-  private static boolean checkIfPrefixExists(String path) {
-    if (null == path) {
-      return false;
-    }
-    final String lowerPath = path.toLowerCase(Locale.getDefault());
-    return lowerPath.startsWith(CarbonCommonConstants.HDFSURL_PREFIX) || lowerPath
-        .startsWith(CarbonCommonConstants.VIEWFSURL_PREFIX) || lowerPath
-        .startsWith(CarbonCommonConstants.LOCAL_FILE_PREFIX) || lowerPath
-        .startsWith(CarbonCommonConstants.ALLUXIOURL_PREFIX);
   }
 
   /**

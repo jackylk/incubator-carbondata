@@ -21,13 +21,12 @@ import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
-import org.apache.carbondata.core.datamap.Segment
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.metadata.{CarbonTableIdentifier, SegmentFileStore}
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.mutate.CarbonUpdateUtil
 import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatus}
-import org.apache.carbondata.core.util.CarbonProperties
+import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
 import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.processing.util.CarbonLoaderUtil
 import org.apache.carbondata.spark.core.CarbonInternalCommonConstants
@@ -60,7 +59,7 @@ object FileInternalUtil {
       .getProperty(CarbonInternalCommonConstants.CARBON_UPDATE_SYNC_FOLDER,
         CarbonInternalCommonConstants.CARBON_UPDATE_SYNC_FOLDER_DEFAULT).trim
     var timestampFile = configuredMdtPath + "/" + CarbonCommonConstants.SCHEMAS_MODIFIED_TIME_FILE
-    timestampFile = CarbonInternalLoaderUtil.checkAndAppendFileSystemURIScheme(timestampFile)
+    timestampFile = CarbonUtil.checkAndAppendFileSystemURIScheme(timestampFile)
     val timestampFileType = FileFactory.getFileType(timestampFile)
     (timestampFile, timestampFileType)
   }
