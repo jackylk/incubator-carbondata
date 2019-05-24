@@ -38,6 +38,7 @@ import org.apache.carbondata.core.metadata.schema.table.RelationIdentifier;
 import org.apache.carbondata.core.scan.filter.resolver.FilterResolverIntf;
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager;
 import org.apache.carbondata.core.util.BlockletDataMapUtil;
+import org.apache.carbondata.core.util.CarbonProperties;
 import org.apache.carbondata.core.util.ObjectSerializationUtil;
 import org.apache.carbondata.core.util.path.CarbonTablePath;
 
@@ -182,7 +183,9 @@ public class DataMapUtil {
    */
   public static void loadDataMaps(CarbonTable carbonTable, DataMapExprWrapper dataMapExprWrapper,
       List<Segment> validSegments, List<PartitionSpec> partitionsToPrune) throws IOException {
-    if (BlockletDataMapUtil.loadDataMapsParallel(carbonTable)) {
+    if (!CarbonProperties.getInstance()
+        .isDistributedPruningEnabled(carbonTable.getDatabaseName(), carbonTable.getTableName())
+        && BlockletDataMapUtil.loadDataMapsParallel(carbonTable)) {
       String clsName = "org.apache.carbondata.spark.rdd.SparkBlockletDataMapLoaderJob";
       DataMapJob dataMapJob = (DataMapJob) createDataMapJob(clsName);
       String className = "org.apache.carbondata.hadoop.DistributableBlockletDataMapLoader";
