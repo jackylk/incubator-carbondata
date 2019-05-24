@@ -72,7 +72,7 @@
           <systemProperties>
             <java.awt.headless>true</java.awt.headless>
           </systemProperties>
-          <!-- testFailureIgnore>false</testFailureIgnore -->
+          <testFailureIgnore>true</testFailureIgnore>
           <failIfNoTests>false</failIfNoTests>
         </configuration>
       </plugin>
@@ -135,7 +135,7 @@
         <configuration>
           <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
           <junitxml>.</junitxml>
-          <testFailureIgnore>false</testFailureIgnore>
+          <testFailureIgnore>true</testFailureIgnore>
           <filereports>CarbonTestSuite.txt</filereports>
           <argLine>-ea -Xmx3g -XX:MaxPermSize=512m -XX:ReservedCodeCacheSize=512m
           </argLine>
