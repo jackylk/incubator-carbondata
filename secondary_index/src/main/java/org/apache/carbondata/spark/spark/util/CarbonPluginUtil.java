@@ -46,8 +46,6 @@ public final class CarbonPluginUtil {
     // get index table list from fact table
     for (CarbonTable indexTable : indexCarbonTables) {
       if (null != indexTable) {
-        LoadMetadataDetails[] loadMetadataDetails =
-            SegmentStatusManager.readLoadMetadata(indexTable.getMetadataPath());
         // Delete marked loads
         try {
           SegmentStatusManager.deleteLoadsAndUpdateMetadata(indexTable, isForceDeletion, null);
