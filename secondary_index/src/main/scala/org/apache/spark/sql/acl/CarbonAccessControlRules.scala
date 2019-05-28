@@ -32,16 +32,19 @@ import org.apache.spark.sql.hive.acl.{HiveACLInterface, ObjectType, PrivObject, 
 import org.apache.spark.sql.hive.execution.command.CarbonDropDatabaseCommand
 import org.apache.spark.util.CarbonInternalScalaUtil
 
-import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
+import org.apache.carbondata.common.exceptions.sql.{MalformedCarbonCommandException, NoSuchDataMapException}
+import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.datamap.DataMapStoreManager
 import org.apache.carbondata.core.metadata.schema.datamap.DataMapClassProvider
-import org.apache.carbondata.core.metadata.schema.table.TableInfo
+import org.apache.carbondata.core.metadata.schema.table.{DataMapSchema, TableInfo}
 import org.apache.carbondata.processing.merger.CompactionType
 
 private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
     hCatalog: SessionCatalog,
     aclInterface: HiveACLInterface)
   extends Rule[LogicalPlan] {
+
+  private val LOGGER = LogServiceFactory.getLogService(classOf[CarbonAccessControlRules].getName)
 
   override def apply(plan: LogicalPlan): LogicalPlan = {
 
@@ -137,24 +140,43 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
         ifExistsSet: Boolean,
         table: Option[TableIdentifier],
         forceDrop: Boolean) =>
+          var tableName = ""
+          var databaseName = ""
           // here just check for datamap owner , because in case of preagg, only owner can create
           // and in case of MV other user can create, so datamap owner check will be more suitable
           // check for drop
-          val dataMapSchema = DataMapStoreManager.getInstance().getDataMapSchema(dataMapName)
-          val tableName: String = if (dataMapSchema.getProviderName
-            .equalsIgnoreCase(DataMapClassProvider.MV.getShortName)) {
-            dataMapName + "_table"
-          } else {
-            // if not MV datamap, parent tables will be one for preagg, or bloom etc
-            dataMapSchema.getParentTables.asScala.head.getTableName
+          var dataMapSchema: DataMapSchema = null
+          try {
+            // in case of datamaps like MV, lucene, bloom datamap, get the details from schema
+            dataMapSchema = DataMapStoreManager.getInstance().getDataMapSchema(dataMapName)
+            tableName = dataMapName + "_table"
+            databaseName = dataMapSchema.getRelationIdentifier.getDatabaseName
+          } catch {
+            case ex: NoSuchDataMapException =>
+              // in case of preagg , schema wont be present, so get the table from identifier if
+              // defined, if not throw back the exception
+              if (table.isDefined) {
+                tableName = table.get.table
+                databaseName = CarbonEnv.getDatabaseName(table.get.database)(sparkSession)
+              } else {
+                if (!ifExistsSet) {
+                  throw ex
+                } else {
+                  LOGGER
+                    .warn(s"Datamap $dataMapName does not exists, Ignoring the ACL check for drop" +
+                          s" datamap")
+                  return plan
+                }
+              }
           }
-          val databaseName = dataMapSchema.getRelationIdentifier.getDatabaseName
+
           checkPrivilege(c, Set(new PrivObject(
             ObjectType.TABLE,
             databaseName,
             tableName,
             null,
-            Set(PrivType.OWNER_PRIV))))
+            Set(PrivType.OWNER_PRIV))),
+            null, ifExistsSet)
 
         case c@DropTableCommand(identifier, ifExists, _, _) =>
           checkPrivilegeRecursively(c, Some(
