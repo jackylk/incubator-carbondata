@@ -103,7 +103,7 @@ public class DistributableDataMapFormat extends FileInputFormat<Void, ExtendedBl
     this.dataMapToClear = dataMapToClear;
   }
 
-  DistributableDataMapFormat(CarbonTable table, FilterResolverIntf filterResolverIntf,
+  public DistributableDataMapFormat(CarbonTable table, FilterResolverIntf filterResolverIntf,
       List<Segment> validSegments, List<String> invalidSegments, List<PartitionSpec> partitions,
       boolean isJobToClearDataMaps, DataMapLevel dataMapLevel, boolean isFallbackJob)
       throws IOException {

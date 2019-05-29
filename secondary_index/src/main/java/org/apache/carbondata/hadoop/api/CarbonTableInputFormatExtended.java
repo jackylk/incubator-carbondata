@@ -23,9 +23,11 @@ import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datamap.DataMapChooser;
 import org.apache.carbondata.core.datamap.DataMapStoreManager;
 import org.apache.carbondata.core.datamap.DataMapUtil;
+import org.apache.carbondata.core.datamap.DistributableDataMapFormat;
 import org.apache.carbondata.core.datamap.Segment;
 import org.apache.carbondata.core.datamap.TableDataMap;
 import org.apache.carbondata.core.datamap.dev.expr.DataMapExprWrapper;
+import org.apache.carbondata.core.indexstore.PartitionSpec;
 import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.readcommitter.ReadCommittedScope;
@@ -35,6 +37,7 @@ import org.apache.carbondata.core.statusmanager.LoadMetadataDetails;
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager;
 import org.apache.carbondata.core.statusmanager.SegmentUpdateStatusManager;
 import org.apache.carbondata.core.util.CarbonProperties;
+import org.apache.carbondata.indexserver.IndexServer;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -125,14 +128,25 @@ public class CarbonTableInputFormatExtended {
       LoadMetadataDetails[] loadMetadataDetails = readCommittedScope.getSegmentList();
       SegmentUpdateStatusManager updateStatusManager =
           new SegmentUpdateStatusManager(carbonTable, loadMetadataDetails);
-      DataMapStoreManager.getInstance()
-          .refreshSegmentCacheIfRequired(carbonTable, updateStatusManager, segmentIds);
-      List<Segment> setSegID =
-          isSegmentValidAfterFilter(job.getConfiguration(), carbonTable, filterInterface,
-              segmentIds);
+      List<Segment> setSegID = new ArrayList<>();
+      if (CarbonProperties.getInstance()
+          .isDistributedPruningEnabled(carbonTable.getDatabaseName(), carbonTable.getTableName())) {
+        List<String> segmentsToBeRefreshed = DataMapStoreManager.getInstance()
+            .getSegmentsToBeRefreshed(carbonTable, updateStatusManager, validSegments);
+        DistributableDataMapFormat dataMapFormat =
+            new DistributableDataMapFormat(carbonTable, filterInterface, segmentIds,
+                segmentsToBeRefreshed, null, false, null, false);
+        setSegID.addAll(IndexServer.getClient().getPrunedSegments(dataMapFormat).getSegments());
+      } else {
+        DataMapStoreManager.getInstance()
+            .refreshSegmentCacheIfRequired(carbonTable, updateStatusManager, segmentIds);
+        setSegID.addAll(
+            isSegmentValidAfterFilter(job.getConfiguration(), carbonTable, filterInterface,
+                segmentIds));
+      }
       filteredSegments.addAll(setSegID);
     } else {
-      filteredSegments = segmentIds;
+      filteredSegments.addAll(segmentIds);
     }
     return filteredSegments;
   }

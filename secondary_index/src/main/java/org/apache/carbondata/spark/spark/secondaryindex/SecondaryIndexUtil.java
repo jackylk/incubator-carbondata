@@ -203,17 +203,11 @@ public class SecondaryIndexUtil {
           SegmentStatusManager.readLoadMetadata(indexTable.getMetadataPath());
 
       if (null != loadFolderDetailsArray && loadFolderDetailsArray.length > 0) {
-        List<String> invalidLoads = new ArrayList<>(CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);
         try {
           SegmentStatusManager.writeLoadDetailsIntoFile(
               CarbonTablePath.getTableStatusFilePath(indexTable.getTablePath()),
               updateTimeStampForIndexTable(loadFolderDetailsArrayMainTable,
                   loadFolderDetailsArray));
-          if (invalidLoads.size() > 0) {
-            LOG.info("Delete segment by Id is successfull for $dbName.$tableName.");
-          } else {
-            LOG.error("Delete segment by Id is failed. Invalid ID is: " + invalidLoads.toString());
-          }
         } catch (Exception ex) {
           LOG.error(ex.getMessage());
         }
