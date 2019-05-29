@@ -40,6 +40,7 @@ import org.apache.carbondata.sdk.file.CarbonWriter;
 import org.apache.carbondata.sdk.file.CarbonWriterBuilder;
 import org.apache.carbondata.sdk.file.Schema;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
@@ -125,6 +126,20 @@ public class CarbonReplicationEndpoint extends BaseReplicationEndpoint {
     this.exec.allowCoreThreadTimeOut(true);
   }
 
+  @VisibleForTesting
+  public void init(Configuration conf) throws IOException {
+    this.conf = conf;
+    this.replicationRpcLimit =
+        (int) (0.95 * conf.getLong(RpcServer.MAX_REQUEST_SIZE, RpcServer.DEFAULT_MAX_REQUEST_SIZE));
+    // Initialize the executor
+    this.maxThreads = conf.getInt(HConstants.REPLICATION_SOURCE_MAXTHREADS_KEY,
+        HConstants.REPLICATION_SOURCE_MAXTHREADS_DEFAULT);
+    this.appendBatch = conf.getBoolean(CARBON_APPEND_BATCH, true);
+    this.exec = new ThreadPoolExecutor(maxThreads, maxThreads, 60, TimeUnit.SECONDS,
+        new LinkedBlockingQueue<>());
+    this.exec.allowCoreThreadTimeOut(true);
+  }
+
   @Override public boolean replicate(ReplicateContext replicateContext) {
     CompletionService<Integer> pool = new ExecutorCompletionService<>(this.exec);
     try {
@@ -165,8 +180,7 @@ public class CarbonReplicationEndpoint extends BaseReplicationEndpoint {
       // Skip those table entries where CARBON_SCHEMA doesn't exist in table descriptor
       TableName tableName = entry.getKey().getTableName();
       try {
-        if (tableDescriptors.get(tableName).getValue(CarbonMasterObserver.CARBON_SCHEMA_DESC)
-            == null) {
+        if (getCarbonSchemaStr(tableName) == null) {
           continue;
         }
       } catch (IOException io) {
@@ -179,6 +193,10 @@ public class CarbonReplicationEndpoint extends BaseReplicationEndpoint {
           .add(entry);
     }
     return new ArrayList<>(regionEntries.values());
+  }
+
+  public String getCarbonSchemaStr(TableName tableName) throws IOException {
+    return tableDescriptors.get(tableName).getValue(CarbonMasterObserver.CARBON_SCHEMA_DESC);
   }
 
   private long parallelReplicate(CompletionService<Integer> pool, ReplicateContext replicateContext,
@@ -297,8 +315,7 @@ public class CarbonReplicationEndpoint extends BaseReplicationEndpoint {
     // Create carbon writer and cache it
     if (hbaseMeta == null) {
       // Get the schema from table desc and convert it into JSON format
-      String schemaDesc =
-          tableDescriptors.get(tableName).getValue(CarbonMasterObserver.CARBON_SCHEMA_DESC);
+      String schemaDesc = getCarbonSchemaStr(tableName);
       tblproperties = new HashMap<>();
       tableSchema = CarbonSchemaWriter.convertToSchemaFromJSON(schemaDesc, tblproperties);
       hbaseMeta = new CarbonHbaseMeta(tableSchema, tblproperties);

@@ -424,9 +424,8 @@ class CarbonMergerRDD[K, V](
       // We take the minimum of average number of tasks created during load time and the number
       // of tasks we get based on size for creating ranges.
       val numOfPartitions = Math
-        .max(CarbonCommonConstants.NUM_CORES_DEFAULT_VAL.toInt,
-          Math.min(totalTaskCount, DataLoadProcessBuilderOnSpark
-            .getNumPatitionsBasedOnSize(totalSize, carbonTable, carbonLoadModel, true)))
+        .max(CarbonCommonConstants.NUM_CORES_DEFAULT_VAL.toInt, DataLoadProcessBuilderOnSpark
+          .getNumPatitionsBasedOnSize(totalSize, carbonTable, carbonLoadModel, true))
       LOGGER.info(s"Compacting on range column: ${rangeColumn.map(_.getColName).mkString(",")}")
       allRanges = getRangesFromRDD(rangeColumn,
         carbonTable,

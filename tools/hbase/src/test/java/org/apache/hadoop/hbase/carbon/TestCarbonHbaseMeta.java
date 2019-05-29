@@ -12,7 +12,7 @@ import org.apache.hadoop.hbase.coprocessor.CarbonHbaseMeta;
 public class TestCarbonHbaseMeta {
 
 
-  static String schemaStr = "{\"ID\":\"string\", \"name\":\"string\",\"salary\":\"double\", \"timestamp\":\"timestamp\",\"tblproperties\": {\"sort_columns\":\"ID\", \"hbase_mapping\":\"key=ID,cf1:name=name,timestamp=timestamp,cf1:salary=salary\"}}";
+  static String schemaStr = "{\"ID\":\"string\", \"name\":\"string\",\"salary\":\"double\", \"timestamp\":\"timestamp\",\"deletestatus\":\"long\",\"tblproperties\": {\"sort_columns\":\"ID\", \"hbase_mapping\":\"key=ID,cf1:name=name,timestamp=timestamp,cf1:salary=salary,deletestatus=deletestatus\"}}";
 
   public static void main(String[] strings) throws IOException {
 
