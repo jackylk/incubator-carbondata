@@ -18,9 +18,9 @@ package org.apache.carbondata.indexserver
 
 import scala.collection.JavaConverters._
 
+import org.apache.spark.{Partition, TaskContext}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.hive.DistributionUtil
-import org.apache.spark.{Partition, TaskContext}
 
 import org.apache.carbondata.core.datamap.DataMapStoreManager
 import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMapFactory
