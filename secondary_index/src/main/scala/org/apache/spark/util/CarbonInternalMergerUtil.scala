@@ -36,6 +36,7 @@ import org.apache.carbondata.processing.util.CarbonLoaderUtil
 import org.apache.carbondata.spark.MergeResultImpl
 import org.apache.carbondata.spark.core.CarbonInternalCommonConstants
 import org.apache.carbondata.spark.rdd.CarbonSIRebuildRDD
+import org.apache.carbondata.spark.spark.util.CarbonPluginUtil
 
 
 object CarbonInternalMergerUtil {
@@ -169,26 +170,25 @@ object CarbonInternalMergerUtil {
     val mergedSegments: util.Set[LoadMetadataDetails] = new util.HashSet[LoadMetadataDetails]()
     var rebuiltSegments: Set[String] = Set[String]()
 
-    val mergeStatus =
-      new CarbonSIRebuildRDD(
-        sc.sparkSession,
-        new MergeResultImpl(),
-        carbonLoadModel,
-        carbonMergerMapping
-      ).collect
-    if (null != mergeStatus && mergeStatus.length == 0) {
-      finalMergeStatus = true
-    } else {
-      finalMergeStatus = mergeStatus.forall(_._1._2)
-      rebuiltSegments = mergeStatus.map(_._2).toSet
-      compactionCallableModel.loadsToMerge.asScala.foreach(metadataDetails => {
-        if (rebuiltSegments.contains(metadataDetails.getLoadName)) {
-          mergedSegments.add(metadataDetails)
-        }
-      })
-    }
-
     try {
+      val mergeStatus =
+        new CarbonSIRebuildRDD(
+          sc.sparkSession,
+          new MergeResultImpl(),
+          carbonLoadModel,
+          carbonMergerMapping
+        ).collect
+      if (null != mergeStatus && mergeStatus.length == 0) {
+        finalMergeStatus = true
+      } else {
+        finalMergeStatus = mergeStatus.forall(_._1._2)
+        rebuiltSegments = mergeStatus.map(_._2).toSet
+        compactionCallableModel.loadsToMerge.asScala.foreach(metadataDetails => {
+          if (rebuiltSegments.contains(metadataDetails.getLoadName)) {
+            mergedSegments.add(metadataDetails)
+          }
+        })
+      }
       if (finalMergeStatus) {
         if (null != mergeStatus && mergeStatus.length != 0) {
           mergeIndexFilesNeeded = true

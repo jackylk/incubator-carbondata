@@ -92,7 +92,7 @@ object FileInternalUtil {
         loadMetadataDetail
           .setSegmentFile(SegmentFileStore
                             .genSegmentFileName(segmentId,
-                              segmentIdToLoadStartTimeMapping.get(segmentId).toString) +
+                              segmentIdToLoadStartTimeMapping.get(segmentId).get.toString) +
                           CarbonTablePath.SEGMENT_EXT)
       }
       CarbonLoaderUtil.addDataIndexSizeIntoMetaEntry(loadMetadataDetail, segmentId, carbonTable)
