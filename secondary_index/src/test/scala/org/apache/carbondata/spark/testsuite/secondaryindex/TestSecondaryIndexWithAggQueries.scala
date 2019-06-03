@@ -133,12 +133,12 @@ class TestSecondaryIndexWithAggQueries extends QueryTest with BeforeAndAfterAll 
     sql(
       "CREATE DATAMAP dm_test_pre_agg1 ON TABLE test_pre_agg USING 'bloomfilter' DMPROPERTIES " +
       "('INDEX_COLUMNS' = 'address', 'BLOOM_SIZE'='640000', 'BLOOM_FPP'='0.00001')")
-    sql("create datamap datamap_test_pre_agg  ON TABLE test_pre_agg USING 'preaggregate' as select " +
-        "id,count(id) from test_pre_agg group by id")
+    sql(
+      "create index index5 on table test_pre_agg(address) as 'org.apache.carbondata" +
+      ".format' tblproperties('table_blocksize' = '256')")
     val exceptionMessage = intercept[ErrorMessage] {
-      sql(
-        "create datamap dm_preag_bloom_cust_id on table test_pre_agg_datamap_test_pre_agg using " +
-        "'bloomfilter' dmproperties('index_columns'='test_pre_agg_id')")
+      sql("create datamap datamap_test_pre_agg  ON TABLE index5 USING 'preaggregate' as select " +
+          "name from index5 group by name")
     }.getMessage
     assert(exceptionMessage.contains("Datamap creation on Pre-aggregate table or Secondary Index table is not supported"))
   }

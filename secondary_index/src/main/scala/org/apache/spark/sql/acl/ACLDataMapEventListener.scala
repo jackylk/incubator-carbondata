@@ -50,7 +50,7 @@ object ACLDataMapEventListener {
             carbonTableIdentifier = new CarbonTableIdentifier(dbName, tableIdentifier.table, "")
             val carbonTable = CarbonEnv
               .getCarbonTable(Some(dbName), tableIdentifier.table)(sparkSession)
-            if (carbonTable.isChildDataMap || CarbonInternalScalaUtil.isIndexTable(carbonTable)) {
+            if (CarbonInternalScalaUtil.isIndexTable(carbonTable)) {
               throw new ErrorMessage(
                 "Datamap creation on Pre-aggregate table or Secondary Index table is not supported")
             }

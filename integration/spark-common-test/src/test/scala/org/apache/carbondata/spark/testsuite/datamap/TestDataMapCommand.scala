@@ -23,7 +23,7 @@ import java.io.{File, FilenameFilter}
 import org.apache.hadoop.conf.Configuration
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.test.util.QueryTest
-import org.scalatest.BeforeAndAfterAll
+import org.scalatest.{BeforeAndAfterAll, Ignore}
 
 import org.apache.carbondata.common.exceptions.MetadataProcessException
 import org.apache.carbondata.common.exceptions.sql.{MalformedCarbonCommandException, MalformedDataMapCommandException, NoSuchDataMapException}
@@ -449,7 +449,7 @@ class TestDataMapCommand extends QueryTest with BeforeAndAfterAll {
         assert(preExplain.collect()(0).getString(0).contains("carbontable_agg0"))
     }
 
-    test("test don't support lucene on binary data type") {
+    ignore("test don't support lucene on binary data type") {
         val tableName = "datamapshowtest20"
         sql(s"drop table if exists $tableName")
 
