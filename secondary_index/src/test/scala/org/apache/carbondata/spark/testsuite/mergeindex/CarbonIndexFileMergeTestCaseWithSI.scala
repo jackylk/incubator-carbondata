@@ -32,6 +32,8 @@ class CarbonIndexFileMergeTestCaseWithSI
   override protected def beforeAll(): Unit = {
     val n = 150000
     createFile(file2, n * 4, n)
+    CarbonProperties.getInstance()
+      .addProperty(CarbonInternalCommonConstants.CARBON_SI_SEGMENT_MERGE, "false")
     sql("DROP INDEX IF EXISTS nonindexmerge_index on nonindexmerge")
     sql("DROP INDEX IF EXISTS nonindexmerge_index1 on nonindexmerge")
     sql("DROP INDEX IF EXISTS nonindexmerge_index2 on nonindexmerge")
@@ -54,7 +56,8 @@ class CarbonIndexFileMergeTestCaseWithSI
       .addProperty(CarbonCommonConstants.CARBON_MERGE_INDEX_IN_SEGMENT, "true")
       .addProperty(CarbonCommonConstants.COMPACTION_SEGMENT_LEVEL_THRESHOLD,
         CarbonCommonConstants.DEFAULT_SEGMENT_LEVEL_THRESHOLD)
-      .addProperty(CarbonInternalCommonConstants.CARBON_SI_SEGMENT_MERGE, "false")
+      .addProperty(CarbonInternalCommonConstants.CARBON_SI_SEGMENT_MERGE,
+        CarbonInternalCommonConstants.DEFAULT_CARBON_SI_SEGMENT_MERGE)
   }
 
   test("Verify correctness of index merge") {
