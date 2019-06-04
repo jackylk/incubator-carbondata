@@ -118,17 +118,18 @@ private[sql] case class CarbonProjectForUpdateCommand(
       else {
         throw new Exception("Table is locked for updation. Please try after some time")
       }
-
+      val tableIdentifier = Seq(carbonTable.getDatabaseName, tableName)
       val executionErrors = new ExecutionErrors(FailureCauses.NONE, "")
       if (updateLock.lockWithRetries(3, 3)) {
         if (compactionLock.lockWithRetries(3, 3)) {
           // Get RDD.
           dataSet = if (isPersistEnabled) {
-            Dataset.ofRows(sparkSession, plan).persist(StorageLevel.fromString(
-              CarbonProperties.getInstance.getUpdateDatasetStorageLevel()))
+            Dataset.ofRows(sparkSession, InternalProject(tableIdentifier, plan))
+              .persist(StorageLevel.fromString(
+                CarbonProperties.getInstance.getUpdateDatasetStorageLevel()))
           }
           else {
-            Dataset.ofRows(sparkSession, plan)
+            Dataset.ofRows(sparkSession, InternalProject(tableIdentifier, plan))
           }
 
           // handle the clean up of IUD.
