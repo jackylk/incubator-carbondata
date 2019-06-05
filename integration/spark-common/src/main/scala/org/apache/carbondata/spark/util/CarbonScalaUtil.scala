@@ -17,14 +17,13 @@
 
 package org.apache.carbondata.spark.util
 
-import java.{lang, util}
 import java.io.IOException
 import java.lang.ref.Reference
 import java.text.SimpleDateFormat
 import java.util.Date
 
-import scala.collection.mutable
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.util.Try
 
 import com.univocity.parsers.common.TextParsingException
@@ -51,8 +50,8 @@ import org.apache.carbondata.core.metadata.datatype.{DataTypes => CarbonDataType
 import org.apache.carbondata.core.metadata.encoder.Encoding
 import org.apache.carbondata.core.metadata.schema.table.{CarbonTable, DataMapSchema}
 import org.apache.carbondata.core.metadata.schema.table.column.{CarbonColumn, ColumnSchema}
-import org.apache.carbondata.core.mutate.data.BlockMappingVO
 import org.apache.carbondata.core.mutate.{CarbonUpdateUtil, SegmentUpdateDetails}
+import org.apache.carbondata.core.mutate.data.BlockMappingVO
 import org.apache.carbondata.core.statusmanager.SegmentStatus
 import org.apache.carbondata.core.util.DataTypeUtil
 import org.apache.carbondata.processing.exception.DataLoadingException
@@ -67,7 +66,7 @@ object CarbonScalaUtil {
 
   def getString(value: Any,
       serializationNullFormat: String,
-      complexDelimiters: util.ArrayList[String],
+      complexDelimiters: java.util.ArrayList[String],
       timeStampFormat: SimpleDateFormat,
       dateFormat: SimpleDateFormat,
       isVarcharType: Boolean = false,
@@ -432,7 +431,7 @@ object CarbonScalaUtil {
    */
   def generateUniqueNumber(taskId: Int,
       segmentId: String,
-      partitionNumber: lang.Long): String = {
+      partitionNumber: java.lang.Long): String = {
     String.valueOf(Math.pow(10, 2).toInt + segmentId.toInt) +
     String.valueOf(Math.pow(10, 5).toInt + taskId) +
     String.valueOf(partitionNumber + Math.pow(10, 5).toInt)
@@ -459,9 +458,9 @@ object CarbonScalaUtil {
       val referentField = classOf[Reference[Thread]].getDeclaredField("referent")
       referentField.setAccessible(true)
       var i = 0
-      while (i < lang.reflect.Array.getLength(table)) {
+      while (i < java.lang.reflect.Array.getLength(table)) {
         // Each entry in the table array of ThreadLocalMap is an Entry object
-        val entry = lang.reflect.Array.get(table, i)
+        val entry = java.lang.reflect.Array.get(table, i)
         if (entry != null) {
           // Get a reference to the thread local object and remove it from the table
           val threadLocal = referentField.get(entry).asInstanceOf[ThreadLocal[_]]
@@ -720,8 +719,8 @@ object CarbonScalaUtil {
       timestamp: String,
       executorErrors: ExecutionErrors,
       isUpdateOperation: Boolean): Seq[Segment] = {
-    val blockUpdateDetailsList = new util.ArrayList[SegmentUpdateDetails]()
-    val segmentDetails = new util.HashSet[Segment]()
+    val blockUpdateDetailsList = new java.util.ArrayList[SegmentUpdateDetails]()
+    val segmentDetails = new java.util.HashSet[Segment]()
     res.foreach(resultOfSeg => resultOfSeg.foreach(
       resultOfBlock => {
         if (resultOfBlock._1 == SegmentStatus.SUCCESS) {
@@ -765,7 +764,8 @@ object CarbonScalaUtil {
             !isUpdateOperation,
             listOfSegmentToBeMarkedDeleted)
     ) {
-      LOGGER.info(s"Delete data operation is successful for ${ carbonTable.getDatabaseName }.${ carbonTable.getTableName }")
+      LOGGER.info(s"Delete data operation is successful for " +
+                  s"${ carbonTable.getDatabaseName }.${ carbonTable.getTableName }")
     } else {
       // In case of failure , clean all related delete delta files
       CarbonUpdateUtil.cleanStaleDeltaFiles(carbonTable, timestamp)

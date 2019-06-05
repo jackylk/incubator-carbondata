@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.hbase.coprocessor;
 
 import org.apache.carbondata.core.metadata.datatype.DataType;
@@ -7,6 +24,12 @@ import org.apache.carbondata.sdk.file.Field;
 import org.apache.hadoop.hbase.util.Bytes;
 
 public class HbaseDataTypeConverter implements DataTypeConverter {
+
+  private static SimpleDateFormat dateFormat =
+      new SimpleDateFormat(CarbonCommonConstants.CARBON_DATE_DEFAULT_FORMAT);
+
+  private static SimpleDateFormat timeFormat =
+      new SimpleDateFormat(CarbonCommonConstants.CARBON_TIMESTAMP_DEFAULT_FORMAT);
 
   @Override
   public void convertRowKey(byte[] key, int offset, int len, int[] mapping, Field[] fields,
@@ -43,10 +66,12 @@ public class HbaseDataTypeConverter implements DataTypeConverter {
           row[mapping[i]] = String.valueOf(Bytes.toBigDecimal(key, offset, decLen));
           offset += decLen;
         } else if (id == DataTypes.DATE.getId()) {
-          row[mapping[i]] = String.valueOf(Bytes.toInt(key, offset, 4));
+          row[mapping[i]] = dateFormat.format(new Date(Bytes.toInt(key, offset, 4) *
+              org.apache.carbondata.core.keygenerator.directdictionary.timestamp
+                  .DateDirectDictionaryGenerator.MILLIS_PER_DAY));
           offset += 4;
         } else if (id == DataTypes.TIMESTAMP.getId()) {
-          row[mapping[i]] = String.valueOf(Bytes.toLong(key, offset, 8));
+          row[mapping[i]] = timeFormat.format(new Date(Bytes.toLong(key, offset, 8)));
           offset += 8;
         } else if (id == DataTypes.VARCHAR.getId()) {
           int strLen = Bytes.toInt(key, offset, 4);
@@ -66,7 +91,8 @@ public class HbaseDataTypeConverter implements DataTypeConverter {
     }
   }
 
-  @Override public String convert(byte[] value, int offset, int len, DataType dataType) {
+  @Override
+  public String convert(byte[] value, int offset, int len, DataType dataType) {
     int id = dataType.getId();
     if (id == DataTypes.BOOLEAN.getId()) {
       return String.valueOf(value[offset] != (byte) 0);
@@ -83,9 +109,11 @@ public class HbaseDataTypeConverter implements DataTypeConverter {
     } else if (DataTypes.isDecimal(dataType)) {
       return String.valueOf(Bytes.toBigDecimal(value, offset, len));
     } else if (id == DataTypes.DATE.getId()) {
-      return String.valueOf(Bytes.toInt(value, offset, len));
+      return dateFormat.format(new Date(Bytes.toInt(value, offset, len) *
+          org.apache.carbondata.core.keygenerator.directdictionary.timestamp
+              .DateDirectDictionaryGenerator.MILLIS_PER_DAY));
     } else if (id == DataTypes.TIMESTAMP.getId()) {
-      return String.valueOf(Bytes.toLong(value, offset, len));
+      return timeFormat.format(new Date(Bytes.toLong(value, offset, len)));
     } else if (id == DataTypes.VARCHAR.getId()) {
       return String.valueOf(Bytes.toString(value, offset, len));
     } else if (id == DataTypes.FLOAT.getId()) {

@@ -318,7 +318,8 @@ class CarbonMergerRDD[K, V](
       // If the table is not a partition table then only we go for range column compaction flow
       if (carbonTable.getRangeColumn != null) {
         rangeColumn = Array(carbonTable.getRangeColumn)
-      } else if (carbonTable.getTableInfo.getFactTable.getListOfColumns.asScala.exists(_.isPrimaryKeyColumn)) {
+      } else if (carbonTable.getTableInfo.getFactTable.
+        getListOfColumns.asScala.exists(_.isPrimaryKeyColumn)) {
         rangeColumn = carbonTable.getAllDimensions.asScala.
           filter(_.getColumnSchema.isPrimaryKeyColumn).toArray
       }
@@ -683,7 +684,8 @@ class CarbonMergerRDD[K, V](
       partitionNames = null,
       splits = allSplits)
     if (rangeColumn.length > 1) {
-      getRangesOfPrimaryKeyFromRDD(scanRdd, carbonTable, Math.max(defaultParallelism, allSplits.size()))
+      getRangesOfPrimaryKeyFromRDD(
+        scanRdd, carbonTable, Math.max(defaultParallelism, allSplits.size()))
     } else {
       val objectOrdering: Ordering[Object] = createOrderingForColumn(rangeColumn(0))
       val sparkDataType = Util.convertCarbonToSparkDataType(dataType(0))

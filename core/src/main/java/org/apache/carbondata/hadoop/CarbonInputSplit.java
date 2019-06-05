@@ -37,9 +37,9 @@ import org.apache.carbondata.core.datastore.block.BlockletInfos;
 import org.apache.carbondata.core.datastore.block.Distributable;
 import org.apache.carbondata.core.datastore.block.TableBlockInfo;
 import org.apache.carbondata.core.indexstore.BlockletDetailInfo;
+import org.apache.carbondata.core.indexstore.RangeColumnSplitMerger;
 import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMapRowIndexes;
 import org.apache.carbondata.core.indexstore.row.DataMapRow;
-import org.apache.carbondata.core.indexstore.RangeColumnSplitMerger;
 import org.apache.carbondata.core.metadata.ColumnarFormatVersion;
 import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema;
 import org.apache.carbondata.core.statusmanager.FileFormat;
@@ -267,7 +267,8 @@ public class CarbonInputSplit extends FileSplit
   }
 
   public CarbonInputSplit(String segmentId, String filePath, long start, long length,
-      String[] locations, String[] inMemoryHosts, FileFormat fileFormat, RangeColumnSplitMerger merger) {
+      String[] locations, String[] inMemoryHosts, FileFormat fileFormat,
+      RangeColumnSplitMerger merger) {
     this.filePath = filePath;
     this.start = start;
     this.length = length;

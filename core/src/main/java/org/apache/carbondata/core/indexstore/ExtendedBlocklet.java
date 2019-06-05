@@ -44,7 +44,8 @@ public class ExtendedBlocklet extends Blocklet {
   }
 
   public ExtendedBlocklet(String filePath, String blockletId,
-      boolean compareBlockletIdForObjectMatching, ColumnarFormatVersion version, RangeColumnSplitMerger merger) {
+      boolean compareBlockletIdForObjectMatching, ColumnarFormatVersion version,
+      RangeColumnSplitMerger merger) {
     super(filePath, blockletId, compareBlockletIdForObjectMatching);
     try {
       this.inputSplit =

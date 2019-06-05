@@ -15,15 +15,24 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.coprocessor;
+package org.apache.carbondata.horizon.rest.util;
 
-import org.apache.carbondata.core.metadata.datatype.DataType;
-import org.apache.carbondata.sdk.file.Field;
+import org.apache.carbondata.common.annotations.InterfaceAudience;
+import org.apache.carbondata.common.annotations.InterfaceStability;
 
-public interface DataTypeConverter {
+@InterfaceAudience.User
+@InterfaceStability.Evolving
+public class CarbonException extends Exception {
 
-  void convertRowKey(byte[] key, int offset, int len, int[] mapping, Field[] fields, String[] row);
+  public CarbonException() {
+    super();
+  }
 
-  String convert(byte[] value, int offset, int len, DataType dataType);
+  public CarbonException(String message) {
+    super(message);
+  }
 
+  public CarbonException(Exception e) {
+    super(e);
+  }
 }

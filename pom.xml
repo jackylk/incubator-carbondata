@@ -105,6 +105,8 @@
     <module>assembly</module>
     <module>tools/cli</module>
     <module>hbase-connector</module>
+    <module>integration/zeppelin</module>
+    <module>rest</module>
   </modules>
 
   <properties>
@@ -400,6 +402,7 @@
         <artifactId>findbugs-maven-plugin</artifactId>
         <version>3.0.4</version>
         <configuration>
+          <skip>true</skip>
           <excludeFilterFile>${dev.path}/findbugs-exclude.xml</excludeFilterFile>
           <failOnError>true</failOnError>
           <findbugsXmlOutput>true</findbugsXmlOutput>

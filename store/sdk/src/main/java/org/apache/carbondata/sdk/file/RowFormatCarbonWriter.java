@@ -48,13 +48,13 @@ import org.apache.carbondata.streaming.CarbonStreamOutputFormat;
 import org.apache.carbondata.streaming.CarbonStreamRecordWriter;
 import org.apache.carbondata.streaming.index.StreamFileIndex;
 import org.apache.carbondata.streaming.segment.StreamSegment;
+import static org.apache.carbondata.streaming.segment.StreamSegment.updateStreamFileIndex;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.log4j.Logger;
 
-import static org.apache.carbondata.streaming.segment.StreamSegment.updateStreamFileIndex;
 
 public class RowFormatCarbonWriter extends CarbonWriter {
 

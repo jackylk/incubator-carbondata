@@ -26,14 +26,14 @@ import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 import org.apache.hadoop.io.NullWritable
+import org.apache.hadoop.mapreduce.{Job, JobID, RecordReader, RecordWriter, TaskAttemptID, TaskID, TaskType}
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl
-import org.apache.hadoop.mapreduce.{Job, JobID, RecordReader, RecordWriter, TaskAttemptID, TaskID, TaskType}
-import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.{Row, SparkSession, types}
-import org.apache.spark.sql.types.{ByteType, DataType, StringType}
-import org.apache.spark.sql.util.SparkTypeConverter
 import org.apache.spark.{Partition, TaskContext}
+import org.apache.spark.sql.{types, SparkSession}
+import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.types.{DataType, StringType}
+import org.apache.spark.sql.util.SparkTypeConverter
 
 import org.apache.carbondata.common.CarbonIterator
 import org.apache.carbondata.converter.SparkDataTypeConverterImpl
@@ -47,14 +47,12 @@ import org.apache.carbondata.core.scan.model.QueryModel
 import org.apache.carbondata.core.scan.primarykey.PrimaryKeyDeleteVectorDetailQueryResultIterator
 import org.apache.carbondata.core.statusmanager.FileFormat
 import org.apache.carbondata.core.util.DataTypeUtil
+import org.apache.carbondata.hadoop.{AbstractRecordReader, CarbonInputSplit, CarbonMultiBlockSplit, CarbonProjection, CarbonRecordReader, InputMetricsStats}
 import org.apache.carbondata.hadoop.api.{CarbonInputFormat, CarbonTableInputFormat, CarbonTableOutputFormat}
 import org.apache.carbondata.hadoop.internal.ObjectArrayWritable
-import org.apache.carbondata.hadoop.{AbstractRecordReader, CarbonInputSplit, CarbonMultiBlockSplit, CarbonProjection, CarbonRecordReader, InputMetricsStats}
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel
-import org.apache.carbondata.spark.{HandoffResult, PrimaryKeyResult}
+import org.apache.carbondata.spark.PrimaryKeyResult
 import org.apache.carbondata.spark.util.CommonUtil
-
-
 
 class UpdatePrimaryKeyResultIterator(
     recordReader: RecordReader[Void, Object],
@@ -114,9 +112,11 @@ class UpdatePrimaryKeyRDD[K, V](
     CommonUtil.setTempStoreLocation(split.index, carbonLoadModel, true, false)
     val attemptId = new TaskAttemptID(jobTrackerId, id, TaskType.MAP, split.index, 0)
     val attemptContext = new TaskAttemptContextImpl(getConf, attemptId)
-    val dataTypes = new Array[DataType](carbonTable.getTableInfo.getFactTable.getListOfColumns.size())
+    val dataTypes =
+      new Array[DataType](carbonTable.getTableInfo.getFactTable.getListOfColumns.size())
     carbonTable.getTableInfo.getFactTable.getListOfColumns.asScala.foreach{d =>
-      dataTypes(d.getSchemaOrdinal) = SparkTypeConverter.convertCarbonToSparkDataType(d, carbonTable)
+      dataTypes(d.getSchemaOrdinal) =
+        SparkTypeConverter.convertCarbonToSparkDataType(d, carbonTable)
     }
 
     val reader = prepareInputIterator(split, carbonTable, attemptContext)
@@ -237,11 +237,13 @@ class UpdatePrimaryKeyRDD[K, V](
     segmentList.add(Segment.toSegment(handOffSegmentId, null))
     CarbonInputFormat.setTableName(job.getConfiguration, carbonLoadModel.getTableName)
     CarbonInputFormat.setDatabaseName(job.getConfiguration, carbonLoadModel.getDatabaseName)
-    CarbonInputFormat.setTableInfo(job.getConfiguration, carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable.getTableInfo)
+    CarbonInputFormat.setTableInfo(
+      job.getConfiguration, carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable.getTableInfo)
     job.getConfiguration.set(FileInputFormat.INPUT_DIR, carbonLoadModel.getTablePath)
     val splits = inputFormat.getSplits(job)
-    val filteredSplit = splits.asScala.map(_.asInstanceOf[CarbonInputSplit]).filter{carbonInputSplit =>
-      FileFormat.ROW_V1 != carbonInputSplit.getFileFormat
+    val filteredSplit =
+      splits.asScala.map(_.asInstanceOf[CarbonInputSplit]).filter{ carbonInputSplit =>
+        FileFormat.ROW_V1 != carbonInputSplit.getFileFormat
     }
     CarbonInputFormat.setSegmentsToAccess(job.getConfiguration, segmentList)
     CarbonInputFormat.setValidateSegmentsToAccess(job.getConfiguration, false)
@@ -278,7 +280,7 @@ class UpdatePrimaryKeyRDD[K, V](
     val logStr = new mutable.StringBuilder()
     regroups.zipWithIndex.foreach{ r =>
       logStr.append("group :" + r._2).append(" : ")
-      r._1.foreach(s => logStr.append(s.getVersion + " : " +s.getBlockPath).append(" &&& ") )
+      r._1.foreach(s => logStr.append(s.getVersion + " : " + s.getBlockPath).append(" &&& "))
       logStr.append(
         s"""
            | ----------------------

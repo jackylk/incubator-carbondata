@@ -507,7 +507,8 @@ public class CarbonCompactionUtil {
           // null value then pass only one expression as a filter expression
           curExpr = exp1;
         } else {
-          exp2 = new LessThanEqualToExpression(new ColumnExpression(rangeColumn[i].getColName(), dataType[i]),
+          exp2 = new LessThanEqualToExpression(
+              new ColumnExpression(rangeColumn[i].getColName(), dataType[i]),
               new LiteralExpression(maxVal[i], dataType[i]));
           if (rangeColumn[i].hasEncoding(Encoding.DICTIONARY)) {
             exp2.setAlreadyResolved(true);
@@ -516,16 +517,19 @@ public class CarbonCompactionUtil {
         }
       } else if (null == maxVal || maxVal[i] == null) {
         // Last task
-        curExpr = new GreaterThanExpression(new ColumnExpression(rangeColumn[i].getColName(), dataType[i]),
+        curExpr = new GreaterThanExpression(
+            new ColumnExpression(rangeColumn[i].getColName(), dataType[i]),
             new LiteralExpression(minVal[i], dataType[i]));
         if (rangeColumn[i].hasEncoding(Encoding.DICTIONARY)) {
           curExpr.setAlreadyResolved(true);
         }
       } else {
         // Remaining all intermediate ranges
-        exp1 = new GreaterThanExpression(new ColumnExpression(rangeColumn[i].getColName(), dataType[i]),
+        exp1 = new GreaterThanExpression(
+            new ColumnExpression(rangeColumn[i].getColName(), dataType[i]),
             new LiteralExpression(minVal[i], dataType[i]));
-        exp2 = new LessThanEqualToExpression(new ColumnExpression(rangeColumn[i].getColName(), dataType[i]),
+        exp2 = new LessThanEqualToExpression(
+            new ColumnExpression(rangeColumn[i].getColName(), dataType[i]),
             new LiteralExpression(maxVal[i], dataType[i]));
         if (rangeColumn[i].hasEncoding(Encoding.DICTIONARY)) {
           exp2.setAlreadyResolved(true);
@@ -551,7 +555,7 @@ public class CarbonCompactionUtil {
     int idx = -1;
     // TODO handle multiple range columns
     DataType[] dataType = new DataType[rangeCol.length];
-    boolean[] isDictEncode = new boolean[rangeCol.length];rangeCol[0].hasEncoding(Encoding.DICTIONARY);
+    boolean[] isDictEncode = new boolean[rangeCol.length];
     for (int i = 0; i < rangeCol.length; i++) {
       dataType[i] = rangeCol[i].getDataType();
       isDictEncode[i] = rangeCol[i].hasEncoding(Encoding.DICTIONARY);

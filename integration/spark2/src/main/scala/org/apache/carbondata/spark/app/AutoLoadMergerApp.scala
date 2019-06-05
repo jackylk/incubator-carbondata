@@ -23,9 +23,9 @@ import java.util
 import scala.collection.JavaConverters._
 
 import org.apache.spark.SparkConf
+import org.apache.spark.sql.{CarbonSession, SparkSession}
 import org.apache.spark.sql.execution.command.CompactionModel
 import org.apache.spark.sql.util.CarbonException
-import org.apache.spark.sql.{CarbonSession, SparkSession}
 import org.slf4j.{Logger, LoggerFactory}
 
 import org.apache.carbondata.common.logging.LogServiceFactory
@@ -38,7 +38,6 @@ import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.events.OperationContext
 import org.apache.carbondata.processing.loading.model.{CarbonLoadModel, CarbonLoadModelBuilder}
 import org.apache.carbondata.processing.merger.{CarbonDataMergerUtil, CompactionType}
-import org.apache.carbondata.sdk.file.{CarbonSchemaReader, CarbonWriter}
 import org.apache.carbondata.spark.rdd.{CarbonDataRDDFactory, StreamHandoffRDD}
 import org.apache.carbondata.spark.util.CarbonSparkUtil
 
@@ -138,7 +137,7 @@ object AutoLoadMergerApp {
      Thread.sleep(5000)
    }
    if (spark != null) {
-     println("Shutting down ...")
+     LOGGER.info("Shutting down ...")
      spark.stop()
    }
  }

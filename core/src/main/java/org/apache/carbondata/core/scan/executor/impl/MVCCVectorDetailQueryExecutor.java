@@ -83,7 +83,7 @@ public class MVCCVectorDetailQueryExecutor extends AbstractQueryExecutor<Object>
         "Started executing with MVCC with update " + isUpdate + " no of blocks " + queryModel
             .getTableBlockInfos().size());
     for (TableBlockInfo info : queryModel.getTableBlockInfos()) {
-      LOGGER.info("Version : "+info.getVersion() + " path : "+ info.getFilePath());
+      LOGGER.info("Version : " + info.getVersion() + " path : " + info.getFilePath());
     }
 
     queryModel = queryModel.getCopy();
@@ -175,7 +175,8 @@ public class MVCCVectorDetailQueryExecutor extends AbstractQueryExecutor<Object>
     int[] columnOrdinals =
         getNormalColumnOrdinals(queryModel, primaryKeyOrdinals, timestampOrdinal[0],
             deleteStatusOrdinal[0], tupleIdex);
-    PrimaryKeyMerger merger = new PrimaryKeyMerger(new PrimaryKeyRowComparator(dataTypes, primaryKeyOrdinals),
+    PrimaryKeyMerger merger = new PrimaryKeyMerger(
+        new PrimaryKeyRowComparator(dataTypes, primaryKeyOrdinals),
         timestampOrdinal[0], deleteStatusOrdinal[0], columnOrdinals);
     if (isUpdate) {
       this.queryIterator =

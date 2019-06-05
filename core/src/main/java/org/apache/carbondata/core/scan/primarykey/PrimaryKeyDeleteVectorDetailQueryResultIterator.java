@@ -193,8 +193,8 @@ public class PrimaryKeyDeleteVectorDetailQueryResultIterator extends CarbonItera
         segmentUpdateDetail.setDeleteDeltaStartTimestamp(timestamp);
         int prevDeleteRowSize = 0;
         if (entry.getValue().getBlockExecutionInfo().getDeletedRecordsMap() != null) {
-          for (DeleteDeltaVo deltaVo : entry.getValue().getBlockExecutionInfo().getDeletedRecordsMap()
-              .values()) {
+          for (DeleteDeltaVo deltaVo :
+              entry.getValue().getBlockExecutionInfo().getDeletedRecordsMap().values()) {
             prevDeleteRowSize += deltaVo.getBitSet().length();
           }
         }

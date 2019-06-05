@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.carbondata.common.annotations.InterfaceAudience;
@@ -293,13 +292,12 @@ public class CarbonWriterBuilder {
             "inverted_index", "table_page_size_inmb", "primary_key_columns"));
 
     // TODO handle this
-
-//    for (String key : options.keySet()) {
-//      if (!supportedOptions.contains(key.toLowerCase())) {
-//        throw new IllegalArgumentException(
-//            "Unsupported options. " + key + " Refer method header or documentation");
-//      }
-//    }
+    //    for (String key : options.keySet()) {
+    //      if (!supportedOptions.contains(key.toLowerCase())) {
+    //        throw new IllegalArgumentException(
+    //            "Unsupported options. " + key + " Refer method header or documentation");
+    //      }
+    //    }
 
     for (Map.Entry<String, String> entry : options.entrySet()) {
       if (entry.getKey().equalsIgnoreCase("table_blocksize")) {

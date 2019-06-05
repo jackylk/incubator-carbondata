@@ -37,7 +37,7 @@ object CarbonSessionExample {
       s"$rootPath/examples/spark2/src/main/resources/log4j.properties")
 
     CarbonProperties.getInstance()
-      .addProperty(CarbonCommonConstants.ENABLE_QUERY_STATISTICS, "false")
+      .addProperty(CarbonCommonConstants.ENABLE_QUERY_STATISTICS, "true")
     val spark = ExampleUtils.createCarbonSession("CarbonSessionExample")
     spark.sparkContext.setLogLevel("INFO")
     exampleBody(spark)
@@ -49,29 +49,92 @@ object CarbonSessionExample {
     val rootPath = new File(this.getClass.getResource("/").getPath
                             + "../../../..").getCanonicalPath
 
-//    spark.sql("DROP TABLE IF EXISTS source2")
+    spark.sql("DROP TABLE IF EXISTS source")
 
     // Create table
-//    spark.sql(
-//      s"""
-//         | CREATE external TABLE emp10 STORED AS carbondata location 'hdfs://localhost:9000/carbon-store/hbase-emp5'
-//       """.stripMargin)
+    spark.sql(
+      s"""
+         | CREATE TABLE source(
+         | shortField SHORT,
+         | intField INT,
+         | bigintField LONG,
+         | doubleField DOUBLE,
+         | stringField STRING,
+         | timestampField TIMESTAMP,
+         | decimalField DECIMAL(18,2),
+         | dateField DATE,
+         | charField CHAR(5),
+         | floatField FLOAT
+         | )
+         | STORED AS carbondata
+       """.stripMargin)
 
     val path = s"$rootPath/examples/spark2/src/main/resources/data.csv"
 
-  //    spark.sql("describe formatted emp5").show(100, false)
+    // scalastyle:off
+    spark.sql(
+      s"""
+         | LOAD DATA LOCAL INPATH '$path'
+         | INTO TABLE source
+         | OPTIONS('HEADER'='true', 'COMPLEX_DELIMITER_LEVEL_1'='#')
+       """.stripMargin)
+    // scalastyle:on
 
-    val l = System.currentTimeMillis()
-    spark.sql("select count(id) from emp10").show()
-//    spark.sql("show segments for table  emp5").show(false)
-//    spark.sql("select * from emp10 where id=600001").show()
-    spark.sql("select * from emp10").show(200)
-//        spark.sql("show segments for table emp10").show(10000,false)
-//    spark.sql("select * from emp2 ").show()
-//    spark.sql("select sum(salary),dept from emp2 where city='city0' group by dept").show()
-//    spark.sql("select sum(salary),city from emp2 group by city").show()
-    println("point query " + (System.currentTimeMillis() - l))
+    spark.sql(
+      s"""
+         | SELECT charField, stringField, intField
+         | FROM source
+         | WHERE stringfield = 'spark' AND decimalField > 40
+      """.stripMargin).show()
+
+    spark.sql(
+      s"""
+         | SELECT *
+         | FROM source WHERE length(stringField) = 5
+       """.stripMargin).show()
+
+    spark.sql(
+      s"""
+         | SELECT *
+         | FROM source WHERE date_format(dateField, "yyyy-MM-dd") = "2015-07-23"
+       """.stripMargin).show()
+
+    spark.sql("SELECT count(stringField) FROM source").show()
+
+    spark.sql(
+      s"""
+         | SELECT sum(intField), stringField
+         | FROM source
+         | GROUP BY stringField
+       """.stripMargin).show()
+
+    spark.sql(
+      s"""
+         | SELECT t1.*, t2.*
+         | FROM source t1, source t2
+         | WHERE t1.stringField = t2.stringField
+      """.stripMargin).show()
+
+    spark.sql(
+      s"""
+         | WITH t1 AS (
+         | SELECT * FROM source
+         | UNION ALL
+         | SELECT * FROM source
+         | )
+         | SELECT t1.*, t2.*
+         | FROM t1, source t2
+         | WHERE t1.stringField = t2.stringField
+      """.stripMargin).show()
+
+    spark.sql(
+      s"""
+         | SELECT *
+         | FROM source
+         | WHERE stringField = 'spark' and floatField > 2.8
+       """.stripMargin).show()
+
     // Drop table
-    // spark.sql("DROP TABLE IF EXISTS source")
+    spark.sql("DROP TABLE IF EXISTS source")
   }
 }

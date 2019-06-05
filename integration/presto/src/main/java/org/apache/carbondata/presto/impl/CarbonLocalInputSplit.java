@@ -133,13 +133,14 @@ public class CarbonLocalInputSplit {
 
   public static CarbonInputSplit convertSplit(CarbonLocalInputSplit carbonLocalInputSplit) {
     CarbonInputSplit inputSplit = new CarbonInputSplit(carbonLocalInputSplit.getSegmentId(),
-        carbonLocalInputSplit.getBlockletId(), carbonLocalInputSplit.getPath(),
-        carbonLocalInputSplit.getStart(), carbonLocalInputSplit.getLength(),
-        carbonLocalInputSplit.getLocations()
-            .toArray(new String[carbonLocalInputSplit.getLocations().size()]),
+        carbonLocalInputSplit.getBlockletId(),
+        carbonLocalInputSplit.getPath(),
+        carbonLocalInputSplit.getStart(),
+        carbonLocalInputSplit.getLength(),
+        carbonLocalInputSplit.getLocations().toArray(new String[0]),
         carbonLocalInputSplit.getNumberOfBlocklets(),
         ColumnarFormatVersion.valueOf(carbonLocalInputSplit.getVersion()),
-        carbonLocalInputSplit.getDeleteDeltaFiles(), null);
+        carbonLocalInputSplit.getDeleteDeltaFiles());
     inputSplit.setFormat(carbonLocalInputSplit.getFileFormat());
     if (FileFormat.COLUMNAR_V3.ordinal() == inputSplit.getFileFormat().ordinal()) {
       Gson gson = new Gson();
