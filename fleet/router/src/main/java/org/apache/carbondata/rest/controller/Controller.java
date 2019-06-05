@@ -18,19 +18,22 @@
 package org.apache.carbondata.rest.controller;
 
 import java.util.List;
-import java.util.stream.IntStream;
 
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.rest.model.validate.RequestValidator;
 import org.apache.carbondata.rest.model.view.SqlRequest;
 import org.apache.carbondata.rest.model.view.SqlResponse;
-import org.apache.carbondata.horizon.rest.sql.SparkSqlWrapper;
 import org.apache.carbondata.rest.util.CarbonException;
+import org.apache.carbondata.router.CarbonQueryRunner;
+import org.apache.carbondata.router.Destination;
+import org.apache.carbondata.router.HBaseQueryRunner;
+import org.apache.carbondata.router.sql.Router;
 
 import org.apache.log4j.Logger;
-import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.catalyst.TableIdentifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -45,35 +48,46 @@ public class Controller {
   private static final Logger LOGGER =
       LogServiceFactory.getLogService(Controller.class.getName());
 
+  private HBaseQueryRunner hbaseRunner;
+  private CarbonQueryRunner carbonRunner;
+
   @RequestMapping(value = "/table/sql", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<SqlResponse> sql(@RequestBody SqlRequest request) throws CarbonException {
     RequestValidator.validateSql(request);
     List<Row> rows;
     Dataset<Row> sqlDataFrame = null;
-    try {
-      sqlDataFrame = SparkSqlWrapper.sql(Main.getSession(),
-              request.getSqlStatement());
-      rows = sqlDataFrame.collectAsList();
-    } catch (AnalysisException e) {
-      LOGGER.error(e);
-      throw new CarbonException(e.getSimpleMessage());
-    } catch (Exception e) {
-      LOGGER.error(e);
-      throw new CarbonException(e.getMessage());
-    }
-    final String[] fieldNames = sqlDataFrame.schema().fieldNames();
-    Object[][] responseData = new Object[0][];
-    if (rows.size() > 0) {
-      final Object[][] result = new Object[rows.size() + 1][fieldNames.length];
-      System.arraycopy(fieldNames, 0, result[0], 0, fieldNames.length);
-      IntStream.range(0, rows.size()).forEach(index ->
-          IntStream.range(0, fieldNames.length).forEach(col ->
-                result[index + 1][col] = rows.get(index).get(col)));
-      responseData = result;
+    SparkSession session = Main.getSession();
+    Destination dest = Router.route(session, request.getSqlStatement());
+    if (dest.getQueryType() == Destination.QueryType.HBASE) {
+      hbaseRunner.runHBase(dest);
+    } else {
+      carbonRunner.runCarbon(dest, new TableIdentifier(null));
     }
 
+//    try {
+//      sqlDataFrame = SparkSqlWrapper.sql(Main.getSession(),
+//              request.getSqlStatement());
+//      rows = sqlDataFrame.collectAsList();
+//    } catch (AnalysisException e) {
+//      LOGGER.error(e);
+//      throw new CarbonException(e.getSimpleMessage());
+//    } catch (Exception e) {
+//      LOGGER.error(e);
+//      throw new CarbonException(e.getMessage());
+//    }
+//    final String[] fieldNames = sqlDataFrame.schema().fieldNames();
+//    Object[][] responseData = new Object[0][];
+//    if (rows.size() > 0) {
+//      final Object[][] result = new Object[rows.size() + 1][fieldNames.length];
+//      System.arraycopy(fieldNames, 0, result[0], 0, fieldNames.length);
+//      IntStream.range(0, rows.size()).forEach(index ->
+//          IntStream.range(0, fieldNames.length).forEach(col ->
+//                result[index + 1][col] = rows.get(index).get(col)));
+//      responseData = result;
+//    }
+//
     return new ResponseEntity<>(
-        new SqlResponse(request, "SUCCESS", responseData), HttpStatus.OK);
+        new SqlResponse(request, "SUCCESS", null), HttpStatus.OK);
   }
 
   @RequestMapping(value = "echosql")
