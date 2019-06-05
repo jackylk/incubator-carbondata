@@ -1,4 +1,4 @@
-package org.apache.hadoop.hbase.coprocessor;
+package org.apache.hadoop.hbase.carbon;
 
 import java.io.IOException;
 import java.util.ArrayList;
