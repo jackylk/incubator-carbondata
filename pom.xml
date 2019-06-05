@@ -104,9 +104,10 @@
     <module>integration/hive</module>
     <module>assembly</module>
     <module>tools/cli</module>
-    <module>hbase-connector</module>
-    <module>integration/zeppelin</module>
-    <module>rest</module>
+    <module>fleet/router</module>
+    <module>fleet/core</module>
+    <module>fleet/zeppelin</module>
+    <module>integration/hbase</module>
   </modules>
 
   <properties>
