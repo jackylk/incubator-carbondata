@@ -25,7 +25,7 @@ import org.apache.carbondata.rest.model.view.SqlRequest;
 import org.apache.carbondata.rest.model.view.SqlResponse;
 import org.apache.carbondata.rest.util.CarbonException;
 import org.apache.carbondata.router.CarbonQueryRunner;
-import org.apache.carbondata.router.Destination;
+import org.apache.carbondata.router.RewrittenQuery;
 import org.apache.carbondata.router.HBaseQueryRunner;
 import org.apache.carbondata.router.sql.Router;
 
@@ -57,11 +57,11 @@ public class Controller {
     List<Row> rows;
     Dataset<Row> sqlDataFrame = null;
     SparkSession session = Main.getSession();
-    Destination dest = Router.route(session, request.getSqlStatement());
-    if (dest.getQueryType() == Destination.QueryType.HBASE) {
-      hbaseRunner.runHBase(dest);
+    RewrittenQuery dest = Router.route(session, request.getSqlStatement());
+    if (dest.getQueryType() == RewrittenQuery.QueryType.HBASE) {
+      hbaseRunner.doHBaseQuery(dest);
     } else {
-      carbonRunner.runCarbon(dest, new TableIdentifier(null));
+      carbonRunner.doCarbonJob(dest, new TableIdentifier(null));
     }
 
 //    try {

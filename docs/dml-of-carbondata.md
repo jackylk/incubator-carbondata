@@ -339,7 +339,7 @@ CarbonData DML statements are documented here,which includes:
 
   **NOTE:**
   * The source table and the CarbonData table must have the same table schema.
-  * The data type of source and destination table columns should be same
+  * The data type of source and rewrittenQuery table columns should be same
   * INSERT INTO command does not support partial success if bad records are found, it will fail.
   * Data cannot be loaded or updated in source table while insert from source table to target table is in progress.
 
@@ -412,7 +412,7 @@ CarbonData DML statements are documented here,which includes:
   [ WHERE { <filter_condition> } ]
   ```
 
-  **NOTE:** The update command fails if multiple input rows in source table are matched with single row in destination table.
+  **NOTE:** The update command fails if multiple input rows in source table are matched with single row in rewrittenQuery table.
 
   Examples:
   ```

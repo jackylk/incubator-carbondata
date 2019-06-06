@@ -850,7 +850,7 @@ Users can specify which columns to include and exclude for local dictionary gene
   * The new database name and the old database name should be same.
   * Before executing this command the old table schema and data should be copied into the new database location.
   * If the table is aggregate table, then all the aggregate tables should be copied to the new database location.
-  * For old store, the time zone of the source and destination cluster should be same.
+  * For old store, the time zone of the source and rewrittenQuery cluster should be same.
   * If old cluster used HIVE meta store to store schema, refresh will not work as schema file does not exist in file system.
 
 ### Table and Column Comment

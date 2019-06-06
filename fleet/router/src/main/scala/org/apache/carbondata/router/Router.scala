@@ -15,21 +15,18 @@
  * limitations under the License.
  */
 
-package org.apache.carbondata.router.sql
+package org.apache.carbondata.router
 
-import scala.collection.JavaConverters._
-
-import org.apache.spark.sql.catalyst.expressions.Expression
-import org.apache.spark.sql.catalyst.plans.logical.{Filter, GlobalLimit, LocalLimit, Project, SubqueryAlias}
-import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.{CarbonDatasourceHadoopRelation, SparkSession}
+import org.apache.spark.sql.catalyst.expressions.Expression
+import org.apache.spark.sql.catalyst.plans.logical._
+import org.apache.spark.sql.execution.datasources.LogicalRelation
 
-import org.apache.carbondata.router.Destination
-import org.apache.carbondata.router.Destination.QueryType
+import org.apache.carbondata.router.RewrittenQuery.QueryType
 
 object Router {
 
-  def route(session: SparkSession, sqlString: String): Destination = {
+  def route(session: SparkSession, sqlString: String): RewrittenQuery = {
     val analyzed = session.sql(sqlString).queryExecution.analyzed
     analyzed match {
       case _@Project(columns, _@Filter(expr, s: SubqueryAlias))
@@ -37,29 +34,30 @@ object Router {
            s.child.isInstanceOf[LogicalRelation] &&
            s.child.asInstanceOf[LogicalRelation].relation
              .isInstanceOf[CarbonDatasourceHadoopRelation] =>
-        val dest = new Destination(QueryType.HBASE, analyzed)
-        dest.setColumns(columns.asJava)
-        dest.setExpr(expr)
-        dest.setRelation(s.child.asInstanceOf[LogicalRelation])
-        dest.setMaxRows(Long.MaxValue)
+        val dest = new RewrittenQuery(QueryType.HBASE, analyzed)
+        val scan = new HBaseScanRequest()
+        //TODO: set param in scan
+        dest.setHbaseScanRequest(scan)
         dest
       case gl@GlobalLimit(_, ll@LocalLimit(_, p@Project(columns, _@Filter(expr, s: SubqueryAlias))))
         if containsPrimaryKey(expr) &&
            s.child.isInstanceOf[LogicalRelation] &&
            s.child.asInstanceOf[LogicalRelation].relation
              .isInstanceOf[CarbonDatasourceHadoopRelation] =>
-        val dest = new Destination(QueryType.HBASE, analyzed)
-        dest.setColumns(columns.asJava)
-        dest.setExpr(expr)
-        dest.setRelation(s.child.asInstanceOf[LogicalRelation])
-        dest.setMaxRows(gl.maxRows.get)
+        val dest = new RewrittenQuery(QueryType.HBASE, analyzed)
+        val scan = new HBaseScanRequest()
+        //TODO: set param in scan
+        dest.setHbaseScanRequest(scan)
         dest
       case _ =>
-        val dest = new Destination(QueryType.CARBON, analyzed)
+        val dest = new RewrittenQuery(QueryType.CARBON, analyzed)
+        val rewrittenSql = rewriteCarbonQuery(analyzed)
+        dest.setRewrittenSql(rewrittenSql)
         dest
     }
   }
 
   private def containsPrimaryKey(expr: Expression): Boolean = ???
 
+  private def rewriteCarbonQuery(analyzed: LogicalPlan): String = ???
 }

@@ -15,33 +15,20 @@
  * limitations under the License.
  */
 
-package org.apache.carbondata.router;
+package fleet.core;
 
 import java.util.List;
 
-import org.apache.carbondata.common.annotations.InterfaceAudience;
 import org.apache.carbondata.core.datastore.row.CarbonRow;
+import org.apache.carbondata.router.HBaseQueryRunner;
+import org.apache.carbondata.router.RewrittenQuery;
 
 /**
- * Implement this to support query job on carbondata.
- * It can be spark/presto/hive
+ * This implementation perfom hbase scan query directly in caller's thread
  */
-@InterfaceAudience.Developer("fleet-engine")
-public interface CarbonQueryRunner {
-
-  /**
-   * perform an asynchronous query job by underlying engine.
-   * SQL statement maybe rewritten if there is any MV or Query Result Cache matched
-   *
-   * @param rewrittenQuery rewritten sql
-   */
-  void doAsyncCarbonJob(RewrittenQuery rewrittenQuery);
-
-  /**
-   * perform a synchronous query job by underlying engine.
-   * SQL statement maybe rewritten if there is any MV or Query Result Cache matched
-   *
-   * @param rewrittenQuery rewritten sql
-   */
-  List<CarbonRow> doCarbonJob(RewrittenQuery rewrittenQuery);
+public class DirectHBaseQueryRunner implements HBaseQueryRunner {
+  @Override
+  public List<CarbonRow> doHBaseQuery(RewrittenQuery rewrittenQuery) {
+    return null;
+  }
 }

@@ -15,33 +15,26 @@
  * limitations under the License.
  */
 
-package org.apache.carbondata.router;
+package fleet.core;
 
 import java.util.List;
 
-import org.apache.carbondata.common.annotations.InterfaceAudience;
 import org.apache.carbondata.core.datastore.row.CarbonRow;
+import org.apache.carbondata.router.CarbonQueryRunner;
+import org.apache.carbondata.router.RewrittenQuery;
 
 /**
- * Implement this to support query job on carbondata.
- * It can be spark/presto/hive
+ * Do query on CarbonData by Spark
  */
-@InterfaceAudience.Developer("fleet-engine")
-public interface CarbonQueryRunner {
+public class SparkCarbonQueryRunner implements CarbonQueryRunner {
 
-  /**
-   * perform an asynchronous query job by underlying engine.
-   * SQL statement maybe rewritten if there is any MV or Query Result Cache matched
-   *
-   * @param rewrittenQuery rewritten sql
-   */
-  void doAsyncCarbonJob(RewrittenQuery rewrittenQuery);
+  @Override
+  public void doAsyncCarbonJob(RewrittenQuery rewrittenQuery) {
 
-  /**
-   * perform a synchronous query job by underlying engine.
-   * SQL statement maybe rewritten if there is any MV or Query Result Cache matched
-   *
-   * @param rewrittenQuery rewritten sql
-   */
-  List<CarbonRow> doCarbonJob(RewrittenQuery rewrittenQuery);
+  }
+
+  @Override
+  public List<CarbonRow> doCarbonJob(RewrittenQuery rewrittenQuery) {
+    return null;
+  }
 }

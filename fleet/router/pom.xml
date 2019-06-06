@@ -11,7 +11,7 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>fleet-rest</artifactId>
+  <artifactId>fleet-router</artifactId>
   <name> Fleet :: REST </name>
 
   <properties>
