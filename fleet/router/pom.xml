@@ -12,7 +12,7 @@
   </parent>
 
   <artifactId>fleet-router</artifactId>
-  <name> Fleet :: REST </name>
+  <name> Fleet :: Router </name>
 
   <properties>
     <dev.path>${basedir}/../../dev</dev.path>

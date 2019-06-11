@@ -15,19 +15,32 @@
  * limitations under the License.
  */
 
-package org.apache.carbondata.rest.model.view;
+package fleet.core;
 
-public class SqlRequest extends Request {
-  private String sqlStatement;
+import java.util.List;
 
-  public SqlRequest() {
+import org.apache.carbondata.core.datastore.row.CarbonRow;
+import org.apache.carbondata.runner.AsyncJob;
+import org.apache.carbondata.runner.KVQueryParams;
+import org.apache.carbondata.runner.QueryRunner;
+
+/**
+ * Do query on CarbonData by Spark
+ */
+public class LeoQueryRunner implements QueryRunner {
+
+  @Override
+  public AsyncJob doAsyncJob(String sqlString) {
+    return null;
   }
 
-  public SqlRequest(String sqlStatement) {
-    this.sqlStatement = sqlStatement;
+  @Override
+  public List<CarbonRow> doJob(String sqlString) {
+    return null;
   }
 
-  public String getSqlStatement() {
-    return sqlStatement;
+  @Override
+  public List<CarbonRow> doPKQuery(KVQueryParams params) {
+    return null;
   }
 }

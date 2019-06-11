@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.carbondata.rest.util;
+package org.apache.carbondata.compute.util;
 
 import java.io.DataInput;
 import java.io.DataOutput;

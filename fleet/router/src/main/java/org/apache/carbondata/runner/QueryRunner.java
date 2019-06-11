@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.carbondata.router;
+package org.apache.carbondata.runner;
 
 import java.util.List;
 
@@ -23,16 +23,34 @@ import org.apache.carbondata.common.annotations.InterfaceAudience;
 import org.apache.carbondata.core.datastore.row.CarbonRow;
 
 /**
- * Implement this to support query on hbase.
- * Prefer to construct a HBase Scan and execute directly to minimize latency
+ * Implement this to support query job on fleet compute cluster.
+ * It can be spark/presto/hive/hbasedirect
  */
 @InterfaceAudience.Developer("fleet-engine")
-public interface HBaseQueryRunner {
+public interface QueryRunner {
 
   /**
-   * synchronous query to hbase
-   * @param rewrittenQuery query request
+   * perform an asynchronous query job.
+   * SQL statement maybe rewritten if there is any MV or Query Result Cache matched
+   *
+   * @param sqlString sql to be executed
+   */
+  AsyncJob doAsyncJob(String sqlString);
+
+  /**
+   * perform a synchronous query job.
+   * SQL statement maybe rewritten if there is any MV or Query Result Cache matched
+   *
+   * @param sqlString sql to be executed
    * @return query result
    */
-  List<CarbonRow> doHBaseQuery(RewrittenQuery rewrittenQuery);
+  List<CarbonRow> doJob(String sqlString);
+
+  /**
+   * perform a synchronous query based on primary key.
+   *
+   * @param params query params
+   * @return query result
+   */
+  List<CarbonRow> doPKQuery(KVQueryParams params);
 }

@@ -15,16 +15,25 @@
  * limitations under the License.
  */
 
-package org.apache.carbondata.rest.model.view;
+package org.apache.carbondata.compute.model.view;
 
-class Request {
-  private long requestId;
+public class SqlResponse extends Response {
 
-  Request() {
-    this.requestId = System.nanoTime();
+  private Object[][] rows;
+
+  public SqlResponse() {
   }
 
-  public long getRequestId() {
-    return requestId;
+  public SqlResponse(Request request, String message, Object[][] rows) {
+    super(request, message);
+    this.rows = rows;
+  }
+
+  public Object[][] getRows() {
+    return rows;
+  }
+
+  public void setRows(Object[][] rows) {
+    this.rows = rows;
   }
 }

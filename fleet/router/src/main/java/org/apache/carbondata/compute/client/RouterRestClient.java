@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.carbondata.rest.client;
+package org.apache.carbondata.compute.client;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,8 +23,8 @@ import java.util.Objects;
 
 import org.apache.carbondata.common.annotations.InterfaceAudience;
 import org.apache.carbondata.common.annotations.InterfaceStability;
+import org.apache.carbondata.compute.model.view.SqlResponse;
 import org.apache.carbondata.core.datastore.row.CarbonRow;
-import org.apache.carbondata.rest.model.view.SqlResponse;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;

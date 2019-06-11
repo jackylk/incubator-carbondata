@@ -15,20 +15,14 @@
  * limitations under the License.
  */
 
-package fleet.core;
+package org.apache.carbondata.runner;
 
 import java.util.List;
 
+import org.apache.carbondata.common.annotations.InterfaceAudience;
 import org.apache.carbondata.core.datastore.row.CarbonRow;
-import org.apache.carbondata.router.HBaseQueryRunner;
-import org.apache.carbondata.router.RewrittenQuery;
 
-/**
- * This implementation perfom hbase scan query directly in caller's thread
- */
-public class DirectHBaseQueryRunner implements HBaseQueryRunner {
-  @Override
-  public List<CarbonRow> doHBaseQuery(RewrittenQuery rewrittenQuery) {
-    return null;
-  }
+@InterfaceAudience.Developer("fleet-runner")
+public interface DDLRunner {
+  List<CarbonRow> doDDL(Query query);
 }

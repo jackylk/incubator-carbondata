@@ -15,26 +15,12 @@
  * limitations under the License.
  */
 
-package fleet.core;
-
-import java.util.List;
-
-import org.apache.carbondata.core.datastore.row.CarbonRow;
-import org.apache.carbondata.router.CarbonQueryRunner;
-import org.apache.carbondata.router.RewrittenQuery;
+package org.apache.carbondata.runner;
 
 /**
- * Do query on CarbonData by Spark
+ * Represent a asynchronous job executing by fleet-core
  */
-public class SparkCarbonQueryRunner implements CarbonQueryRunner {
+public interface AsyncJob {
 
-  @Override
-  public void doAsyncCarbonJob(RewrittenQuery rewrittenQuery) {
-
-  }
-
-  @Override
-  public List<CarbonRow> doCarbonJob(RewrittenQuery rewrittenQuery) {
-    return null;
-  }
+  String getId();
 }

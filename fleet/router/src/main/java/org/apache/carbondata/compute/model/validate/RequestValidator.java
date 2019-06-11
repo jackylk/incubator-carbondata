@@ -15,24 +15,21 @@
  * limitations under the License.
  */
 
-package org.apache.carbondata.rest.util;
+package org.apache.carbondata.compute.model.validate;
 
-import org.apache.carbondata.common.annotations.InterfaceAudience;
-import org.apache.carbondata.common.annotations.InterfaceStability;
+import org.apache.carbondata.compute.model.view.SqlRequest;
+import org.apache.carbondata.compute.util.CarbonException;
 
-@InterfaceAudience.User
-@InterfaceStability.Evolving
-public class CarbonException extends Exception {
+import org.apache.commons.lang.StringUtils;
 
-  public CarbonException() {
-    super();
-  }
+public class RequestValidator {
 
-  public CarbonException(String message) {
-    super(message);
-  }
-
-  public CarbonException(Exception e) {
-    super(e);
+  public static void validateSql(SqlRequest request) throws CarbonException {
+    if (request == null) {
+      throw new CarbonException("Select should not be null");
+    }
+    if (StringUtils.isEmpty(request.getSqlStatement())) {
+      throw new CarbonException("sql statement is invalid");
+    }
   }
 }

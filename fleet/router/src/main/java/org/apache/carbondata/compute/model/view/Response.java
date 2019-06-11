@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.carbondata.rest.model.view;
+package org.apache.carbondata.compute.model.view;
 
 public class Response {
   private long responseId;

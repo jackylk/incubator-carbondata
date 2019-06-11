@@ -15,21 +15,29 @@
  * limitations under the License.
  */
 
-package org.apache.carbondata.router;
+package org.apache.carbondata.runner;
 
-public class HBaseScanRequest {
+import org.apache.spark.sql.catalyst.expressions.Expression;
+
+public class KVQueryParams {
 
   private String databaseName;
   private String tableName;
   private String[] selectColumns;
-  private String filterExpr;
-  private int limit;
+  private Expression filterExpr;
+  private long limit;
 
-  public HBaseScanRequest() {
+  public KVQueryParams(String databaseName, String tableName, String[] select,
+      Expression filterExpr) {
+    this.databaseName = databaseName;
+    this.tableName = tableName;
+    this.selectColumns = select;
+    this.filterExpr = filterExpr;
+    this.limit = Long.MAX_VALUE;
   }
 
-  public HBaseScanRequest(String databaseName, String tableName, String[] select, String filterExpr,
-      int limit) {
+  public KVQueryParams(String databaseName, String tableName, String[] select,
+      Expression filterExpr, long limit) {
     this.databaseName = databaseName;
     this.tableName = tableName;
     this.selectColumns = select;
@@ -61,19 +69,19 @@ public class HBaseScanRequest {
     this.selectColumns = selectColumns;
   }
 
-  public String getFilterExpr() {
+  public Expression getFilterExpr() {
     return filterExpr;
   }
 
-  public void setFilterExpr(String filterExpr) {
+  public void setFilterExpr(Expression filterExpr) {
     this.filterExpr = filterExpr;
   }
 
-  public int getLimit() {
+  public long getLimit() {
     return limit;
   }
 
-  public void setLimit(int limit) {
+  public void setLimit(long limit) {
     this.limit = limit;
   }
 

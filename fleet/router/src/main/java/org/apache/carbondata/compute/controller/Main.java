@@ -15,16 +15,16 @@
  * limitations under the License.
  */
 
-package org.apache.carbondata.rest.controller;
+package org.apache.carbondata.compute.controller;
 
 import java.io.IOException;
 import java.net.InetAddress;
 
 import org.apache.carbondata.common.logging.LogServiceFactory;
+import org.apache.carbondata.compute.util.StoreConf;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.util.CarbonProperties;
-import org.apache.carbondata.rest.util.StoreConf;
 
 import org.apache.log4j.Logger;
 import org.apache.spark.sql.CarbonSessionBuilder;
