@@ -35,7 +35,7 @@ import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datamap.DistributableDataMapFormat
 import org.apache.carbondata.core.datastore.impl.FileFactory
-import org.apache.carbondata.core.indexstore.{ExtendedBlockletWrapper, ExtendedBlockletWrapperContainer, SegmentWrapper}
+import org.apache.carbondata.core.indexstore.{ExtendedBlockletWrapperContainer, SegmentWrapperContainer}
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.util.CarbonProperties
 
@@ -59,7 +59,7 @@ trait ServerInterface {
   def invalidateSegmentCache(carbonTable: CarbonTable,
       segmentIds: Array[String], jobGroupId: String = ""): Unit
 
-  def getPrunedSegments(request: DistributableDataMapFormat): SegmentWrapper
+  def getPrunedSegments(request: DistributableDataMapFormat): SegmentWrapperContainer
 }
 
 /**
@@ -123,6 +123,7 @@ object IndexServer extends ServerInterface {
       new ExtendedBlockletWrapperContainer(splits.map(_._2), request.isFallbackJob)
     }
   }
+
 
   override def invalidateSegmentCache(carbonTable: CarbonTable,
       segmentIds: Array[String], jobGroupId: String = ""): Unit = doAs {
@@ -211,15 +212,13 @@ object IndexServer extends ServerInterface {
       FileFactory.getConfiguration, NetUtils.getDefaultSocketFactory(configuration))
   }
 
-  override def getPrunedSegments(request: DistributableDataMapFormat): SegmentWrapper = doAs {
-    sparkSession.sparkContext.setLocalProperty("spark.jobGroup.id", request.getTaskGroupId)
-    sparkSession.sparkContext.setLocalProperty("spark.job.description", request.getTaskGroupDesc)
-    val splits: Array[(String, ExtendedBlockletWrapper)] = new DistributedPruneRDD(sparkSession, request).collect()
-    DistributedRDDUtils.updateExecutorCacheSize(splits.map(_._1).toSet)
-    val segments = splits.map {
-      case (_, extendedBlocklet) =>
-        extendedBlocklet.getSegment
-    }.toSet
-    new SegmentWrapper(segments.toList.asJava)
-  }
+  override def getPrunedSegments(request: DistributableDataMapFormat): SegmentWrapperContainer =
+    doAs {
+      sparkSession.sparkContext.setLocalProperty("spark.jobGroup.id", request.getTaskGroupId)
+      sparkSession.sparkContext.setLocalProperty("spark.job.description", request.getTaskGroupDesc)
+      val splits = new SegmentPruneRDD(sparkSession, request).collect()
+      DistributedRDDUtils.updateExecutorCacheSize(splits.map(_._1).toSet)
+      val segmentWrappers = splits.map(_._2)
+      new SegmentWrapperContainer(segmentWrappers)
+    }
 }

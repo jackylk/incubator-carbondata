@@ -19,7 +19,6 @@ package org.apache.carbondata.core.indexstore;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,36 +26,40 @@ import org.apache.carbondata.core.datamap.Segment;
 
 import org.apache.hadoop.io.Writable;
 
-public class SegmentWrapper implements Writable, Serializable {
+public class SegmentWrapperContainer implements Writable {
 
-  private List<Segment> segments;
+  private SegmentWrapper[] segmentWrappers;
 
-  public SegmentWrapper() {
+  public SegmentWrapperContainer() {
 
   }
 
-  public SegmentWrapper(List<Segment> segments) {
-    this.segments = segments;
+  public SegmentWrapperContainer(SegmentWrapper[] segmentWrappers) {
+    this.segmentWrappers = segmentWrappers;
   }
 
   public List<Segment> getSegments() {
+    List<Segment> segments = new ArrayList<>();
+    for (SegmentWrapper segmentWrapper: segmentWrappers) {
+      segments.addAll(segmentWrapper.getSegments());
+    }
     return segments;
   }
 
   @Override public void write(DataOutput dataOutput) throws IOException {
-    dataOutput.writeInt(segments.size());
-    for (Segment segment : segments) {
-      segment.write(dataOutput);
+    dataOutput.writeInt(segmentWrappers.length);
+    for (SegmentWrapper segmentWrapper: segmentWrappers) {
+      segmentWrapper.write(dataOutput);
     }
   }
 
   @Override public void readFields(DataInput dataInput) throws IOException {
-    int size = dataInput.readInt();
-    segments = new ArrayList<>(size);
-    for (int i = 0; i < size; i++) {
-      Segment segment = new Segment();
-      segment.readFields(dataInput);
-      segments.add(segment);
+    int numOfWrappers = dataInput.readInt();
+    segmentWrappers = new SegmentWrapper[numOfWrappers];
+    for (int i = 0; i < numOfWrappers; i++) {
+      SegmentWrapper segmentWrapper = new SegmentWrapper();
+      segmentWrapper.readFields(dataInput);
+      segmentWrappers[i] = segmentWrapper;
     }
   }
 }

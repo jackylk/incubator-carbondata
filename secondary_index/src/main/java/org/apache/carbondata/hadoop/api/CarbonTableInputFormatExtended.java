@@ -86,11 +86,12 @@ public class CarbonTableInputFormatExtended {
         segmentStatusManager.getValidAndInvalidSegments();
     List<Segment> validSegments = segments.getValidSegments();
     //if no segments in table
+    List<Segment> validSegmentsToAccess = new ArrayList<Segment>();
     if (validSegments.size() == 0) {
       return new ArrayList<>(0);
     }
     if (segmentsToAccess.length == 0 || segmentsToAccess[0].getSegmentNo().equalsIgnoreCase("*")) {
-      carbonTableInputFormat.setSegmentsToAccess(job.getConfiguration(), validSegments);
+      validSegmentsToAccess.addAll(validSegments);
     } else {
       List<Segment> filteredSegmentToAccess = new ArrayList<Segment>();
       for (Segment segment : validSegments) {
@@ -110,18 +111,16 @@ public class CarbonTableInputFormatExtended {
       if (filteredSegmentToAccess.size() == 0) {
         return new ArrayList<>(0);
       } else {
-        carbonTableInputFormat.setSegmentsToAccess(job.getConfiguration(), filteredSegmentToAccess);
+        validSegmentsToAccess.addAll(filteredSegmentToAccess);
       }
     }
+    carbonTableInputFormat.setSegmentsToAccess(job.getConfiguration(), validSegmentsToAccess);
     //    return getSplitsInternal(job, true);
     // process and resolve the expression
     Expression filter = carbonTableInputFormat.getFilterPredicates(job.getConfiguration());
     carbonTable.processFilterExpression(filter, null, null);
     FilterResolverIntf filterInterface = carbonTable.resolveFilter(filter, identifier);
     List<Segment> filteredSegments = new ArrayList<>();
-    // If filter is null then return all segments.
-    List<Segment> segmentIds =
-        Arrays.asList(carbonTableInputFormat.getSegmentsToAccess(job, readCommittedScope));
     if (filter != null) {
       // refresh the segments if needed
       LoadMetadataDetails[] loadMetadataDetails = readCommittedScope.getSegmentList();
@@ -131,17 +130,17 @@ public class CarbonTableInputFormatExtended {
       if (CarbonProperties.getInstance()
           .isDistributedPruningEnabled(carbonTable.getDatabaseName(), carbonTable.getTableName())) {
         List<String> segmentsToBeRefreshed = DataMapStoreManager.getInstance()
-            .getSegmentsToBeRefreshed(carbonTable, updateStatusManager, validSegments);
+            .getSegmentsToBeRefreshed(carbonTable, updateStatusManager, validSegmentsToAccess);
         try {
           DistributableDataMapFormat dataMapFormat =
-              new DistributableDataMapFormat(carbonTable, filterInterface, segmentIds,
+              new DistributableDataMapFormat(carbonTable, filterInterface, validSegmentsToAccess,
                   segmentsToBeRefreshed, null, false, null, false);
           setSegID.addAll(IndexServer.getClient().getPrunedSegments(dataMapFormat).getSegments());
         } catch (Exception e) {
           LOG.warn("Distributed Segment Pruning failed, initiating embedded pruning", e);
           try {
             DistributableDataMapFormat dataMapFormat =
-                new DistributableDataMapFormat(carbonTable, filterInterface, segmentIds,
+                new DistributableDataMapFormat(carbonTable, filterInterface, validSegmentsToAccess,
                     segmentsToBeRefreshed, null, false, null, true);
             setSegID.addAll(IndexServer.getPrunedSegments(dataMapFormat).getSegments());
             String[] segmentsToBeCleaned = new String[validSegments.size()];
@@ -152,22 +151,23 @@ public class CarbonTableInputFormatExtended {
           } catch (Exception ex) {
             LOG.warn("Embedded Segment Pruning failed, initiating driver pruning", ex);
             DataMapStoreManager.getInstance()
-                .refreshSegmentCacheIfRequired(carbonTable, updateStatusManager, segmentIds);
+                .refreshSegmentCacheIfRequired(carbonTable, updateStatusManager,
+                    validSegmentsToAccess);
             setSegID.addAll(
                 isSegmentValidAfterFilter(job.getConfiguration(), carbonTable, filterInterface,
-                    segmentIds));
+                    validSegmentsToAccess));
           }
         }
       } else {
         DataMapStoreManager.getInstance()
-            .refreshSegmentCacheIfRequired(carbonTable, updateStatusManager, segmentIds);
+            .refreshSegmentCacheIfRequired(carbonTable, updateStatusManager, validSegmentsToAccess);
         setSegID.addAll(
             isSegmentValidAfterFilter(job.getConfiguration(), carbonTable, filterInterface,
-                segmentIds));
+                validSegmentsToAccess));
       }
       filteredSegments.addAll(setSegID);
     } else {
-      filteredSegments.addAll(segmentIds);
+      filteredSegments.addAll(validSegmentsToAccess);
     }
     return filteredSegments;
   }

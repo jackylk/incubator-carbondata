@@ -68,7 +68,6 @@ public class ExtendedBlockletWrapper implements Writable, Serializable {
   private static final int BLOCK_SIZE = 256 * 1024 * 1024;
 
   public ExtendedBlockletWrapper() {
-
   }
 
   public ExtendedBlockletWrapper(List<ExtendedBlocklet> extendedBlockletList, String tablePath,
@@ -92,8 +91,8 @@ public class ExtendedBlockletWrapper implements Writable, Serializable {
           isFolderExists = false;
         }
         if (isFolderExists) {
-          stream = FileFactory.getDataOutputStream(folderPath + "/" + fileName,
-              FileFactory.getFileType(folderPath),
+          stream = FileFactory
+              .getDataOutputStream(folderPath + "/" + fileName, FileFactory.getFileType(folderPath),
                   BUFFER_SIZE, BLOCK_SIZE, (short) 1);
           writeBlockletToStream(stream, bytes, uniqueLocations, extendedBlockletList);
           this.dataSize = stream.size();
@@ -226,7 +225,7 @@ public class ExtendedBlockletWrapper implements Writable, Serializable {
       }
       return extendedBlockletList;
     } else {
-      return new ArrayList<>();
+      return new ArrayList<ExtendedBlocklet>();
     }
   }
 

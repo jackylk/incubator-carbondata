@@ -398,6 +398,10 @@ public class DistributableDataMapFormat extends FileInputFormat<Void, ExtendedBl
     return validSegments;
   }
 
+  public ReadCommittedScope getReadCommittedScope() {
+    return readCommittedScope;
+  }
+
   public void createDataMapChooser() throws IOException {
     if (null != filterResolverIntf) {
       this.dataMapChooser = new DataMapChooser(table);

@@ -30,6 +30,7 @@ import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentSta
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.hadoop.CarbonInputSplit
+import org.apache.carbondata.indexserver.IndexServer
 import org.apache.carbondata.processing.loading.model.{CarbonDataLoadSchema, CarbonLoadModel}
 import org.apache.carbondata.processing.merger.CarbonDataMergerUtil
 import org.apache.carbondata.processing.util.CarbonLoaderUtil
@@ -226,6 +227,17 @@ object CarbonInternalMergerUtil {
           SegmentStatusManager
             .writeLoadDetailsIntoFile(CarbonTablePath.getTableStatusFilePath(tablePath),
               loadMetadataDetails)
+
+          if (CarbonProperties.getInstance()
+            .isDistributedPruningEnabled(indexCarbonTable.getDatabaseName,
+              indexCarbonTable.getTableName)) {
+            try {
+              IndexServer.getClient
+                .invalidateSegmentCache(indexCarbonTable, rebuiltSegments.toArray)
+            } catch {
+              case _: Exception =>
+            }
+          }
 
           // clear the datamap cache for the merged segments, as the index files and
           // data files are rewritten after compaction

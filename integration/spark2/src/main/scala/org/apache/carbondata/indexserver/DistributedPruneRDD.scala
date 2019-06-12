@@ -25,7 +25,6 @@ import scala.collection.JavaConverters._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
 import scala.concurrent.duration.Duration
 
-import org.apache.commons.lang.StringUtils
 import org.apache.hadoop.mapred.{RecordReader, TaskAttemptID}
 import org.apache.hadoop.mapreduce.{InputSplit, Job, TaskType}
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl
@@ -35,9 +34,8 @@ import org.apache.spark.sql.hive.DistributionUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.cache.CacheProvider
-import org.apache.carbondata.core.datamap.{DataMapDistributable, DataMapStoreManager, DistributableDataMapFormat, TableDataMap}
+import org.apache.carbondata.core.datamap.{DataMapStoreManager, DistributableDataMapFormat}
 import org.apache.carbondata.core.datamap.dev.expr.DataMapDistributableWrapper
-import org.apache.carbondata.core.datastore.block.SegmentPropertiesAndSchemaHolder
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.indexstore.{ExtendedBlocklet, ExtendedBlockletWrapper}
 import org.apache.carbondata.core.util.{CarbonProperties, CarbonThreadFactory}
@@ -82,6 +80,9 @@ private[indexserver] class DistributedPruneRDD(@transient private val ss: SparkS
     val attemptId = new TaskAttemptID(jobTrackerId, id, TaskType.MAP, split.index, 0)
     val attemptContext = new TaskAttemptContextImpl(FileFactory.getConfiguration, attemptId)
     val inputSplits = split.asInstanceOf[DataMapRDDPartition].inputSplit
+    val executorIP = s"${ SparkEnv.get.blockManager.blockManagerId.host }_${
+      SparkEnv.get.blockManager.blockManagerId.executorId
+    }"
     if (dataMapFormat.isJobToClearDataMaps) {
       // if job is to clear datamaps just clear datamaps from cache and pass empty iterator
       DataMapStoreManager.getInstance().clearInvalidDataMaps(dataMapFormat.getCarbonTable,
@@ -95,10 +96,7 @@ private[indexserver] class DistributedPruneRDD(@transient private val ss: SparkS
       } else {
         0L
       }
-      val executorIP = s"${ SparkEnv.get.blockManager.blockManagerId.host }_${
-        SparkEnv.get.blockManager.blockManagerId.executorId
-      }"
-      Iterator((executorIP + "_" + cacheSize, new ExtendedBlockletWrapper()))
+      Iterator((executorIP + "_" + cacheSize.toString, new ExtendedBlockletWrapper()))
     } else {
       if (dataMapFormat.getInvalidSegments.size > 0) {
         // clear the segmentMap and from cache in executor when there are invalid segments
@@ -134,11 +132,10 @@ private[indexserver] class DistributedPruneRDD(@transient private val ss: SparkS
       } else {
         0L
       }
-      val executorIP = s"${ SparkEnv.get.blockManager.blockManagerId.host }_${
-        SparkEnv.get.blockManager.blockManagerId.executorId
-      }"
       val value = (executorIP + "_" + cacheSize.toString, new ExtendedBlockletWrapper(f.toList
-        .asJava, dataMapFormat.getCarbonTable.getTablePath, dataMapFormat.getQueryId,
+        .asJava,
+        dataMapFormat.getCarbonTable.getTablePath,
+        dataMapFormat.getQueryId,
         dataMapFormat.isWriteToFile))
       Iterator(value)
     }
