@@ -21,7 +21,6 @@ import java.security.PrivilegedAction
 import java.util.UUID
 
 import scala.collection.JavaConverters._
-import scala.collection.JavaConverters._
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.ipc.{ProtocolInfo, RPC}

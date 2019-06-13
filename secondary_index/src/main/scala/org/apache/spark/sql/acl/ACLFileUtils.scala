@@ -19,22 +19,21 @@ import scala.collection.mutable.ArrayBuffer
 
 import org.apache.commons.lang3.StringUtils
 import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.{FileStatus, FileSystem, Path, PathFilter}
 import org.apache.hadoop.fs.permission.{AclEntry, AclEntryType, FsAction, FsPermission}
 import org.apache.hadoop.fs.viewfs.ViewFileSystem
-import org.apache.hadoop.fs.{FileStatus, FileSystem, Path, PathFilter}
 import org.apache.hadoop.hdfs.DistributedFileSystem
 import org.apache.hadoop.security.UserGroupInformation
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod
 import org.apache.spark.SparkContext
-import org.apache.spark.sql.{SQLContext, SparkSession}
+import org.apache.spark.sql.{SparkSession, SQLContext}
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.locks.LockUsage
-import org.apache.carbondata.core.metadata.schema.PartitionInfo
-import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.metadata.{CarbonTableIdentifier, SegmentFileStore}
+import org.apache.carbondata.core.metadata.schema.PartitionInfo
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.events.OperationContext
 import org.apache.carbondata.spark.acl.{CarbonUserGroupInformation, InternalCarbonConstant, UserGroupUtils}

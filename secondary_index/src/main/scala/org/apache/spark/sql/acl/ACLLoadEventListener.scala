@@ -17,10 +17,10 @@ import scala.collection.JavaConverters._
 
 import org.apache.commons.lang.StringUtils
 import org.apache.hadoop.fs.Path
+import org.apache.spark.sql.{SparkSession, SQLContext}
 import org.apache.spark.sql.acl.ACLFileUtils.{getPermissionsOnTable, setACLGroupRights}
 import org.apache.spark.sql.hive.CarbonInternalMetaUtil
 import org.apache.spark.sql.hive.acl._
-import org.apache.spark.sql.{SQLContext, SparkSession}
 
 import org.apache.carbondata.common.constants.LoggerAction
 import org.apache.carbondata.common.logging.LogServiceFactory
@@ -28,8 +28,8 @@ import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.metadata.CarbonTableIdentifier
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
-import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
+import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.events._
 import org.apache.carbondata.events.exception.PreEventException
 import org.apache.carbondata.processing.loading.events.LoadEvents.{LoadTablePostExecutionEvent, LoadTablePreExecutionEvent}
