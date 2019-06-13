@@ -44,6 +44,11 @@ class SIDropEventListener extends OperationEventListener with Logging {
       case dropTablePreEvent: DropTablePreEvent =>
         LOGGER.info("drop table pre event-listener called")
         val parentCarbonTable = dropTablePreEvent.carbonTable
+        if(CarbonInternalScalaUtil.isIndexTable(parentCarbonTable)) {
+          sys.error(s"Drop table is not permitted on Index Table [${
+            parentCarbonTable.getDatabaseName
+          }.${ parentCarbonTable.getTableName }]")
+        }
         try {
           val tableIdentifier = new TableIdentifier(parentCarbonTable.getTableName,
             Some(parentCarbonTable.getDatabaseName))

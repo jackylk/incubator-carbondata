@@ -53,20 +53,10 @@ object CarbonInternalHiveMetadataUtil {
     val tableName = indexTableIdentifier.table
     try {
       if (indexInfo != null) {
-        val parentTableName = parentCarbonTable.getTableName
-        val newIndexInfo = IndexTableUtil.removeIndexTable(indexInfo, dbName, tableName)
-        CarbonInternalScalaUtil.removeIndexTableInfo(parentCarbonTable, tableName)
-        sparkSession.sql(
-          s"""ALTER TABLE $dbName.$parentTableName SET SERDEPROPERTIES ('indexInfo'
-             |='$newIndexInfo')"""
-            .stripMargin)
-        FileInternalUtil.touchSchemaFileTimestamp(dbName,
-          parentTableName,
-          parentCarbonTable.getTablePath,
-          System.currentTimeMillis())
-        FileInternalUtil.
-          touchStoreTimeStamp()
-        refreshTable(dbName, parentTableName, sparkSession)
+        removeIndexInfoFromParentTable(indexInfo,
+          parentCarbonTable,
+          dbName,
+          tableName)(sparkSession)
       }
     } catch {
       case e: Exception =>
@@ -74,6 +64,22 @@ object CarbonInternalHiveMetadataUtil {
           s"Error While deleting the table $dbName.$tableName during drop carbon table" +
           e.getMessage)
     }
+  }
+
+  def removeIndexInfoFromParentTable(indexInfo: String,
+    parentCarbonTable: CarbonTable,
+    dbName: String,
+    tableName: String)(sparkSession: SparkSession): Unit = {
+    val parentTableName = parentCarbonTable.getTableName
+    val newIndexInfo = IndexTableUtil.removeIndexTable(indexInfo, dbName, tableName)
+    CarbonInternalScalaUtil.removeIndexTableInfo(parentCarbonTable, tableName)
+    sparkSession.sql(
+      s"""ALTER TABLE $dbName.$parentTableName SET SERDEPROPERTIES ('indexInfo'='$newIndexInfo')
+        """.stripMargin)
+    FileInternalUtil.touchSchemaFileTimestamp(dbName, parentTableName,
+      parentCarbonTable.getTablePath, System.currentTimeMillis())
+    FileInternalUtil.touchStoreTimeStamp()
+    refreshTable(dbName, parentTableName, sparkSession)
   }
 
   def transformToRemoveNI(expression: Expression): Expression = {
