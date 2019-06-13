@@ -15,25 +15,24 @@
  * limitations under the License.
  */
 
-package leo.qs.controller;
+package leo.qs.app;
 
 import java.util.List;
 
 import org.apache.carbondata.common.logging.LogServiceFactory;
-import org.apache.carbondata.core.datastore.row.CarbonRow;
 import org.apache.carbondata.runner.Router;
 
-import fleet.core.StandardQueryRunner;
-import leo.fleet.router.AsyncJob;
-import leo.fleet.router.JobID;
-import leo.fleet.router.Query;
-import leo.fleet.router.QueryRunner;
 import leo.qs.client.MetaStoreClient;
+import leo.qs.intf.AsyncJob;
+import leo.qs.intf.JobID;
+import leo.qs.intf.Query;
+import leo.qs.intf.QueryRunner;
 import leo.qs.model.validate.RequestValidator;
 import leo.qs.model.view.SqlRequest;
 import leo.qs.model.view.SqlResponse;
 import leo.qs.util.CarbonException;
 import org.apache.log4j.Logger;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.springframework.http.HttpStatus;
@@ -45,43 +44,61 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-public class Controller {
+class Controller {
 
   private static final Logger LOGGER =
       LogServiceFactory.getLogService(Controller.class.getName());
 
   private SparkSession session = Main.getSession();
-  private QueryRunner queryRunner = new StandardQueryRunner(session);
   private MetaStoreClient metaClient;
+  private RunnerLocator locator = new LocalRunnerLocator();
 
   @RequestMapping(value = "/sql", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<SqlResponse> sql(@RequestBody SqlRequest request) throws CarbonException {
     RequestValidator.validateSql(request);
     String originSql = request.getSqlStatement();
-    LogicalPlan plan = session.sql(originSql).queryExecution().analyzed();
+    LogicalPlan plan;
+    try {
+      // if it is a DDL, it will be executed here
+      plan = session.sql(originSql).queryExecution().analyzed();
+    } catch (Exception e) {
+      return createExceptionResponse(request, e);
+    }
+
+    // decide whether the query is primary key query or not
     Query query = Router.route(session, originSql, plan);
+    QueryRunner queryRunner = locator.getRunner(query);
     switch (query.getType()) {
       case PKQuery:
         // for primary key query, execute it synchronously
-        List<CarbonRow> result = queryRunner.doPKQuery(query);
+        List<Row> result = queryRunner.doPKQuery(query);
         return createResponse(request, result);
 
       case NPKQuery:
         // generate a new JobID and save in metastore
-        JobID jobID = JobID.newRandomID();
-        metaClient.setJobStarted(jobID, query);
+        JobID jobID1 = JobID.newRandomID();
+        metaClient.setJobStarted(jobID1, query);
 
         // execute the query asynchronously,
         // check the job status and get the result later by jobID
-        AsyncJob job = queryRunner.doAsyncJob(query, jobID);
-        return createAsyncResponse(request, job);
+        AsyncJob job1 = queryRunner.doAsyncJob(query, jobID1);
+        return createAsyncResponse(request, job1);
+
+      case ContinuousQuery:
+        // generate a new JobID and save in metastore
+        JobID jobID2 = JobID.newRandomID();
+        metaClient.setJobStarted(jobID2, query);
+
+        // execute the continuous query asynchronously,
+        AsyncJob job2 = queryRunner.doContinuousJob(query, jobID2);
+        return createAsyncResponse(request, job2);
 
       default:
         return createExceptionResponse(request, new UnsupportedOperationException());
     }
   }
 
-  private ResponseEntity<SqlResponse> createResponse(SqlRequest request, List<CarbonRow> result) {
+  private ResponseEntity<SqlResponse> createResponse(SqlRequest request, List<Row> result) {
     return new ResponseEntity<>(
         new SqlResponse(request, "SUCCESS", null), HttpStatus.OK);
   }

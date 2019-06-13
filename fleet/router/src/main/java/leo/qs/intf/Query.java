@@ -15,7 +15,9 @@
  * limitations under the License.
  */
 
-package leo.fleet.router;
+package leo.qs.intf;
+
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 
 public class Query {
 
@@ -25,10 +27,12 @@ public class Query {
 
   private KVQueryParams kvQueryParams;
 
+  private LogicalPlan originPlan;
+
   private Type type;
 
   public enum Type {
-    PKQuery, NPKQuery
+    PKQuery, NPKQuery, ContinuousQuery
   }
 
   private Query(String originSql, Type type) {
@@ -51,16 +55,30 @@ public class Query {
   /**
    * create a query without primary key filter
    * @param originSql
+   * @param originPlan
    * @param rewrittenSql
    * @return a new Query object
    */
-  public static Query makeNPKQuery(String originSql, String rewrittenSql) {
+  public static Query makeNPKQuery(String originSql, LogicalPlan originPlan, String rewrittenSql) {
     Query query = new Query(originSql, Type.NPKQuery);
+    query.originPlan = originPlan;
     query.rewrittenSql = rewrittenSql;
     return query;
   }
 
-  public String getRewrittenSql() {
+  /**
+   * create a continuous query
+   * @param originSql
+   * @param originPlan
+   * @return a new Query object
+   */
+  public static Query makeContinuousQuery(String originSql, LogicalPlan originPlan) {
+    Query query = new Query(originSql, Type.ContinuousQuery);
+    query.originPlan = originPlan;
+    return query;
+  }
+
+    public String getRewrittenSql() {
     return rewrittenSql;
   }
 
@@ -76,4 +94,7 @@ public class Query {
     return originSql;
   }
 
+  public LogicalPlan getOriginPlan() {
+    return originPlan;
+  }
 }

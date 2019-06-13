@@ -15,13 +15,18 @@
  * limitations under the License.
  */
 
-package leo.qs.client;
+package fleet.core;
 
+import leo.qs.intf.AsyncJob;
 import leo.qs.intf.JobID;
-import leo.qs.intf.Query;
 
-public interface MetaStoreClient {
-  void setJobStarted(JobID jobID, Query query);
-  void setJobFinished(JobID jobID);
-  void setJobFailed(JobID jobID);
+public class AsyncJobImpl implements AsyncJob {
+
+  private JobID jobID;
+  private long threadID;
+
+  public AsyncJobImpl(JobID jobID, long threadID) {
+    this.jobID = jobID;
+    this.threadID = threadID;
+  }
 }

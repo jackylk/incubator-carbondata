@@ -19,12 +19,12 @@ package fleet.core;
 
 import java.util.List;
 
-import org.apache.carbondata.core.datastore.row.CarbonRow;
-
-import leo.fleet.router.AsyncJob;
-import leo.fleet.router.JobID;
-import leo.fleet.router.Query;
-import leo.fleet.router.QueryRunner;
+import leo.qs.intf.AsyncJob;
+import leo.qs.intf.JobID;
+import leo.qs.intf.Query;
+import leo.qs.intf.QueryRunner;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 
 /**
@@ -41,16 +41,31 @@ public class StandardQueryRunner implements QueryRunner {
 
   @Override
   public AsyncJob doAsyncJob(Query query, JobID jobID) {
+    Thread thread = new Thread(
+        () -> Dataset.ofRows(session, query.getOriginPlan()).collect()
+    );
+    thread.run();
+    return new AsyncJobImpl(jobID, thread.getId());
+  }
+
+  @Override
+  public List<Row> doJob(Query query) {
+    List<Row> rows = Dataset.ofRows(session, query.getOriginPlan()).collectAsList();
+    return rows;
+  }
+
+  @Override
+  public List<Row> doPKQuery(Query query) {
+    // construct hbase scan query
     return null;
   }
 
   @Override
-  public List<CarbonRow> doJob(Query query) {
-    return null;
-  }
-
-  @Override
-  public List<CarbonRow> doPKQuery(Query query) {
-    return null;
+  public AsyncJob doContinuousJob(Query query, JobID jobID) {
+    Thread thread = new Thread(
+        () -> Dataset.ofRows(session, query.getOriginPlan()).collect()
+    );
+    thread.run();
+    return new AsyncJobImpl(jobID, thread.getId());
   }
 }

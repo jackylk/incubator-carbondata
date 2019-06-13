@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package leo.qs.controller;
+package leo.qs.app;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -32,7 +32,7 @@ import org.apache.spark.sql.SparkSession;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 
-public class Main {
+class Main {
 
   private static Logger LOGGER =
       LogServiceFactory.getLogService(Main.class.getCanonicalName());

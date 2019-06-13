@@ -15,22 +15,11 @@
  * limitations under the License.
  */
 
-package leo.fleet.router;
+package leo.qs.intf;
 
-import java.util.UUID;
+/**
+ * Represent a asynchronous job executing by fleet-core
+ */
+public interface AsyncJob {
 
-public class JobID {
-  private String id;
-
-  private JobID(String id) {
-    this.id = id;
-  }
-
-  public static JobID newRandomID() {
-    return new JobID(UUID.randomUUID().toString());
-  }
-
-  public String getId() {
-    return id;
-  }
 }

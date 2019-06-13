@@ -17,10 +17,11 @@
 
 package org.apache.carbondata.runner
 
-import leo.fleet.router.{KVQueryParams, Query}
+import leo.qs.intf.{KVQueryParams, Query}
 import org.apache.spark.sql.{CarbonDatasourceHadoopRelation, SparkSession}
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.plans.logical._
+import org.apache.spark.sql.execution.command.stream.{CarbonCreateStreamCommand, CarbonDropStreamCommand, CarbonShowStreamsCommand}
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 
 object Router {
@@ -62,10 +63,19 @@ object Router {
             gl.maxRows.get)
         )
 
+      case cmd@CarbonCreateStreamCommand(_, _, _, _, _, _) =>
+        Query.makeContinuousQuery(originSql, cmd)
+
+      case cmd@CarbonDropStreamCommand(_, _) =>
+        Query.makeContinuousQuery(originSql, cmd)
+
+      case cmd@CarbonShowStreamsCommand(_) =>
+        Query.makeContinuousQuery(originSql, cmd)
+
       // Other carbondata query goes here
-      case _ =>
-        val rewrittenSql = rewriteCarbonQuery(plan)
-        Query.makeNPKQuery(originSql, rewrittenSql)
+      case query =>
+        val rewrittenSql = rewriteCarbonQuery(originSql, plan)
+        Query.makeNPKQuery(originSql, query, rewrittenSql)
     }
   }
 
@@ -73,7 +83,7 @@ object Router {
     false
   }
 
-  private def rewriteCarbonQuery(analyzed: LogicalPlan): String = {
-    null
+  private def rewriteCarbonQuery(originSql: String, analyzed: LogicalPlan): String = {
+    originSql
   }
 }

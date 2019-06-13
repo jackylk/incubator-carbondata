@@ -15,12 +15,14 @@
  * limitations under the License.
  */
 
-package leo.fleet.router;
+package leo.qs.intf;
 
 import java.util.List;
 
 import org.apache.carbondata.common.annotations.InterfaceAudience;
 import org.apache.carbondata.core.datastore.row.CarbonRow;
+
+import org.apache.spark.sql.Row;
 
 /**
  * Implement this to support query job on fleet compute cluster.
@@ -34,6 +36,8 @@ public interface QueryRunner {
    * SQL statement maybe rewritten if there is any MV or Query Result Cache matched
    *
    * @param query query request
+   * @param jobID job id
+   * @return job handler
    */
   AsyncJob doAsyncJob(Query query, JobID jobID);
 
@@ -44,7 +48,7 @@ public interface QueryRunner {
    * @param query query request
    * @return query result
    */
-  List<CarbonRow> doJob(Query query);
+  List<Row> doJob(Query query);
 
   /**
    * perform a synchronous query based on primary key.
@@ -52,5 +56,13 @@ public interface QueryRunner {
    * @param query query request
    * @return query result
    */
-  List<CarbonRow> doPKQuery(Query query);
+  List<Row> doPKQuery(Query query);
+
+  /**
+   * start a continuous job, like streaming ingestion job
+   * @param query query statement
+   * @param jobID job id
+   * @return job handler
+   */
+  AsyncJob doContinuousJob(Query query, JobID jobID);
 }

@@ -15,13 +15,20 @@
  * limitations under the License.
  */
 
-package leo.qs.client;
+package leo.qs.app;
 
-import leo.qs.intf.JobID;
+import fleet.core.StandardQueryRunner;
 import leo.qs.intf.Query;
+import leo.qs.intf.QueryRunner;
 
-public interface MetaStoreClient {
-  void setJobStarted(JobID jobID, Query query);
-  void setJobFinished(JobID jobID);
-  void setJobFailed(JobID jobID);
+/**
+ * This {@code RunnerLocator} returns a local {@code QueryRunner}
+ */
+class LocalRunnerLocator implements RunnerLocator {
+  private QueryRunner queryRunner = new StandardQueryRunner(Main.getSession());
+
+  @Override
+  public QueryRunner getRunner(Query query) {
+    return queryRunner;
+  }
 }

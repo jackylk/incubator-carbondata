@@ -15,13 +15,21 @@
  * limitations under the License.
  */
 
-package leo.qs.client;
+package leo.qs.app;
 
-import leo.qs.intf.JobID;
 import leo.qs.intf.Query;
+import leo.qs.intf.QueryRunner;
 
-public interface MetaStoreClient {
-  void setJobStarted(JobID jobID, Query query);
-  void setJobFinished(JobID jobID);
-  void setJobFailed(JobID jobID);
+/**
+ * Used for getting a QueryRunner instance to run the query
+ */
+interface RunnerLocator {
+
+  /**
+   * Return a QueryRunner based on the query.
+   *
+   * @param query query
+   * @return a QueryRunner instance to run the query
+   */
+  QueryRunner getRunner(Query query);
 }
