@@ -19,6 +19,7 @@ package org.apache.spark.sql.leo
 
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.parser.ParserInterface
+import org.apache.spark.sql.execution.strategy.{CarbonLateDecodeStrategy, DDLStrategy, StreamingTableStrategy}
 import org.apache.spark.sql.hive.CarbonSessionStateBuilder
 import org.apache.spark.sql.internal.SessionState
 import org.apache.spark.sql.parser.CarbonSparkSqlParser
@@ -31,6 +32,13 @@ class LeoSessionStateBuilder(
   // TODO: add parser for Leo specify syntax
   override lazy val sqlParser: ParserInterface = new CarbonSparkSqlParser(conf, sparkSession)
 
-  experimentalMethods.extraStrategies = Seq(new LeoDDLStrategy(sparkSession))
+  experimentalMethods.extraStrategies =
+    Seq(
+      new LeoDDLStrategy(sparkSession),
+      new StreamingTableStrategy(sparkSession),
+      new CarbonLateDecodeStrategy,
+      new DDLStrategy(sparkSession)
+    )
 
+  override protected def newBuilder: NewBuilder = new LeoSessionStateBuilder(_, _)
 }

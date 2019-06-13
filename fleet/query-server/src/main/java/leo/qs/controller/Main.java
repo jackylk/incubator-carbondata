@@ -114,7 +114,9 @@ public class Main {
         .config("spark.hadoop.fs.s3a.access.key", args[2])
         .config("spark.hadoop.fs.s3a.secret.key", args[3])
         .config("spark.hadoop.fs.s3a.impl", args[4])
-        .config("spark.hadoop.fs.defaultFS", args[9]);
+        .config("spark.hadoop.fs.defaultFS", args[9])
+        .config("spark.carbon.sessionstate.classname",
+            "org.apache.spark.sql.leo.LeoSessionStateBuilder");
 
     session = new CarbonSessionBuilder(baseBuilder).build(storeLocation, null, false);
   }
