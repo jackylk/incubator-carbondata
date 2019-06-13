@@ -36,7 +36,6 @@ import org.apache.carbondata.processing.util.CarbonLoaderUtil
 import org.apache.carbondata.spark.MergeResultImpl
 import org.apache.carbondata.spark.core.CarbonInternalCommonConstants
 import org.apache.carbondata.spark.rdd.CarbonSIRebuildRDD
-import org.apache.carbondata.spark.spark.util.CarbonPluginUtil
 
 
 object CarbonInternalMergerUtil {
@@ -56,7 +55,9 @@ object CarbonInternalMergerUtil {
   def mergeDataFilesSISegments(segmentIdToLoadStartTimeMapping: scala.collection.mutable
   .Map[String, java.lang.Long],
     indexCarbonTable: CarbonTable,
-    loadsToMerge: util.List[LoadMetadataDetails], carbonLoadModel: CarbonLoadModel)
+    loadsToMerge: util.List[LoadMetadataDetails],
+    carbonLoadModel: CarbonLoadModel,
+    isRebuildCommand: Boolean = false)
     (sqlContext: SQLContext): Boolean = {
     var rebuildSegmentProperty = false
     try {
@@ -70,7 +71,8 @@ object CarbonInternalMergerUtil {
           .toBoolean
     }
     try {
-      if (rebuildSegmentProperty) {
+      // in case of manual rebuild command, no need to consider the carbon property
+      if (rebuildSegmentProperty || isRebuildCommand) {
         scanSegmentsAndSubmitJob(segmentIdToLoadStartTimeMapping,
           indexCarbonTable,
           loadsToMerge, carbonLoadModel)(sqlContext)

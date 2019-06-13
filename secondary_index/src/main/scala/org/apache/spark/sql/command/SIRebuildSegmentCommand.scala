@@ -164,7 +164,7 @@ case class SIRebuildSegmentCommand(
         val mergeIndexFilesNeeded = CarbonInternalMergerUtil
           .mergeDataFilesSISegments(segmentIdToLoadStartTimeMapping,
             indexTable,
-            loadMetadataDetails.toList.asJava, carbonLoadModelForMergeDataFiles)(sparkSession
+            loadMetadataDetails.toList.asJava, carbonLoadModelForMergeDataFiles, true)(sparkSession
             .sqlContext)
         if (mergeIndexFilesNeeded) {
           loadMetadataDetails.foreach { metadataDetails =>

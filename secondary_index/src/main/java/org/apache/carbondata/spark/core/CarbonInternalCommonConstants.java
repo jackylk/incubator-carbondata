@@ -94,7 +94,8 @@ public final class CarbonInternalCommonConstants {
 
   /**
    * Default value for SI segment Compaction / merge small files
+   * Making this true degrade the LOAD performance
    */
-  public static final String DEFAULT_CARBON_SI_SEGMENT_MERGE = "true";
+  public static final String DEFAULT_CARBON_SI_SEGMENT_MERGE = "false";
 
 }
