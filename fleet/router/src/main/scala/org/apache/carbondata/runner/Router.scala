@@ -17,41 +17,16 @@
 
 package org.apache.carbondata.runner
 
-import org.apache.spark.sql.{CarbonDatasourceHadoopRelation, CarbonEnv, SparkSession}
+import leo.fleet.router.{KVQueryParams, Query}
+import org.apache.spark.sql.{CarbonDatasourceHadoopRelation, SparkSession}
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.plans.logical._
-import org.apache.spark.sql.execution.command.{CreateDatabaseCommand, DDLUtils, DropDatabaseCommand, DropTableCommand}
 import org.apache.spark.sql.execution.datasources.LogicalRelation
-import org.apache.spark.sql.hive.execution.command.{LeoCreateDatabaseCommand, LeoCreateTableCommand, LeoDropDatabaseCommand, LeoDropTableCommand}
 
 object Router {
 
-  def route(session: SparkSession, sqlString: String): Query = {
-    val analyzed = session.sql(sqlString).queryExecution.analyzed
-    analyzed match {
-
-      // DROP DATABASE
-      case cmd@CreateDatabaseCommand(_, _, _, _, _) =>
-        Query.makeDDLQuery(LeoCreateDatabaseCommand(cmd))
-
-      // DROP DATABASE
-      case cmd@DropDatabaseCommand(_, _, _) =>
-        Query.makeDDLQuery(LeoDropDatabaseCommand(cmd))
-
-      // CREATE TABLE
-      case cmd@org.apache.spark.sql.execution.datasources.CreateTable(tableDesc, mode, None)
-        if tableDesc.provider.get != DDLUtils.HIVE_PROVIDER
-           && (tableDesc.provider.get.equals("org.apache.spark.sql.CarbonSource")
-               || tableDesc.provider.get.equalsIgnoreCase("carbondata")) =>
-        Query.makeDDLQuery(LeoCreateTableCommand(cmd, tableDesc, mode))
-
-      // DROP TABLE
-      case cmd@DropTableCommand(identifier, ifNotExists, _, _)
-        if CarbonEnv.getInstance(session).carbonMetaStore.isTablePathExists(identifier)(session) =>
-        Query.makeDDLQuery(
-          LeoDropTableCommand(cmd, ifNotExists, identifier.database, identifier.table.toLowerCase)
-        )
-
+  def route(session: SparkSession, originSql: String, plan: LogicalPlan): Query = {
+    plan match {
       // HBase query, in form of "SELECT column_list FROM t WHERE cond(primary_key)"
       case _@Project(columns, _@Filter(expr, s: SubqueryAlias))
         if containsPrimaryKey(expr) &&
@@ -61,6 +36,7 @@ object Router {
         val relation =
           s.child.asInstanceOf[LogicalRelation].asInstanceOf[CarbonDatasourceHadoopRelation]
         Query.makePKQuery(
+          originSql,
           new KVQueryParams(
             relation.carbonRelation.databaseName,
             relation.carbonRelation.tableName,
@@ -77,6 +53,7 @@ object Router {
         val relation =
           s.child.asInstanceOf[LogicalRelation].asInstanceOf[CarbonDatasourceHadoopRelation]
         Query.makePKQuery(
+          originSql,
           new KVQueryParams(
             relation.carbonRelation.databaseName,
             relation.carbonRelation.tableName,
@@ -87,8 +64,8 @@ object Router {
 
       // Other carbondata query goes here
       case _ =>
-        val rewrittenSql = rewriteCarbonQuery(analyzed)
-        Query.makeNPKQuery(rewrittenSql)
+        val rewrittenSql = rewriteCarbonQuery(plan)
+        Query.makeNPKQuery(originSql, rewrittenSql)
     }
   }
 
