@@ -148,8 +148,7 @@ public class CarbonTableInputFormatExtended {
             for (int i = 0; i < validSegments.size(); i++) {
               segmentsToBeCleaned[i] = validSegments.get(i).getSegmentNo();
             }
-            IndexServer.invalidateSegmentCache(carbonTable.getDatabaseName(),
-                carbonTable.getTableName(), segmentsToBeCleaned);
+            IndexServer.invalidateSegmentCache(carbonTable, segmentsToBeCleaned);
           } catch (Exception ex) {
             LOG.warn("Embedded Segment Pruning failed, initiating driver pruning", ex);
             DataMapStoreManager.getInstance()
