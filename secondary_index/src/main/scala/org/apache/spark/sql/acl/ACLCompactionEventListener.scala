@@ -61,7 +61,8 @@ object ACLCompactionEventListener {
           operationContext,
           carbonTable.getCarbonTableIdentifier,
           false,
-          true
+          true,
+          Some(carbonTable)
         )
 
     }
