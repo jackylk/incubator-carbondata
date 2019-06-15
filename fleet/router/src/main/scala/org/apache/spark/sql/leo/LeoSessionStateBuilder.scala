@@ -29,8 +29,7 @@ class LeoSessionStateBuilder(
     parentState: Option[SessionState] = None)
   extends CarbonSessionStateBuilder(sparkSession, parentState) {
 
-  // TODO: add parser for Leo specify syntax
-  override lazy val sqlParser: ParserInterface = new CarbonSparkSqlParser(conf, sparkSession)
+  override lazy val sqlParser = new LeoSqlParser(conf, sparkSession)
 
   experimentalMethods.extraStrategies =
     Seq(
@@ -40,5 +39,5 @@ class LeoSessionStateBuilder(
       new DDLStrategy(sparkSession)
     )
 
-  override protected def newBuilder: NewBuilder = new LeoSessionStateBuilder(_, _)
+  override protected def newBuilder = new LeoSessionStateBuilder(_, _)
 }
