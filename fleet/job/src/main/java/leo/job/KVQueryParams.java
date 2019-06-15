@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package leo.qs.intf;
+package leo.job;
 
 import org.apache.spark.sql.catalyst.expressions.Expression;
 

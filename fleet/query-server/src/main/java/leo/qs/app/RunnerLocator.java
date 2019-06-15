@@ -17,7 +17,7 @@
 
 package leo.qs.app;
 
-import leo.qs.intf.Query;
+import leo.job.Query;
 import leo.qs.intf.QueryRunner;
 
 /**

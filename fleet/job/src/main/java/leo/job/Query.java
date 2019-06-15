@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package leo.qs.intf;
+package leo.job;
 
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 
@@ -28,6 +28,10 @@ public class Query {
   private KVQueryParams kvQueryParams;
 
   private LogicalPlan originPlan;
+
+  // in case on NPKQuery, query result will be stored in this path
+  // this variable is valid only if query type is NPKQuery
+  private String resultPath;
 
   private Type type;
 
@@ -63,7 +67,18 @@ public class Query {
     Query query = new Query(originSql, Type.NPKQuery);
     query.originPlan = originPlan;
     query.rewrittenSql = rewrittenSql;
+    query.resultPath = generateResultPathForQuery(originPlan);
     return query;
+  }
+
+  /**
+   * Generate the result path based on the query
+   * @param plan query plan
+   * @return result path
+   */
+  private static String generateResultPathForQuery(LogicalPlan plan) {
+    // TODO
+    return null;
   }
 
   /**

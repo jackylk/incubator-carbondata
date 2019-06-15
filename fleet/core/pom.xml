@@ -24,12 +24,11 @@
       <groupId>org.apache.carbondata</groupId>
       <artifactId>fleet-router</artifactId>
       <version>${project.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.apache.carbondata</groupId>
-          <artifactId>carbondata-lucene</artifactId>
-        </exclusion>
-      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.carbondata</groupId>
+      <artifactId>fleet-job</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>

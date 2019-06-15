@@ -15,18 +15,25 @@
  * limitations under the License.
  */
 
-package fleet.core;
+package leo.job;
 
-import leo.job.AsyncJob;
-import leo.job.JobID;
+public enum AsyncJobStatus {
 
-public class AsyncJobImpl implements AsyncJob {
+  STARTED(1),
+  FINISHED(2),
+  FAILED(3);
 
-  private JobID jobID;
-  private long threadID;
+  private int status;
 
-  public AsyncJobImpl(JobID jobID, long threadID) {
-    this.jobID = jobID;
-    this.threadID = threadID;
+  AsyncJobStatus(int status) {
+    this.status = status;
+  }
+
+  public int getStatus() {
+    return status;
+  }
+
+  public void setStatus(int status) {
+    this.status = status;
   }
 }

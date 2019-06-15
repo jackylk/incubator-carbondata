@@ -20,8 +20,10 @@ package leo.qs.intf;
 import java.util.List;
 
 import org.apache.carbondata.common.annotations.InterfaceAudience;
-import org.apache.carbondata.core.datastore.row.CarbonRow;
 
+import leo.job.AsyncJob;
+import leo.job.JobID;
+import leo.job.Query;
 import org.apache.spark.sql.Row;
 
 /**

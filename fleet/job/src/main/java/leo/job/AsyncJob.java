@@ -15,24 +15,11 @@
  * limitations under the License.
  */
 
-package leo.qs.client;
+package leo.job;
 
-import leo.qs.intf.JobID;
-import leo.qs.intf.Query;
+/**
+ * Represent a asynchronous job executing by fleet-core
+ */
+public interface AsyncJob {
 
-public class MetaStoreClientImpl implements MetaStoreClient {
-  @Override
-  public void setJobStarted(JobID jobID, Query query) {
-
-  }
-
-  @Override
-  public void setJobFinished(JobID jobID) {
-
-  }
-
-  @Override
-  public void setJobFailed(JobID jobID) {
-
-  }
 }

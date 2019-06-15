@@ -19,9 +19,9 @@ package fleet.core;
 
 import java.util.List;
 
-import leo.qs.intf.AsyncJob;
-import leo.qs.intf.JobID;
-import leo.qs.intf.Query;
+import leo.job.AsyncJob;
+import leo.job.JobID;
+import leo.job.Query;
 import leo.qs.intf.QueryRunner;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;

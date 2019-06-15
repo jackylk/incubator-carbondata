@@ -17,11 +17,30 @@
 
 package leo.qs.client;
 
-import leo.qs.intf.JobID;
-import leo.qs.intf.Query;
+import leo.job.JobID;
+import leo.job.JobMeta;
+import leo.job.MetaStoreClient;
+import leo.job.Query;
 
-public interface MetaStoreClient {
-  void setJobStarted(JobID jobID, Query query);
-  void setJobFinished(JobID jobID);
-  void setJobFailed(JobID jobID);
+public class JobMetaStoreClient implements MetaStoreClient {
+
+  @Override
+  public void setJobStarted(JobID jobID, Query query) {
+
+  }
+
+  @Override
+  public void setJobFinished(JobMeta jobMeta) {
+
+  }
+
+  @Override
+  public void setJobFailed(JobMeta jobMeta) {
+
+  }
+
+  @Override
+  public JobMeta getJobStatus(String jobId) {
+    return null;
+  }
 }

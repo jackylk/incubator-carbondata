@@ -15,11 +15,22 @@
  * limitations under the License.
  */
 
-package leo.qs.intf;
+package leo.job;
 
-/**
- * Represent a asynchronous job executing by fleet-core
- */
-public interface AsyncJob {
+import java.util.UUID;
 
+public class JobID {
+  private String id;
+
+  private JobID(String id) {
+    this.id = id;
+  }
+
+  public static JobID newRandomID() {
+    return new JobID(UUID.randomUUID().toString());
+  }
+
+  public String getId() {
+    return id;
+  }
 }

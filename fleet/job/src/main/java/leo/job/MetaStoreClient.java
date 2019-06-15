@@ -15,22 +15,12 @@
  * limitations under the License.
  */
 
-package leo.qs.intf;
+package leo.job;
 
-import java.util.UUID;
+public interface MetaStoreClient {
+  void setJobStarted(JobID jobID, Query query);
+  void setJobFinished(JobMeta jobMeta);
+  void setJobFailed(JobMeta jobMeta);
 
-public class JobID {
-  private String id;
-
-  private JobID(String id) {
-    this.id = id;
-  }
-
-  public static JobID newRandomID() {
-    return new JobID(UUID.randomUUID().toString());
-  }
-
-  public String getId() {
-    return id;
-  }
+  JobMeta getJobStatus(String jobId);
 }

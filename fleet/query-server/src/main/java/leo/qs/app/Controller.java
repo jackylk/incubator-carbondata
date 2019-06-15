@@ -22,10 +22,10 @@ import java.util.List;
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.runner.Router;
 
-import leo.qs.client.MetaStoreClient;
-import leo.qs.intf.AsyncJob;
-import leo.qs.intf.JobID;
-import leo.qs.intf.Query;
+import leo.job.AsyncJob;
+import leo.job.JobID;
+import leo.job.MetaStoreClient;
+import leo.job.Query;
 import leo.qs.intf.QueryRunner;
 import leo.qs.model.validate.RequestValidator;
 import leo.qs.model.view.SqlRequest;
