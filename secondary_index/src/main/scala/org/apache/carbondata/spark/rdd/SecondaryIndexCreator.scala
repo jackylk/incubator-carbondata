@@ -180,31 +180,13 @@ object SecondaryIndexCreator {
           successSISegments,
           secondaryIndexModel.carbonLoadModel.getDatabaseName,
           secondaryIndexModel.secondaryIndex.indexTableName,
-          SegmentStatus.SUCCESS,
+          SegmentStatus.INSERT_IN_PROGRESS,
           secondaryIndexModel.segmentIdToLoadStartTimeMapping,
           segmentToLoadStartTimeMap,
           indexCarbonTable,
           secondaryIndexModel.sqlContext.sparkSession)
-      }
 
-      // update the status of all the segments to marked for delete if data load fails, so that
-      // next load which is triggered for SI table in post event of main table data load clears
-      // all the segments of marked for delete and retriggers the load to same segments again in
-      // that event
-      if (failedSISegments.nonEmpty && !isCompactionCall) {
-        tableStatusUpdateForFailure = FileInternalUtil.updateTableStatus(
-          failedSISegments,
-          secondaryIndexModel.carbonLoadModel.getDatabaseName,
-          secondaryIndexModel.secondaryIndex.indexTableName,
-          SegmentStatus.MARKED_FOR_DELETE,
-          secondaryIndexModel.segmentIdToLoadStartTimeMapping,
-          segmentToLoadStartTimeMap,
-          indexCarbonTable,
-          secondaryIndexModel.sqlContext.sparkSession)
-      }
-
-      // merge index files for success segments in case of only load
-      if (!isCompactionCall) {
+        // merge index files for success segments in case of only load
         val loadMetadataDetails = (SegmentStatusManager
           .readLoadMetadata(indexCarbonTable.getMetadataPath))
           .filter(loadMetadataDetail => successSISegments.contains(loadMetadataDetail.getLoadName))
@@ -227,6 +209,32 @@ object SecondaryIndexCreator {
           segmentToLoadStartTimeMap,
           indexCarbonTable.getTablePath,
           indexCarbonTable, mergeIndexProperty = false)
+
+        tableStatusUpdateForSuccess = FileInternalUtil.updateTableStatus(
+          successSISegments,
+          secondaryIndexModel.carbonLoadModel.getDatabaseName,
+          secondaryIndexModel.secondaryIndex.indexTableName,
+          SegmentStatus.SUCCESS,
+          secondaryIndexModel.segmentIdToLoadStartTimeMapping,
+          segmentToLoadStartTimeMap,
+          indexCarbonTable,
+          secondaryIndexModel.sqlContext.sparkSession)
+      }
+
+      // update the status of all the segments to marked for delete if data load fails, so that
+      // next load which is triggered for SI table in post event of main table data load clears
+      // all the segments of marked for delete and retriggers the load to same segments again in
+      // that event
+      if (failedSISegments.nonEmpty && !isCompactionCall) {
+        tableStatusUpdateForFailure = FileInternalUtil.updateTableStatus(
+          failedSISegments,
+          secondaryIndexModel.carbonLoadModel.getDatabaseName,
+          secondaryIndexModel.secondaryIndex.indexTableName,
+          SegmentStatus.MARKED_FOR_DELETE,
+          secondaryIndexModel.segmentIdToLoadStartTimeMapping,
+          segmentToLoadStartTimeMap,
+          indexCarbonTable,
+          secondaryIndexModel.sqlContext.sparkSession)
       }
 
       if (failedSISegments.nonEmpty) {

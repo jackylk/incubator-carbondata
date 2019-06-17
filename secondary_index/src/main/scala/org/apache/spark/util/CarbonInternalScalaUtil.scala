@@ -21,6 +21,7 @@ import org.apache.spark.sql.command.{SecondaryIndex, SecondaryIndexModel}
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.hive.CarbonRelation
 
+import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.compression.CompressorFactory
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
@@ -36,6 +37,8 @@ import org.apache.carbondata.spark.spark.load.CarbonInternalLoaderUtil
  *
  */
 object CarbonInternalScalaUtil {
+
+  val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
 
   def addIndexTableInfo(carbonTable: CarbonTable,
       tableName: String,
@@ -266,14 +269,9 @@ object CarbonInternalScalaUtil {
     indexTableName: String,
     isLoadToFailedSISegments: Boolean,
     secondaryIndex: SecondaryIndex,
-    carbonTable: CarbonTable): Unit = {
-
-    val metaStore = CarbonEnv.getInstance(sparkSession).carbonMetaStore
-    var indexTable = metaStore
-      .lookupRelation(Some(carbonLoadModel.getDatabaseName),
-        indexTableName)(sparkSession).asInstanceOf[CarbonRelation].carbonTable
-
-    val details = SegmentStatusManager.readLoadMetadata(indexTable.getMetadataPath)
+    carbonTable: CarbonTable,
+    indexTable: CarbonTable,
+    failedLoadMetaDataDetils: java.util.List[LoadMetadataDetails] = null): Unit = {
 
     var segmentIdToLoadStartTimeMapping: scala.collection.mutable.Map[String, java.lang.Long] =
       scala.collection.mutable.Map()
@@ -282,15 +280,13 @@ object CarbonInternalScalaUtil {
       .collection
       .mutable.ListBuffer[String]()
 
-    if (isLoadToFailedSISegments) {
-      // read the details of SI table and get all the failed segments during SI creation which are
-      // MARKED_FOR_DELETE
-      details.collect {
-        case loadMetaDetail: LoadMetadataDetails =>
-          if (loadMetaDetail.getSegmentStatus == SegmentStatus.MARKED_FOR_DELETE) {
-            segmentsToReload.append(loadMetaDetail.getLoadName)
-          }
-      }
+    if (isLoadToFailedSISegments && null != failedLoadMetaDataDetils) {
+      failedLoadMetaDataDetils.asScala.foreach(loadMetaDetail => {
+        segmentsToReload.append(loadMetaDetail.getLoadName)
+      })
+      LOGGER.info(
+        s"SI segments to be reloaded for index table: ${
+          indexTable.getTableUniqueName} are: ${segmentsToReload}")
       segmentIdToLoadStartTimeMapping = CarbonInternalLoaderUtil
         .getSegmentToLoadStartTimeMapping(carbonLoadModel.getLoadMetadataDetails.asScala.toArray)
         .asScala

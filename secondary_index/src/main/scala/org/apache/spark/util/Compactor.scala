@@ -20,7 +20,7 @@ import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.command.{SecondaryIndex, SecondaryIndexModel}
 
 import org.apache.carbondata.common.logging.LogServiceFactory
-import org.apache.carbondata.core.statusmanager.SegmentStatusManager
+import org.apache.carbondata.core.statusmanager.{SegmentStatus, SegmentStatusManager}
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 import org.apache.carbondata.spark.rdd.SecondaryIndexCreator
 import org.apache.carbondata.spark.spark.load.CarbonInternalLoaderUtil
@@ -76,7 +76,8 @@ object Compactor {
           validSegments.head,
           carbonLoadModel,
           segmentToSegmentTimestampMap,
-          segmentIdToLoadStartTimeMapping(validSegments.head))
+          segmentIdToLoadStartTimeMapping(validSegments.head),
+          SegmentStatus.INSERT_IN_PROGRESS)
 
         val loadMetadataDetails = (SegmentStatusManager
           .readLoadMetadata(indexCarbonTable.getMetadataPath))
@@ -103,6 +104,16 @@ object Compactor {
           segmentToSegmentTimestampMap,
           indexCarbonTable.getTablePath,
           indexCarbonTable, false)
+
+        CarbonInternalLoaderUtil.updateLoadMetadataWithMergeStatus(
+          indexCarbonTable,
+          loadsToMerge,
+          validSegments.head,
+          carbonLoadModel,
+          segmentToSegmentTimestampMap,
+          segmentIdToLoadStartTimeMapping(validSegments.head),
+          SegmentStatus.SUCCESS)
+
       } catch {
         case ex: Exception =>
           LOGGER.error(s"Compaction failed for SI table ${secondaryIndex.indexTableName}", ex)

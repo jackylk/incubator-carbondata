@@ -20,6 +20,7 @@ import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
+import org.apache.carbondata.core.statusmanager.SegmentStatusManager
 import org.apache.carbondata.events._
 import org.apache.carbondata.processing.loading.events.LoadEvents.LoadTablePreStatusUpdateEvent
 import org.apache.carbondata.spark.core.metadata.IndexMetadata
@@ -62,13 +63,18 @@ class SILoadEventListener extends OperationEventListener with Logging {
                   indexMetadata.getIndexesMap.get(indexTableName).asScala.toList,
                   indexTableName)
 
+                val metaStore = CarbonEnv.getInstance(sparkSession).carbonMetaStore
+                val indexTable = metaStore
+                  .lookupRelation(Some(carbonLoadModel.getDatabaseName),
+                    indexTableName)(sparkSession).asInstanceOf[CarbonRelation].carbonTable
+
                 CarbonInternalScalaUtil
                   .LoadToSITable(sparkSession,
                     carbonLoadModel,
                     indexTableName,
                     isLoadToFailedSISegments = false,
                     secondaryIndex,
-                    carbonTable)
+                    carbonTable, indexTable)
             }
           } else {
             logInfo(s"No index tables found for table: ${carbonTable.getTableName}")

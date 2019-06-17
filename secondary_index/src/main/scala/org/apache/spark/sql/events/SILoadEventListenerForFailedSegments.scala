@@ -12,6 +12,8 @@
 
 package org.apache.spark.sql.events
 
+import java.util
+
 import scala.collection.JavaConverters._
 
 import org.apache.spark.internal.Logging
@@ -22,6 +24,9 @@ import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
+import org.apache.carbondata.core.locks.{CarbonLockFactory, LockUsage}
+import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatus, SegmentStatusManager}
+import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.events.{Event, OperationContext, OperationEventListener}
 import org.apache.carbondata.processing.loading.events.LoadEvents.LoadTablePostStatusUpdateEvent
 import org.apache.carbondata.spark.core.metadata.IndexMetadata
@@ -53,6 +58,7 @@ class SILoadEventListenerForFailedSegments extends OperationEventListener with L
         val indexMetadata = IndexMetadata
           .deserialize(carbonTable.getTableInfo.getFactTable.getTableProperties
             .get(carbonTable.getCarbonTableIdentifier.getTableId))
+        val mainTableDetails = SegmentStatusManager.readLoadMetadata(carbonTable.getMetadataPath)
         if (null != indexMetadata) {
           val indexTables = indexMetadata.getIndexTables.asScala
           // if there are no index tables for a given fact table do not perform any action
@@ -70,21 +76,85 @@ class SILoadEventListenerForFailedSegments extends OperationEventListener with L
                     indexMetadata.getIndexesMap.get(indexTableName).asScala.toList,
                     indexTableName)
 
+                  val metaStore = CarbonEnv.getInstance(sparkSession).carbonMetaStore
+                  val indexTable = metaStore
+                    .lookupRelation(Some(carbonLoadModel.getDatabaseName),
+                      indexTableName)(sparkSession).asInstanceOf[CarbonRelation].carbonTable
+
+                  var details = SegmentStatusManager.readLoadMetadata(indexTable.getMetadataPath)
+
+                  val failedLoadMetadataDetails: java.util.List[LoadMetadataDetails] = new util
+                  .ArrayList[LoadMetadataDetails]()
+
+                  // read the details of SI table and get all the failed segments during SI
+                  // creation which are MARKED_FOR_DELETE or invalid INSERT_IN_PROGRESS
+                  details.collect {
+                    case loadMetaDetail: LoadMetadataDetails =>
+                      if (loadMetaDetail.getSegmentStatus == SegmentStatus.MARKED_FOR_DELETE &&
+                          checkIfMainTableLoadIsValid(mainTableDetails,
+                            loadMetaDetail.getLoadName)) {
+                          failedLoadMetadataDetails.add(loadMetaDetail)
+                      } else if ((loadMetaDetail.getSegmentStatus ==
+                                  SegmentStatus.INSERT_IN_PROGRESS ||
+                                  loadMetaDetail.getSegmentStatus ==
+                                  SegmentStatus.INSERT_OVERWRITE_IN_PROGRESS) &&
+                                 checkIfMainTableLoadIsValid(mainTableDetails,
+                                   loadMetaDetail.getLoadName)) {
+                        val segmentLock = CarbonLockFactory
+                          .getCarbonLockObj(indexTable.getAbsoluteTableIdentifier,
+                            CarbonTablePath.addSegmentPrefix(loadMetaDetail.getLoadName) +
+                            LockUsage.LOCK)
+                        try {
+                          if (segmentLock.lockWithRetries(1, 5)) {
+                            LOGGER
+                              .info("SIFailedLoadListener: Acquired segment lock on segment:" +
+                                    loadMetaDetail.getLoadName)
+                            val currentDetails = SegmentStatusManager
+                              .readLoadMetadata(indexTable.getMetadataPath)
+                            val currentLoadDetail = currentDetails.toList
+                              .filter(oneLoad => oneLoad.getLoadName == loadMetaDetail.getLoadName)
+                              .head
+                            if (currentLoadDetail.getSegmentStatus ==
+                                SegmentStatus.INSERT_IN_PROGRESS ||
+                                currentLoadDetail.getSegmentStatus ==
+                                SegmentStatus.INSERT_OVERWRITE_IN_PROGRESS) {
+                              failedLoadMetadataDetails.add(currentLoadDetail)
+                            }
+                          }
+                        } finally {
+                          segmentLock.unlock()
+                          LOGGER
+                            .info("SIFailedLoadListener: Released segment lock on segment:" +
+                                  loadMetaDetail.getLoadName)
+                        }
+                      }
+                  }
                   try {
-                    CarbonInternalScalaUtil
-                      .LoadToSITable(sparkSession,
-                        carbonLoadModel,
-                        indexTableName,
-                        isLoadToFailedSISegments = true,
-                        secondaryIndex,
-                        carbonTable)
+                    if (!failedLoadMetadataDetails.isEmpty) {
+                      CarbonInternalScalaUtil
+                        .LoadToSITable(sparkSession,
+                          carbonLoadModel,
+                          indexTableName,
+                          isLoadToFailedSISegments = true,
+                          secondaryIndex,
+                          carbonTable, indexTable, failedLoadMetadataDetails)
 
-                    // enable the SI table if it was disabled earlier due to failure during SI
-                    // creation time
-                    sparkSession.sql(
-                      s"""ALTER TABLE ${carbonLoadModel.getDatabaseName}.$indexTableName SET
-                          |SERDEPROPERTIES ('isSITableEnabled' = 'true')""".stripMargin)
+                      // get the current load metadata details of the index table
+                      details = SegmentStatusManager.readLoadMetadata(indexTable.getMetadataPath)
 
+                      // check if there are any IN_PROGRESS segments in the index table
+                      val isInProgressSegmentsExists = (details
+                        .filter(loadMetadataDetail => loadMetadataDetail.getSegmentStatus ==
+                                                      SegmentStatus.INSERT_IN_PROGRESS)).nonEmpty
+                      // only if there is no IN_PROGRESS segments enable the SI table
+                      if (!isInProgressSegmentsExists) {
+                        // enable the SI table if it was disabled earlier due to failure during SI
+                        // creation time
+                        sparkSession.sql(
+                          s"""ALTER TABLE ${carbonLoadModel.getDatabaseName}.$indexTableName SET
+                              |SERDEPROPERTIES ('isSITableEnabled' = 'true')""".stripMargin)
+                      }
+                    }
                   } catch {
                     case ex: Exception =>
                       // in case of SI load only for for failed segments, catch the exception, but
@@ -98,6 +168,19 @@ class SILoadEventListenerForFailedSegments extends OperationEventListener with L
             }
           }
         }
+    }
+  }
+
+  def checkIfMainTableLoadIsValid(mainTableDetails: Array[LoadMetadataDetails],
+    loadName: String): Boolean = {
+    val mainTableLoadDetail = mainTableDetails
+      .filter(mainTableDetail => mainTableDetail.getLoadName.equals(loadName)).head
+    if (mainTableLoadDetail.getSegmentStatus ==
+        SegmentStatus.MARKED_FOR_DELETE ||
+        mainTableLoadDetail.getSegmentStatus == SegmentStatus.COMPACTED) {
+      false
+    } else {
+      true
     }
   }
 }
