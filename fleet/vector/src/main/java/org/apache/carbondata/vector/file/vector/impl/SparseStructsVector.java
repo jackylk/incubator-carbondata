@@ -48,7 +48,7 @@ public class SparseStructsVector extends SparseVector {
     super(type);
     List<CarbonDimension> childDimensions = ((CarbonDimension) column).getListOfChildDimensions();
     numColumns = childDimensions.size();
-    childVectors =new ArrayVector[numColumns];
+    childVectors = new ArrayVector[numColumns];
     for (int index = 0; index < numColumns; index++) {
       childVectors[index] = ArrayVectorFactory.createArrayVector(childDimensions.get(index));
     }

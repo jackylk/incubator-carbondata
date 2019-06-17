@@ -158,7 +158,7 @@ public class VectorSplitReader extends AbstractRecordReader<Object> {
           }
         }
       }
-    } while(rowCount == 0);
+    } while (rowCount == 0);
     return rowCount;
   }
 

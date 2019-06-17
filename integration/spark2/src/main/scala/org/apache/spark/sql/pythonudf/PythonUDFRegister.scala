@@ -80,7 +80,7 @@ class PythonUDFRegister {
   }
 
   private def generateScriptFile(funcName: String, script: String, returnType: DataType): String = {
-
+    // scalastyle:off
     val gen =
       s"""
          |import os
@@ -96,6 +96,7 @@ class PythonUDFRegister {
          |stdout_bin = os.fdopen(sys.stdout.fileno(), 'wb', 4)
          |stdout_bin.write(pickled_command)
      """.stripMargin
+    // scalastyle:on
     val file = new File(System.getProperty("java.io.tmpdir") + "/python/" +
                         System.nanoTime() + ".py")
     file.getParentFile.mkdirs()

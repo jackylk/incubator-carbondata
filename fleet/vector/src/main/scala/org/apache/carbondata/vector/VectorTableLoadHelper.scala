@@ -18,9 +18,9 @@
 package org.apache.carbondata.vector
 
 import org.apache.hadoop.conf.Configuration
+import org.apache.spark.sql.{DataFrame, Row, SQLContext}
 import org.apache.spark.sql.execution.command.ExecutionErrors
 import org.apache.spark.sql.util.SparkSQLUtil
-import org.apache.spark.sql.{DataFrame, Row, SQLContext}
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.statusmanager.{FileFormat, LoadMetadataDetails, SegmentStatus}

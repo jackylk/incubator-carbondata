@@ -17,8 +17,8 @@
 
 package org.apache.spark.sql.leo.command
 
-import org.apache.spark.sql.execution.command.RunnableCommand
 import org.apache.spark.sql.{Row, SparkSession}
+import org.apache.spark.sql.execution.command.RunnableCommand
 
 case class LeoRegisterModelCommand(
     dbName: Option[String],

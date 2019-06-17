@@ -21,7 +21,6 @@ package org.apache.carbondata.vector.file.writer.impl;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonColumn;
@@ -32,7 +31,6 @@ import org.apache.carbondata.vector.file.writer.ArrayWriterFactory;
 import org.apache.carbondata.vector.table.VectorTablePath;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.log4j.Logger;
 import org.apache.spark.sql.Row;
 
 /**
@@ -67,8 +65,8 @@ public class SparseStructsWriter extends SparseWriter {
     defaultValues = new Object[numColumns];
     for (int index = 0; index < numColumns; index++) {
       CarbonDimension dimension = childDimensions.get(index);
-        defaultValues[index] =
-            DataTypeUtil.getDataBasedOnDataType(dimension.getDefaultValue(), dimension);
+      defaultValues[index] =
+          DataTypeUtil.getDataBasedOnDataType(dimension.getDefaultValue(), dimension);
     }
   }
 

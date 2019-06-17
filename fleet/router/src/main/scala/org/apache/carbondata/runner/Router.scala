@@ -18,11 +18,11 @@
 package org.apache.carbondata.runner
 
 import leo.job.{KVQueryParams, Query}
+import org.apache.spark.sql.{CarbonDatasourceHadoopRelation, SparkSession}
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.execution.command.stream.{CarbonCreateStreamCommand, CarbonDropStreamCommand, CarbonShowStreamsCommand}
 import org.apache.spark.sql.execution.datasources.LogicalRelation
-import org.apache.spark.sql.{CarbonDatasourceHadoopRelation, SparkSession}
 
 object Router {
 

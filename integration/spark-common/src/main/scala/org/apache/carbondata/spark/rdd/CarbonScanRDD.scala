@@ -487,7 +487,8 @@ class CarbonScanRDD[T: ClassTag](
 //            .asInstanceOf[RecordReader[Void, Object]]
 //          streamReader
         case FileFormat.VECTOR_V1 =>
-          VectorTableInputFormat.createRecordReader(model, attemptContext.getConfiguration, vectorReader)
+          VectorTableInputFormat.createRecordReader(
+            model, attemptContext.getConfiguration, vectorReader)
         case _ =>
           // create record reader for CarbonData file format
           if (vectorReader) {

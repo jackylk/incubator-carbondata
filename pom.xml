@@ -104,6 +104,7 @@
     <module>integration/hive</module>
     <module>assembly</module>
     <module>tools/cli</module>
+    <module>fleet/job</module>
     <module>fleet/router</module>
     <module>fleet/core</module>
     <module>fleet/zeppelin</module>

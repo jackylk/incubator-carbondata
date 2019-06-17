@@ -93,7 +93,7 @@ public class Query {
     return query;
   }
 
-    public String getRewrittenSql() {
+  public String getRewrittenSql() {
     return rewrittenSql;
   }
 
