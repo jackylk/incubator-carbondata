@@ -592,9 +592,16 @@ object ACLFileUtils {
     }
     changeOwnerRecursivelyAfterOperation(isLoadOrCompaction, sparkSession.sqlContext,
       pathArrBeforeCreate, pathArrAfterCreate, tablePath)
-    LOGGER
-      .info("----------- After Applying ACL : " + (System.currentTimeMillis() - start) +
-            " for table :" + carbonTableIdentifier.getTableName)
+    if (carbonTableIdentifier != null) {
+      LOGGER
+        .info(
+          "Time taken After Operation for Applying ACL : " + (System.currentTimeMillis() - start) +
+          " for table :" + carbonTableIdentifier.getTableName)
+    } else {
+      LOGGER
+        .info("Time taken After Operation for Applying ACL for MV : " +
+              (System.currentTimeMillis() - start))
+    }
   }
 
   def isACLSupported(tablePath: String): Boolean = {
