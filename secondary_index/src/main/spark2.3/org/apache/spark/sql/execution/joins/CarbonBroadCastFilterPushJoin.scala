@@ -81,17 +81,17 @@ trait CarbonBroadCastFilterPushJoin extends BinaryExecNode with HashJoin with Co
     }
   }
 
-  /**
-    * unapply method of BroadcastQueryStageInput
-    */
-  object CarbonBroadcastQueryStageInput {
-    def unapply(plan: SparkPlan): Option[(BroadcastQueryStage, Seq[Attribute])] = {
-      plan match {
-        case cExec: BroadcastQueryStageInput =>
-          Some(cExec.childStage, cExec.output)
-        case _ => None
-      }
+}
+
+/**
+  * unapply method of BroadcastQueryStageInput
+  */
+object CarbonBroadcastQueryStageInput {
+  def unapply(plan: SparkPlan): Option[(BroadcastQueryStage, Seq[Attribute])] = {
+    plan match {
+      case cExec: BroadcastQueryStageInput =>
+        Some(cExec.childStage, cExec.output)
+      case _ => None
     }
   }
-
 }
