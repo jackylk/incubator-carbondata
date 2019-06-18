@@ -19,15 +19,15 @@ package org.apache.spark.sql.leo
 
 import scala.util.matching.Regex
 
-import org.apache.spark.sql.catalyst.CarbonDDLSqlParser
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.command.management.{CarbonAlterTableCompactionCommand, CarbonLoadDataCommand}
-import org.apache.spark.sql.leo.command.{LeoCreateModelCommand, LeoDropModelCommand, LeoInsertColumnCommand, LeoRegisterModelCommand, LeoShowModelsCommand, LeoUnregisterModelCommand}
+import org.apache.spark.sql.leo.command._
+import org.apache.spark.sql.parser.CarbonSpark2SqlParser
 import org.apache.spark.sql.util.CarbonException
 
 import org.apache.carbondata.spark.util.CarbonScalaUtil
 
-class LeoAiSqlParser extends CarbonDDLSqlParser {
+class LeoAiSqlParser extends CarbonSpark2SqlParser {
 
   protected val MODEL: Regex = leoKeyWord("MODEL")
   protected val MODELS: Regex = leoKeyWord("MODELS")
@@ -66,7 +66,8 @@ class LeoAiSqlParser extends CarbonDDLSqlParser {
     }
   }
 
-  protected lazy val start: Parser[LogicalPlan] = modelManagement | serviceManagement
+  override protected lazy val start: Parser[LogicalPlan] = explainPlan | startCommand |
+                                                           modelManagement | serviceManagement
 
   protected lazy val modelManagement: Parser[LogicalPlan] = createModel | dropModel | showModels
   protected lazy val serviceManagement: Parser[LogicalPlan] = registerModel | unregisterModel

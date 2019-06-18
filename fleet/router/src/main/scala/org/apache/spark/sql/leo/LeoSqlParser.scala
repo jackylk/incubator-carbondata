@@ -18,7 +18,7 @@
 package org.apache.spark.sql.leo
 
 import org.apache.spark.sql.{CarbonSession, SparkSession}
-import org.apache.spark.sql.catalyst.parser.{AbstractSqlParser, AstBuilder, SqlBaseParser}
+import org.apache.spark.sql.catalyst.parser.{AbstractSqlParser, SqlBaseParser}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.internal.{SQLConf, VariableSubstitution}
 import org.apache.spark.sql.util.CarbonException
