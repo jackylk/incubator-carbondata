@@ -27,7 +27,7 @@ object StreamSQLExample {
 
     val spark = ExampleUtils.createCarbonSession("StructuredStreamingExample", 4)
     val requireCreateTable = true
-    val recordFormat = "json" // can be "json" or "csv"
+    val recordFormat = "csv" // can be "json" or "csv"
 
     if (requireCreateTable) {
       // drop table if exists previously
@@ -40,8 +40,7 @@ object StreamSQLExample {
            | CREATE TABLE sink(
            | id INT,
            | name STRING,
-           | salary FLOAT,
-           | file struct<school:array<string>, age:int>
+           | salary FLOAT
            | )
            | STORED AS carbondata
            | TBLPROPERTIES(
@@ -54,8 +53,7 @@ object StreamSQLExample {
         | CREATE TABLE source (
         | id INT,
         | name STRING,
-        | salary FLOAT,
-        | file struct<school:array<string>, age:int>
+        | salary FLOAT
         | )
         | STORED AS carbondata
         | TBLPROPERTIES(

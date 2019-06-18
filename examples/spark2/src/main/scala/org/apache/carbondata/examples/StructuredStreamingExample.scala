@@ -127,7 +127,7 @@ object StructuredStreamingExample {
     val thread = new Thread() {
       override def run(): Unit = {
         for (_ <- 0 to 1000) {
-          spark.sql(s"select count(*) from $tableName").show(truncate = false)
+          spark.sql(s"select * from $tableName limit 10").show(truncate = false)
           spark.sql(s"show segments for table $tableName").show
           Thread.sleep(1000 * 3)
         }
@@ -187,12 +187,10 @@ object StructuredStreamingExample {
             index = index + 1
             recordFormat match {
               case "csv" =>
-                socketWriter.println(index.toString + ",name_" + index
-                                     + "," + (index * 10000.00).toString +
-                                     ",school_" + index + ":school_" + index + index + "$" + index)
+                socketWriter.println(index + ",name_" + index + "," + (index * 2.1))
               case "json" =>
                 socketWriter.println(
-                  s"""{"id":$index,"name":"s","salary":4.3,"file":{"school":["a","b"],"age":6}}""")
+                  s"""{"id":100,"name":"s","salary":2.1}""")
             }
           }
           socketWriter.flush()

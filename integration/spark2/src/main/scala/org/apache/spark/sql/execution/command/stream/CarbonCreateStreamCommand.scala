@@ -146,13 +146,6 @@ case class CarbonCreateStreamCommand(
     // 2. collect the new ExprId generated
     // 3. update the stream query plan with the new ExprId generated, to make the plan consistent
 
-    // exprList is used for UDF to extract the data from the 'value' column in kafka
-    val columnNames = Util.convertToSparkSchema(sourceTable).fieldNames
-    val exprList = columnNames.zipWithIndex.map {
-      case (columnName, i) =>
-        s"case when size(_values) > $i then _values[$i] else null end AS $columnName"
-    }
-
     val aliasMap = new util.HashMap[String, ExprId]()
     val updatedQuery = inputQuery.logicalPlan transform {
       case r: LogicalRelation
@@ -167,6 +160,17 @@ case class CarbonCreateStreamCommand(
         val recordFormat = tblProperty.getOrElse("record_format", "csv")
         val newPlan = recordFormat match {
             case "csv" =>
+              // exprList is used for UDF to extract the data from the 'value' column in kafka
+              val sparkSchema = Util.convertToSparkSchema(sourceTable)
+              val columnNames = sparkSchema.fieldNames
+              val columnTypes = sparkSchema.map(_.dataType)
+              val exprList = columnNames.zipWithIndex.map {
+                case (columnName, i) =>
+                  s"CAST(" +
+                  s"  case when size(_values) > $i then _values[$i] else null end " +
+                  s"  AS ${columnTypes(i).simpleString}" +
+                  s") AS $columnName"
+              }
               val delimiter = tblProperty.getOrElse("delimiter", ",")
               plan.selectExpr(
                 s"split(_value, '${CarbonSparkUtil.delimiterConverter4Udf(delimiter)}') as _values")
