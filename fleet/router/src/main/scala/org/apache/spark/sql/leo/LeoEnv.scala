@@ -15,18 +15,18 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.leo.command
+package org.apache.spark.sql.leo
 
-import org.apache.spark.sql.{Row, SparkSession}
-import org.apache.spark.sql.catalyst.expressions.Attribute
-import org.apache.spark.sql.execution.command.{CreateDatabaseCommand, RunnableCommand}
+import org.apache.spark.sql.{CarbonSession, SparkSession}
 
-// create database should create OBS bucket
-case class LeoCreateDatabaseCommand(sparkCommand: CreateDatabaseCommand)
-  extends RunnableCommand {
-  override val output: Seq[Attribute] = sparkCommand.output
+object LeoEnv {
+  def getOrCreateLeoSession(builder: SparkSession.Builder): SparkSession = {
+    builder
+      .config("leo.enabled", "true")
+      .config("spark.carbon.sessionstate.classname",
+        "org.apache.spark.sql.leo.LeoSessionStateBuilder")
+      .enableHiveSupport()
 
-  override def run(sparkSession: SparkSession): Seq[Row] = {
-    sparkCommand.run(sparkSession)
+    new CarbonSession.CarbonBuilder(builder).getOrCreateCarbonSession()
   }
 }

@@ -21,18 +21,17 @@ import java.util.Date
 
 import scala.collection.JavaConverters._
 
-import org.apache.spark.sql.{CarbonEnv, Row, SparkSession}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.catalog.CatalogTypes.TablePartitionSpec
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.execution.command.MetadataCommand
 import org.apache.spark.sql.hive.CarbonRelation
+import org.apache.spark.sql.{CarbonEnv, Row, SparkSession}
 
 import org.apache.carbondata.common.Strings
 import org.apache.carbondata.core.constants.{CarbonCommonConstants, CarbonLoadOptionConstants}
 import org.apache.carbondata.core.metadata.datatype.DataTypes
-import org.apache.carbondata.core.metadata.schema.PartitionInfo
 import org.apache.carbondata.core.metadata.schema.partition.PartitionType
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
@@ -95,11 +94,18 @@ private[sql] case class CarbonDescribeFormattedCommand(
     results ++= Seq(
       ("", "", ""),
       ("## Detailed Table Information", "", ""),
-      ("Database", catalogTable.database, ""),
+      ("Database", CarbonEnv.getInstance(sparkSession).extractUserDB(catalogTable.database), ""),
       ("Table", catalogTable.identifier.table, ""),
       ("Owner", catalogTable.owner, ""),
-      ("Created", new Date(catalogTable.createTime).toString, ""),
-      ("Location ", carbonTable.getTablePath, ""),
+      ("Created", new Date(catalogTable.createTime).toString, ""))
+
+    if (!CarbonEnv.getInstance(sparkSession).isLeo) {
+      results ++= Seq(
+        ("Location ", carbonTable.getTablePath, "")
+      )
+    }
+
+    results ++= Seq(
       ("External", carbonTable.isExternalTable.toString, ""),
       ("Transactional", carbonTable.isTransactionalTable.toString, ""),
       ("Streaming", streaming, ""),

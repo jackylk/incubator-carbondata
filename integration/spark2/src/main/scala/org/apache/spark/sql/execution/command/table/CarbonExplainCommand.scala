@@ -17,8 +17,8 @@
 
 package org.apache.spark.sql.execution.command.table
 
-import org.apache.spark.sql.{Row, SparkSession}
-import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
+import org.apache.spark.sql.{AnalysisException, CarbonEnv, LeoDatabase, Row, SparkSession}
+import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, GenericRow}
 import org.apache.spark.sql.catalyst.plans.logical.{Command, LogicalPlan, Union}
 import org.apache.spark.sql.execution.command.{ExplainCommand, MetadataCommand}
 import org.apache.spark.sql.types.StringType
@@ -33,16 +33,31 @@ case class CarbonExplainCommand(
   override def processMetadata(sparkSession: SparkSession): Seq[Row] = {
     val explainCommand = child.asInstanceOf[ExplainCommand]
     setAuditInfo(Map("query" -> explainCommand.logicalPlan.simpleString))
-    val isCommand = explainCommand.logicalPlan match {
+    val (newPlanOp, errMsg) = LeoDatabase.replaceAllDBName(explainCommand.logicalPlan)
+    val newCmd = if (newPlanOp.isEmpty) {
+      throw new AnalysisException(errMsg)
+    } else {
+      ExplainCommand(
+        newPlanOp.get,
+        explainCommand.extended,
+        explainCommand.codegen,
+        explainCommand.cost)
+    }
+    val isCommand = newCmd.logicalPlan match {
       case _: Command => true
       case Union(childern) if childern.forall(_.isInstanceOf[Command]) => true
       case _ => false
     }
 
-    if (explainCommand.logicalPlan.isStreaming || isCommand) {
-      explainCommand.run(sparkSession)
+    val rows = if (newCmd.logicalPlan.isStreaming || isCommand) {
+      newCmd.run(sparkSession)
     } else {
-      collectProfiler(sparkSession) ++ explainCommand.run(sparkSession)
+      collectProfiler(sparkSession) ++ newCmd.run(sparkSession)
+    }
+    val env = CarbonEnv.getInstance(sparkSession)
+    rows.map { row =>
+      val newMsg = env.replaceDBNameInString(row.getString(0))
+      new GenericRow(Seq(newMsg).toArray.asInstanceOf[Array[Any]])
     }
   }
 

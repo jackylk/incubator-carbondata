@@ -19,6 +19,7 @@ package org.apache.spark.sql.leo.command
 
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.catalyst.expressions.Attribute
+import org.apache.spark.sql.execution.command.table.CarbonDropTableCommand
 import org.apache.spark.sql.execution.command.{DropTableCommand, RunnableCommand}
 
 case class LeoDropTableCommand(
@@ -31,6 +32,6 @@ case class LeoDropTableCommand(
   override val output: Seq[Attribute] = sparkCommand.output
 
   override def run(sparkSession: SparkSession): Seq[Row] = {
-    Seq.empty
+    CarbonDropTableCommand(ifExistsSet, databaseNameOp, tableName, dropChildTable).run(sparkSession)
   }
 }
