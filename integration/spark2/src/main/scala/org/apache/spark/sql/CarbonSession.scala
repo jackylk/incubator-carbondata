@@ -85,12 +85,35 @@ class CarbonSession(@transient val sc: SparkContext,
    * Run search mode if enabled, otherwise run SparkSQL
    */
   override def sql(sqlText: String): DataFrame = {
-    withProfiler(
-      sqlText,
-      (qe, sse) => {
+    try {
+      withProfiler(
+        sqlText,
+        (qe, sse) => {
           new Dataset[Row](self, qe, RowEncoder(qe.analyzed.schema))
-      }
-    )
+        }
+      )
+    } catch {
+      case e: AnalysisException =>
+        val (newPlanOp, errMsg) = if (e.plan.nonEmpty) {
+          try {
+            LeoDatabase.replaceAllDBName(e.plan.get)
+          } catch {
+            case ee: Exception => (e.plan, "")
+          }
+        } else {
+          (None, "")
+        }
+
+        throw new AnalysisException(
+          CarbonEnv.getInstance(this).replaceDBNameInString(e.getMessage),
+          e.line,
+          e.startPosition,
+          newPlanOp,
+          CarbonEnv.getInstance(this).replaceDBNameInException(e.cause))
+
+      case e: Exception =>
+        throw CarbonEnv.getInstance(this).replaceDBNameInException(Some(e)).get
+    }
   }
 
   /**

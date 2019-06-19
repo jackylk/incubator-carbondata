@@ -19,10 +19,13 @@ package org.apache.spark.sql.leo
 
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{CarbonEnv, SparkSession}
+import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.{SparkPlan, SparkStrategy}
 import org.apache.spark.sql.execution.command._
-import org.apache.spark.sql.leo.command.{LeoCreateDatabaseCommand, LeoCreateTableCommand, LeoDropDatabaseCommand, LeoDropTableCommand}
+import org.apache.spark.sql.execution.command.table.{CarbonDescribeFormattedCommand, CarbonShowTablesCommand}
+import org.apache.spark.sql.leo.command.{LeoCreateDatabaseCommand, LeoCreateTableCommand, LeoDropDatabaseCommand, LeoDropTableCommand, LeoShowDatabasesCommand}
+import org.apache.spark.util.CarbonReflectionUtils
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 
@@ -42,11 +45,36 @@ class LeoDDLStrategy(session: SparkSession) extends SparkStrategy {
         val leoCmd = LeoDropDatabaseCommand(cmd)
         ExecutedCommandExec(leoCmd) :: Nil
 
+      case cmd@ShowDatabasesCommand(databasePattern) =>
+        val leoCmd = LeoShowDatabasesCommand(databasePattern)
+        ExecutedCommandExec(leoCmd) :: Nil
+
+      case cmd@ShowTablesCommand(databaseName, tableIdentifierPattern, isExtended, partitionSpec) =>
+        val carbonCmd = CarbonShowTablesCommand(databaseName, tableIdentifierPattern)
+        ExecutedCommandExec(carbonCmd) :: Nil
+
+      case cmd@DescribeTableCommand(table, partitionSpec, isExtended) =>
+        val isFormatted: Boolean = if (session.version.startsWith("2.1")) {
+          CarbonReflectionUtils.getDescribeTableFormattedField(cmd)
+        } else {
+          false
+        }
+        if (isExtended || isFormatted) {
+          val resolvedTable =
+            session.sessionState.executePlan(UnresolvedRelation(table)).analyzed
+          val resultPlan = session.sessionState.executePlan(resolvedTable).executedPlan
+          ExecutedCommandExec(
+            CarbonDescribeFormattedCommand(
+              resultPlan,
+              plan.output,
+              partitionSpec,
+              table)) :: Nil
+        } else {
+          Nil
+        }
+
       // CREATE TABLE
-      case cmd@CreateDataSourceTableCommand(table, ignoreIfExists)
-        if table.provider.get != DDLUtils.HIVE_PROVIDER
-           && (table.provider.get.equals("org.apache.spark.sql.CarbonSource")
-               || table.provider.get.equalsIgnoreCase("carbondata")) =>
+      case cmd@CreateTableCommand(table, ignoreIfExists) =>
         val leoCmd = LeoCreateTableCommand(table, ignoreIfExists)
         ExecutedCommandExec(leoCmd) :: Nil
 
@@ -57,6 +85,7 @@ class LeoDDLStrategy(session: SparkSession) extends SparkStrategy {
           cmd, ifNotExists, identifier.database, identifier.table.toLowerCase)
         ExecutedCommandExec(leoCmd) :: Nil
 
+      case _ => Nil
     }
   }
 }

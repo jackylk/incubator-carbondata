@@ -27,29 +27,10 @@ case class LeoCreateTableCommand(
   extends RunnableCommand {
 
   override def run(sparkSession: SparkSession): Seq[Row] = {
-    // step 1: create table in hbase
-    // TODO
-
-    // step 2: create table in carbon (persist schema file)
-    val updatedCatalog = try {
-      CarbonSource.updateCatalogTableWithCarbonSchema(table, sparkSession)
-    } catch {
-      case e: Exception =>
-        // TODO: drop table in hbase
-        throw e
-    }
-
-    // step 3: save meta in metastore, undo previous steps if failed
-    try {
-
-      val cmd = CreateDataSourceTableCommand(updatedCatalog, ignoreIfExists)
-      cmd.run(sparkSession)
-    } catch {
-      case e: Exception =>
-        // TODO: drop table in hbase
-        // TODO: delete the schema file
-      throw e
-    }
+    val updatedCatalog = CarbonSource.updateCatalogTableWithCarbonSchema(table, sparkSession)
+    val newTable = updatedCatalog.copy(provider = Some("org.apache.spark.sql.CarbonSource"))
+    val rows = CreateDataSourceTableCommand(newTable, ignoreIfExists).run(sparkSession)
+    rows
   }
 
 }

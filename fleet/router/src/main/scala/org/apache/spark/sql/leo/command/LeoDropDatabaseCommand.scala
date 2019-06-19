@@ -36,7 +36,6 @@ case class LeoDropDatabaseCommand(command: DropDatabaseCommand)
     // delete name space in hbase
     // drop db in carbon
 
-
     var rows: Seq[Row] = Seq()
     val dbName = command.databaseName
     var tablesInDB: Seq[TableIdentifier] = null
