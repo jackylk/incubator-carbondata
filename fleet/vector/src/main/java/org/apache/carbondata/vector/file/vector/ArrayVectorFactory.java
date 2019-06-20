@@ -43,9 +43,13 @@ public class ArrayVectorFactory {
    * @return
    */
   public static ArrayVector createArrayVector(CarbonColumn column) {
+    return createArrayVector(column, null);
+  }
+
+  public static ArrayVector createArrayVector(CarbonColumn column, ArrayVector parent) {
     DataType sparkDataType =
         CarbonSparkDataSourceUtil.convertCarbonToSparkDataType(column.getDataType());
-    return createArrayVector(sparkDataType, column);
+    return createArrayVector(sparkDataType, column, parent);
   }
 
   /**
@@ -55,6 +59,11 @@ public class ArrayVectorFactory {
    * @return
    */
   public static ArrayVector createArrayVector(DataType dataType, CarbonColumn column) {
+    return createArrayVector(dataType, column, null);
+  }
+
+  public static ArrayVector createArrayVector(
+      DataType dataType, CarbonColumn column, ArrayVector parent) {
     if (dataType instanceof StringType ||
         dataType instanceof DateType ||
         dataType instanceof BooleanType ||
@@ -66,15 +75,15 @@ public class ArrayVectorFactory {
         dataType instanceof DecimalType ||
         dataType instanceof BinaryType ||
         dataType instanceof VarcharType) {
-      return new SparsePrimitiveVector(dataType);
+      return new SparsePrimitiveVector(dataType, parent);
     } else if (dataType instanceof TimestampType) {
-      return new SparseTimestampsVector(dataType);
+      return new SparseTimestampsVector(dataType, parent);
     } else if (dataType instanceof ArrayType) {
-      return new SparseArraysVector((ArrayType) dataType, column);
+      return new SparseArraysVector((ArrayType) dataType, parent, column);
     } else if (dataType instanceof StructType) {
-      return new SparseStructsVector((StructType) dataType, column);
+      return new SparseStructsVector((StructType) dataType, parent, column);
     } else if (dataType instanceof MapType) {
-      return new SparseMapsVector((MapType) dataType, column);
+      return new SparseMapsVector((MapType) dataType, parent, column);
     } else {
       String message = "vector table not support data type: " + dataType.typeName();
       LOGGER.error(message);

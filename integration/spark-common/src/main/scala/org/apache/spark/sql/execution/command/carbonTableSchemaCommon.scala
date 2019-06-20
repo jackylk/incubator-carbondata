@@ -195,7 +195,8 @@ case class AlterTableAddColumnsModel(
     tableProperties: Map[String, String],
     dimCols: Seq[Field],
     msrCols: Seq[Field],
-    highCardinalityDims: Seq[String])
+    highCardinalityDims: Seq[String],
+    columnSchemas: Seq[ColumnSchema] = Seq.empty)
 
 case class AlterTableDropColumnModel(databaseName: Option[String],
     tableName: String,
@@ -225,7 +226,7 @@ class AlterTableColumnSchemaGenerator(
     if(sortColumns.isDefined) {
       sortColumns.get.contains(columnName)
     } else {
-      true
+      false
     }
   }
 
@@ -234,7 +235,7 @@ class AlterTableColumnSchemaGenerator(
     if(sortColumns.isDefined) {
       sortColumns.get.contains(columnName)
     } else {
-      true
+      false
     }
   }
 

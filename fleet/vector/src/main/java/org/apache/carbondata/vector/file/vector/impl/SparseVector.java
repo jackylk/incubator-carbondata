@@ -59,8 +59,8 @@ public abstract class SparseVector extends ArrayVector {
    *
    * @param type
    */
-  public SparseVector(DataType type) {
-    super(type);
+  public SparseVector(DataType type, ArrayVector parent) {
+    super(type, parent);
   }
 
   public int fillVector(ArrayReader reader, int rows) throws IOException {
@@ -86,7 +86,7 @@ public abstract class SparseVector extends ArrayVector {
     if (offsetLen >= stepLen) {
       for (int index = 0; index < offsetLen; index += stepLen) {
         numRows += 1;
-        if (offset[index] == stepLen) {
+        if (offset[index] == FileConstants.NULL_BYTE) {
           numNulls += 1;
         }
       }
@@ -124,10 +124,14 @@ public abstract class SparseVector extends ArrayVector {
   }
 
   protected int dataOffset(int rowId, int byteSize) {
+    if (parent != null) {
+      rowId = columnIndex(rowId);
+    }
     return (int) (bytesToLong(offset, rowId << 3) - start - byteSize);
   }
 
   protected int offsetAt(int rowId) {
+    rowId = columnIndex(rowId);
     if (rowId == 0) {
       return 0;
     } else {
@@ -136,6 +140,7 @@ public abstract class SparseVector extends ArrayVector {
   }
 
   protected int dataLengthAt(int rowId) {
+    rowId = columnIndex(rowId);
     if (rowId == 0) {
       return (int) (bytesToLong(offset, 0) - start);
     } else {
@@ -156,7 +161,8 @@ public abstract class SparseVector extends ArrayVector {
 
   @Override
   public boolean isNullAt(int rowId) {
-    return offset[rowId << 3] == 8;
+    rowId = columnIndex(rowId);
+    return offset[rowId << 3] == FileConstants.NULL_BYTE;
   }
 
   @Override
@@ -174,5 +180,13 @@ public abstract class SparseVector extends ArrayVector {
         ((bytes[start + 5] & 255) << 16) +
         ((bytes[start + 6] & 255) <<  8) +
         ((bytes[start + 7] & 255) <<  0);
+  }
+
+  @Override
+  public int columnIndex(int rowIndex) {
+    if (parent == null) {
+      return rowIndex;
+    }
+    return ((SparseStructsVector)parent).actualIndex(rowIndex);
   }
 }

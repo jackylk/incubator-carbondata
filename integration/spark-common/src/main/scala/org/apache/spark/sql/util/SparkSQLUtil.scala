@@ -221,4 +221,8 @@ object SparkSQLUtil {
   def getSerializableConfigurableInstance(hadoopConf: Configuration): SerializableConfiguration = {
     new SerializableConfiguration(hadoopConf)
   }
+
+  def ofRows(spark: SparkSession, plan: LogicalPlan): DataFrame = {
+    Dataset.ofRows(spark, plan)
+  }
 }

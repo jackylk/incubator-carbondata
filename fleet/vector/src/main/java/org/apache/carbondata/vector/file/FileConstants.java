@@ -23,6 +23,11 @@ package org.apache.carbondata.vector.file;
 public class FileConstants {
 
   /**
+   * flag byte: whether it is null or not
+   */
+  public static final byte NULL_BYTE = (byte) 0x80;
+
+  /**
    * the data size of load batch, unit: byte
    */
   public static final long TABLE_LOAD_BATCH_SIZE = 256L * 1024 * 1024;

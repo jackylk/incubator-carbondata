@@ -66,6 +66,7 @@ public class VectorTableWriter {
    */
   private synchronized void initWriter() throws VectorTableException {
     if (isFirstRow) {
+      isFirstRow = false;
       List<CarbonColumn> columns = table.getCreateOrderColumn(table.getTableName());
       numColumns = columns.size();
       // init writer
@@ -93,7 +94,6 @@ public class VectorTableWriter {
         }
       }
     }
-    isFirstRow = false;
   }
 
   /**

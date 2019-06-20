@@ -53,7 +53,7 @@ public class SparseStructsReader extends SparseReader {
     numColumns = childDimensions.size();
     childReaders = new ArrayReader[numColumns];
     for (int index = 0; index < numColumns; index++) {
-      childReaders[index] = ArrayReaderFactory.createArrayReader(table, childDimensions.get(0));
+      childReaders[index] = ArrayReaderFactory.createArrayReader(table, childDimensions.get(index));
       childReaders[index].open(columnFolder, hadoopConf);
     }
   }

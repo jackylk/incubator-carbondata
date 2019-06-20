@@ -43,12 +43,12 @@ public class SparseMapsVector extends SparseVector {
    *
    * @param type
    */
-  public SparseMapsVector(MapType type, CarbonColumn column) {
-    super(type);
+  public SparseMapsVector(MapType type, ArrayVector parent, CarbonColumn column) {
+    super(type, parent);
     List<CarbonDimension> childDimensions =
         ((CarbonDimension) column).getListOfChildDimensions().get(0).getListOfChildDimensions();
     keyVector = ArrayVectorFactory.createArrayVector(childDimensions.get(0));
-    valueVector = ArrayVectorFactory.createArrayVector(childDimensions.get(0));
+    valueVector = ArrayVectorFactory.createArrayVector(childDimensions.get(1));
   }
 
   @Override
@@ -61,9 +61,9 @@ public class SparseMapsVector extends SparseVector {
   }
 
   @Override
-  public ColumnarMap getMap(int ordinal) {
+  public ColumnarMap getMap(int rowId) {
     // TODO better to reuse this ColumnarMap object to reduce GC.
-    return new ColumnarMap(keyVector, valueVector, offsetAt(ordinal), dataLengthAt(ordinal));
+    return new ColumnarMap(keyVector, valueVector, offsetAt(rowId), dataLengthAt(rowId));
   }
 
   @Override

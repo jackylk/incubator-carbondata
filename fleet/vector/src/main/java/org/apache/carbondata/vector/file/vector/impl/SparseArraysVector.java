@@ -41,8 +41,8 @@ public class SparseArraysVector extends SparseVector {
    *
    * @param type
    */
-  public SparseArraysVector(ArrayType type, CarbonColumn column) {
-    super(type);
+  public SparseArraysVector(ArrayType type, ArrayVector parent, CarbonColumn column) {
+    super(type, parent);
     vector = ArrayVectorFactory.createArrayVector(
         ((CarbonDimension) column).getListOfChildDimensions().get(0));
   }

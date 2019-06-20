@@ -40,6 +40,7 @@ import org.apache.spark.rdd.{DataLoadCoalescedRDD, DataLoadPartitionCoalescer, N
 import org.apache.spark.sql.{CarbonEnv, DataFrame, Row, SQLContext}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.execution.command.{CompactionModel, ExecutionErrors, UpdateTableModel}
+import org.apache.spark.sql.execution.command.vector.VectorTableLoader
 import org.apache.spark.sql.hive.DistributionUtil
 import org.apache.spark.sql.optimizer.CarbonFilters
 import org.apache.spark.sql.util.{CarbonException, SparkSQLUtil}
@@ -78,7 +79,6 @@ import org.apache.carbondata.processing.util.{Auditor, CarbonDataProcessorUtil, 
 import org.apache.carbondata.spark.{DataLoadResultImpl, PartitionFactory, _}
 import org.apache.carbondata.spark.load._
 import org.apache.carbondata.spark.util.{CarbonScalaUtil, CommonUtil, Util}
-import org.apache.carbondata.vector.VectorTableLoadHelper
 
 /**
  * This is the factory class which can create different RDD depends on user needs.
@@ -377,7 +377,7 @@ object CarbonDataRDDFactory {
               dataFrame, carbonLoadModel, hadoopConf)
           } else if (dataFrame.isDefined) {
             if (carbonTable.isVectorTable) {
-              VectorTableLoadHelper.loadDataFrameForVector(
+              VectorTableLoader.loadDataFrameForVector(
                 sqlContext,
                 dataFrame,
                 carbonLoadModel,

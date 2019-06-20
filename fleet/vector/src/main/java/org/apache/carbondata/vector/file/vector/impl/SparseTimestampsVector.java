@@ -17,6 +17,8 @@
 
 package org.apache.carbondata.vector.file.vector.impl;
 
+import org.apache.carbondata.vector.file.vector.ArrayVector;
+
 import org.apache.spark.sql.types.DataType;
 
 /**
@@ -28,8 +30,8 @@ public class SparseTimestampsVector extends SparsePrimitiveVector {
    *
    * @param type
    */
-  public SparseTimestampsVector(DataType type) {
-    super(type);
+  public SparseTimestampsVector(DataType type, ArrayVector parent) {
+    super(type, parent);
   }
 
   @Override

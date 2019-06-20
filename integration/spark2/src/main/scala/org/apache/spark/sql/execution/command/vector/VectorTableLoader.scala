@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.carbondata.vector
+package org.apache.spark.sql.execution.command.vector
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.spark.sql.{DataFrame, Row, SQLContext}
@@ -32,7 +32,7 @@ import org.apache.carbondata.vector.table.VectorTableWriter
 /**
  * load util for vector table
  */
-object VectorTableLoadHelper {
+object VectorTableLoader {
 
   private val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
 

@@ -44,13 +44,14 @@ public class SparseStructsVector extends SparseVector {
    *
    * @param type
    */
-  public SparseStructsVector(StructType type, CarbonColumn column) {
-    super(type);
+  public SparseStructsVector(StructType type, ArrayVector parent, CarbonColumn column) {
+    super(type, parent);
     List<CarbonDimension> childDimensions = ((CarbonDimension) column).getListOfChildDimensions();
     numColumns = childDimensions.size();
     childVectors = new ArrayVector[numColumns];
     for (int index = 0; index < numColumns; index++) {
-      childVectors[index] = ArrayVectorFactory.createArrayVector(childDimensions.get(index));
+      childVectors[index] =
+          ArrayVectorFactory.createArrayVector(childDimensions.get(index), this);
     }
   }
 
@@ -82,5 +83,9 @@ public class SparseStructsVector extends SparseVector {
       }
       childVectors = null;
     }
+  }
+
+  public int actualIndex(int rowIndex) {
+    return offsetAt(rowIndex);
   }
 }
