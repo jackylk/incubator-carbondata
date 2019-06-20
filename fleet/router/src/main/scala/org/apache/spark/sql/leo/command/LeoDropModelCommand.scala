@@ -17,8 +17,12 @@
 
 package org.apache.spark.sql.leo.command
 
+import scala.collection.JavaConverters._
+
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.execution.command.RunnableCommand
+import org.apache.spark.sql.leo.ModelStoreManager
+import org.apache.spark.sql.leo.exceptions.NoSuchModelException
 
 case class LeoDropModelCommand(
     dbName: Option[String],
@@ -26,5 +30,17 @@ case class LeoDropModelCommand(
     ifExists: Boolean)
   extends RunnableCommand {
 
-  override def run(sparkSession: SparkSession): Seq[Row] = Seq.empty
+  override def run(sparkSession: SparkSession): Seq[Row] = {
+    val modelSchemas = ModelStoreManager.getInstance().getAllModelSchemas
+    val ifModelExists = modelSchemas.asScala
+      .exists(model => model.getDataMapName.equalsIgnoreCase(modelName))
+    if (ifModelExists) {
+      ModelStoreManager.getInstance().dropModelSchema(modelName)
+    } else {
+      if (!ifExists) {
+        throw new NoSuchModelException(modelName)
+      }
+    }
+    Seq.empty
+  }
 }

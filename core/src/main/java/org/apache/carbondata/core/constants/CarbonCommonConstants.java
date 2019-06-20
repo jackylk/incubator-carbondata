@@ -2195,4 +2195,8 @@ public final class CarbonCommonConstants {
 
   public  static final String CARBON_INDEX_SERVER_JOBNAME_LENGTH_DEFAULT =
           "50";
+  /**
+   * This property will be used to store queryObject used in create model
+   */
+  public static final String QUERY_OBJECT = "query_object";
 }
