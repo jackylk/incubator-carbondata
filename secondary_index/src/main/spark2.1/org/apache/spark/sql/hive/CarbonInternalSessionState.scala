@@ -127,16 +127,12 @@ class CarbonSessionCloseListener(sparkSession: SparkSession) extends SparkSessio
 // Register all the required listeners using the singleton instance as the listeners
 // need to be registered only once
 object CarbonInternalSessionState {
-  var initialized = false
 
   def init(sparkSession: SparkSession): Unit = {
 
     sparkSession.sessionStateListenerManager
       .addListener(new CarbonSessionCloseListener(sparkSession))
-    if (!initialized) {
-      CarbonCommonInitializer.init(sparkSession)
-      initialized = true
-    }
+    CarbonCommonInitializer.init
   }
 }
 

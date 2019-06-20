@@ -14,6 +14,7 @@ package org.apache.spark.sql.acl
 import org.apache.spark.sql.hive.CarbonInternalMetaUtil
 import org.apache.spark.util.CarbonInternalReflectionUtils
 
+import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.events.{CarbonEnvInitPreEvent, Event, OperationContext, OperationEventListener}
 import org.apache.carbondata.spark.acl.CarbonUserGroupInformation
 import org.apache.carbondata.spark.core.CarbonInternalCommonConstants
@@ -22,7 +23,9 @@ import org.apache.carbondata.spark.core.CarbonInternalCommonConstants
  *
  */
 class CarbonEnvInitPreEventListener extends OperationEventListener {
-   /**
+  val LOGGER = LogServiceFactory.getLogService(this.getClass.getName)
+
+  /**
    * Called on a specified event occurrence
    *
    * @param event
@@ -33,7 +36,8 @@ class CarbonEnvInitPreEventListener extends OperationEventListener {
      val carbonEnvInitPreEvent = event.asInstanceOf[CarbonEnvInitPreEvent]
      val storePath = carbonEnvInitPreEvent.storePath
      val sparkSession = carbonEnvInitPreEvent.sparkSession
-     val carbonSessionInfo = carbonEnvInitPreEvent.carbonSessionInfo
+    LOGGER.info("CarbonEnvInitPreEventListener invoked for session :" + sparkSession.toString)
+    val carbonSessionInfo = carbonEnvInitPreEvent.carbonSessionInfo
      CarbonUserGroupInformation.getInstance.enableDriverUser()
     val sessionLevelUGIObject = CarbonUserGroupInformation.getInstance
       .createCurrentUser(CarbonInternalMetaUtil.getClientUser(sparkSession))

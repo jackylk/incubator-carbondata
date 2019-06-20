@@ -105,9 +105,6 @@ class CarbonACLSessionCatalog(
     carbonEnv
   }
 
-  // Initialize all listeners to the Operation bus.
-  CarbonEnv.init(sparkSession)
-
   override def lookupRelation(name: TableIdentifier): LogicalPlan = {
     val rtnRelation: LogicalPlan =
       try {
@@ -305,8 +302,9 @@ class CarbonACLInternalSessionStateBuilder(sparkSession: SparkSession,
     }
   }
 
-  // initialize all listeners
-  CarbonACLInternalSessionStateBuilder.init(sparkSession)
+  // Register all the required listeners using the singleton instance as the listeners
+  // need to be registered only once
+  CarbonCommonInitializer.init
 
   class CarbonPreOptimizerRule extends Rule[LogicalPlan] {
 
@@ -339,19 +337,6 @@ class CarbonACLInternalSessionStateBuilder(sparkSession: SparkSession,
   }
 
   override protected def newBuilder: NewBuilder = new CarbonACLInternalSessionStateBuilder(_, _)
-}
-
-// Register all the required listeners using the singleton instance as the listeners
-// need to be registered only once
-object CarbonACLInternalSessionStateBuilder {
-  var initialized = false
-
-  def init(sparkSession: SparkSession): Unit = {
-    if (!initialized) {
-      CarbonCommonInitializer.init(sparkSession)
-      initialized = true
-    }
-  }
 }
 
 class CarbonInternalSqlAstBuilder(conf: SQLConf, parser: CarbonInternalSpark2SqlParser,
