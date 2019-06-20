@@ -33,7 +33,7 @@ case class CarbonExplainCommand(
   override def processMetadata(sparkSession: SparkSession): Seq[Row] = {
     val explainCommand = child.asInstanceOf[ExplainCommand]
     setAuditInfo(Map("query" -> explainCommand.logicalPlan.simpleString))
-    val (newPlanOp, errMsg) = LeoDatabase.replaceAllDBName(explainCommand.logicalPlan)
+    val (newPlanOp, errMsg) = LeoDatabase.convertUserDBNameToLeoInPlan(explainCommand.logicalPlan)
     val newCmd = if (newPlanOp.isEmpty) {
       throw new AnalysisException(errMsg)
     } else {
@@ -56,7 +56,7 @@ case class CarbonExplainCommand(
     }
     val env = CarbonEnv.getInstance(sparkSession)
     rows.map { row =>
-      val newMsg = env.replaceDBNameInString(row.getString(0))
+      val newMsg = env.makeStringValidToUser(row.getString(0))
       new GenericRow(Seq(newMsg).toArray.asInstanceOf[Array[Any]])
     }
   }

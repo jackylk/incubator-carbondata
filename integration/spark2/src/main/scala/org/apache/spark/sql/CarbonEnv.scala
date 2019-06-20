@@ -67,13 +67,13 @@ class CarbonEnv {
 
   // return the user visible database name by extracting it from the input
   // database name (for Leo)
-  var extractUserDB: String => String = _
+  var convertToUserDBName: String => String = _
 
-  // replace leo database name with user database name in the input string
-  var replaceDBNameInString: String => String = _
+  // find and replace all leo database names with user database name in the input string
+  var makeStringValidToUser: String => String = _
 
-  // replease leo database name with user database name in the input exception
-  var replaceDBNameInException: Option[Throwable] => Option[Throwable] = _
+  // find and replace leo database names with user database name in the input exception
+  var makeExceptionValidToUser: Option[Throwable] => Option[Throwable] = _
 
   def init(sparkSession: SparkSession): Unit = {
     val properties = CarbonProperties.getInstance()
@@ -148,14 +148,14 @@ class CarbonEnv {
       case e: Exception =>
         isLeo = false
     }
-    extractUserDB = if (isLeo) LeoDatabase.extractUserDBName else noOp
-    replaceDBNameInString = if (isLeo) replaceLeoDBNameInString else noOp
-    replaceDBNameInException = if (isLeo) replaceLeoDBNameInException else noOpException
+    convertToUserDBName = if (isLeo) LeoDatabase.convertLeoDBNameToUser else noOp
+    makeStringValidToUser = if (isLeo) replaceLeoDBNameInString else noOp
+    makeExceptionValidToUser = if (isLeo) replaceLeoDBNameInException else noOpException
   }
 
   private def replaceLeoDBNameInString(msg: String): String = {
     if (isLeo) {
-      val pattern: Regex = LeoDatabase.getLeoDBPrefix.r
+      val pattern: Regex = LeoDatabase.leoDBNamePrefix.r
       pattern.replaceAllIn(msg, "")
     } else {
       msg
