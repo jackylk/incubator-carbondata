@@ -19,8 +19,8 @@ package org.apache.spark.sql.leo.command
 
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.catalyst.expressions.Attribute
-import org.apache.spark.sql.execution.command.table.CarbonDropTableCommand
 import org.apache.spark.sql.execution.command.{DropTableCommand, RunnableCommand}
+import org.apache.spark.sql.execution.command.table.CarbonDropTableCommand
 
 case class LeoDropTableCommand(
     sparkCommand: DropTableCommand,
