@@ -96,7 +96,7 @@ class CarbonSession(@transient val sc: SparkContext,
       case e: AnalysisException =>
         val (newPlanOp, errMsg) = if (e.plan.nonEmpty) {
           try {
-            LeoDatabase.replaceAllDBName(e.plan.get)
+            LeoDatabase.convertUserDBNameToLeoInPlan(e.plan.get)
           } catch {
             case ee: Exception => (e.plan, "")
           }
@@ -105,14 +105,14 @@ class CarbonSession(@transient val sc: SparkContext,
         }
 
         throw new AnalysisException(
-          CarbonEnv.getInstance(this).replaceDBNameInString(e.getMessage),
+          CarbonEnv.getInstance(this).makeStringValidToUser(e.getMessage),
           e.line,
           e.startPosition,
           newPlanOp,
-          CarbonEnv.getInstance(this).replaceDBNameInException(e.cause))
+          CarbonEnv.getInstance(this).makeExceptionValidToUser(e.cause))
 
       case e: Exception =>
-        throw CarbonEnv.getInstance(this).replaceDBNameInException(Some(e)).get
+        throw CarbonEnv.getInstance(this).makeExceptionValidToUser(Some(e)).get
     }
   }
 

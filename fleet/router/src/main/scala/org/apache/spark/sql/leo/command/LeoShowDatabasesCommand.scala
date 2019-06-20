@@ -39,7 +39,7 @@ case class LeoShowDatabasesCommand(
       databasePattern
         .map(catalog.listDatabases)
         .getOrElse(catalog.listDatabases)
-        .map(LeoDatabase.extractUserDBName)
+        .map(LeoDatabase.convertLeoDBNameToUser)
     databases.map { d => Row(d) }
   }
 

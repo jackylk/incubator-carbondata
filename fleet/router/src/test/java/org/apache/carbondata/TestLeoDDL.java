@@ -94,8 +94,8 @@ public class TestLeoDDL {
   public void testCreateDBOk() throws AnalysisException {
     session.sql("create database db1");
 
-    Database db = session.catalog().getDatabase(LeoDatabase.fromUserDBName("db1"));
-    assertEquals(LeoDatabase.fromUserDBName("db1"), db.name());
+    Database db = session.catalog().getDatabase(LeoDatabase.convertUserDBNameToLeo("db1"));
+    assertEquals(LeoDatabase.convertUserDBNameToLeo("db1"), db.name());
 
     List<Row> rows = session.sql("show databases").collectAsList();
     assertEquals("db1", rows.get(0).getString(0));
@@ -131,14 +131,14 @@ public class TestLeoDDL {
     session.sql("desc formatted db1.t1").show(100, false);
     rows = session.sql("desc formatted db1.t1").collectAsList();
     long size = rows.stream()
-        .filter(row -> row.getString(1).contains(LeoDatabase.getLeoDBPrefix()))
+        .filter(row -> row.getString(1).contains(LeoDatabase.leoDBNamePrefix()))
         .count();
     assertEquals(0, size);
 
     session.sql("explain select * from db1.t1").show(false);
     rows = session.sql("explain select * from db1.t1").collectAsList();
     size = rows.stream()
-        .filter(row -> row.getString(0).contains(LeoDatabase.getLeoDBPrefix()))
+        .filter(row -> row.getString(0).contains(LeoDatabase.leoDBNamePrefix()))
         .count();
     assertEquals(0, size);
 
