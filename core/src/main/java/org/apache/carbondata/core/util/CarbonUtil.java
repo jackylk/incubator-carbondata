@@ -2052,13 +2052,25 @@ public final class CarbonUtil {
    */
   public static org.apache.carbondata.format.TableInfo readSchemaFile(String schemaFilePath)
       throws IOException {
+    return readSchemaFile(schemaFilePath, FileFactory.getConfiguration());
+  }
+
+  /**
+   * This method will read the schema file from a given path
+   *
+   * @param schemaFilePath
+   * @return
+   */
+  public static org.apache.carbondata.format.TableInfo readSchemaFile(String schemaFilePath,
+      Configuration conf)
+      throws IOException {
     TBaseCreator createTBase = new ThriftReader.TBaseCreator() {
       public org.apache.thrift.TBase<org.apache.carbondata.format.TableInfo,
           org.apache.carbondata.format.TableInfo._Fields> create() {
         return new org.apache.carbondata.format.TableInfo();
       }
     };
-    ThriftReader thriftReader = new ThriftReader(schemaFilePath, createTBase);
+    ThriftReader thriftReader = new ThriftReader(schemaFilePath, createTBase, conf);
     thriftReader.open();
     org.apache.carbondata.format.TableInfo tableInfo =
         (org.apache.carbondata.format.TableInfo) thriftReader.read();
