@@ -221,6 +221,10 @@ object SparkSQLUtil {
     new SerializableConfiguration(hadoopConf)
   }
 
+  def ofRows(spark: SparkSession, plan: LogicalPlan): DataFrame = {
+    Dataset.ofRows(spark, plan)
+  }
+
   /**
    * Get the task group id
    *

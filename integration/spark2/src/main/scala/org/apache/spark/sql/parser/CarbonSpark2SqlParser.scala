@@ -81,7 +81,7 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
     cacheManagement | alterDataMap
 
   protected lazy val loadManagement: Parser[LogicalPlan] =
-    deleteLoadsByID | deleteLoadsByLoadDate | cleanFiles | loadDataNew
+    deleteLoadsByID | deleteLoadsByLoadDate | cleanFiles | loadDataNew | insertColumns
 
   protected lazy val restructure: Parser[LogicalPlan] =
     alterTableColumnRenameAndModifyDataType | alterTableDropColumn | alterTableAddColumns
@@ -457,6 +457,14 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
           tableInfoOp = None,
           internalOptions = Map.empty,
           partition = partitionSpec)
+    }
+
+  protected lazy val insertColumns: Parser[LogicalPlan] =
+    INSERT ~> COLUMNS ~> ( "(" ~> anyFieldDef  <~ ")" ) ~
+    (INTO ~> TABLE.? ~> (ident <~ ".").?) ~ ident ~
+    restInput <~ opt(";") ^^ {
+      case column~ dbName ~ tableName ~ query =>
+        CarbonInsertColumnsCommand(column, dbName, tableName, query)
     }
 
   protected lazy val deleteLoadsByID: Parser[LogicalPlan] =

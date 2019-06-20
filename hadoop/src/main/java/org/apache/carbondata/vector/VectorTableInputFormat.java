@@ -39,6 +39,9 @@ import org.apache.log4j.Logger;
 
 public class VectorTableInputFormat {
 
+  private static final InheritableThreadLocal<String> threadLocal =
+      new InheritableThreadLocal<String>();
+
   private static final Logger LOGGER =
       LogServiceFactory.getLogService(VectorTableInputFormat.class.getCanonicalName());
 
@@ -71,5 +74,15 @@ public class VectorTableInputFormat {
       LOGGER.error(e);
       throw e;
     }
+  }
+
+  public static void setSegmentNo(String segmentNo) {
+    threadLocal.set(segmentNo);
+  }
+
+  public static String getSegmentNo() {
+    String segmentNo = threadLocal.get();
+    threadLocal.remove();
+    return segmentNo;
   }
 }

@@ -33,8 +33,6 @@ class LeoAiSqlParser extends CarbonSpark2SqlParser {
   protected val MODELS: Regex = leoKeyWord("MODELS")
   protected val REGISTER: Regex = leoKeyWord("REGISTER")
   protected val UNREGISTER: Regex = leoKeyWord("UNREGISTER")
-  protected val INSERT: Regex = leoKeyWord("INSERT")
-  protected val COLUMN: Regex = leoKeyWord("COLUMN")
 
   /**
    * This will convert key word to regular expression.
@@ -126,18 +124,5 @@ class LeoAiSqlParser extends CarbonSpark2SqlParser {
     UNREGISTER ~> MODEL ~> (ident <~ ".").? ~ ident <~ opt(";") ^^ {
       case dbName ~ modelName =>
         LeoUnregisterModelCommand(dbName, modelName)
-    }
-
-  /**
-   * INSERT COLUMN columnName
-   * INTO TABLE [dbName.]tableName
-   * AS select_query
-   */
-  protected lazy val insertColumn: Parser[LogicalPlan] =
-    INSERT ~> COLUMN ~> ident ~
-    (INTO ~> TABLE ~> (ident <~ ".").?) ~ ident ~
-    (AS ~> restInput) <~ opt(";") ^^ {
-      case columnName ~ dbName ~ tableName ~ query =>
-        LeoInsertColumnCommand(columnName, dbName, tableName, query)
     }
 }

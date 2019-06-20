@@ -487,6 +487,11 @@ class CarbonScanRDD[T: ClassTag](
 //            .asInstanceOf[RecordReader[Void, Object]]
 //          streamReader
         case FileFormat.VECTOR_V1 =>
+          // set segmentNo for insert columns
+          VectorTableInputFormat.setSegmentNo(
+            inputSplit.asInstanceOf[CarbonMultiBlockSplit].getAllSplits.get(0).getSegmentId
+          )
+          // create RecordReader
           VectorTableInputFormat.createRecordReader(
             model, attemptContext.getConfiguration, vectorReader)
         case _ =>

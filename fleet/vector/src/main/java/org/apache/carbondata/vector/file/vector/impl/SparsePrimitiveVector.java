@@ -18,6 +18,7 @@
 package org.apache.carbondata.vector.file.vector.impl;
 
 import org.apache.carbondata.core.util.DataTypeUtil;
+import org.apache.carbondata.vector.file.vector.ArrayVector;
 
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.Decimal;
@@ -32,8 +33,8 @@ public class SparsePrimitiveVector extends SparseVector {
    *
    * @param type
    */
-  public SparsePrimitiveVector(DataType type) {
-    super(type);
+  public SparsePrimitiveVector(DataType type, ArrayVector parent) {
+    super(type, parent);
   }
 
   @Override
@@ -101,6 +102,4 @@ public class SparsePrimitiveVector extends SparseVector {
     System.arraycopy(data, offsetAt(rowId), bytes, 0, bytes.length);
     return bytes;
   }
-
-
 }

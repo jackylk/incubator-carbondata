@@ -149,9 +149,20 @@ class CarbonHiveSessionCatalog(
       schemaParts: String,
       cols: Option[Seq[ColumnSchema]]): Unit = {
     alterTable(tableIdentifier, schemaParts, cols)
+    val createColumnsByUser =
+      if (cols.isDefined) {
+        val columns = cols
+          .get
+          .filter(!_.isInvisible)
+          .filter(_.getSchemaOrdinal != -1)
+          .sortBy(_.getSchemaOrdinal)
+        Option(columns)
+      } else {
+        cols
+      }
     CarbonSessionUtil
       .alterExternalCatalogForTableWithUpdatedSchema(tableIdentifier,
-        cols,
+        createColumnsByUser,
         schemaParts,
         sparkSession)
   }

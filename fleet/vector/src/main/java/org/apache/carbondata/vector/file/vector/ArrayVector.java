@@ -38,21 +38,44 @@ import org.apache.spark.unsafe.types.UTF8String;
 public abstract class ArrayVector extends ColumnVector {
 
   /**
-   * read data from reader and fill vector
-   * @param reader
-   * @param rows
-   * @return
+   * parent vector
    */
-  public abstract int fillVector(ArrayReader reader, int rows) throws IOException;
+  protected ArrayVector parent;
 
   /**
    * Sets up the data type of this column vector.
    *
    * @param type
    */
-  public ArrayVector(DataType type) {
+  public ArrayVector(DataType type, ArrayVector parent) {
     super(type);
+    this.parent = parent;
   }
+
+  /**
+   * if the vector has a parent, set it by this method.
+   * @param parentVector
+   */
+  public void setParent(ArrayVector parentVector) {
+    this.parent = parent;
+  }
+
+  /**
+   * convert row index to column index.
+   * @param rowIndex
+   * @return
+   */
+  public int columnIndex(int rowIndex) {
+    return rowIndex;
+  }
+
+  /**
+   * read data from reader and fill vector
+   * @param reader
+   * @param rows
+   * @return
+   */
+  public abstract int fillVector(ArrayReader reader, int rows) throws IOException;
 
   @Override
   public boolean getBoolean(int rowId) {

@@ -103,6 +103,7 @@ abstract class CarbonDDLSqlParser extends AbstractCarbonSparkSQLParser {
   protected val IN = carbonKeyWord("IN")
   protected val INCLUDE = carbonKeyWord("INCLUDE")
   protected val INPATH = carbonKeyWord("INPATH")
+  protected val INSERT = carbonKeyWord("INSERT")
   protected val INTO = carbonKeyWord("INTO")
   protected val LEVELS = carbonKeyWord("LEVELS")
   protected val LIKE = carbonKeyWord("LIKE")
