@@ -27,6 +27,7 @@ import org.apache.carbondata.core.scan.expression.Expression;
 public class LeoQueryObject implements Serializable {
 
   private String tableName;
+  private String tablePath;
   private String[] projectionColumns;
   private Expression filterExpression;
 
@@ -36,6 +37,14 @@ public class LeoQueryObject implements Serializable {
 
   public void setTableName(String tableName) {
     this.tableName = tableName;
+  }
+
+  public String getTablePath() {
+    return tablePath;
+  }
+
+  public void setTablePath(String tablePath) {
+    this.tablePath = tablePath;
   }
 
   public String[] getProjectionColumns() {

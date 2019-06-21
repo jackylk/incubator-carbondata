@@ -23,6 +23,8 @@ import scala.collection.JavaConverters._
 
 import org.apache.spark.sql.{AnalysisException, LeoDatabase, Row, SparkSession}
 import org.apache.spark.sql.carbondata.execution.datasources.CarbonSparkDataSourceUtil
+import org.apache.leo.model.rest.CreateModelRestManager
+import org.apache.spark.sql.{AnalysisException, Row, SparkSession}
 import org.apache.spark.sql.catalyst.catalog.HiveTableRelation
 import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference}
 import org.apache.spark.sql.catalyst.plans.logical.{Filter, Project}
@@ -69,6 +71,7 @@ case class LeoCreateModelCommand(
     val database = LeoDatabase.convertLeoDBNameToUser(parentTable.head.database)
     query
       .setTableName(database + CarbonCommonConstants.UNDERSCORE + parentTable.head.identifier.table)
+    query.setTablePath(parentTable.head.storage.locationUri.get.getPath)
     // get projection columns and filter expression from logicalPlan
     logicalPlan match {
       case Project(projects, child: Filter) =>
@@ -97,7 +100,7 @@ case class LeoCreateModelCommand(
 
     // TODO train model and get options
     val optionsMap = new java.util.HashMap[String, String]()
-
+    optionsMap.putAll(options.asJava)
     optionsMap
       .put(CarbonCommonConstants.QUERY_OBJECT, ObjectSerializationUtil.convertObjectToString(query))
     // create model schema
@@ -112,8 +115,18 @@ case class LeoCreateModelCommand(
       relationIdentifier
     }
     modelSchema.setParentTables(new util.ArrayList[RelationIdentifier](parentIdents.asJava))
-    // store model schema
-    ModelStoreManager.getInstance().saveModelSchema(modelSchema)
+    // It starts creating the training job and generates the model in cloud.
+    val jobId = CreateModelRestManager.startTrainingJobRequest(optionsMap, modelName, query)
+    optionsMap.put("job_id", jobId.toString)
+    try {
+      // store model schema
+      ModelStoreManager.getInstance().saveModelSchema(modelSchema)
+    } catch {
+      case e:Exception =>
+        // TODO drop job.
+        throw e
+    }
+
     Seq.empty
   }
 }
