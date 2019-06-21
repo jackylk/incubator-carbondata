@@ -28,7 +28,7 @@ import org.apache.carbondata.core.cache.dictionary.ManageDictionaryAndBTree
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datamap.DataMapStoreManager
 import org.apache.carbondata.core.datastore.impl.FileFactory
-import org.apache.carbondata.core.metadata.{AbsoluteTableIdentifier, CarbonTableIdentifier}
+import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.util.CarbonUtil
 import org.apache.carbondata.core.util.path.CarbonTablePath
@@ -208,7 +208,13 @@ object CarbonInternalMetastore {
 
     val isIndexTable = datasourceOptions.getOrElse("isIndexTable", "false")
     val parentTableName = datasourceOptions.getOrElse("parentTableName", "")
-    val parentTablePath = datasourceOptions.getOrElse("parentTablePath", "")
+    val parentTablePath = if (!parentTableName.isEmpty) {
+      CarbonEnv
+        .getCarbonTable(TableIdentifier(parentTableName, Some(databaseName)))(sparkSession)
+        .getTablePath
+    } else {
+      ""
+    }
     val parentTableId = datasourceOptions.getOrElse("parentTableId", "")
     (isIndexTable, parentTableName, indexList, parentTablePath, parentTableId)
   }
