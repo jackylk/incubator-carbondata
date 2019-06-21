@@ -67,7 +67,8 @@ object DistributedRDDUtils {
     val groupedPartitions = convertToPartition(sortedPartitions,
       legacySegments,
       tableUniqueName,
-      executorsList).groupBy {
+      executorsList)
+      .groupBy {
         partition =>
           partition.getLocations.head
       }
