@@ -14,80 +14,80 @@
 
 1. 收集网上数据，从搜索引擎中得到图片路径和标题。建立table t
 
-   ```sql
-   create table t (
-     string path, 
-     string title,
-     int rank) 
-   as 
-   	select web_search('baidu_img', '颜值最高的明星', 100);
-   ```
+```sql
+create table t (
+  string path, 
+  string title,
+  int rank) 
+as
+  select web_search('baidu_img', '颜值最高的明星', 100);
+```
 
    
 
 2. 爬取图片，并将图片入库table t
 
-   ```sql
-   insert columns (
-     img binary, 
-     width int, 
-     height int, 
-     channel int) 
-   into t 
-   as 
-   	select 
-       image_content(download(path)), 
-       image_width(download(path)), 
-       image_height(download(path)), 
-       image_channel(download(path)) 
-   	from t;
-   ```
+```sql
+insert columns (
+  img binary, 
+  width int, 
+  height int, 
+  channel int) 
+into t 
+as 
+  select 
+    image_content(download(path)), 
+    image_width(download(path)), 
+    image_height(download(path)), 
+    image_channel(download(path)) 
+  from t;
+```
 
    
 
-3. 调用*命名实体API*，从title中得到明星名字
+3. 调用*NLP-命名实体API*，从title中得到明星名字
 
-   ```sql
-   insert columns (
-     name_from_title auto_struct) 
-   into t
-   as 
-   	select ei_named_entity(title) 
-   	from t;
-   ```
+```sql
+insert columns (
+  name_from_title json) 
+into t
+as 
+  select ei_named_entity(title) 
+  from t;
+```
 
    
 
-4. 调用*名人识别API*，从图片中得到明星名字
+4. 调用*图片识别-名人识别API*，从图片中得到明星名字
 
-   ```sql
-   insert columns (
-   	name_from_image auto_struct)
-   into t
-   as
-   	select ei_celebrity_recognition(base64(img))
-   	from t;
-   ```
+```sql
+insert columns (
+  name_from_image json)
+into t
+as
+  select ei_celebrity_recognition(img)
+  from t;
+```
 
    
 
 5. 数据清洗，过滤出上两步名字相同的人。统计数量、按排名显示图片
 
-   ```sql
-   -- 统计人数，剔除不干净的数据
-   select count(*) 
+```sql
+-- 统计人数，剔除不干净的数据，看看EI识别的好坏
+select count(*) 
+from t 
+where name_from_title.name = name_from_image.name;
+
+-- 显示颜值最高的10个人
+!display(
+  "select img 
    from t 
-   where name_from_title.name = name_from_image.name;
-   
-   -- 显示颜值最高的10个人
-   !display(
-   	"select img 
-       from t 
-       where name_from_title.name = name_from_image.name
-       order by rank
-       limit 10",
-   	10)
-   ```
+   where name_from_title.name = name_from_image.name
+   order by rank
+   limit 10",
+  10)
+```
 
 
 
@@ -99,96 +99,107 @@
 
 演示步骤：（基于第一个演示继续在table t上进行）
 
-1. 采集爬取”哭泣”的图片
+1. 采集爬取”哭泣”的图片，追加到已有的明星图片表里
 
-   ```sql
-   create table t (
-     string path, 
-     string title,
-     int rank) 
-   as 
-   	select web_search('baidu_img', '哭泣的人', 100);
-   ```
+```sql
+insert into table t (
+  path, 
+  title,
+  rank) 
+select web_search('baidu_img', '哭泣的人', 100);
+
+insert columns (
+  img binary, 
+  width int, 
+  height int, 
+  channel int)
+into t
+as 
+  select 
+    image_content(download(path)), 
+    image_width(download(path)), 
+    image_height(download(path)), 
+    image_channel(download(path)) 
+  from t;
+```
 
    
 
 2. 打标签。1代表微笑，0代表哭泣。已有的明星图片都是微笑的，所以是1。当前demo是直接插入标签值，未来和ModelArts系统联合做标注
 
-   ```sql
-   insert columns (label string) 
-   into t
-   as 
-   	select 
-       case when name_from_image != null then '1' 
-       else '0' 
-       end
-   	from t;
-   ```
+```sql
+insert columns (label string) 
+into t
+as 
+  select 
+    case when name_from_image != null then '1' 
+    else '0' 
+    end
+  from t;
+```
 
    
 
 3. 训练模型
 
-   ```sql
-   create model db1.model1
-   options (
-   	'type' = 'tensorflow/image_classification',
-   	'base_model' = 'inceptorv3',
-   	'label_column' = 'label',
-   	'max_iteration' = 100)
-   as
-   	select img, label 
-   	from t
-   ```
+```sql
+create model db1.model1
+  options (
+  'type' = 'tensorflow/image_classification',
+  'base_model' = 'inceptorv3',
+  'label_column' = 'label',
+  'max_iteration' = 100)
+as
+  select img, label 
+  from t
+```
 
 
 
 4. 推理。先将模型注册为udf，收集另一些数据来用于做推理
 
-   ```sql
-   register model db1.model1
-   as expression_classification;
-   
-   -- 收集要推理的图片
-   create table p (
-     string path, 
-     string title,
-     int rank) 
-   as 
-   	select web_search('baidu_img', '特朗普', 100);
-   	
-   -- 爬取图片
-   insert columns (
-     img binary, 
-     width int, 
-     height int, 
-     channel int) 
-   into p
-   as 
-   	select 
-       image_content(download(path)), 
-       image_width(download(path)), 
-       image_height(download(path)), 
-       image_channel(download(path)) 
-   	from p;
-   	
-   -- 调用udf进行表情识别
-   insert columns (expression int)
-   into p
-   as 
-   	select expression_classification(base64(img))
-   	from p;
-   
-   ```
+```sql
+register model db1.model1
+as expression_classification;
+
+-- 收集要推理的图片
+create table p (
+  string path, 
+  string title,
+  int rank) 
+as 
+  select web_search('baidu_img', '特朗普', 100);
+
+-- 爬取图片
+insert columns (
+  img binary, 
+  width int, 
+  height int, 
+  channel int) 
+into p
+as 
+  select 
+    image_content(download(path)), 
+    image_width(download(path)), 
+    image_height(download(path)), 
+    image_channel(download(path)) 
+  from p;
+
+-- 调用udf进行表情识别
+insert columns (expression int)
+into p
+as 
+  select expression_classification(img)
+  from p;
+
+```
 
    
 
 5. 停止推理，删除模型
 
-   ```sql
-   unregister model db1.model1;
-   
-   drop model db1.model1;
-   ```
+```sql
+unregister model db1.model1;
 
-   
+drop model db1.model1;
+```
