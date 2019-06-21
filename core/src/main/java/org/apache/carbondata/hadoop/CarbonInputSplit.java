@@ -452,6 +452,7 @@ public class CarbonInputSplit extends FileSplit
       out.writeShort(blockletId);
     }
     out.writeBoolean(isLegacyStore);
+    writeDeleteDeltaFile(out);
   }
 
   private void writeDeleteDeltaFile(DataOutput out) throws IOException {
