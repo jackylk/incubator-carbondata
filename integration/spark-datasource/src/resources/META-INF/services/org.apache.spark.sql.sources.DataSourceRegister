@@ -15,3 +15,4 @@
 ## limitations under the License.
 ## ------------------------------------------------------------------------
 org.apache.spark.sql.carbondata.execution.datasources.SparkCarbonFileFormat
+org.apache.spark.sql.execution.datasources.binaryfile.BinaryFileFormat
