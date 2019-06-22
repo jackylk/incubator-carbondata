@@ -155,7 +155,7 @@ object ACLFileUtils {
         // the metadata folder path for them, rest all other operations we can use the diffPathArr
         val finalDirsList = if (isLoadOrCompaction) {
           val segmentFilePaths = diffPathArr.collect {
-            case a if a.contains(".segment") =>
+            case a if a.endsWith(".segment") =>
               SegmentFileStore.readSegmentFile(a.split(delimiter)(0))
                 .getLocationMap.keySet().asScala.map(path => tablePath + path) ++
               Seq(a.split(delimiter)(0))
