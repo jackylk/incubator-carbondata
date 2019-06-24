@@ -17,6 +17,8 @@
 
 package org.apache.carbondata.vector.file;
 
+import org.apache.spark.unsafe.types.UTF8String;
+
 /**
  * constants in vector file
  */
@@ -41,4 +43,8 @@ public class FileConstants {
    * the minimum size of reading data file
    */
   public static final int FILE_READ_MIN_SIZE = 4 * 1024;
+
+  public static final UTF8String EMPTY_UTF8_STRING = UTF8String.fromString("");
+
+  public static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
 }

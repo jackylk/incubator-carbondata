@@ -18,6 +18,7 @@
 package org.apache.carbondata.vector.file.vector.impl;
 
 import org.apache.carbondata.core.util.DataTypeUtil;
+import org.apache.carbondata.vector.file.FileConstants;
 import org.apache.carbondata.vector.file.vector.ArrayVector;
 
 import org.apache.spark.sql.types.DataType;
@@ -93,11 +94,19 @@ public class SparsePrimitiveVector extends SparseVector {
 
   @Override
   public UTF8String getUTF8String(int rowId) {
-    return UTF8String.fromBytes(data, offsetAt(rowId), dataLengthAt(rowId));
+    int length = dataLengthAt(rowId);
+    if (length == 0) {
+      return FileConstants.EMPTY_UTF8_STRING;
+    }
+    return UTF8String.fromBytes(data, offsetAt(rowId), length);
   }
 
   @Override
   public byte[] getBinary(int rowId) {
+    int length = dataLengthAt(rowId);
+    if (length == 0) {
+      return FileConstants.EMPTY_BYTE_ARRAY;
+    }
     byte[] bytes = new byte[dataLengthAt(rowId)];
     System.arraycopy(data, offsetAt(rowId), bytes, 0, bytes.length);
     return bytes;

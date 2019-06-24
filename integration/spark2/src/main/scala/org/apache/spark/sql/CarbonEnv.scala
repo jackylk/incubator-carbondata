@@ -32,6 +32,7 @@ import org.apache.spark.sql.execution.command.timeseries.TimeSeriesFunction
 import org.apache.spark.sql.hive._
 import org.apache.spark.util.CarbonReflectionUtils
 
+import org.apache.carbondata.cloud.CloudUdfRegister
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datamap.DataMapStoreManager
@@ -100,6 +101,10 @@ class CarbonEnv {
 
     // added for handling timeseries function like hour, minute, day , month , year
     sparkSession.udf.register("timeseries", new TimeSeriesFunction)
+
+    // register for cloud udf
+    CloudUdfRegister.register(sparkSession)
+
     // acquiring global level lock so global configuration will be updated by only one thread
     CarbonEnv.carbonEnvMap.synchronized {
       if (!initialized) {

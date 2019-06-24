@@ -459,8 +459,24 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
           partition = partitionSpec)
     }
 
+  lazy val jsonDataType: Parser[Field] =
+    JSON ^^ {
+      case e1 =>
+        Field(null, Some(e1), None, None)
+    }
+
+  lazy val fieldWithDataTypeOption: Parser[Field] =
+    (ident | stringLit) ~ (jsonDataType | nestedType).? ^^ {
+      case e1 ~ e2 =>
+        if (e2.isDefined) {
+          Field(e1, e2.get.dataType, Some(e1), e2.get.children)
+        } else {
+          Field(e1, None, Some(e1), None)
+        }
+    }
+
   protected lazy val insertColumns: Parser[LogicalPlan] =
-    INSERT ~> COLUMNS ~> ( "(" ~> anyFieldDef  <~ ")" ) ~
+    INSERT ~> COLUMNS ~> ( "(" ~> fieldWithDataTypeOption <~ ")" ) ~
     (INTO ~> TABLE.? ~> (ident <~ ".").?) ~ ident ~
     restInput <~ opt(";") ^^ {
       case column~ dbName ~ tableName ~ query =>
