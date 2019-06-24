@@ -33,6 +33,9 @@ class LeoAiSqlParser extends CarbonSpark2SqlParser {
   protected val MODELS: Regex = leoKeyWord("MODELS")
   protected val REGISTER: Regex = leoKeyWord("REGISTER")
   protected val UNREGISTER: Regex = leoKeyWord("UNREGISTER")
+  protected val START: Regex = leoKeyWord("START")
+  protected val STOP: Regex = leoKeyWord("STOP")
+  protected val JOB: Regex = leoKeyWord("JOB")
 
   /**
    * This will convert key word to regular expression.
@@ -68,7 +71,8 @@ class LeoAiSqlParser extends CarbonSpark2SqlParser {
                                                            modelManagement | serviceManagement
 
   protected lazy val modelManagement: Parser[LogicalPlan] = createModel | dropModel | showModels
-  protected lazy val serviceManagement: Parser[LogicalPlan] = registerModel | unregisterModel
+  protected lazy val serviceManagement: Parser[LogicalPlan] = registerModel | unregisterModel |
+                                                              startJOb | stopJOb
 
   /**
    * CREATE MODEL [IF NOT EXISTS] [dbName.]modelName
@@ -106,6 +110,33 @@ class LeoAiSqlParser extends CarbonSpark2SqlParser {
     SHOW ~> MODELS <~ opt(";") ^^ {
       case _ =>
         LeoShowModelsCommand()
+    }
+
+  /**
+   * START JOB jobName ON MODEL modelName OPTIONS(...)
+   */
+  protected lazy val startJOb: Parser[LogicalPlan] =
+    START ~> JOB ~> ident ~ (ON ~> MODEL ~> (ident <~ ".").? ~ ident) ~
+    (OPTIONS ~> "(" ~> repsep(createModelOptions, ",") <~ ")").? <~ opt(";") ^^ {
+      case jobName ~ model ~ options =>
+        val (dbName, modelName) = model match {
+          case databaseName ~ modelName => (databaseName, modelName)
+        }
+        val optionMap = options.getOrElse(List[(String, String)]()).toMap[String, String]
+        // TODO Remove null and add command
+        null
+    }
+
+  /**
+   * STOP JOB jobName ON MODEL modelName
+   */
+  protected lazy val stopJOb: Parser[LogicalPlan] =
+    STOP ~> JOB ~> ident ~ (ON ~> MODEL ~> (ident <~ ".").? ~ ident) <~ opt(";") ^^ {
+      case jobName ~ model =>
+        val (dbName, modelName) = model match {
+          case databaseName ~ modelName => (databaseName, modelName)
+        }
+        LeoStopJobOnModelCommand(jobName, dbName, modelName)
     }
 
   /**
