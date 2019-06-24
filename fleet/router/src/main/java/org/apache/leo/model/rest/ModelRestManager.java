@@ -43,10 +43,10 @@ import static org.apache.leo.model.rest.RestConstants.*;
 /**
  * It creates the training job in Model Arts
  */
-public class CreateModelRestManager {
+public class ModelRestManager {
 
   private static final Logger LOGGER =
-      LogServiceFactory.getLogService(CreateModelRestManager.class.getName());
+      LogServiceFactory.getLogService(ModelRestManager.class.getName());
 
   private static OkHttpClient client = new OkHttpClient();
 
@@ -57,13 +57,7 @@ public class CreateModelRestManager {
       LeoQueryObject queryObject) throws Exception {
     String json = CreateTrainingJobVO.generateJson(options, modelName, queryObject);
     LOGGER.info(json);
-    String maUserName = CarbonProperties.getInstance().getProperty("leo.ma.username");
-    String maPwd = CarbonProperties.getInstance().getProperty("leo.ma.password");
-    if (maUserName == null || maPwd == null) {
-      throw new Exception("User name and password should be set in carbon properties");
-    }
-    LoginRequestManager.LoginInfo loginInfo =
-        LoginRequestManager.login(maUserName, maPwd, client);
+    LoginRequestManager.LoginInfo loginInfo = getLoginInfo();
 
     Object[] status = new Object[2];
     RestUtil.postAsync(
@@ -103,6 +97,22 @@ public class CreateModelRestManager {
       throw (Exception) status[0];
     }
     return Long.parseLong(status[1].toString());
+  }
+
+  private static LoginRequestManager.LoginInfo getLoginInfo() throws Exception {
+    String maUserName = CarbonProperties.getInstance().getProperty("leo.ma.username");
+    String maPwd = CarbonProperties.getInstance().getProperty("leo.ma.password");
+    if (maUserName == null || maPwd == null) {
+      throw new Exception("User name and password should be set in carbon properties");
+    }
+    return LoginRequestManager.login(maUserName, maPwd, client);
+  }
+
+  public static void deleteTrainingJob(Long jobId) throws Exception {
+    LoginRequestManager.LoginInfo loginInfo = getLoginInfo();
+    Response response = RestUtil.delete(
+        MODELARTS_CN_NORTH_V1_ENDPOINT + loginInfo.getProjectId() + SEPARATOR
+            + MODELARTS_TRAINING_REST + SEPARATOR + jobId, loginInfo.getToken(), client);
   }
 }
 

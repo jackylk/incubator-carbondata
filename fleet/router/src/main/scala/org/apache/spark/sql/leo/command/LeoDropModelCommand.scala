@@ -19,6 +19,7 @@ package org.apache.spark.sql.leo.command
 
 import scala.collection.JavaConverters._
 
+import org.apache.leo.model.rest.ModelRestManager
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.execution.command.RunnableCommand
 import org.apache.spark.sql.leo.ModelStoreManager
@@ -35,6 +36,9 @@ case class LeoDropModelCommand(
     val ifModelExists = modelSchemas.asScala
       .exists(model => model.getDataMapName.equalsIgnoreCase(modelName))
     if (ifModelExists) {
+      val schema = ModelStoreManager.getInstance().getModelSchema(modelName)
+      val jobId = schema.getProperties.get("job_id")
+      ModelRestManager.deleteTrainingJob(jobId.toLong)
       ModelStoreManager.getInstance().dropModelSchema(modelName)
     } else {
       if (!ifExists) {
