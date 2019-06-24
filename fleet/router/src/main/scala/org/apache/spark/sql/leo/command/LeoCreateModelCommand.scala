@@ -23,7 +23,7 @@ import scala.collection.JavaConverters._
 
 import org.apache.spark.sql.{AnalysisException, LeoDatabase, Row, SparkSession}
 import org.apache.spark.sql.carbondata.execution.datasources.CarbonSparkDataSourceUtil
-import org.apache.leo.model.rest.CreateModelRestManager
+import org.apache.leo.model.rest.ModelRestManager
 import org.apache.spark.sql.{AnalysisException, Row, SparkSession}
 import org.apache.spark.sql.catalyst.catalog.HiveTableRelation
 import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference}
@@ -116,14 +116,14 @@ case class LeoCreateModelCommand(
     }
     modelSchema.setParentTables(new util.ArrayList[RelationIdentifier](parentIdents.asJava))
     // It starts creating the training job and generates the model in cloud.
-    val jobId = CreateModelRestManager.startTrainingJobRequest(optionsMap, modelName, query)
+    val jobId = ModelRestManager.startTrainingJobRequest(optionsMap, modelName, query)
     optionsMap.put("job_id", jobId.toString)
     try {
       // store model schema
       ModelStoreManager.getInstance().saveModelSchema(modelSchema)
     } catch {
       case e:Exception =>
-        // TODO drop job.
+        ModelRestManager.deleteTrainingJob(jobId)
         throw e
     }
 

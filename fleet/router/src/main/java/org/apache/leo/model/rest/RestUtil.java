@@ -1,11 +1,14 @@
 package org.apache.leo.model.rest;
 
+import java.io.IOException;
+
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class RestUtil {
 
@@ -25,5 +28,14 @@ public class RestUtil {
 
   public static void postAsync(String url, String json, Callback callback, OkHttpClient client) {
     postAsync(url, json, callback, null, client);
+  }
+
+  public static Response delete(String url, String token, OkHttpClient client)
+      throws IOException {
+    Request.Builder builder = new Request.Builder().url(url).delete();
+    builder = builder.addHeader("X-Auth-Token", token);
+    final Request request = builder.build();
+    Call call = client.newCall(request);
+    return call.execute();
   }
 }
