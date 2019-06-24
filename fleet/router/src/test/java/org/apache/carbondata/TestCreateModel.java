@@ -115,6 +115,30 @@ public class TestCreateModel {
     assert (queryObject.getFilterExpression().getString().equals(equalToExpression.getString()));
   }
 
+  @Test
+  public void testModelWithModelArts() throws IOException {
+    CarbonProperties.getInstance().addProperty("leo.ma.username", "hwstaff_l00215684");
+    CarbonProperties.getInstance().addProperty("leo.ma.password", "@Huawei123");
+    carbon.sql("drop database if exists a1 cascade");
+    carbon.sql("create database a1");
+    carbon.sql("drop table if exists a1.test");
+    carbon.sql("create table a1.test(c1 int, c2 int, c3 int)");
+    carbon.sql("drop model if exists a1.m2");
+    // create model with options
+    carbon.sql(
+        "CREATE MODEL if not exists a1.m2 OPTIONS('worker_server_num'='1', "
+            + "'app_url'='/obs-5b79/train_mnist/', 'boot_file_url'='/obs-5b79/train_mnist/train_mnist.py', "
+            + "'data_url'='/obs-5b79/dataset-mnist/','log_url'='/obs-5b79/train-log/','engine_id'='28','spec_id'='1') as select c1,c2 from a1.test where c3>5");
+    assert (FileFactory.isFileExist(
+        CarbonProperties.getInstance().getSystemFolderLocation() + "/model/_default_projectid_a1_m2.dmschema"));
+
+    carbon.sql("start job job1 on model a1.m2 OPTIONS('train_url'='/obs-5b79/mnist-model/','params'='num_epochs=1')").show();
+
+    carbon.sql("drop model if exists a1.m2");
+    carbon.sql("drop table if exists a1.test");
+    carbon.sql("drop database if exists a1 cascade");
+  }
+
   @AfterClass public static void tearDown() {
     carbon.sql("drop database if exists db cascade");
     carbon.close();
