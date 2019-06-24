@@ -95,7 +95,7 @@ case class CarbonDatasourceHadoopRelation(
     val complexFilterExists = filterComplex.map(col =>
       col.map(_.isInstanceOf[GetStructField]))
 
-    if (!complexFilterExists.exists(f => f.contains(true))) {
+    if (!carbonTable.isVectorTable && !complexFilterExists.exists(f => f.contains(true))) {
       var parentColumn = new ListBuffer[String]
       // In case of Struct or StructofStruct Complex type, get the project column for given
       // parent/child field and pushdown the corresponding project column. In case of Array, Map,

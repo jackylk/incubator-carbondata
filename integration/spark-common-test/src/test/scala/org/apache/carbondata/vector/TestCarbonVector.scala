@@ -267,6 +267,39 @@ class TestCarbonVector extends QueryTest with BeforeAndAfterAll {
 
     sql(s"describe formatted $tableName").show(100, false)
   }
+
+  test("query with complex") {
+    val tableName = "query_complex"
+    sql(s"drop table if exists $tableName")
+    val rdd = sqlContext
+      .sparkSession
+      .sparkContext
+      .parallelize(Seq(
+        NewRecord(SubRecord2("aa1"), SubRecord3(Array("bb1", "cc3"), "dd1")),
+        NewRecord(SubRecord2("aa2"), SubRecord3(Array("bb2", "cc3"), "dd2")),
+        NewRecord(SubRecord2("aa3"), SubRecord3(Array("bb3", "cc3"), "dd3"))
+      ))
+    val df = sqlContext.createDataFrame(rdd)
+    df.createOrReplaceTempView("base_query_complex")
+
+    sql(
+      s"""create table $tableName(
+         |  col1 struct<col5: string>,
+         |  col2 struct<col3: array<string>, col4: string>
+         | )
+         | stored by 'carbondata'
+         | tblproperties('vector'='true')
+      """.stripMargin)
+
+    sql(s"insert into $tableName select * from base_query_complex")
+
+    sql(s"describe formatted $tableName").show(100, false)
+
+    sql(s"select * from $tableName").show(100, false)
+
+    sql(s"select col1.col5, col2.col4 from $tableName").show(100, false)
+  }
+
 }
 
 case class SubRecord1(
@@ -278,6 +311,11 @@ case class SubRecord1(
 
 case class SubRecord2(
     col5: String
+)
+
+case class SubRecord3(
+    col3: Array[String],
+    col4: String
 )
 
 case class Record(
@@ -297,6 +335,11 @@ case class Record(
     arrayField: Array[String],
     structField: SubRecord1,
     mapField: Map[String, java.lang.Integer]
+)
+
+case class NewRecord(
+    col1: SubRecord2,
+    col2: SubRecord3
 )
 
 case class JsonRecord(
