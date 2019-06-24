@@ -123,8 +123,7 @@ class LeoAiSqlParser extends CarbonSpark2SqlParser {
           case databaseName ~ modelName => (databaseName, modelName)
         }
         val optionMap = options.getOrElse(List[(String, String)]()).toMap[String, String]
-        // TODO Remove null and add command
-        null
+        LeoStartJobCommand(jobName, dbName, modelName, optionMap)
     }
 
   /**

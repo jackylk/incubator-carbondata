@@ -21,10 +21,9 @@ import java.util
 
 import scala.collection.JavaConverters._
 
-import org.apache.spark.sql.{AnalysisException, LeoDatabase, Row, SparkSession}
+import org.apache.spark.sql.{AnalysisException, CarbonEnv, LeoDatabase, Row, SparkSession}
 import org.apache.spark.sql.carbondata.execution.datasources.CarbonSparkDataSourceUtil
 import org.apache.leo.model.rest.ModelRestManager
-import org.apache.spark.sql.{AnalysisException, Row, SparkSession}
 import org.apache.spark.sql.catalyst.catalog.HiveTableRelation
 import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference}
 import org.apache.spark.sql.catalyst.plans.logical.{Filter, Project}
@@ -51,8 +50,14 @@ case class LeoCreateModelCommand(
   override def run(sparkSession: SparkSession): Seq[Row] = {
     // check if model with modelName already exists
     val modelSchemas = ModelStoreManager.getInstance().getAllModelSchemas
+    val updatedDbName =
+      LeoDatabase.convertUserDBNameToLeo(CarbonEnv.getDatabaseName(dbName)(sparkSession))
+    val updatedModelName = updatedDbName + CarbonCommonConstants.UNDERSCORE + modelName
     val ifAlreadyExists = modelSchemas.asScala
-      .exists(model => model.getDataMapName.equalsIgnoreCase(modelName))
+      .exists(model => {
+        model.getDataMapName
+          .equalsIgnoreCase(updatedModelName)
+      })
     if (ifAlreadyExists) {
       if (!ifNotExists) {
         throw new AnalysisException("Model with name " + modelName + " already exists in storage")
@@ -105,7 +110,7 @@ case class LeoCreateModelCommand(
       .put(CarbonCommonConstants.QUERY_OBJECT, ObjectSerializationUtil.convertObjectToString(query))
     // create model schema
     val modelSchema = new DataMapSchema()
-    modelSchema.setDataMapName(modelName)
+    modelSchema.setDataMapName(updatedModelName)
     modelSchema.setCtasQuery(queryString)
     modelSchema.setProperties(optionsMap)
     // get parent table relation Identifier
@@ -115,18 +120,7 @@ case class LeoCreateModelCommand(
       relationIdentifier
     }
     modelSchema.setParentTables(new util.ArrayList[RelationIdentifier](parentIdents.asJava))
-    // It starts creating the training job and generates the model in cloud.
-    val jobId = ModelRestManager.startTrainingJobRequest(optionsMap, modelName, query)
-    optionsMap.put("job_id", jobId.toString)
-    try {
-      // store model schema
-      ModelStoreManager.getInstance().saveModelSchema(modelSchema)
-    } catch {
-      case e:Exception =>
-        ModelRestManager.deleteTrainingJob(jobId)
-        throw e
-    }
-
+    ModelStoreManager.getInstance().saveModelSchema(modelSchema)
     Seq.empty
   }
 }
