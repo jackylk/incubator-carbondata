@@ -159,8 +159,7 @@ class TestCarbonVector extends QueryTest with BeforeAndAfterAll {
 
     sql(s"select name, result_struct from $labelTable" ).show(100, false)
 
-    // sql(s"select result_struct.birth, result_struct.name from $labelTable " ).show(100, false)
-
+    sql(s"select result_struct.birth, result_struct.name from $labelTable " ).show(100, false)
   }
 }
 
