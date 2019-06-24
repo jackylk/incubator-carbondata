@@ -21,17 +21,21 @@ import java.util
 
 import scala.collection.JavaConverters._
 
-import org.apache.spark.sql.{AnalysisException, Row, SparkSession}
+import org.apache.spark.sql.{AnalysisException, LeoDatabase, Row, SparkSession}
+import org.apache.spark.sql.carbondata.execution.datasources.CarbonSparkDataSourceUtil
 import org.apache.spark.sql.catalyst.catalog.HiveTableRelation
 import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference}
 import org.apache.spark.sql.catalyst.plans.logical.{Filter, Project}
 import org.apache.spark.sql.execution.command.RunnableCommand
-import org.apache.spark.sql.execution.datasources.LogicalRelation
+import org.apache.spark.sql.execution.datasources.{DataSourceStrategy, LogicalRelation}
 import org.apache.spark.sql.leo.{LeoQueryObject, ModelStoreManager}
+import org.apache.spark.sql.types.AtomicType
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.metadata.schema.table.{DataMapSchema, RelationIdentifier}
+import org.apache.carbondata.core.scan.expression.{Expression => CarbonExpression}
+import org.apache.carbondata.core.scan.expression.logical.AndExpression
 import org.apache.carbondata.core.util.ObjectSerializationUtil
 
 case class LeoCreateModelCommand(
@@ -62,12 +66,26 @@ case class LeoCreateModelCommand(
       case h: HiveTableRelation => h.tableMeta
     }
     val query = new LeoQueryObject
-    query.setTableName(parentTable.head.identifier.table)
+    val database = LeoDatabase.convertLeoDBNameToUser(parentTable.head.database)
+    query
+      .setTableName(database + CarbonCommonConstants.UNDERSCORE + parentTable.head.identifier.table)
     // get projection columns and filter expression from logicalPlan
     logicalPlan match {
       case Project(projects, child: Filter) =>
         val projectionColumns = new util.ArrayList[String]()
-        query.setFilterExpression(child.condition)
+        // convert expression to sparks source filter
+        val filters = child.condition.flatMap(DataSourceStrategy.translateFilter)
+        val tableSchema = parentTable.head.schema
+        val dataTypeMap = tableSchema.map(f => f.name -> f.dataType).toMap
+        // convert to carbon filter expressions
+        val filter: Option[CarbonExpression] = filters.filterNot{ ref =>
+          ref.references.exists{ p =>
+            !dataTypeMap(p).isInstanceOf[AtomicType]
+          }
+        }.flatMap { filter =>
+          CarbonSparkDataSourceUtil.createCarbonFilter(tableSchema, filter)
+        }.reduceOption(new AndExpression(_, _))
+        query.setFilterExpression(filter.get)
         projects.map {
           case attr: AttributeReference =>
             projectionColumns.add(attr.name)
@@ -89,7 +107,7 @@ case class LeoCreateModelCommand(
     modelSchema.setProperties(optionsMap)
     // get parent table relation Identifier
     val parentIdents = parentTable.map { table =>
-      val relationIdentifier = new RelationIdentifier(table.database, table.identifier.table, "")
+      val relationIdentifier = new RelationIdentifier(database, table.identifier.table, "")
       relationIdentifier.setTablePath(FileFactory.getUpdatedFilePath(table.location.toString))
       relationIdentifier
     }

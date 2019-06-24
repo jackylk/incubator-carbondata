@@ -19,50 +19,104 @@ package org.apache.carbondata;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 
+import org.apache.carbondata.common.exceptions.sql.NoSuchDataMapException;
+import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
+import org.apache.carbondata.core.metadata.datatype.DataTypes;
+import org.apache.carbondata.core.metadata.schema.table.DataMapSchema;
+import org.apache.carbondata.core.scan.expression.ColumnExpression;
+import org.apache.carbondata.core.scan.expression.LiteralExpression;
+import org.apache.carbondata.core.scan.expression.conditional.EqualToExpression;
 import org.apache.carbondata.core.util.CarbonProperties;
+import org.apache.carbondata.core.util.ObjectSerializationUtil;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.spark.sql.CarbonSession;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.leo.LeoEnv;
+import org.apache.spark.sql.leo.LeoQueryObject;
+import org.apache.spark.sql.leo.ModelStoreManager;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
+/**
+ * unit test for leo model ddl commands
+ */
 public class TestCreateModel {
 
-  public static void main(String[] args) throws IOException {
+  private static SparkSession carbon;
+
+  @BeforeClass
+  public static void setup() throws IOException {
     String warehouse = new File("./warehouse").getCanonicalPath();
-    // create leo session
-    SparkSession.Builder builder = SparkSession.builder().master("local").appName("TestCreateModel")
-        .config("spark.carbon.sessionstate.classname",
-            "org.apache.spark.sql.leo.LeoSessionStateBuilder")
-        .config("spark.driver.host", "localhost").config("spark.sql.warehouse.dir", warehouse);
-
-    SparkSession carbon = new CarbonSession.CarbonBuilder(builder).getOrCreateCarbonSession();
-
-    testModel(carbon);
-    FileUtils.deleteDirectory(new File(warehouse));
-    carbon.close();
+    SparkSession.Builder builder = SparkSession.builder()
+        .master("local")
+        .config("spark.driver.host", "localhost")
+        .config("spark.sql.warehouse.dir", warehouse);
+    carbon = LeoEnv.getOrCreateLeoSession(builder);
+    carbon.sql("drop database if exists db cascade");
+    carbon.sql("create database db");
   }
 
-  private static void testModel(SparkSession carbon) throws IOException {
-    carbon.sql("drop table if exists default.test");
-    carbon.sql("create table default.test(c1 int, c2 int, c3 int) stored by 'carbondata'");
-    carbon.sql("drop model if exists default.m1");
+  /**
+   * test create and drop model
+   */
+  @Test
+  public void testModel() throws IOException {
+    carbon.sql("drop table if exists db.test");
+    carbon.sql("create table db.test(c1 int, c2 int, c3 int)");
+    carbon.sql("drop model if exists db.m1");
     // create model without options
-    carbon.sql("CREATE MODEL default.m1  as select c1,c2 as a from default.test where c3>5 and c2=1");
+    carbon.sql("CREATE MODEL db.m1  as select c1,c2 as a from db.test where c3>5 and c2=1");
     assert (FileFactory.isFileExist(
         CarbonProperties.getInstance().getSystemFolderLocation() + "/model/m1.dmschema"));
-    carbon.sql("drop model if exists default.m1");
+    carbon.sql("drop model if exists db.m1");
     assert (!FileFactory.isFileExist(
         CarbonProperties.getInstance().getSystemFolderLocation() + "/model/m1.dmschema"));
-    carbon.sql("drop model if exists default.m2");
+    carbon.sql("drop model if exists db.m2");
     // create model with options
     carbon.sql(
-        "CREATE MODEL if not exists default.m2 OPTIONS('label_col'='c2', 'max_iteration'='100') as select c1,c2 from default.test where c3>5");
+        "CREATE MODEL if not exists db.m2 OPTIONS('label_col'='c2', 'max_iteration'='100') "
+            + "as select c1,c2 from db.test where c3>5");
     assert (FileFactory.isFileExist(
         CarbonProperties.getInstance().getSystemFolderLocation() + "/model/m2.dmschema"));
-    carbon.sql("drop model if exists default.m2");
-    carbon.sql("drop table if exists default.test");
+    carbon.sql("drop model if exists db.m2");
+    carbon.sql("drop table if exists db.test");
+  }
 
+  /**
+   * test query object
+   */
+  @Test
+  public void testQueryObject()
+      throws IOException, NoSuchDataMapException {
+    carbon.sql("drop table if exists db.test");
+    carbon.sql("create table db.test(c1 int, c2 int, c3 int)");
+    carbon.sql("drop model if exists db.m1");
+    carbon.sql(
+        "CREATE MODEL if not exists db.m1 OPTIONS('label_col'='c2', 'max_iteration'='100') "
+            + "as select c1,c2 from db.test where c3=5");
+    DataMapSchema m1 = ModelStoreManager.getInstance().getModelSchema("m1");
+    assert(m1.getDataMapName().equalsIgnoreCase("m1"));
+    assert(m1.getCtasQuery().equalsIgnoreCase(" select c1,c2 from db.test where c3=5"));
+    // get Query Object
+    String query = m1.getProperties().get(CarbonCommonConstants.QUERY_OBJECT);
+    LeoQueryObject queryObject = (LeoQueryObject) ObjectSerializationUtil.convertStringToObject(query);
+    String[] projects = new String[]{"c1", "c2"};
+    // compare projection columns
+    assert (Arrays.equals(queryObject.getProjectionColumns(), projects));
+    // compare table name
+    assert (queryObject.getTableName().equalsIgnoreCase("db_test"));
+    // compare filter expression
+    ColumnExpression columnExpression = new ColumnExpression("c3", DataTypes.INT);
+    EqualToExpression equalToExpression = new EqualToExpression(columnExpression,
+        new LiteralExpression("5", DataTypes.INT));
+    assert (queryObject.getFilterExpression().getString().equals(equalToExpression.getString()));
+  }
+
+  @AfterClass public static void tearDown() {
+    carbon.sql("drop database if exists db cascade");
+    carbon.close();
   }
 }

@@ -19,7 +19,7 @@ package org.apache.spark.sql.leo;
 
 import java.io.Serializable;
 
-import org.apache.spark.sql.catalyst.expressions.Expression;
+import org.apache.carbondata.core.scan.expression.Expression;
 
 /**
  * It holds projection, filterExpression of queryString used in create model
