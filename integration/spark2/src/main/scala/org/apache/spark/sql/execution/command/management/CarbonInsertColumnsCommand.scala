@@ -17,24 +17,19 @@
 
 package org.apache.spark.sql.execution.command.management
 
-import scala.collection.JavaConverters._
-
 import org.apache.spark.sql.{CarbonEnv, Row, SparkSession}
-import org.apache.spark.sql.execution.command.{AlterTableAddColumnsModel, Auditable,
-BucketFields, Field, RunnableCommand, TableNewProcessor}
+import org.apache.spark.sql.execution.command.{AlterTableAddColumnsModel, Auditable, Field, RunnableCommand, TableNewProcessor}
 import org.apache.spark.sql.execution.command.schema.CarbonAlterTableAddColumnCommand
 import org.apache.spark.sql.execution.command.vector.InsertColumnsHelper
-import org.apache.spark.sql.parser.CarbonSpark2SqlParser
 
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
-import org.apache.carbondata.core.metadata.schema.table.column.{CarbonColumn, ColumnSchema}
+import org.apache.carbondata.core.metadata.schema.table.column.{ColumnSchema}
 
 /**
  * based same table to insert a new column as the following steps:
- * 1. generate a virtual column, not add to the metadata of the table
- * 2. insert the data for this virtual column
- * 3. add the virtual column into the table
+ * 1. insert the data
+ * 2. add the column into the table
  */
 case class CarbonInsertColumnsCommand(
     field: Field,
@@ -52,57 +47,19 @@ case class CarbonInsertColumnsCommand(
       throw new MalformedCarbonCommandException(
         s"column name: ${ field.column } already used by this table")
     }
-    val plan = sparkSession.sql(query)
+    val inputData = sparkSession.sql(query)
     setAuditTable(table)
-    // 1. generate a virtual column
-    val (column, columnSchemas) = generateVirtualColumn()
-    // 2. insert columns data into each segments
-    InsertColumnsHelper.insertColumnsForVectorTable(
-      sparkSession,
-      table,
-      column,
-      plan,
-      sparkSession.sessionState.newHadoopConf()
-    )
+    // 1. insert columns data into each segments
+    val columnSchemas =
+      InsertColumnsHelper.insertColumnsForVectorTable(
+        sparkSession,
+        table,
+        field,
+        inputData,
+        sparkSession.sessionState.newHadoopConf())
     // 3. add columns into table schema
-    addColumnIntoTable(sparkSession, table, columnSchemas, column.isDimension)
+    addColumnIntoTable(sparkSession, table, columnSchemas)
     Seq.empty
-  }
-
-  /**
-   * generate a virtual column for insert columns function
-   * it is not in the table schema now.
-   * @return CarbonDimension or CarbonMeasure
-   * @return Seq[ColumnSchema]
-   */
-  def generateVirtualColumn(): (CarbonColumn, Seq[ColumnSchema]) = {
-    // TODO need to infer data type for abstract complex data type
-    val parser = new CarbonSpark2SqlParser()
-    val virtualTableModel = parser.prepareTableModel(
-      true,
-      Option("default"),
-      "default",
-      Seq(field),
-      Seq.empty,
-      scala.collection.mutable.Map.empty[String, String],
-      Option.empty[BucketFields],
-      false,
-      false,
-      None)
-    val virtualTableInfo = TableNewProcessor(virtualTableModel)
-    val virtualTable = CarbonTable.buildFromTableInfo(virtualTableInfo)
-    val virtualColumn =
-      virtualTable
-        .getCreateOrderColumn(virtualTable.getTableName)
-        .get(0)
-    val virtualSchemas =
-      virtualTable
-        .getTableInfo
-        .getFactTable
-        .getListOfColumns
-        .asScala
-        .filter(!_.isInvisible)
-    (virtualColumn, virtualSchemas)
   }
 
   /**
@@ -110,13 +67,12 @@ case class CarbonInsertColumnsCommand(
    * @param sparkSession
    * @param table
    * @param columnSchemas
-   * @param isDimension
    */
   def addColumnIntoTable(
       sparkSession: SparkSession,
       table: CarbonTable,
-      columnSchemas: Seq[ColumnSchema],
-      isDimension: Boolean): Unit = {
+      columnSchemas: Seq[ColumnSchema]
+  ): Unit = {
     val alterTableAddColumnsModel =
       AlterTableAddColumnsModel(
         Option(table.getDatabaseName),

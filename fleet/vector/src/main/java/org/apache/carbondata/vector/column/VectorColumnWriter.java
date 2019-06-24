@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.carbondata.vector.table;
+package org.apache.carbondata.vector.column;
 
 import java.io.IOException;
 

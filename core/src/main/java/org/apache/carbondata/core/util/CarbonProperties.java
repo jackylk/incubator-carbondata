@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.text.SimpleDateFormat;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -1670,4 +1671,10 @@ public final class CarbonProperties {
     return CarbonCommonConstants.CARBON_INDEX_SERVER_WORKER_THREADS_DEFAULT;
   }
 
+  /**
+   * iterate each property
+   */
+  public Iterator<Map.Entry<Object, Object>> iterator() {
+    return carbonProperties.entrySet().iterator();
+  }
 }

@@ -17,14 +17,17 @@
 
 package org.apache.carbondata.vector;
 
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.datamap.Segment;
+import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.scan.model.QueryModel;
 import org.apache.carbondata.core.statusmanager.FileFormat;
+import org.apache.carbondata.core.statusmanager.SegmentStatusManager;
 import org.apache.carbondata.core.util.path.CarbonTablePath;
 import org.apache.carbondata.hadoop.CarbonInputSplit;
 
@@ -44,6 +47,16 @@ public class VectorTableInputFormat {
 
   private static final Logger LOGGER =
       LogServiceFactory.getLogService(VectorTableInputFormat.class.getCanonicalName());
+
+
+  public static List<InputSplit> getSplit(CarbonTable table, Configuration hadoopConf)
+      throws IOException {
+    SegmentStatusManager segmentStatusManager =
+        new SegmentStatusManager(table.getAbsoluteTableIdentifier(), hadoopConf);
+    List<Segment> segments =
+        segmentStatusManager.getValidAndInvalidSegments().getValidSegments();
+    return getSplit(segments);
+  }
 
   public static List<InputSplit> getSplit(List<Segment> segments) {
     if (segments == null || segments.isEmpty()) {

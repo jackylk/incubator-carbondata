@@ -68,7 +68,7 @@ case class TableModel(
     var dataMapRelation: Option[scala.collection.mutable.LinkedHashMap[Field, DataMapField]] = None)
 
 case class Field(column: String, var dataType: Option[String], name: Option[String],
-    children: Option[List[Field]], parent: String = null,
+    var children: Option[List[Field]], parent: String = null,
     storeType: Option[String] = Some("columnar"),
     var schemaOrdinal: Int = -1,
     var precision: Int = 0, var scale: Int = 0, var rawSchema: String = "",

@@ -50,17 +50,19 @@ case class CarbonInsertIntoCommand(
     val isPersistEnabledUserValue = CarbonProperties.getInstance
       .getProperty(CarbonCommonConstants.CARBON_INSERT_PERSIST_ENABLED,
         CarbonCommonConstants.CARBON_INSERT_PERSIST_ENABLED_DEFAULT)
-    val isPersistRequired =
+    val isPersistRequired = if (relation.carbonTable.isVectorTable) {
+      false
+    } else {
       isPersistEnabledUserValue.equalsIgnoreCase("true") || containsLimit(child)
-    val df =
-      if (isPersistRequired) {
-        LOGGER.info("Persist enabled for Insert operation")
-        Dataset.ofRows(sparkSession, child).persist(
-          StorageLevel.fromString(
-            CarbonProperties.getInstance.getInsertIntoDatasetStorageLevel))
-      } else {
-        Dataset.ofRows(sparkSession, child)
-      }
+    }
+    val df = if (isPersistRequired) {
+      LOGGER.info("Persist enabled for Insert operation")
+      Dataset.ofRows(sparkSession, child).persist(
+        StorageLevel.fromString(
+          CarbonProperties.getInstance.getInsertIntoDatasetStorageLevel))
+    } else {
+      Dataset.ofRows(sparkSession, child)
+    }
     val header = relation.tableSchema.get.fields.map(_.name).mkString(",")
     loadCommand = CarbonLoadDataCommand(
       databaseNameOp = Some(relation.carbonRelation.databaseName),
