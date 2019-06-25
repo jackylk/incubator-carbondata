@@ -27,7 +27,7 @@ import org.scalatest.BeforeAndAfterAll
 
 import org.apache.carbondata.core.util.CarbonProperties
 
-class TestCarbonVector extends QueryTest with BeforeAndAfterAll {
+class TestOcrUdf extends QueryTest with BeforeAndAfterAll {
 
   val dbName = "ocr_db"
 
@@ -158,8 +158,6 @@ class TestCarbonVector extends QueryTest with BeforeAndAfterAll {
     sql(s"describe formatted $labelTable").show(100, false)
 
     sql(s"select name, result_struct from $labelTable" ).show(100, false)
-
-    sql(s"select result_struct.birth, result_struct.name from $labelTable " ).show(100, false)
   }
 }
 

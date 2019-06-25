@@ -48,14 +48,16 @@ public class VectorTableInputFormat {
   private static final Logger LOGGER =
       LogServiceFactory.getLogService(VectorTableInputFormat.class.getCanonicalName());
 
-
-  public static List<InputSplit> getSplit(CarbonTable table, Configuration hadoopConf)
+  public static List<Segment> getSegments(CarbonTable table, Configuration hadoopConf)
       throws IOException {
     SegmentStatusManager segmentStatusManager =
         new SegmentStatusManager(table.getAbsoluteTableIdentifier(), hadoopConf);
-    List<Segment> segments =
-        segmentStatusManager.getValidAndInvalidSegments().getValidSegments();
-    return getSplit(segments);
+    return segmentStatusManager.getValidAndInvalidSegments().getValidSegments();
+  }
+
+  public static List<InputSplit> getSplit(CarbonTable table, Configuration hadoopConf)
+      throws IOException {
+    return getSplit(getSegments(table, hadoopConf));
   }
 
   public static List<InputSplit> getSplit(List<Segment> segments) {

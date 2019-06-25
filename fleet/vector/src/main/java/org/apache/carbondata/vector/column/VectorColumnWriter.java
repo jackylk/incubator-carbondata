@@ -44,17 +44,20 @@ public class VectorColumnWriter {
 
   private final Configuration hadoopConf;
   private final CarbonTable table;
-  private final CarbonColumn column;
+  private final CarbonColumn[] columns;
+  private final int numColumns;
   private final String segmentPath;
-  private ArrayWriter arrayWriter;
+  private ArrayWriter[] arrayWriters;
   private boolean isFirstRow = true;
 
   public VectorColumnWriter(
-      CarbonTable table, CarbonColumn column, String segmentNo, Configuration hadoopConf) {
+      CarbonTable table, CarbonColumn[] columns, String segmentNo, Configuration hadoopConf) {
     this.table = table;
     this.hadoopConf = hadoopConf;
     this.segmentPath = CarbonTablePath.getSegmentPath(table.getTablePath(), segmentNo);
-    this.column = column;
+    this.columns = columns;
+    this.numColumns = columns.length;
+    this.arrayWriters = new ArrayWriter[numColumns];
   }
 
   private synchronized void initWriter() throws VectorTableException {
@@ -62,8 +65,10 @@ public class VectorColumnWriter {
       isFirstRow = false;
       // init writer
       try {
-        arrayWriter = ArrayWriterFactory.createArrayWriter(table, column);
-        arrayWriter.open(segmentPath, hadoopConf);
+        for (int index = 0; index < numColumns; index++) {
+          arrayWriters[index] = ArrayWriterFactory.createArrayWriter(table, columns[index]);
+          arrayWriters[index].open(segmentPath, hadoopConf);
+        }
       } catch (IOException e) {
         String message = "Failed to init array writer";
         LOGGER.error(message, e);
@@ -75,12 +80,14 @@ public class VectorColumnWriter {
   /**
    * write one value of the column
    */
-  public void write(Object value) throws VectorTableException {
+  public void write(Object[] value) throws VectorTableException {
     if (isFirstRow) {
       initWriter();
     }
     try {
-      arrayWriter.appendObject(value);
+      for (int index = 0; index < numColumns; index++) {
+        arrayWriters[index].appendObject(value[index]);
+      }
     } catch (IOException e) {
       String message = "Failed to write column";
       LOGGER.error(message, e);
@@ -94,8 +101,13 @@ public class VectorColumnWriter {
   public void close() throws VectorTableException {
     IOException ex = ArrayWriterFactory.destroyArrayWriter(
         "Failed to close array file writer for insert column",
-        arrayWriter);
-    arrayWriter = null;
+        arrayWriters);
+    if (arrayWriters != null) {
+      for (int index = 0; index < numColumns; index++) {
+        arrayWriters[index] = null;
+      }
+      arrayWriters = null;
+    }
     if (ex != null) {
       throw new VectorTableException("Failed to close writer for insert column");
     }

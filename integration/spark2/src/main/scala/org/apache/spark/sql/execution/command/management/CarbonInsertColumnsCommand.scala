@@ -24,7 +24,7 @@ import org.apache.spark.sql.execution.command.vector.InsertColumnsHelper
 
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
-import org.apache.carbondata.core.metadata.schema.table.column.{ColumnSchema}
+import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema
 
 /**
  * based same table to insert a new column as the following steps:
@@ -32,7 +32,7 @@ import org.apache.carbondata.core.metadata.schema.table.column.{ColumnSchema}
  * 2. add the column into the table
  */
 case class CarbonInsertColumnsCommand(
-    field: Field,
+    fields: Seq[Field],
     dbName: Option[String],
     tableName: String,
     query: String)
@@ -40,13 +40,7 @@ case class CarbonInsertColumnsCommand(
 
   override def run(sparkSession: SparkSession): Seq[Row] = {
     val table = CarbonEnv.getCarbonTable(dbName, tableName)(sparkSession)
-    if (!table.isVectorTable) {
-      throw new UnsupportedOperationException("insert columns only support vector table")
-    }
-    if (table.getColumnByName(table.getTableName, field.column) != null) {
-      throw new MalformedCarbonCommandException(
-        s"column name: ${ field.column } already used by this table")
-    }
+    validate(table)
     val inputData = sparkSession.sql(query)
     setAuditTable(table)
     // 1. insert columns data into each segments
@@ -54,12 +48,45 @@ case class CarbonInsertColumnsCommand(
       InsertColumnsHelper.insertColumnsForVectorTable(
         sparkSession,
         table,
-        field,
+        fields,
         inputData,
         sparkSession.sessionState.newHadoopConf())
     // 3. add columns into table schema
     addColumnIntoTable(sparkSession, table, columnSchemas)
     Seq.empty
+  }
+
+  def validate(table: CarbonTable): Unit = {
+    if (!table.isVectorTable) {
+      throw new MalformedCarbonCommandException("insert columns only support vector table")
+    }
+
+    if (fields.isEmpty) {
+      throw new MalformedCarbonCommandException(
+        s"insert column list can not be empty")
+    }
+
+    val uniqueSize = fields.map(_.column.toLowerCase).toSet.size
+    if (uniqueSize != fields.size) {
+      throw new MalformedCarbonCommandException(
+        s"not allow multiple columns have a same name")
+    }
+
+    fields.foreach { field =>
+      if (field.column.contains(".")) {
+        throw new MalformedCarbonCommandException(
+          s"the column name: ${ field.column } can not contain a dot")
+      }
+      if (table.getColumnByName(table.getTableName, field.column) != null) {
+        throw new MalformedCarbonCommandException(
+          s"column name: ${ field.column } already used by this table")
+      }
+    }
+
+    if (!query.toLowerCase.trim.startsWith("select")) {
+      throw new MalformedCarbonCommandException(
+        s"insert columns should be followed by a select sql")
+    }
   }
 
   /**
