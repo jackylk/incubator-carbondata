@@ -38,40 +38,21 @@ class PythonUDFRegister {
       script: String,
       libraryIncludes: Array[String],
       returnType: DataType = StringType): Unit = {
+    // Generate a wrapper script to wrap the user input script
+    // Run the script to get the serialized python executable object (binary)
+    // Register the executable object to spark
+
     val fileName = generateScriptFile(funcName, script, returnType)
-
-    val pathElements = new ArrayBuffer[String]
-    pathElements += PythonUtils.sparkPythonPath
-    pathElements += sys.env.getOrElse("PYTHONPATH", "")
-    pathElements += Seq(sys.env("SPARK_HOME"), "python").mkString(File.separator)
-    pathElements ++= libraryIncludes
-    val pythonPath = PythonUtils.mergePythonPaths(pathElements: _*)
-
-    val pythonExec = spark.sparkContext.getConf.get("spark.python.exec", "python")
-
-    val pb = new ProcessBuilder(Arrays.asList(pythonExec, fileName))
-    val workerEnv = pb.environment()
-    workerEnv.put("PYTHONPATH", pythonPath)
-    // This is equivalent to setting the -u flag; we use it because ipython doesn't support -u:
-    workerEnv.put("PYTHONUNBUFFERED", "YES")
-    val worker = pb.start()
-
-    val stream = worker.getInputStream
-    val errorStream = worker.getErrorStream
-    worker.waitFor()
-    val inBinary = getBinary(stream)
-    val errBinary = getBinary(errorStream)
-    if (errBinary.length  > 0) {
-      throw new Exception(new String(errBinary))
-    }
-    worker.destroy()
+    val inBinary = PythonExecUtil.runPythonScript(spark, libraryIncludes, fileName)
     FileFactory.deleteFile(fileName, FileFactory.getFileType(fileName))
+
     // TODO handle big udf bigger than 1 MB, they supposed to be broadcasted.
     val function = PythonFunction(
       inBinary,
       new java.util.HashMap[String, String](),
       new java.util.ArrayList[String](),
-      pythonExec, spark.sparkContext.getConf.get("spark.python.version", "2.7"),
+      spark.sparkContext.getConf.get("spark.python.exec", "python"),
+      spark.sparkContext.getConf.get("spark.python.version", "2.7"),
       new java.util.ArrayList[Broadcast[PythonBroadcast]](),
       null)
     spark.udf.registerPython(
@@ -104,15 +85,6 @@ class PythonUDFRegister {
     writer.write(gen)
     writer.close()
     file.getAbsolutePath
-  }
-
-  def getBinary(stream: InputStream): Array[Byte] = {
-    val out = new ByteArrayOutputStream()
-    while (stream.available() > 0) {
-      out.write(stream.read())
-    }
-    stream.close()
-    out.toByteArray
   }
 
 }

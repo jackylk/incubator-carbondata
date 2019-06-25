@@ -37,7 +37,8 @@ class LeoSqlParser(conf: SQLConf, sparkSession: SparkSession) extends AbstractSq
     CarbonSession.updateSessionInfoToCurrentThread(sparkSession)
     val (updatedPlanOp, errorMessage) = try {
       val parsedPlan = super.parsePlan(sqlText)
-      LeoDatabase.convertUserDBNameToLeoInPlan(parsedPlan)
+      val resolvedTVFPlan = LeoTVFAnalyzerRule(sparkSession)(parsedPlan)
+      LeoDatabase.convertUserDBNameToLeoInPlan(resolvedTVFPlan)
     } catch {
       case ce: MalformedCarbonCommandException =>
         CarbonScalaUtil.cleanParserThreadLocals()

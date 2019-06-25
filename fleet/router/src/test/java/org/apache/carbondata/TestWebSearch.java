@@ -15,27 +15,32 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.leo
+package org.apache.carbondata;
 
-import org.apache.spark.sql.leo.builtin.LeoUDF
-import org.apache.spark.sql.{CarbonSession, SparkSession}
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-object LeoEnv {
-  def getOrCreateLeoSession(builder: SparkSession.Builder): SparkSession = {
-    builder
-      .config("leo.enabled", "true")
-      .config("spark.carbon.sessionstate.classname",
-        "org.apache.spark.sql.leo.LeoSessionStateBuilder")
-      .enableHiveSupport()
+public class TestWebSearch extends LeoTest {
 
-    val session = new CarbonSession.CarbonBuilder(builder).getOrCreateCarbonSession()
-    registerLeoBuiltinUDF(session)
+  @BeforeClass
+  public static void setup() {
+    sql("drop table if exists db1.t1");
+    sql("drop database if exists db1 cascade");
+    sql("create database db1");
   }
 
-  private def registerLeoBuiltinUDF(sesssion: SparkSession): SparkSession = {
-    val download: String => Array[Byte] = LeoUDF.download
-    sesssion.udf.register("download", download)
-    sesssion
+  @Test
+  public void testUDTF() {
+    sql("create table db1.t1 (name string, age int)");
+    sql("select url, title from WebSearch('key_word'='特朗普', 'page_num'='3')").show(100, false);
+    sql("drop table db1.t1");
   }
 
+  @Test
+  public void testDownload() {
+    sql("create table db1.t1 (image binary)");
+    sql("insert into db1.t1 select download('https://www.baidu.com/img/bd_logo1.png?qua=high&where=super')");
+    sql("select * from db1.t1").show();
+    sql("drop table db1.t1");
+  }
 }

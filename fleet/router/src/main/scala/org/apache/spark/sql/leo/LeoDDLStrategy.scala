@@ -25,6 +25,7 @@ import org.apache.spark.sql.execution.{SparkPlan, SparkStrategy}
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.command.table.{CarbonDescribeFormattedCommand, CarbonShowTablesCommand}
 import org.apache.spark.sql.leo.command.{LeoCreateDatabaseCommand, LeoCreateTableCommand, LeoDropDatabaseCommand, LeoDropTableCommand, LeoShowDatabasesCommand}
+import org.apache.spark.sql.leo.builtin.{WebSearch, WebSearchExec}
 import org.apache.spark.util.CarbonReflectionUtils
 
 import org.apache.carbondata.common.logging.LogServiceFactory
@@ -84,6 +85,9 @@ class LeoDDLStrategy(session: SparkSession) extends SparkStrategy {
         val leoCmd = LeoDropTableCommand(
           cmd, ifNotExists, identifier.database, identifier.table.toLowerCase)
         ExecutedCommandExec(leoCmd) :: Nil
+
+      case ws@WebSearch(_, _) =>
+        WebSearchExec(session, ws) :: Nil
 
       case _ => Nil
     }
