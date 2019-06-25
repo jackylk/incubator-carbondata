@@ -106,6 +106,7 @@
     <module>tools/cli</module>
     <module>fleet/query-server</module>
     <module>fleet/job</module>
+    <module>fleet/ai-intf</module>
     <module>fleet/router</module>
     <module>fleet/core</module>
     <module>fleet/vector</module>

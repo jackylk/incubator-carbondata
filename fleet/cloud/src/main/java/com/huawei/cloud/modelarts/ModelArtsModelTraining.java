@@ -60,44 +60,44 @@ public class ModelArtsModelTraining implements ModelTrainingAPI {
    * It creates training job in modelarts and starts it to generate model.
    */
   @Override
-  public long startTrainingJob(Map<String, String> options, String modelName,
-      DataScan dataScan) {
+  public long startTrainingJob(Map<String, String> options, String modelName, DataScan dataScan) {
     // Start a new training job in ModelArts
     String json = CreateTrainingJobVO.generateJson(options, modelName, dataScan);
     LOGGER.info(json);
     LoginRequestManager.LoginInfo loginInfo = getLoginInfo();
 
     Object[] status = new Object[2];
-    RestUtil.postAsync(
-        MODELARTS_CN_NORTH_V1_ENDPOINT + loginInfo.getProjectId() +
-            SEPARATOR + MODELARTS_TRAINING_REST, json, new Callback() {
-          @Override public void onFailure(Call call, IOException e) {
+    RestUtil.postAsync(MODELARTS_CN_NORTH_V1_ENDPOINT + loginInfo.getProjectId() + SEPARATOR
+        + MODELARTS_TRAINING_REST, json, new Callback() {
+      @Override
+      public void onFailure(Call call, IOException e) {
+        status[0] = e;
+      }
+
+      @Override
+      public void onResponse(Call call, Response response) throws IOException {
+        if (response.isSuccessful()) {
+          ObjectMapper objectMapper = new ObjectMapper();
+          Map<String, Object> jsonNodeMap = null;
+          try {
+            String rspStr = response.body().string();
+            LOGGER.info(rspStr);
+            jsonNodeMap = objectMapper.readValue(rspStr, new TypeReference<Map<String, Object>>() {
+            });
+            if ((Boolean) jsonNodeMap.get("is_success")) {
+              status[1] = jsonNodeMap.get("job_id");
+            } else {
+              status[0] = new Exception(rspStr);
+            }
+          } catch (Exception e) {
+            LOGGER.error(e);
             status[0] = e;
           }
-          @Override public void onResponse(Call call, Response response) throws IOException {
-            if (response.isSuccessful()) {
-              ObjectMapper objectMapper = new ObjectMapper();
-              Map<String, Object> jsonNodeMap = null;
-              try {
-                String rspStr = response.body().string();
-                LOGGER.info(rspStr);
-                jsonNodeMap =
-                    objectMapper.readValue(rspStr, new TypeReference<Map<String, Object>>() {
-                    });
-                if ((Boolean) jsonNodeMap.get("is_success")) {
-                  status[1] = jsonNodeMap.get("job_id");
-                } else {
-                  status[0] = new Exception(rspStr);
-                }
-              } catch (Exception e) {
-                LOGGER.error(e);
-                status[0] = e;
-              }
-            } else {
-              status[0] = new Exception(response.body().string());
-            }
-          }
-        }, loginInfo.getToken(), client);
+        } else {
+          status[0] = new Exception(response.body().string());
+        }
+      }
+    }, loginInfo.getToken(), client);
     while (status[0] == null && status[1] == null) {
       try {
         Thread.sleep(10);
@@ -106,7 +106,7 @@ public class ModelArtsModelTraining implements ModelTrainingAPI {
       }
     }
     if (status[0] != null) {
-      throw new RuntimeException((Exception)status[0]);
+      throw new RuntimeException((Exception) status[0]);
     }
     return Long.parseLong(status[1].toString());
   }
@@ -310,8 +310,7 @@ class CreateTrainingJobVO implements Serializable {
   /**
    * Generates json for starting and creating training job.
    */
-  static String generateJson(Map<String, String> options, String modelName,
-      DataScan queryObject) {
+  static String generateJson(Map<String, String> options, String modelName, DataScan queryObject) {
     CreateTrainingJobVO modelVO = new CreateTrainingJobVO();
     modelVO.setJob_name(modelName);
     Config config = new Config();

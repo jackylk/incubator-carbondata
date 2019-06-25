@@ -24,8 +24,8 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.{SparkPlan, SparkStrategy}
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.command.table.{CarbonDescribeFormattedCommand, CarbonShowTablesCommand}
-import org.apache.spark.sql.leo.command.{LeoCreateDatabaseCommand, LeoCreateTableCommand, LeoDropDatabaseCommand, LeoDropTableCommand, LeoShowDatabasesCommand}
 import org.apache.spark.sql.leo.builtin.{WebSearch, WebSearchExec}
+import org.apache.spark.sql.leo.command.{LeoCreateDatabaseCommand, LeoCreateTableCommand, LeoDropDatabaseCommand, LeoDropTableCommand, LeoShowDatabasesCommand}
 import org.apache.spark.util.CarbonReflectionUtils
 
 import org.apache.carbondata.common.logging.LogServiceFactory

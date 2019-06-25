@@ -20,9 +20,9 @@ package org.apache.spark.sql.leo.command
 import scala.collection.JavaConverters._
 
 import org.apache.leo.model.job.{TrainJobDetail, TrainJobManager}
+import org.apache.spark.sql.{AnalysisException, CarbonEnv, LeoDatabase, Row, SparkSession}
 import org.apache.spark.sql.execution.command.RunnableCommand
 import org.apache.spark.sql.leo.{LeoEnv, ModelStoreManager}
-import org.apache.spark.sql.{AnalysisException, CarbonEnv, LeoDatabase, Row, SparkSession}
 
 import org.apache.carbondata.ai.DataScan
 import org.apache.carbondata.core.constants.CarbonCommonConstants
@@ -44,14 +44,15 @@ case class LeoStartJobCommand(
     val model = modelSchemas.asScala
       .find(model => model.getDataMapName.equalsIgnoreCase(updatedModelName))
     val schema = model.getOrElse(
-      throw new AnalysisException("Model with name " + updatedModelName + " already exists in storage"))
+      throw new AnalysisException(
+        "Model with name " + updatedModelName + " already exists in storage"))
 
     val optionsMap = new java.util.HashMap[String, String]()
     optionsMap.putAll(options.asJava)
     val details = TrainJobManager.getAllTrainedJobs(updatedModelName)
     if (details.exists(_.getJobName.equalsIgnoreCase(jobName))) {
       throw new AnalysisException(
-        "Job with name " + jobName + " already exists on model " +updatedModelName)
+        "Job with name " + jobName + " already exists on model " + updatedModelName)
     }
     val optionsMapFinal = new java.util.HashMap[String, String]()
     optionsMapFinal.putAll(optionsMap)
@@ -68,7 +69,7 @@ case class LeoStartJobCommand(
       // store model schema
       TrainJobManager.saveTrainJob(updatedModelName, detail)
     } catch {
-      case e:Exception =>
+      case e: Exception =>
         LeoEnv.modelTraingAPI.stopTrainingJob(jobId)
         throw e
     }
