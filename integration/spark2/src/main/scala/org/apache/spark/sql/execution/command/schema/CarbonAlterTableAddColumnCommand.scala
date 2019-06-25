@@ -83,19 +83,15 @@ private[sql] case class CarbonAlterTableAddColumnCommand(
           carbonTable.getAbsoluteTableIdentifier,
           sparkSession.sparkContext).process
       } else {
-        val size = carbonTable.getCreateOrderColumn(carbonTable.getTableName).size()
-        val column = alterTableAddColumnsModel.columnSchemas(0)
-        column.setSchemaOrdinal(size)
-        val columns = wrapperTableInfo.getFactTable.getListOfColumns
-        if (column.isDimensionColumn) {
-          var allColumns = columns.asScala.filter(_.isDimensionColumn)
-          allColumns ++= alterTableAddColumnsModel.columnSchemas
-          allColumns ++= columns.asScala.filter(!_.isDimensionColumn)
-          wrapperTableInfo.getFactTable.setListOfColumns(allColumns.asJava)
-          wrapperTableInfo.setLastUpdatedTime(System.currentTimeMillis())
-        } else {
-          columns.add(alterTableAddColumnsModel.columnSchemas(0))
-        }
+        // update schema ordinal
+        val columnSchemas = alterTableAddColumnsModel.columnSchemas
+        val columns = wrapperTableInfo.getFactTable.getListOfColumns.asScala
+        var allColumns = columns.filter(_.isDimensionColumn)
+        allColumns ++= columnSchemas.filter(_.isDimensionColumn)
+        allColumns ++= columns.filter(!_.isDimensionColumn)
+        allColumns ++= columnSchemas.filter(!_.isDimensionColumn)
+        wrapperTableInfo.getFactTable.setListOfColumns(allColumns.asJava)
+        wrapperTableInfo.setLastUpdatedTime(System.currentTimeMillis())
         alterTableAddColumnsModel.columnSchemas
       }
       setAuditInfo(Map(

@@ -90,17 +90,26 @@ class TestCarbonVector extends QueryTest with BeforeAndAfterAll {
 
     sql(s"select smallIntField, stringField from $tableName where smallIntField = 1").show(100, false)
 
-    sql(s"insert columns(newcol1 int) into table $tableName select smallIntField + 100 from $tableName").show(100, false)
+    sql(s"""insert columns(newcol1, newcol2 int, newcol3)
+        | into table $tableName
+        | select smallIntField + 100,
+        | case when smallIntField > 1 then smallIntField + 100 end,
+        | stringField
+        | from $tableName""".stripMargin
+    ).show(100, false)
 
-    sql(s"select smallIntField, newcol1 from $tableName").show(100, false)
+    sql(s"""insert columns(newcol4, newcol5, newcol6)
+           | into table $tableName
+           | select smallIntField + 100,
+           | stringField,
+           | timestampField
+           | from $tableName
+           | where smallIntField > 1""".stripMargin
+    ).show(100, false)
 
-    sql(s"insert columns(newcol2 int) into $tableName select case when smallIntField > 1 then smallIntField + 100 end from $tableName").show(100, false)
+    sql(s"describe formatted $tableName").show(100, false)
 
-    sql(s"select smallIntField, newcol2 from $tableName").show(100, false)
-
-    sql(s"insert columns(newcol3 int) into $tableName select smallIntField + 100 from $tableName where smallIntField > 1").show(100, false)
-
-    sql(s"select smallIntField, newcol3 from $tableName").show(100, false)
+    sql(s"select * from $tableName").show(100, false)
   }
 
   test("Test insert column with complex data type") {
@@ -143,19 +152,26 @@ class TestCarbonVector extends QueryTest with BeforeAndAfterAll {
 
     sql(s"select count(*) from $tableName").show(100, false)
 
-    sql(s"select smallIntField, structField from $tableName where structfield.col1 = 'c1'").show(100, false)
+    sql(
+      s""" insert columns(
+         |   newCol1,
+         |   newArrayField,
+         |   newCol2,
+         |   newStructField struct<col1:string, col2:int, col3:array<string>>,
+         |   newCol3,
+         |   newMapField)
+         | into table $tableName
+         | select
+         |   bigIntField,
+         |   arrayField,
+         |   doubleField,
+         |   structField,
+         |   smallIntField,
+         |   mapField
+         | from $tableName""".stripMargin
+    ).show(100, false)
 
-    sql(s"select smallIntField, structField from $tableName where mapField['k1'] = 1").show(100, false)
-
-    sql(s"insert columns(newArrayField array<string>) into table $tableName select arrayField from $tableName").show(100, false)
-
-    sql(s"select * from $tableName").show(100, false)
-
-    sql(s"insert columns(newStructField struct<col1:string, col2:int, col3:array<string>>) into $tableName select structField from $tableName").show(100, false)
-
-    sql(s"select * from $tableName").show(100, false)
-
-    sql(s"insert columns(newMapField map<string, int>) into $tableName select mapField from $tableName").show(100, false)
+    sql(s"describe formatted $tableName").show(100, false)
 
     sql(s"select * from $tableName").show(100, false)
   }
@@ -216,7 +232,7 @@ class TestCarbonVector extends QueryTest with BeforeAndAfterAll {
 
     sql(s"select newMapField, mapField from $tableName").show(100, false)
 
-    sql(s"insert columns(newcol1) into table $tableName select smallIntField + 100 from $tableName").show(100, false)
+    sql(s"insert columns(newcol1 bigint) into table $tableName select smallIntField + 100 from $tableName").show(100, false)
 
     sql(s"select smallIntField, newcol1 from $tableName").show(100, false)
 
@@ -224,11 +240,13 @@ class TestCarbonVector extends QueryTest with BeforeAndAfterAll {
 
     sql(s"select smallIntField, newcol2 from $tableName").show(100, false)
 
-    sql(s"insert columns(newcol3) into $tableName select smallIntField + 100 from $tableName where smallIntField > 1").show(100, false)
+    sql(s"insert columns(newcol3 string) into $tableName select smallIntField + 100 from $tableName where smallIntField > 1").show(100, false)
 
     sql(s"select smallIntField, newcol3 from $tableName").show(100, false)
 
     sql(s"describe formatted $tableName").show(100, false)
+
+    sql(s"select * from $tableName").show(100, false)
   }
 
   test("Test insert column with json schema infer") {
@@ -300,6 +318,46 @@ class TestCarbonVector extends QueryTest with BeforeAndAfterAll {
     sql(s"select col1.col5, col2.col4 from $tableName").show(100, false)
   }
 
+  test("Test insert multiple columns") {
+    val tableName = "insert_multiple_columns"
+    sql(s"drop table if exists $tableName")
+    sql(
+      s"""create table $tableName(
+         | smallIntField smallInt,
+         | intField int,
+         | bigIntField bigint,
+         | floatField float,
+         | doubleField double,
+         | decimalField decimal(25, 4),
+         | timestampField timestamp,
+         | dateField date,
+         | stringField string,
+         | varcharField varchar(10),
+         | charField char(10),
+         | booleanField boolean,
+         | binaryFiled binary,
+         | arrayField array<string>,
+         | structField struct<col1:string, col2:int, col3:array<string>>,
+         | mapField map<string, int>
+         | )
+         | stored by 'carbondata'
+         | tblproperties('vector'='true')
+      """.stripMargin)
+
+    sql(s"insert into $tableName select * from base_table")
+
+    sql(s"insert into $tableName select * from base_table")
+
+    sql(s"show segments for table $tableName").show(100, false)
+
+    sql(s"select count(*) from $tableName").show(100, false)
+
+    sql(s"insert columns(newcol1, newcol2) into table $tableName select smallIntField + 100, case when smallIntField > 1 then smallIntField + 100 end from $tableName").show(100, false)
+
+    sql(s"describe formatted $tableName").show(100, false)
+
+    sql(s"select * from $tableName").show(100, false)
+  }
 }
 
 case class SubRecord1(

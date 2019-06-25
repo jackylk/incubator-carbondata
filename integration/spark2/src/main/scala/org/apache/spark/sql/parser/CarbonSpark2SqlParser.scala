@@ -476,11 +476,11 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
     }
 
   protected lazy val insertColumns: Parser[LogicalPlan] =
-    INSERT ~> COLUMNS ~> ( "(" ~> fieldWithDataTypeOption <~ ")" ) ~
+    INSERT ~> COLUMNS ~> ( "(" ~> repsep(fieldWithDataTypeOption, ",") <~ ")" ) ~
     (INTO ~> TABLE.? ~> (ident <~ ".").?) ~ ident ~
     restInput <~ opt(";") ^^ {
-      case column~ dbName ~ tableName ~ query =>
-        CarbonInsertColumnsCommand(column, dbName, tableName, query)
+      case columns~ dbName ~ tableName ~ query =>
+        CarbonInsertColumnsCommand(columns, dbName, tableName, query)
     }
 
   protected lazy val deleteLoadsByID: Parser[LogicalPlan] =
