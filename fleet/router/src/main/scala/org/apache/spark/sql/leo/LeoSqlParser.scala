@@ -46,7 +46,7 @@ class LeoSqlParser(conf: SQLConf, sparkSession: SparkSession) extends AbstractSq
       case ex: Throwable =>
         try {
           val plan = parser.parse(sqlText)
-          (Some(plan), "")
+          LeoDatabase.convertUserDBNameToLeoInPlan(plan)
         } catch {
           case mce: MalformedCarbonCommandException =>
             throw mce

@@ -71,7 +71,7 @@ class CarbonEnv {
   var convertToUserDBName: String => String = _
 
   // find and replace all leo database names with user database name in the input string
-  var makeStringValidToUser: String => String = _
+  var makeStringValidToUser: String => Option[String] = _
 
   // find and replace leo database names with user database name in the input exception
   var makeExceptionValidToUser: Option[Throwable] => Option[Throwable] = _
@@ -154,35 +154,43 @@ class CarbonEnv {
         isLeo = false
     }
     convertToUserDBName = if (isLeo) LeoDatabase.convertLeoDBNameToUser else noOp
-    makeStringValidToUser = if (isLeo) replaceLeoDBNameInString else noOp
+    makeStringValidToUser = if (isLeo) replaceLeoDBNameInString else noOpOption
     makeExceptionValidToUser = if (isLeo) replaceLeoDBNameInException else noOpException
   }
 
-  private def replaceLeoDBNameInString(msg: String): String = {
+  private def replaceLeoDBNameInString(msg: String): Option[String] = {
     if (isLeo) {
       val pattern: Regex = LeoDatabase.leoDBNamePrefix.r
-      pattern.replaceAllIn(msg, "")
+      if (pattern.findAllMatchIn(msg).isEmpty) {
+        return None
+      }
+      Some(pattern.replaceAllIn(msg, ""))
     } else {
-      msg
+      Some(msg)
     }
   }
 
   private def replaceLeoDBNameInException(e: Option[Throwable]): Option[Throwable] = {
     if (e.isEmpty) return None
-    val newMsg = if (e.get != null) {
+    val newMsgOp = if (e.get != null) {
       replaceLeoDBNameInString(e.get.getMessage)
     } else {
-      ""
+      Some("")
     }
     val newCause = if (e.get != null) {
       replaceLeoDBNameInException(Some(e.get.getCause))
     } else {
       None
     }
-    Some(new Exception(newMsg, newCause.orNull))
+    if (newMsgOp.isEmpty) {
+      e
+    } else {
+      Some(new Exception(newMsgOp.get, newCause.orNull))
+    }
   }
 
   private def noOp(string: String): String = string
+  private def noOpOption(string: String): Option[String] = Some(string)
   private def noOpException(e: Option[Throwable]): Option[Throwable] = e
 }
 

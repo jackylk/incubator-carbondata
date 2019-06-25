@@ -215,4 +215,22 @@ public class TestLeoDDL extends LeoTest {
     sql("drop database db1");
   }
 
+  /**
+   * Test alter table command
+   */
+  @Test
+  public void testAlterTableOk() {
+    sql("create database db1");
+    sql("create table db1.t1 (name string, age int) "
+        + "using carbondata options ('lake'='lake1')");
+
+    sql("alter table db1.t1 add columns (address string)");
+    sql("alter table db1.t1 drop columns (address)");
+
+    sql("drop table db1.t1");
+    sql("drop database db1");
+  }
+
+
+
 }

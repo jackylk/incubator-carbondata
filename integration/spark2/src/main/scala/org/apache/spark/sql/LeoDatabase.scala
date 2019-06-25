@@ -21,10 +21,17 @@ import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.command._
+import org.apache.spark.sql.execution.command.cache.{CarbonDropCacheCommand, CarbonShowCacheCommand}
+import org.apache.spark.sql.execution.command.datamap.{CarbonCreateDataMapCommand, CarbonDataMapRebuildCommand, CarbonDataMapShowCommand, CarbonDropDataMapCommand}
+import org.apache.spark.sql.execution.command.management.{CarbonAlterTableCompactionCommand, CarbonAlterTableFinishStreaming, CarbonCleanFilesCommand, CarbonCliCommand, CarbonDeleteLoadByIdCommand, CarbonDeleteLoadByLoadDateCommand, CarbonInsertColumnsCommand, CarbonInsertIntoCommand, CarbonShowLoadsCommand, RefreshCarbonTableCommand}
+import org.apache.spark.sql.execution.command.mutation.{CarbonProjectForDeleteCommand, CarbonProjectForUpdateCommand}
+import org.apache.spark.sql.execution.command.partition.{CarbonAlterTableAddHivePartitionCommand, CarbonAlterTableDropHivePartitionCommand, CarbonAlterTableDropPartitionCommand, CarbonAlterTableSplitPartitionCommand, CarbonShowCarbonPartitionsCommand}
+import org.apache.spark.sql.execution.command.schema.{CarbonAlterTableAddColumnCommand, CarbonAlterTableColRenameDataTypeChangeCommand, CarbonAlterTableDropColumnCommand, CarbonAlterTableRenameCommand, CarbonAlterTableSetCommand, CarbonAlterTableUnsetCommand}
+import org.apache.spark.sql.execution.command.stream.{CarbonCreateStreamCommand, CarbonDropStreamCommand, CarbonShowStreamsCommand}
 import org.apache.spark.sql.execution.datasources.CreateTable
 
 object LeoDatabase {
-  var DEFAULT_PROJECTID: String = ""
+  var DEFAULT_PROJECTID: String = "DEFAULTTENANT666"
 
   /**
    * convert user table identifier to leo table identifier
@@ -50,7 +57,7 @@ object LeoDatabase {
   }
 
   // TODO: add user projectid here
-  def leoDBNamePrefix: String = DEFAULT_PROJECTID + "_"
+  var leoDBNamePrefix: String = DEFAULT_PROJECTID
 
   /**
    * Return false if plan is invalid, otherwise return updated plan after
@@ -92,10 +99,9 @@ object LeoDatabase {
         DropDatabaseCommand(db, ifExists, cascade)
 
       case cmd@CreateTable(table, saveMode, query) =>
-        if (table.identifier.database.isEmpty) {
-          return (None, "database name must be specified")
-        } else if (table.identifier.database.get.equals("default")) {
-          return (None, "default database is not allowed, create a new database")
+        requireDBNameNonEmpty(table.identifier) match {
+          case Some(msg) => return (None, msg)
+          case None =>
         }
         val newTable = new TableIdentifier(
           table.identifier.table,
@@ -103,10 +109,9 @@ object LeoDatabase {
         CreateTable(table.copy(identifier = newTable), saveMode, query)
 
       case cmd@DropTableCommand(table, ifExists, isView, purge) =>
-        if (table.database.isEmpty) {
-          return (None, "database name must be specified")
-        } else if (table.database.get.equals("default")) {
-          return (None, "default database is not allowed, create a new database")
+        requireDBNameNonEmpty(table.database) match {
+          case Some(msg) => return (None, msg)
+          case None =>
         }
         val newTable = new TableIdentifier(
           table.table,
@@ -124,19 +129,17 @@ object LeoDatabase {
         ShowDatabasesCommand(Some(LeoDatabase.leoDBNamePrefix + "*"))
 
       case cmd@ShowTablesCommand(dbNameOp, t, isExtended, partitionSpec) =>
-        if (dbNameOp.isEmpty) {
-          return (None, "database name must be specified")
-        } else if (dbNameOp.get.equals("default")) {
-          return (None, "default database is not allowed, create a new database")
+        requireDBNameNonEmpty(dbNameOp) match {
+          case Some(msg) => return (None, msg)
+          case None =>
         }
         ShowTablesCommand(
           Some(LeoDatabase.convertUserDBNameToLeo(dbNameOp.get)), t, isExtended, partitionSpec)
 
       case cmd@DescribeTableCommand(table, partitionSpec, isExtended) =>
-        if (table.database.isEmpty) {
-          return (None, "database name must be specified")
-        } else if (table.database.get.equals("default")) {
-          return (None, "default database is not allowed, create a new database")
+        requireDBNameNonEmpty(table.database) match {
+          case Some(msg) => return (None, msg)
+          case None =>
         }
         DescribeTableCommand(
           LeoDatabase.convertUserTableIdentifierToLeo(table), partitionSpec, isExtended)
@@ -148,10 +151,337 @@ object LeoDatabase {
         }
         ExplainCommand(newPlanOp.get, extended, codegen, cost)
 
+        //////////////////////////////////////////////////
+        //                Alter Table                   //
+        //////////////////////////////////////////////////
+
+      case cmd@CarbonAlterTableAddColumnCommand(model) =>
+        requireDBNameNonEmpty(model.databaseName) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        val newModel = model.copy(
+          databaseName = Some(LeoDatabase.convertUserDBNameToLeo(model.databaseName.get)))
+        cmd.copy(alterTableAddColumnsModel = newModel)
+
+      case cmd@CarbonAlterTableDropColumnCommand(model) =>
+        requireDBNameNonEmpty(model.databaseName) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        val newModel = model.copy(
+          databaseName = Some(LeoDatabase.convertUserDBNameToLeo(model.databaseName.get)))
+        cmd.copy(alterTableDropColumnModel = newModel)
+
+      case cmd@CarbonAlterTableColRenameDataTypeChangeCommand(model, _) =>
+        requireDBNameNonEmpty(model.databaseName) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        val newModel = model.copy(
+          databaseName = Some(LeoDatabase.convertUserDBNameToLeo(model.databaseName.get)))
+        cmd.copy(alterTableColRenameAndDataTypeChangeModel = newModel)
+
+      case cmd@CarbonAlterTableRenameCommand(model) =>
+        requireDBNameNonEmpty(model.oldTableIdentifier) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        requireDBNameNonEmpty(model.newTableIdentifier) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        val src = model.oldTableIdentifier.copy(
+          database = Some(LeoDatabase.convertUserDBNameToLeo(
+            model.oldTableIdentifier.database.get)))
+        val dest = model.newTableIdentifier.copy(
+          database = Some(LeoDatabase.convertUserDBNameToLeo(
+            model.newTableIdentifier.database.get)))
+        val newModel = model.copy(oldTableIdentifier = src, newTableIdentifier = dest)
+        cmd.copy(alterTableRenameModel = newModel)
+
+      case cmd@CarbonAlterTableSetCommand(tableIdentifier, _, _) =>
+        requireDBNameNonEmpty(tableIdentifier) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        cmd.copy(
+          tableIdentifier = new TableIdentifier(
+            tableIdentifier.table,
+            Some(LeoDatabase.convertUserDBNameToLeo(tableIdentifier.database.get))))
+
+      case cmd@CarbonAlterTableUnsetCommand(tableIdentifier, _, _, _) =>
+        requireDBNameNonEmpty(tableIdentifier) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        cmd.copy(
+          tableIdentifier = new TableIdentifier(
+            tableIdentifier.table,
+            Some(LeoDatabase.convertUserDBNameToLeo(tableIdentifier.database.get))))
+
+      case cmd@CarbonAlterTableCompactionCommand(model, _, _) =>
+        requireDBNameNonEmpty(model.dbName) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        val newModel = model.copy(
+          dbName = Some(LeoDatabase.convertUserDBNameToLeo(model.dbName.get)))
+        cmd.copy(alterTableModel = newModel)
+
+      case cmd@CarbonAlterTableFinishStreaming(dbNameOp, _) =>
+        requireDBNameNonEmpty(dbNameOp) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        cmd.copy(dbName = Some(LeoDatabase.convertUserDBNameToLeo(dbNameOp.get)))
+
+
+      //////////////////////////////////////////////////
+      //                Partition                     //
+      //////////////////////////////////////////////////
+
+      case cmd@CarbonAlterTableAddHivePartitionCommand(table, _, _) =>
+        requireDBNameNonEmpty(table.database) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        val newTable = new TableIdentifier(table.table,
+          Some(LeoDatabase.convertUserDBNameToLeo(table.database.get)))
+        cmd.copy(tableName = newTable)
+
+      case cmd@CarbonAlterTableDropHivePartitionCommand(table, _, _, _, _, _) =>
+        requireDBNameNonEmpty(table.database) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        val newTable = new TableIdentifier(table.table,
+          Some(LeoDatabase.convertUserDBNameToLeo(table.database.get)))
+        cmd.copy(tableName = newTable)
+
+      case cmd@CarbonAlterTableDropPartitionCommand(model) =>
+        requireDBNameNonEmpty(model.databaseName) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        val newModel = model.copy(databaseName =
+          Some(LeoDatabase.convertUserDBNameToLeo(model.databaseName.get)))
+        cmd.copy(model = newModel)
+
+      case cmd@CarbonAlterTableSplitPartitionCommand(model) =>
+        requireDBNameNonEmpty(model.databaseName) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        val newModel = model.copy(databaseName =
+          Some(LeoDatabase.convertUserDBNameToLeo(model.databaseName.get)))
+        cmd.copy(splitPartitionModel = newModel)
+
+      case cmd@CarbonShowCarbonPartitionsCommand(tableIdentifier) =>
+        requireDBNameNonEmpty(tableIdentifier) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        cmd.copy(tableIdentifier = new TableIdentifier(tableIdentifier.table,
+          Some(LeoDatabase.convertUserDBNameToLeo(tableIdentifier.database.get))))
+
+      //////////////////////////////////////////////////
+      //                   Cache                      //
+      //////////////////////////////////////////////////
+
+      case cmd@CarbonDropCacheCommand(tableIdentifier, _) =>
+        requireDBNameNonEmpty(tableIdentifier) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        cmd.copy(tableIdentifier = new TableIdentifier(tableIdentifier.table,
+          Some(LeoDatabase.convertUserDBNameToLeo(tableIdentifier.database.get))))
+
+      case cmd@CarbonShowCacheCommand(tableOp, _) =>
+        if (tableOp.nonEmpty) {
+          requireDBNameNonEmpty(tableOp.get) match {
+            case Some(msg) => return (None, msg)
+            case None =>
+          }
+          cmd.copy(tableIdentifier = Some(new TableIdentifier(
+            tableOp.get.table,
+            Some(LeoDatabase.convertUserDBNameToLeo(tableOp.get.database.get)))))
+        } else {
+          cmd
+        }
+
+      //////////////////////////////////////////////////
+      //                   DataMap                    //
+      //////////////////////////////////////////////////
+
+      case cmd@CarbonCreateDataMapCommand(_, tableOp, _, _, _, _, _) =>
+        if (tableOp.nonEmpty) {
+          requireDBNameNonEmpty(tableOp.get) match {
+            case Some(msg) => return (None, msg)
+            case None =>
+          }
+          cmd.copy(tableIdentifier = Some(new TableIdentifier(
+            tableOp.get.table,
+            Some(LeoDatabase.convertUserDBNameToLeo(tableOp.get.database.get)))))
+        } else {
+          cmd
+        }
+
+      case cmd@CarbonDropDataMapCommand(_, _, tableOp, _) =>
+        if (tableOp.nonEmpty) {
+          requireDBNameNonEmpty(tableOp.get) match {
+            case Some(msg) => return (None, msg)
+            case None =>
+          }
+          cmd.copy(table = Some(new TableIdentifier(
+            tableOp.get.table,
+            Some(LeoDatabase.convertUserDBNameToLeo(tableOp.get.database.get)))))
+        } else {
+          cmd
+        }
+
+      case cmd@CarbonDataMapShowCommand(tableOp) =>
+        if (tableOp.nonEmpty) {
+          requireDBNameNonEmpty(tableOp.get) match {
+            case Some(msg) => return (None, msg)
+            case None =>
+          }
+          cmd.copy(tableIdentifier = Some(new TableIdentifier(
+            tableOp.get.table,
+            Some(LeoDatabase.convertUserDBNameToLeo(tableOp.get.database.get)))))
+        } else {
+          cmd
+        }
+
+      case cmd@CarbonDataMapRebuildCommand(_, tableOp) =>
+        if (tableOp.nonEmpty) {
+          requireDBNameNonEmpty(tableOp.get) match {
+            case Some(msg) => return (None, msg)
+            case None =>
+          }
+          cmd.copy(tableIdentifier = Some(new TableIdentifier(
+            tableOp.get.table,
+            Some(LeoDatabase.convertUserDBNameToLeo(tableOp.get.database.get)))))
+        } else {
+          cmd
+        }
+
+      //////////////////////////////////////////////////
+      //               Data Management                //
+      //////////////////////////////////////////////////
+
+      case cmd@CarbonCleanFilesCommand(databaseNameOp, _, _, _) =>
+        requireDBNameNonEmpty(databaseNameOp) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        cmd.copy(databaseNameOp = Some(LeoDatabase.convertUserDBNameToLeo(databaseNameOp.get)))
+
+      case cmd@CarbonCliCommand(databaseNameOp, _, _) =>
+        requireDBNameNonEmpty(databaseNameOp) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        cmd.copy(databaseNameOp = Some(LeoDatabase.convertUserDBNameToLeo(databaseNameOp.get)))
+
+      case cmd@CarbonDeleteLoadByIdCommand(_, databaseNameOp, _) =>
+        requireDBNameNonEmpty(databaseNameOp) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        cmd.copy(databaseNameOp = Some(LeoDatabase.convertUserDBNameToLeo(databaseNameOp.get)))
+
+      case cmd@CarbonDeleteLoadByLoadDateCommand(databaseNameOp, _, _, _) =>
+        requireDBNameNonEmpty(databaseNameOp) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        cmd.copy(databaseNameOp = Some(LeoDatabase.convertUserDBNameToLeo(databaseNameOp.get)))
+
+      case cmd@CarbonInsertColumnsCommand(_, databaseNameOp, _, _) =>
+        requireDBNameNonEmpty(databaseNameOp) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        cmd.copy(dbName = Some(LeoDatabase.convertUserDBNameToLeo(databaseNameOp.get)))
+
+      case cmd@CarbonShowLoadsCommand(databaseNameOp, _, _, _) =>
+        requireDBNameNonEmpty(databaseNameOp) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        cmd.copy(databaseNameOp = Some(LeoDatabase.convertUserDBNameToLeo(databaseNameOp.get)))
+
+      case cmd@RefreshCarbonTableCommand(databaseNameOp, _) =>
+        requireDBNameNonEmpty(databaseNameOp) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        cmd.copy(databaseNameOp = Some(LeoDatabase.convertUserDBNameToLeo(databaseNameOp.get)))
+
+      case cmd@CarbonProjectForDeleteCommand(_, databaseNameOp, _, _) =>
+        requireDBNameNonEmpty(databaseNameOp) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        cmd.copy(databaseNameOp = Some(LeoDatabase.convertUserDBNameToLeo(databaseNameOp.get)))
+
+      case cmd@CarbonProjectForUpdateCommand(_, databaseNameOp, _, _) =>
+        requireDBNameNonEmpty(databaseNameOp) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        cmd.copy(databaseNameOp = Some(LeoDatabase.convertUserDBNameToLeo(databaseNameOp.get)))
+
+
+      //////////////////////////////////////////////////
+      //                   Streaming                  //
+      //////////////////////////////////////////////////
+
+      case cmd@CarbonCreateStreamCommand(_, sinkDbNameOp, _, _, _, _) =>
+        requireDBNameNonEmpty(sinkDbNameOp) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        cmd.copy(sinkDbName = Some(LeoDatabase.convertUserDBNameToLeo(sinkDbNameOp.get)))
+
+      case cmd@CarbonDropStreamCommand(_, _) =>
+        cmd
+
+      case cmd@CarbonShowStreamsCommand(tableOp) =>
+        if (tableOp.nonEmpty) {
+          requireDBNameNonEmpty(tableOp.get) match {
+            case Some(msg) => return (None, msg)
+            case None =>
+          }
+          cmd.copy(tableOp = Some(new TableIdentifier(
+            tableOp.get.table,
+            Some(LeoDatabase.convertUserDBNameToLeo(tableOp.get.database.get)))))
+        } else {
+          cmd
+        }
+
       case plan => plan
     }
 
     (Some(updatedPlan), "")
   }
 
+  private def requireDBNameNonEmpty(tableIdentifier: TableIdentifier): Option[String] = {
+    if (tableIdentifier.database.isEmpty) {
+      return Some("database name must be specified")
+    } else if (tableIdentifier.database.get.equals("default")) {
+      return Some("default database is not allowed, create a new database")
+    }
+    None
+  }
+
+  private def requireDBNameNonEmpty(databaseNameOp: Option[String]): Option[String] = {
+    if (databaseNameOp.isEmpty) {
+      return Some("database name must be specified")
+    } else if (databaseNameOp.get.equals("default")) {
+      return Some("default database is not allowed, create a new database")
+    }
+    None
+  }
 }
