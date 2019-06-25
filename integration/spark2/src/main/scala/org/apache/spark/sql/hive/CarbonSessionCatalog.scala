@@ -17,13 +17,13 @@
 package org.apache.spark.sql.hive
 
 import org.apache.hadoop.fs.Path
-import org.apache.spark.sql.{CarbonEnv, SparkSession}
+import org.apache.spark.sql.{CarbonEnv, LeoDatabase, SparkSession}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.catalog.{CatalogStorageFormat, CatalogTablePartition}
 import org.apache.spark.sql.catalyst.expressions.Expression
 
 import org.apache.carbondata.common.annotations.{InterfaceAudience, InterfaceStability}
-import org.apache.carbondata.core.metadata.schema.table.column.{ColumnSchema => ColumnSchema}
+import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema
 
 /**
  * This interface defines those common api used by carbon for spark-2.1 and spark-2.2 integration,

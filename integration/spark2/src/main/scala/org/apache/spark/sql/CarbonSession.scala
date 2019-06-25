@@ -106,7 +106,8 @@ class CarbonSession(@transient val sc: SparkContext,
 
         if (newPlanOp.nonEmpty) {
           throw new AnalysisException(
-            CarbonEnv.getInstance(this).makeStringValidToUser(e.getMessage),
+            CarbonEnv.getInstance(this).makeStringValidToUser(e.getMessage)
+              .getOrElse(e.getMessage()),
             e.line,
             e.startPosition,
             newPlanOp,
