@@ -18,31 +18,17 @@ package org.apache.leo.model.job;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-import org.apache.carbondata.common.exceptions.sql.NoSuchDataMapException;
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
-import org.apache.carbondata.core.datamap.DataMapStoreManager;
-import org.apache.carbondata.core.datamap.status.DataMapStatus;
-import org.apache.carbondata.core.locks.ICarbonLock;
-import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier;
-import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
-import org.apache.carbondata.core.metadata.schema.table.DataMapSchema;
-import org.apache.carbondata.core.metadata.schema.table.RelationIdentifier;
-import org.apache.carbondata.core.statusmanager.LoadMetadataDetails;
-import org.apache.carbondata.core.statusmanager.SegmentStatus;
-import org.apache.carbondata.core.statusmanager.SegmentStatusManager;
 import org.apache.carbondata.core.util.CarbonProperties;
-import org.apache.carbondata.core.util.path.CarbonTablePath;
 
 import org.apache.log4j.Logger;
 
 /**
- * Maintains the status of each datamap. As per the status query will decide whether to hit datamap
- * or not.
+ * Maintains the status of each datamap. As per the status query will decide whether to hit
+ * datamap or not.
  */
 public class TrainJobManager {
 
@@ -88,7 +74,8 @@ public class TrainJobManager {
    * @return
    * @throws IOException
    */
-  public static TrainJobDetail getTrainJob(String modelName, String trainJobName) throws IOException {
+  public static TrainJobDetail getTrainJob(
+      String modelName, String trainJobName) throws IOException {
     return storageProvider.getTrainJob(modelName, trainJobName);
   }
 

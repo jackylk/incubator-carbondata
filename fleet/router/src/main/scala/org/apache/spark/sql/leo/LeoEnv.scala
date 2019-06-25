@@ -18,8 +18,8 @@
 package org.apache.spark.sql.leo
 
 import com.huawei.cloud.modelarts.ModelArtsModelTraining
-import org.apache.spark.sql.leo.builtin.LeoUDF
 import org.apache.spark.sql.{CarbonSession, SparkSession}
+import org.apache.spark.sql.leo.builtin.LeoUDF
 
 import org.apache.carbondata.ai.ModelTrainingAPI
 

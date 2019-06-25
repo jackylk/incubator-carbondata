@@ -17,10 +17,6 @@
 package org.apache.leo.model.job;
 
 import java.io.IOException;
-import java.util.List;
-
-import org.apache.carbondata.core.datamap.status.DataMapStatus;
-import org.apache.carbondata.core.metadata.schema.table.DataMapSchema;
 
 /**
  * It updates the datamap status to the storage. It will have 2 implementations one will be disk

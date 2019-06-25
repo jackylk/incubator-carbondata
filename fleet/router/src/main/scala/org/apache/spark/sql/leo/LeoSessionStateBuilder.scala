@@ -19,14 +19,12 @@ package org.apache.spark.sql.leo
 
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.analysis.Analyzer
-import org.apache.spark.sql.catalyst.parser.ParserInterface
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.rules.Rule
-import org.apache.spark.sql.execution.datasources.{DataSourceAnalysis, FindDataSourceTable, HiveOnlyCheck, PreWriteCheck, PreprocessTableCreation, PreprocessTableInsertion, ResolveSQLOnFile}
+import org.apache.spark.sql.execution.datasources.{DataSourceAnalysis, FindDataSourceTable, HiveOnlyCheck, PreprocessTableCreation, PreprocessTableInsertion, PreWriteCheck, ResolveSQLOnFile}
 import org.apache.spark.sql.execution.strategy.{CarbonLateDecodeStrategy, DDLStrategy, StreamingTableStrategy}
 import org.apache.spark.sql.hive.{CarbonAnalyzer, CarbonIUDAnalysisRule, CarbonPreInsertionCasts, CarbonSessionStateBuilder, DetermineTableStats, HiveAnalysis, RelationConversions, ResolveHiveSerdeTable}
 import org.apache.spark.sql.internal.SessionState
-import org.apache.spark.sql.parser.CarbonSparkSqlParser
 
 class LeoSessionStateBuilder(
     sparkSession: SparkSession,

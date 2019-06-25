@@ -21,7 +21,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.carbondata.common.annotations.InterfaceAudience;
-import org.apache.carbondata.core.datamap.status.DataMapStatus;
 
 /**
  * Status of each datamap

@@ -38,4 +38,6 @@
               files="com/huawei/cloud/orc/ResponseProcessUtils.java"/>
     <suppress checks=".*"
               files="com/huawei/cloud/orc/HWOcrClientToken.java"/>
+    <suppress checks=".*"
+              files="com/huawei/cloud/modelarts/ModelArtsModelTraining.java"/>
 </suppressions>

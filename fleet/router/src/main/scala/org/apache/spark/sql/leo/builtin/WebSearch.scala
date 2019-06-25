@@ -43,7 +43,7 @@ class WebSearchParams(exprs: Seq[Expression]) {
   val pageNum = params.find(_.left.simpleString.equals("page_num")).map(_.right.simpleString)
     .getOrElse(throw new AnalysisException("missing 'page_num' parameter for WebSearch"))
 
-  def toSeq = Seq(keyWord, pageNum)
+  def toSeq: Seq[String] = Seq(keyWord, pageNum)
 }
 
 /**
