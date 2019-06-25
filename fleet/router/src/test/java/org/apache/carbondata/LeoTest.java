@@ -15,27 +15,36 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.leo
+package org.apache.carbondata;
 
-import org.apache.spark.sql.leo.builtin.LeoUDF
-import org.apache.spark.sql.{CarbonSession, SparkSession}
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.leo.LeoEnv;
 
-object LeoEnv {
-  def getOrCreateLeoSession(builder: SparkSession.Builder): SparkSession = {
-    builder
-      .config("leo.enabled", "true")
-      .config("spark.carbon.sessionstate.classname",
-        "org.apache.spark.sql.leo.LeoSessionStateBuilder")
-      .enableHiveSupport()
+public class LeoTest {
 
-    val session = new CarbonSession.CarbonBuilder(builder).getOrCreateCarbonSession()
-    registerLeoBuiltinUDF(session)
+  private static SparkSession session;
+
+  private static void init() {
+    SparkSession.Builder builder = SparkSession.builder()
+        .master("local")
+        .config("spark.driver.host", "localhost");
+    session = LeoEnv.getOrCreateLeoSession(builder);
+    session.sparkContext().setLogLevel("ERROR");
   }
 
-  private def registerLeoBuiltinUDF(sesssion: SparkSession): SparkSession = {
-    val download: String => Array[Byte] = LeoUDF.download
-    sesssion.udf.register("download", download)
-    sesssion
+  static Dataset<Row> sql(String sqlString) {
+    if (session == null) {
+      init();
+    }
+    return session.sql(sqlString);
   }
 
+  static SparkSession getSession() {
+    if (session == null) {
+      init();
+    }
+    return session;
+  }
 }

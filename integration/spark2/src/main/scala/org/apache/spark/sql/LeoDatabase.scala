@@ -24,7 +24,7 @@ import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.datasources.CreateTable
 
 object LeoDatabase {
-  var DEFAULT_PROJECTID: String = "_default_projectid"
+  var DEFAULT_PROJECTID: String = ""
 
   /**
    * convert user table identifier to leo table identifier

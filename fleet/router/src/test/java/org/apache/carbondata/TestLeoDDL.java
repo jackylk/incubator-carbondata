@@ -24,9 +24,7 @@ import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.LeoDatabase;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalog.Database;
-import org.apache.spark.sql.leo.LeoEnv;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -37,20 +35,12 @@ import static org.junit.Assert.fail;
 /**
  * Unit test for testing leo DDL commands
  */
-public class TestLeoDDL {
-
-  private static SparkSession session;
+public class TestLeoDDL extends LeoTest {
 
   @BeforeClass
   public static void setup() {
-    SparkSession.Builder builder = SparkSession.builder()
-        .master("local")
-        .config("spark.driver.host", "localhost");
-    session = LeoEnv.getOrCreateLeoSession(builder);
-    session.sparkContext().setLogLevel("ERROR");
-
-    session.sql("drop table if exists db1.t1");
-    session.sql("drop database if exists db1 cascade");
+    sql("drop table if exists db1.t1");
+    sql("drop database if exists db1 cascade");
   }
 
   private void shouldFail(Supplier<Dataset<Row>> func, Class exceptionClazz,
@@ -82,7 +72,7 @@ public class TestLeoDDL {
    */
   @Test
   public void testCreateTableWithoutDBName() {
-    shouldFail(() -> session.sql("create table t1 (name string, age int)"),
+    shouldFail(() -> sql("create table t1 (name string, age int)"),
         AnalysisException.class,
         "database name must be specified");
   }
@@ -92,16 +82,16 @@ public class TestLeoDDL {
    */
   @Test
   public void testCreateDBOk() throws AnalysisException {
-    session.sql("create database db1");
+    sql("create database db1");
 
-    Database db = session.catalog().getDatabase(LeoDatabase.convertUserDBNameToLeo("db1"));
+    Database db = getSession().catalog().getDatabase(LeoDatabase.convertUserDBNameToLeo("db1"));
     assertEquals(LeoDatabase.convertUserDBNameToLeo("db1"), db.name());
 
-    List<Row> rows = session.sql("show databases").collectAsList();
+    List<Row> rows = sql("show databases").collectAsList();
     assertEquals("db1", rows.get(0).getString(0));
 
-    session.sql("drop database db1");
-    rows = session.sql("show databases").collectAsList();
+    sql("drop database db1");
+    rows = sql("show databases").collectAsList();
     assertEquals(0, rows.size());
   }
 
@@ -110,7 +100,7 @@ public class TestLeoDDL {
    */
   @Test
   public void testCreateDefaultDBFail() {
-    shouldFail(() -> session.sql("create database default"),
+    shouldFail(() -> sql("create database default"),
         AnalysisException.class,
         "database name default is not allowed");
   }
@@ -120,33 +110,34 @@ public class TestLeoDDL {
    */
   @Test
   public void testCreateTableOk() {
-    session.sql("create database db1");
-    session.sql("create table db1.t1 (name string, age int)");
+    sql("create database db1");
+    sql("create table db1.t1 (name string, age int) "
+        + "using carbondata options ('lake'='lake1')");
 
-    List<Row> rows = session.sql("show tables in db1").collectAsList();
+    List<Row> rows = sql("show tables in db1").collectAsList();
     assertEquals("db1", rows.get(0).getString(0));
     assertEquals("t1", rows.get(0).getString(1));
     assertFalse(rows.get(0).getBoolean(2));
 
-    session.sql("desc formatted db1.t1").show(100, false);
-    rows = session.sql("desc formatted db1.t1").collectAsList();
+    sql("desc formatted db1.t1").show(100, false);
+    rows = sql("desc formatted db1.t1").collectAsList();
     long size = rows.stream()
         .filter(row -> row.getString(1).contains(LeoDatabase.leoDBNamePrefix()))
         .count();
     assertEquals(0, size);
 
-    session.sql("explain select * from db1.t1").show(false);
-    rows = session.sql("explain select * from db1.t1").collectAsList();
+    sql("explain select * from db1.t1").show(false);
+    rows = sql("explain select * from db1.t1").collectAsList();
     size = rows.stream()
         .filter(row -> row.getString(0).contains(LeoDatabase.leoDBNamePrefix()))
         .count();
     assertEquals(0, size);
 
-    rows = session.sql("select * from db1.t1").collectAsList();
+    rows = sql("select * from db1.t1").collectAsList();
     assertEquals(0, rows.size());
 
-    session.sql("drop table db1.t1");
-    session.sql("drop database db1");
+    sql("drop table db1.t1");
+    sql("drop database db1");
   }
 
   /**
@@ -154,17 +145,17 @@ public class TestLeoDDL {
    */
   @Test
   public void testShowTablesFail() {
-    session.sql("create database db1");
-    session.sql("create table db1.t1 (name string, age int)");
+    sql("create database db1");
+    sql("create table db1.t1 (name string, age int)");
 
-    shouldFail(() -> session.sql("show tables"),
+    shouldFail(() -> sql("show tables"),
         AnalysisException.class, "database name must be specified");
 
-    shouldFail(() -> session.sql("show tables in default"),
+    shouldFail(() -> sql("show tables in default"),
         AnalysisException.class, "default database is not allowed");
 
-    session.sql("drop table db1.t1");
-    session.sql("drop database db1");
+    sql("drop table db1.t1");
+    sql("drop database db1");
   }
 
   /**
@@ -172,17 +163,17 @@ public class TestLeoDDL {
    */
   @Test
   public void testDescTableFail() {
-    session.sql("create database db1");
-    session.sql("create table db1.t1 (name string, age int)");
+    sql("create database db1");
+    sql("create table db1.t1 (name string, age int)");
 
-    shouldFail(() -> session.sql("desc table t1"),
+    shouldFail(() -> sql("desc table t1"),
         AnalysisException.class, "database name must be specified");
 
-    shouldFail(() -> session.sql("desc table default.t1"),
+    shouldFail(() -> sql("desc table default.t1"),
         AnalysisException.class, "default database is not allowed");
 
-    session.sql("drop table db1.t1");
-    session.sql("drop database db1");
+    sql("drop table db1.t1");
+    sql("drop database db1");
   }
 
   /**
@@ -190,17 +181,17 @@ public class TestLeoDDL {
    */
   @Test
   public void testExplainFail() {
-    session.sql("create database db1");
-    session.sql("create table db1.t1 (name string, age int)");
+    sql("create database db1");
+    sql("create table db1.t1 (name string, age int)");
 
-    shouldFail(() -> session.sql("explain select * from t1"),
+    shouldFail(() -> sql("explain select * from t1"),
         AnalysisException.class, "database name must be specified");
 
-    shouldFail(() -> session.sql("explain select * from default.t1"),
+    shouldFail(() -> sql("explain select * from default.t1"),
         AnalysisException.class, "default database is not allowed");
 
-    session.sql("drop table db1.t1");
-    session.sql("drop database db1");
+    sql("drop table db1.t1");
+    sql("drop database db1");
   }
 
   /**
@@ -208,19 +199,20 @@ public class TestLeoDDL {
    */
   @Test
   public void testQueryFail() {
-    session.sql("create database db1");
-    session.sql("create table db1.t1 (name string, age int)");
+    sql("create database db1");
+    sql("create table db1.t1 (name string, age int)");
 
-    shouldFail(() -> session.sql("select * from t1"),
+    shouldFail(() -> sql("select * from t1"),
         AnalysisException.class, "database name must be specified");
 
-    shouldFail(() -> session.sql("select * from default.t1"),
+    shouldFail(() -> sql("select * from default.t1"),
         AnalysisException.class, "default database is not allowed");
 
-    shouldFail(() -> session.sql("select count(*) from (select * from t1)"),
+    shouldFail(() -> sql("select count(*) from (select * from t1)"),
         AnalysisException.class, "database name must be specified");
 
-    session.sql("drop table db1.t1");
-    session.sql("drop database db1");
+    sql("drop table db1.t1");
+    sql("drop database db1");
   }
+
 }

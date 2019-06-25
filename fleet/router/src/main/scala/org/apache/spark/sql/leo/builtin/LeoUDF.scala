@@ -15,27 +15,20 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.leo
+package org.apache.spark.sql.leo.builtin
 
-import org.apache.spark.sql.leo.builtin.LeoUDF
-import org.apache.spark.sql.{CarbonSession, SparkSession}
+import java.net.URI
+import java.nio.file.{Files, Paths}
 
-object LeoEnv {
-  def getOrCreateLeoSession(builder: SparkSession.Builder): SparkSession = {
-    builder
-      .config("leo.enabled", "true")
-      .config("spark.carbon.sessionstate.classname",
-        "org.apache.spark.sql.leo.LeoSessionStateBuilder")
-      .enableHiveSupport()
+/**
+ * Built-in UDFs
+ */
+object LeoUDF {
 
-    val session = new CarbonSession.CarbonBuilder(builder).getOrCreateCarbonSession()
-    registerLeoBuiltinUDF(session)
+  /**
+   * download byte array content from specified url
+   */
+  def download(url: String): Array[Byte] = {
+    Files.readAllBytes(Paths.get(URI.create(url)))
   }
-
-  private def registerLeoBuiltinUDF(sesssion: SparkSession): SparkSession = {
-    val download: String => Array[Byte] = LeoUDF.download
-    sesssion.udf.register("download", download)
-    sesssion
-  }
-
 }
