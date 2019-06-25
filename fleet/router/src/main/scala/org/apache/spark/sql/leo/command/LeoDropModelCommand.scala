@@ -20,10 +20,9 @@ package org.apache.spark.sql.leo.command
 import scala.collection.JavaConverters._
 
 import org.apache.leo.model.job.TrainJobManager
-import org.apache.leo.model.rest.ModelRestManager
 import org.apache.spark.sql.{CarbonEnv, LeoDatabase, Row, SparkSession}
 import org.apache.spark.sql.execution.command.RunnableCommand
-import org.apache.spark.sql.leo.ModelStoreManager
+import org.apache.spark.sql.leo.{LeoEnv, ModelStoreManager}
 import org.apache.spark.sql.leo.exceptions.NoSuchModelException
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
@@ -47,7 +46,7 @@ case class LeoDropModelCommand(
       val details = TrainJobManager.getAllEnabledTrainedJobs(updatedModelName)
       details.foreach{d =>
         val jobId = d.getProperties.get("job_id")
-        ModelRestManager.deleteTrainingJob(jobId.toLong)
+        LeoEnv.modelTraingAPI.stopTrainingJob(jobId.toLong)
       }
       TrainJobManager.dropModel(updatedModelName)
       ModelStoreManager.getInstance().dropModelSchema(updatedModelName)

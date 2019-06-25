@@ -23,15 +23,15 @@ import scala.collection.JavaConverters._
 
 import org.apache.spark.sql.{AnalysisException, CarbonEnv, LeoDatabase, Row, SparkSession}
 import org.apache.spark.sql.carbondata.execution.datasources.CarbonSparkDataSourceUtil
-import org.apache.leo.model.rest.ModelRestManager
 import org.apache.spark.sql.catalyst.catalog.HiveTableRelation
 import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference}
 import org.apache.spark.sql.catalyst.plans.logical.{Filter, Project}
 import org.apache.spark.sql.execution.command.RunnableCommand
 import org.apache.spark.sql.execution.datasources.{DataSourceStrategy, LogicalRelation}
-import org.apache.spark.sql.leo.{LeoQueryObject, ModelStoreManager}
+import org.apache.spark.sql.leo.ModelStoreManager
 import org.apache.spark.sql.types.AtomicType
 
+import org.apache.carbondata.ai.DataScan
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.metadata.schema.table.{DataMapSchema, RelationIdentifier}
@@ -72,7 +72,7 @@ case class LeoCreateModelCommand(
       case l: LogicalRelation => l.catalogTable.get
       case h: HiveTableRelation => h.tableMeta
     }
-    val query = new LeoQueryObject
+    val query = new DataScan
     val database = LeoDatabase.convertLeoDBNameToUser(parentTable.head.database)
     query
       .setTableName(database + CarbonCommonConstants.UNDERSCORE + parentTable.head.identifier.table)

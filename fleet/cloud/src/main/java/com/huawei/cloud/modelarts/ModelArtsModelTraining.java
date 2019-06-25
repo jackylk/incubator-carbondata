@@ -14,7 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.leo.model.rest;
+
+package com.huawei.cloud.modelarts;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -25,10 +26,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.apache.carbondata.ai.DataScan;
+import org.apache.carbondata.ai.ModelTrainingAPI;
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.util.CarbonProperties;
 
 import com.google.gson.Gson;
+import com.huawei.cloud.credential.LoginRequestManager;
+import com.huawei.cloud.util.RestUtil;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.OkHttpClient;
@@ -36,33 +41,36 @@ import okhttp3.Response;
 import org.apache.htrace.fasterxml.jackson.core.type.TypeReference;
 import org.apache.htrace.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.log4j.Logger;
-import org.apache.spark.sql.leo.LeoQueryObject;
 
-import static org.apache.leo.model.rest.RestConstants.*;
+import static com.huawei.cloud.RestConstants.MODELARTS_CN_NORTH_V1_ENDPOINT;
+import static com.huawei.cloud.RestConstants.MODELARTS_TRAINING_REST;
+import static com.huawei.cloud.RestConstants.SEPARATOR;
 
 /**
  * It creates the training job in Model Arts
  */
-public class ModelRestManager {
+public class ModelArtsModelTraining implements ModelTrainingAPI {
 
   private static final Logger LOGGER =
-      LogServiceFactory.getLogService(ModelRestManager.class.getName());
+      LogServiceFactory.getLogService(ModelArtsModelTraining.class.getName());
 
   private static OkHttpClient client = new OkHttpClient();
 
   /**
    * It creates training job in modelarts and starts it to generate model.
    */
-  public static long startTrainingJobRequest(Map<String, String> options, String modelName,
-      LeoQueryObject queryObject) throws Exception {
-    String json = CreateTrainingJobVO.generateJson(options, modelName, queryObject);
+  @Override
+  public long startTrainingJob(Map<String, String> options, String modelName,
+      DataScan dataScan) {
+    // Start a new training job in ModelArts
+    String json = CreateTrainingJobVO.generateJson(options, modelName, dataScan);
     LOGGER.info(json);
     LoginRequestManager.LoginInfo loginInfo = getLoginInfo();
 
     Object[] status = new Object[2];
     RestUtil.postAsync(
-        MODELARTS_CN_NORTH_V1_ENDPOINT + loginInfo.getProjectId()
-            + SEPARATOR + MODELARTS_TRAINING_REST, json, new Callback() {
+        MODELARTS_CN_NORTH_V1_ENDPOINT + loginInfo.getProjectId() +
+            SEPARATOR + MODELARTS_TRAINING_REST, json, new Callback() {
           @Override public void onFailure(Call call, IOException e) {
             status[0] = e;
           }
@@ -91,28 +99,39 @@ public class ModelRestManager {
           }
         }, loginInfo.getToken(), client);
     while (status[0] == null && status[1] == null) {
-      Thread.sleep(10);
+      try {
+        Thread.sleep(10);
+      } catch (InterruptedException e) {
+        // ignore
+      }
     }
     if (status[0] != null) {
-      throw (Exception) status[0];
+      throw new RuntimeException((Exception)status[0]);
     }
     return Long.parseLong(status[1].toString());
   }
 
-  private static LoginRequestManager.LoginInfo getLoginInfo() throws Exception {
+  private static LoginRequestManager.LoginInfo getLoginInfo() {
     String maUserName = CarbonProperties.getInstance().getProperty("leo.ma.username");
     String maPwd = CarbonProperties.getInstance().getProperty("leo.ma.password");
     if (maUserName == null || maPwd == null) {
-      throw new Exception("User name and password should be set in carbon properties");
+      throw new RuntimeException("User name and password should be set in carbon properties");
     }
     return LoginRequestManager.login(maUserName, maPwd, client);
   }
 
-  public static void deleteTrainingJob(Long jobId) throws Exception {
+  @Override
+  public void stopTrainingJob(long jobId) throws IOException {
+    // stop and delete the training job in ModelArts
     LoginRequestManager.LoginInfo loginInfo = getLoginInfo();
     Response response = RestUtil.delete(
         MODELARTS_CN_NORTH_V1_ENDPOINT + loginInfo.getProjectId() + SEPARATOR
             + MODELARTS_TRAINING_REST + SEPARATOR + jobId, loginInfo.getToken(), client);
+  }
+
+  @Override
+  public Map<String, String> getTrainingJobInfo(long jobId) {
+    return null;
   }
 }
 
@@ -292,7 +311,7 @@ class CreateTrainingJobVO implements Serializable {
    * Generates json for starting and creating training job.
    */
   static String generateJson(Map<String, String> options, String modelName,
-      LeoQueryObject queryObject) {
+      DataScan queryObject) {
     CreateTrainingJobVO modelVO = new CreateTrainingJobVO();
     modelVO.setJob_name(modelName);
     Config config = new Config();

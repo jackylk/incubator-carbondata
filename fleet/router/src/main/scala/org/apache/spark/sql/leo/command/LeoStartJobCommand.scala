@@ -20,11 +20,11 @@ package org.apache.spark.sql.leo.command
 import scala.collection.JavaConverters._
 
 import org.apache.leo.model.job.{TrainJobDetail, TrainJobManager}
-import org.apache.leo.model.rest.ModelRestManager
 import org.apache.spark.sql.execution.command.RunnableCommand
-import org.apache.spark.sql.leo.{LeoQueryObject, ModelStoreManager}
+import org.apache.spark.sql.leo.{LeoEnv, ModelStoreManager}
 import org.apache.spark.sql.{AnalysisException, CarbonEnv, LeoDatabase, Row, SparkSession}
 
+import org.apache.carbondata.ai.DataScan
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.util.ObjectSerializationUtil
 
@@ -58,10 +58,10 @@ case class LeoStartJobCommand(
     optionsMapFinal.putAll(schema.getProperties)
     val str = schema.getProperties.get(CarbonCommonConstants.QUERY_OBJECT)
     val queryObject =
-      ObjectSerializationUtil.convertStringToObject(str).asInstanceOf[LeoQueryObject]
+      ObjectSerializationUtil.convertStringToObject(str).asInstanceOf[DataScan]
     // It starts creating the training job and generates the model in cloud.
     val jobId =
-      ModelRestManager.startTrainingJobRequest(optionsMapFinal, updatedModelName, queryObject)
+      LeoEnv.modelTraingAPI.startTrainingJob(optionsMapFinal, updatedModelName, queryObject)
     optionsMap.put("job_id", jobId.toString)
     val detail = new TrainJobDetail(jobName, optionsMap)
     try {
@@ -69,7 +69,7 @@ case class LeoStartJobCommand(
       TrainJobManager.saveTrainJob(updatedModelName, detail)
     } catch {
       case e:Exception =>
-        ModelRestManager.deleteTrainingJob(jobId)
+        LeoEnv.modelTraingAPI.stopTrainingJob(jobId)
         throw e
     }
 

@@ -15,12 +15,14 @@
  * limitations under the License.
  */
 
-package org.apache.leo.model.rest;
+package com.huawei.cloud.credential;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Map;
 
+import com.huawei.cloud.RestConstants;
+import com.huawei.cloud.util.RestUtil;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.OkHttpClient;
@@ -28,15 +30,13 @@ import okhttp3.Response;
 import org.apache.htrace.fasterxml.jackson.core.type.TypeReference;
 import org.apache.htrace.fasterxml.jackson.databind.ObjectMapper;
 
-import static org.apache.leo.model.rest.RestConstants.*;
 
 /**
  * Helps to login to Huawei cloud.
  */
 public class LoginRequestManager implements Serializable {
 
-  public static LoginInfo login(String username, String password, OkHttpClient client)
-      throws Exception {
+  public static LoginInfo login(String username, String password, OkHttpClient client) {
     String loginJson = "{\n" +
         "  \"auth\": {\n" +
         "    \"identity\": {\n" +
@@ -60,7 +60,7 @@ public class LoginRequestManager implements Serializable {
         "}";
     LoginInfo loginInfo = new LoginInfo();
     Exception[] exception = new Exception[1];
-    RestUtil.postAsync(HUAWEI_CLOUD_AUTH_ENDPOINT, loginJson,
+    RestUtil.postAsync(RestConstants.HUAWEI_CLOUD_AUTH_ENDPOINT, loginJson,
         new Callback() {
           @Override public void onFailure(Call call, IOException e) {
             exception[0] = e;
@@ -79,17 +79,21 @@ public class LoginRequestManager implements Serializable {
               }
               loginInfo.setUserName(username);
               loginInfo.setLoggedIn(true);
-              loginInfo.setToken(response.header(AUTH_TOKEN_HEADER));
+              loginInfo.setToken(response.header(RestConstants.AUTH_TOKEN_HEADER));
               loginInfo.setProjectId(
                   ((Map) ((Map) jsonNodeMap.get("token")).get("project")).get("id").toString());
             }
           }
         }, client);
     while (exception[0] == null && !loginInfo.isLoggedIn()) {
-      Thread.sleep(10);
+      try {
+        Thread.sleep(10);
+      } catch (InterruptedException e) {
+        // ignore
+      }
     }
     if (exception[0] != null) {
-      throw exception[0];
+      throw new RuntimeException(exception[0]);
     }
     return loginInfo;
   }

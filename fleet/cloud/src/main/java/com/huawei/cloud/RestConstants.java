@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.leo.model.rest;
+package com.huawei.cloud;
 
 /**
  * It contains Cloud end points and rest url constants.
