@@ -41,7 +41,10 @@ object CarbonInternalReflectionUtils {
         resources,
         Predef.boolean2Boolean(isTemp),
         Predef.boolean2Boolean(false),
-        Predef.boolean2Boolean(false))
+        Predef.boolean2Boolean(true))
+      // Assuming that the create function is in shared state and takes functions from previous
+      // state's functionRegistry in Spark2.3, we make the last flag of the above function as
+      // true which is for replaceIfExists that function.
       createFunction._1.asInstanceOf[CreateFunctionCommand]
     } else {
       throw new UnsupportedOperationException("Spark version not supported")
