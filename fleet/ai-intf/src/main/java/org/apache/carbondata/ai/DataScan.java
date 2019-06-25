@@ -15,16 +15,16 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.leo;
+package org.apache.carbondata.ai;
 
 import java.io.Serializable;
 
 import org.apache.carbondata.core.scan.expression.Expression;
 
 /**
- * It holds projection, filterExpression of queryString used in create model
+ * It holds projection, filterExpression of queryString used in ModelTrainingAPI
  */
-public class LeoQueryObject implements Serializable {
+public class DataScan implements Serializable {
 
   private String tableName;
   private String tablePath;

@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 
+import org.apache.carbondata.ai.DataScan;
 import org.apache.carbondata.common.exceptions.sql.NoSuchDataMapException;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
@@ -34,7 +35,6 @@ import org.apache.carbondata.core.util.ObjectSerializationUtil;
 
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.leo.LeoEnv;
-import org.apache.spark.sql.leo.LeoQueryObject;
 import org.apache.spark.sql.leo.ModelStoreManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -102,7 +102,7 @@ public class TestCreateModel {
     assert(m1.getCtasQuery().equalsIgnoreCase(" select c1,c2 from db.test where c3=5"));
     // get Query Object
     String query = m1.getProperties().get(CarbonCommonConstants.QUERY_OBJECT);
-    LeoQueryObject queryObject = (LeoQueryObject) ObjectSerializationUtil.convertStringToObject(query);
+    DataScan queryObject = (DataScan) ObjectSerializationUtil.convertStringToObject(query);
     String[] projects = new String[]{"c1", "c2"};
     // compare projection columns
     assert (Arrays.equals(queryObject.getProjectionColumns(), projects));

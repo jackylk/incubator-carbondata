@@ -1,4 +1,4 @@
-package org.apache.leo.model.rest;
+package com.huawei.cloud.util;
 
 import java.io.IOException;
 
