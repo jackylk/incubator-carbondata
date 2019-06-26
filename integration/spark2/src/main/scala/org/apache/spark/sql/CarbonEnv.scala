@@ -28,6 +28,7 @@ import org.apache.spark.sql.events.{MergeBloomIndexEventListener, MergeIndexEven
 import org.apache.spark.sql.execution.command.cache._
 import org.apache.spark.sql.execution.command.mv._
 import org.apache.spark.sql.execution.command.preaaggregate._
+import org.apache.spark.sql.execution.command.images.ImageInfoFunction
 import org.apache.spark.sql.execution.command.timeseries.TimeSeriesFunction
 import org.apache.spark.sql.hive._
 
@@ -100,6 +101,9 @@ class CarbonEnv {
 
     // added for handling timeseries function like hour, minute, day , month , year
     sparkSession.udf.register("timeseries", new TimeSeriesFunction)
+
+    //image info related udf
+    sparkSession.udf.register("imageinfo", new ImageInfoFunction)
 
     // register for cloud udf
     CloudUdfRegister.register(sparkSession)
