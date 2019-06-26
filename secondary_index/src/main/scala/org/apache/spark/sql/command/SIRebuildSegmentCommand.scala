@@ -113,7 +113,6 @@ case class SIRebuildSegmentCommand(
       scala.collection.mutable.Map()
 
     var loadMetadataDetails: Array[LoadMetadataDetails] = null
-    val validSegmentIds: mutable.Buffer[String] = mutable.Buffer[String]()
 
     try {
       if (lock.lockWithRetries()) {
@@ -161,24 +160,11 @@ case class SIRebuildSegmentCommand(
               .getCompressorForIndexTable(indexTable.getDatabaseName, indexTable.getTableName,
                 mainTable.getTableName)(sparkSession))
 
-        val mergeIndexFilesNeeded = CarbonInternalMergerUtil
+        CarbonInternalMergerUtil
           .mergeDataFilesSISegments(segmentIdToLoadStartTimeMapping,
             indexTable,
             loadMetadataDetails.toList.asJava, carbonLoadModelForMergeDataFiles, true)(sparkSession
             .sqlContext)
-        if (mergeIndexFilesNeeded) {
-          loadMetadataDetails.foreach { metadataDetails =>
-            validSegmentIds += metadataDetails.getLoadName
-          }
-          // Just launch job to merge index for all index tables
-          CarbonMergeFilesRDD.mergeIndexFiles(
-            sparkSession,
-            validSegmentIds,
-            segmentFileNameMap,
-            indexTable.getTablePath,
-            indexTable,
-            true)
-        }
 
         val loadTableACLPostExecutionEvent: LoadTableSIPostExecutionEvent =
           LoadTableSIPostExecutionEvent(sparkSession,
@@ -198,24 +184,10 @@ case class SIRebuildSegmentCommand(
       }
     } catch {
       case ex: Exception =>
-        try {
-          if (!(ex.isInstanceOf[NoSuchTableException] ||
-                ex.isInstanceOf[MalformedCarbonCommandException] ||
-                ex.getMessage.contains("already locked for compaction"))) {
-            val segmentStatusManager: SegmentStatusManager = new SegmentStatusManager(indexTable
-              .getAbsoluteTableIdentifier)
-            val validSegments = (segmentStatusManager.getValidAndInvalidSegments.getValidSegments)
-              .asScala.filter(seg => validSegmentIds.contains(seg.getSegmentNo))
-            CarbonPluginUtil.deleteStaleIndexOrDataFiles(indexTable, validSegments.toList.asJava)
-          }
-        } catch {
-          case e: Exception =>
-            LOGGER
-              .error("Problem while cleaning up stale folder for index table " +
-                     indexTable.getTableName, ex)
-        }
         LOGGER.error(s"SI segment compaction request failed for table " +
                      s"${indexTable.getDatabaseName}.${indexTable.getTableName}")
+      case ex: NoSuchTableException =>
+        throw ex
     } finally {
       lock.unlock()
     }

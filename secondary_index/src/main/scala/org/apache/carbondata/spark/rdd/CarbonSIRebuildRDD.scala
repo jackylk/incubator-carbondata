@@ -84,6 +84,7 @@ class CarbonSIRebuildRDD[K, V](
     CarbonInputFormat.setTableInfo(
       job.getConfiguration,
       carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable.getTableInfo)
+    CarbonInputFormat.setValidateSegmentsToAccess(job.getConfiguration, false)
 
     // get splits
     val splits = format.getSplits(job)

@@ -77,7 +77,14 @@ object Compactor {
           carbonLoadModel,
           segmentToSegmentTimestampMap,
           segmentIdToLoadStartTimeMapping(validSegments.head),
-          SegmentStatus.INSERT_IN_PROGRESS)
+          SegmentStatus.INSERT_IN_PROGRESS, 0L, List.empty.asJava)
+
+        // merge index files
+        CarbonMergeFilesRDD.mergeIndexFiles(sqlContext.sparkSession,
+          secondaryIndexModel.validSegments,
+          segmentToSegmentTimestampMap,
+          indexCarbonTable.getTablePath,
+          indexCarbonTable, false)
 
         val loadMetadataDetails = (SegmentStatusManager
           .readLoadMetadata(indexCarbonTable.getMetadataPath))
@@ -93,17 +100,12 @@ object Compactor {
                 indexCarbonTable.getTableName,
                 carbonMainTable.getTableName)(sqlContext.sparkSession))
 
-        CarbonInternalMergerUtil.mergeDataFilesSISegments(
+        // merge the data files of the compacted segments and take care of
+        // merging the index files inside this if needed
+        val rebuiltSegments = CarbonInternalMergerUtil.mergeDataFilesSISegments(
           secondaryIndexModel.segmentIdToLoadStartTimeMapping,
           indexCarbonTable,
           loadMetadataDetails.toList.asJava, carbonLoadModelForMergeDataFiles)(sqlContext)
-
-        // merge index files
-        CarbonMergeFilesRDD.mergeIndexFiles(sqlContext.sparkSession,
-          secondaryIndexModel.validSegments,
-          segmentToSegmentTimestampMap,
-          indexCarbonTable.getTablePath,
-          indexCarbonTable, false)
 
         CarbonInternalLoaderUtil.updateLoadMetadataWithMergeStatus(
           indexCarbonTable,
@@ -112,7 +114,8 @@ object Compactor {
           carbonLoadModel,
           segmentToSegmentTimestampMap,
           segmentIdToLoadStartTimeMapping(validSegments.head),
-          SegmentStatus.SUCCESS)
+          SegmentStatus.SUCCESS,
+          carbonLoadModelForMergeDataFiles.getFactTimeStamp, rebuiltSegments.toList.asJava)
 
       } catch {
         case ex: Exception =>

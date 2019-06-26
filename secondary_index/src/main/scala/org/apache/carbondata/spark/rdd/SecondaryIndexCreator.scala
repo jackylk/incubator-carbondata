@@ -187,6 +187,12 @@ object SecondaryIndexCreator {
           secondaryIndexModel.sqlContext.sparkSession)
 
         // merge index files for success segments in case of only load
+        CarbonMergeFilesRDD.mergeIndexFiles(secondaryIndexModel.sqlContext.sparkSession,
+          successSISegments,
+          segmentToLoadStartTimeMap,
+          indexCarbonTable.getTablePath,
+          indexCarbonTable, mergeIndexProperty = false)
+
         val loadMetadataDetails = (SegmentStatusManager
           .readLoadMetadata(indexCarbonTable.getMetadataPath))
           .filter(loadMetadataDetail => successSISegments.contains(loadMetadataDetail.getLoadName))
@@ -199,16 +205,13 @@ object SecondaryIndexCreator {
               .getCompressorForIndexTable(indexCarbonTable.getDatabaseName,
                 indexCarbonTable.getTableName,
                 secondaryIndexModel.carbonTable.getTableName)(sc.sparkSession))
-        CarbonInternalMergerUtil
+
+        // merge the data files of the loaded segments and take care of
+        // merging the index files inside this if needed
+        val rebuiltSegments = CarbonInternalMergerUtil
           .mergeDataFilesSISegments(secondaryIndexModel.segmentIdToLoadStartTimeMapping,
             indexCarbonTable,
             loadMetadataDetails.toList.asJava, carbonLoadModelForMergeDataFiles)(sc)
-
-        CarbonMergeFilesRDD.mergeIndexFiles(secondaryIndexModel.sqlContext.sparkSession,
-          successSISegments,
-          segmentToLoadStartTimeMap,
-          indexCarbonTable.getTablePath,
-          indexCarbonTable, mergeIndexProperty = false)
 
         tableStatusUpdateForSuccess = FileInternalUtil.updateTableStatus(
           successSISegments,
@@ -218,7 +221,9 @@ object SecondaryIndexCreator {
           secondaryIndexModel.segmentIdToLoadStartTimeMapping,
           segmentToLoadStartTimeMap,
           indexCarbonTable,
-          secondaryIndexModel.sqlContext.sparkSession)
+          secondaryIndexModel.sqlContext.sparkSession,
+          carbonLoadModelForMergeDataFiles.getFactTimeStamp,
+          rebuiltSegments)
       }
 
       // update the status of all the segments to marked for delete if data load fails, so that

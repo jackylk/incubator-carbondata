@@ -71,7 +71,10 @@ object FileInternalUtil {
     loadStatus: SegmentStatus,
     segmentIdToLoadStartTimeMapping: scala.collection.mutable.Map[String, java.lang.Long],
     segmentToSegmentTimestampMap: java.util.Map[String, String],
-    carbonTable: CarbonTable, sparkSession: SparkSession): Boolean = {
+    carbonTable: CarbonTable,
+    sparkSession: SparkSession,
+    newStartTime: Long = 0L,
+    rebuiltSegments: Set[String] = Set.empty): Boolean = {
     var loadMetadataDetailsList = Array[LoadMetadataDetails]()
     val loadEndTime = CarbonUpdateUtil.readCurrentTime
     validSegments.foreach { segmentId =>
@@ -79,7 +82,11 @@ object FileInternalUtil {
       loadMetadataDetail.setLoadName(segmentId)
       loadMetadataDetail.setPartitionCount("0")
       loadMetadataDetail.setSegmentStatus(loadStatus)
-      loadMetadataDetail.setLoadStartTime(segmentIdToLoadStartTimeMapping(segmentId))
+      if (rebuiltSegments.contains(loadMetadataDetail.getLoadName) && newStartTime != 0L) {
+        loadMetadataDetail.setLoadStartTime(newStartTime)
+      } else {
+        loadMetadataDetail.setLoadStartTime(segmentIdToLoadStartTimeMapping(segmentId))
+      }
       loadMetadataDetail.setLoadEndTime(loadEndTime)
       if (null != segmentToSegmentTimestampMap.get(segmentId)) {
         loadMetadataDetail

@@ -230,7 +230,8 @@ public class CarbonInternalLoaderUtil {
   public static boolean updateLoadMetadataWithMergeStatus(CarbonTable indexCarbonTable,
       String[] loadsToMerge, String mergedLoadNumber, CarbonLoadModel carbonLoadModel,
       Map<String, String> segmentToLoadStartTimeMap, long mergeLoadStartTime,
-      SegmentStatus segmentStatus) throws IOException {
+      SegmentStatus segmentStatus, long newLoadStartTime, List<String> rebuiltSegments)
+      throws IOException {
     boolean tableStatusUpdationStatus = false;
     List<String> loadMergeList = new ArrayList<>(Arrays.asList(loadsToMerge));
     AbsoluteTableIdentifier absoluteTableIdentifier =
@@ -276,7 +277,11 @@ public class CarbonInternalLoaderUtil {
             + CarbonTablePath.SEGMENT_EXT);
         CarbonLoaderUtil
             .addDataIndexSizeIntoMetaEntry(loadMetadataDetails, mergedLoadNumber, indexCarbonTable);
-        loadMetadataDetails.setLoadStartTime(mergeLoadStartTime);
+        if (rebuiltSegments.contains(loadMetadataDetails.getLoadName())) {
+          loadMetadataDetails.setLoadStartTime(newLoadStartTime);
+        } else {
+          loadMetadataDetails.setLoadStartTime(mergeLoadStartTime);
+        }
         loadMetadataDetails.setPartitionCount("0");
 
         // put the merged folder entry

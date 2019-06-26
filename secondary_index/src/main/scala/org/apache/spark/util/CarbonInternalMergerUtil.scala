@@ -17,6 +17,7 @@ import java.util.{Collections, Comparator, List}
 
 import scala.collection.JavaConverters._
 
+import org.apache.spark.rdd.CarbonMergeFilesRDD
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.execution.command.{CarbonMergerMapping, CompactionCallableModel}
@@ -59,7 +60,7 @@ object CarbonInternalMergerUtil {
     loadsToMerge: util.List[LoadMetadataDetails],
     carbonLoadModel: CarbonLoadModel,
     isRebuildCommand: Boolean = false)
-    (sqlContext: SQLContext): Boolean = {
+    (sqlContext: SQLContext): Set[String] = {
     var rebuildSegmentProperty = false
     try {
       rebuildSegmentProperty = CarbonProperties.getInstance().getProperty(
@@ -78,7 +79,7 @@ object CarbonInternalMergerUtil {
           indexCarbonTable,
           loadsToMerge, carbonLoadModel)(sqlContext)
       } else {
-        false
+        Set.empty
       }
     } catch {
       case ex: Exception =>
@@ -93,12 +94,12 @@ object CarbonInternalMergerUtil {
     segmentIdToLoadStartTimeMapping: scala.collection.mutable.Map[String, java.lang.Long],
     indexCarbonTable: CarbonTable,
     loadsToMerge: util.List[LoadMetadataDetails], carbonLoadModel: CarbonLoadModel)
-    (sqlContext: SQLContext): Boolean = {
+    (sqlContext: SQLContext): Set[String] = {
     loadsToMerge.asScala.foreach { seg =>
       LOGGER.info("loads identified for merge is " + seg.getLoadName)
     }
     if (loadsToMerge.isEmpty) {
-      false
+      Set.empty
     } else {
       val compactionCallableModel = CompactionCallableModel(
         carbonLoadModel,
@@ -139,7 +140,7 @@ object CarbonInternalMergerUtil {
 
   private def triggerCompaction(compactionCallableModel: CompactionCallableModel,
     segmentIdToLoadStartTimeMapping: scala.collection.mutable.Map[String, java.lang.Long])
-    (sqlContext: SQLContext): Boolean = {
+    (sqlContext: SQLContext): Set[String] = {
     val indexCarbonTable = compactionCallableModel.carbonTable
     val sc = compactionCallableModel.sqlContext
     val carbonLoadModel = compactionCallableModel.carbonLoadModel
@@ -153,7 +154,6 @@ object CarbonInternalMergerUtil {
     val validSegments: List[Segment] = CarbonDataMergerUtil
       .getValidSegments(compactionCallableModel.loadsToMerge)
     val mergedLoadName: String = ""
-    var mergeIndexFilesNeeded = false
     val carbonMergerMapping = CarbonMergerMapping(
       tablePath,
       indexCarbonTable.getMetadataPath,
@@ -172,6 +172,7 @@ object CarbonInternalMergerUtil {
 
     val mergedSegments: util.Set[LoadMetadataDetails] = new util.HashSet[LoadMetadataDetails]()
     var rebuiltSegments: Set[String] = Set[String]()
+    val segmentIdToLoadStartTimeMap: util.Map[String, String] = new util.HashMap()
 
     try {
       val mergeStatus =
@@ -189,12 +190,13 @@ object CarbonInternalMergerUtil {
         compactionCallableModel.loadsToMerge.asScala.foreach(metadataDetails => {
           if (rebuiltSegments.contains(metadataDetails.getLoadName)) {
             mergedSegments.add(metadataDetails)
+            segmentIdToLoadStartTimeMap
+              .put(metadataDetails.getLoadName, String.valueOf(metadataDetails.getLoadStartTime))
           }
         })
       }
       if (finalMergeStatus) {
         if (null != mergeStatus && mergeStatus.length != 0) {
-          mergeIndexFilesNeeded = true
           mergedSegments.asScala.map { seg =>
             val file = SegmentFileStore.writeSegmentFile(
               indexCarbonTable,
@@ -228,20 +230,28 @@ object CarbonInternalMergerUtil {
             .writeLoadDetailsIntoFile(CarbonTablePath.getTableStatusFilePath(tablePath),
               loadMetadataDetails)
 
-          if (CarbonProperties.getInstance()
-            .isDistributedPruningEnabled(indexCarbonTable.getDatabaseName,
-              indexCarbonTable.getTableName)) {
-            try {
-              IndexServer.getClient
-                .invalidateSegmentCache(indexCarbonTable, rebuiltSegments.toArray)
-            } catch {
-              case _: Exception =>
-            }
-          }
-
           // clear the datamap cache for the merged segments, as the index files and
           // data files are rewritten after compaction
           if (mergedSegments.size > 0) {
+
+            // merge index files for merged segments
+            CarbonMergeFilesRDD.mergeIndexFiles(sc.sparkSession,
+              rebuiltSegments.toSeq,
+              segmentIdToLoadStartTimeMap,
+              indexCarbonTable.getTablePath,
+              indexCarbonTable, mergeIndexProperty = false, false)
+
+            if (CarbonProperties.getInstance()
+              .isDistributedPruningEnabled(indexCarbonTable.getDatabaseName,
+                indexCarbonTable.getTableName)) {
+              try {
+                IndexServer.getClient
+                  .invalidateSegmentCache(indexCarbonTable, rebuiltSegments.toArray)
+              } catch {
+                case _: Exception =>
+              }
+            }
+
             DataMapStoreManager.getInstance
               .clearInvalidSegments(indexCarbonTable, rebuiltSegments.toList.asJava)
           }
@@ -251,6 +261,7 @@ object CarbonInternalMergerUtil {
         LOGGER.info(s"Time taken to merge is(in nano) ${endTime - startTime}")
         LOGGER.info(s"Merge data files request completed for table " +
                     s"${indexCarbonTable.getDatabaseName}.${indexCarbonTable.getTableName}")
+        rebuiltSegments
       } else {
         LOGGER.error(s"Merge data files request failed for table " +
                      s"${indexCarbonTable.getDatabaseName}.${indexCarbonTable.getTableName}")
@@ -262,7 +273,6 @@ object CarbonInternalMergerUtil {
                      s"${indexCarbonTable.getDatabaseName}.${indexCarbonTable.getTableName}")
         throw new Exception("Merge data files Failure in Merger Rdd.", e)
     }
-    mergeIndexFilesNeeded
   }
 
   /**
