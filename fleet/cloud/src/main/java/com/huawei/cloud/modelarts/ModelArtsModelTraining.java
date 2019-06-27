@@ -61,9 +61,9 @@ public class ModelArtsModelTraining implements ModelTrainingAPI {
    * It creates training job in modelarts and starts it to generate model.
    */
   @Override
-  public long startTrainingJob(Map<String, String> options, String modelName, DataScan dataScan) {
+  public long startTrainingJob(Map<String, String> options, String expName, DataScan dataScan) {
     // Start a new training job in ModelArts
-    String json = CreateTrainingJobVO.generateJson(options, modelName, dataScan);
+    String json = CreateTrainingJobVO.generateJson(options, expName, dataScan);
     LOGGER.info(json);
     LoginRequestManager.LoginInfo loginInfo = getLoginInfo();
 

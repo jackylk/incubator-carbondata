@@ -32,15 +32,15 @@ import org.apache.carbondata.core.util.CarbonProperties;
  * It maintains all the Model's in it.
  */
 @InterfaceAudience.Internal
-public final class ModelStoreManager {
+public final class ExperimentStoreManager {
 
-  private final static ModelStoreManager instance = new ModelStoreManager();
+  private final static ExperimentStoreManager instance = new ExperimentStoreManager();
 
   private DataMapSchemaStorageProvider provider = new DiskBasedDMSchemaStorageProvider(
       CarbonProperties.getInstance().getSystemFolderLocation() + "/model");
 
   /**
-   * It gives all model schemas of a given table.
+   * It gives all experiment schemas of a given table.
    *
    */
   public List<DataMapSchema> getDataMapSchemasOfTable(CarbonTable carbonTable) throws IOException {
@@ -48,38 +48,38 @@ public final class ModelStoreManager {
   }
 
   /**
-   * It gives all model schemas from store.
+   * It gives all experiment schemas from store.
    */
-  public List<DataMapSchema> getAllModelSchemas() throws IOException {
+  public List<DataMapSchema> getAllExperimentSchemas() throws IOException {
     return provider.retrieveAllSchemas();
   }
 
-  public DataMapSchema getModelSchema(String modelName)
+  public DataMapSchema getExperimentSchema(String experimentName)
       throws NoSuchDataMapException, IOException {
-    return provider.retrieveSchema(modelName);
+    return provider.retrieveSchema(experimentName);
   }
 
   /**
-   * Saves the model schema to storage
-   * @param modelSchema
+   * Saves the experiment schema to storage
+   * @param experimentSchema
    */
-  public void saveModelSchema(DataMapSchema modelSchema) throws IOException {
-    provider.saveSchema(modelSchema);
+  public void saveExperimentSchema(DataMapSchema experimentSchema) throws IOException {
+    provider.saveSchema(experimentSchema);
   }
 
   /**
-   * Drops the model schema from storage
-   * @param modelName
+   * Drops the experiment schema from storage
+   * @param experimentName
    */
-  public void dropModelSchema(String modelName) throws IOException {
-    provider.dropSchema(modelName);
+  public void dropExperimentSchema(String experimentName) throws IOException {
+    provider.dropSchema(experimentName);
   }
 
   /**
    * Returns the singleton instance
    * @return
    */
-  public static ModelStoreManager getInstance() {
+  public static ExperimentStoreManager getInstance() {
     return instance;
   }
 }

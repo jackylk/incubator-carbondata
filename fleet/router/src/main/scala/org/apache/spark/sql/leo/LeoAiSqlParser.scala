@@ -30,7 +30,7 @@ import org.apache.carbondata.spark.util.CarbonScalaUtil
 class LeoAiSqlParser extends CarbonSpark2SqlParser {
 
   protected val MODEL: Regex = leoKeyWord("MODEL")
-  protected val MODELS: Regex = leoKeyWord("MODELS")
+  protected val EXPERIMENT: Regex = leoKeyWord("EXPERIMENT")
   protected val REGISTER: Regex = leoKeyWord("REGISTER")
   protected val UNREGISTER: Regex = leoKeyWord("UNREGISTER")
   protected val START: Regex = leoKeyWord("START")
@@ -70,22 +70,46 @@ class LeoAiSqlParser extends CarbonSpark2SqlParser {
   override protected lazy val start: Parser[LogicalPlan] = explainPlan | startCommand |
                                                            modelManagement | serviceManagement
 
-  protected lazy val modelManagement: Parser[LogicalPlan] = createModel | dropModel | showModels
-  protected lazy val serviceManagement: Parser[LogicalPlan] = registerModel | unregisterModel |
-                                                              startJOb | stopJOb
+  protected lazy val modelManagement: Parser[LogicalPlan] = createModel | dropModel |
+                                                            createExperiment | dropExperiment
+  protected lazy val serviceManagement: Parser[LogicalPlan] = registerModel | unregisterModel
+
 
   /**
-   * CREATE MODEL [IF NOT EXISTS] [dbName.]modelName
+   * CREATE EXPERIMENT [IF NOT EXISTS] experimentName
    * OPTIONS (...)
    * AS select_query
    */
-  protected lazy val createModel: Parser[LogicalPlan] =
-    CREATE ~> MODEL ~> opt(IF ~> NOT ~> EXISTS) ~ (ident <~ ".").? ~ ident ~
+  protected lazy val createExperiment: Parser[LogicalPlan] =
+    CREATE ~> EXPERIMENT ~> opt(IF ~> NOT ~> EXISTS) ~  ident ~
     (OPTIONS ~> "(" ~> repsep(createModelOptions, ",") <~ ")").? ~
     (AS ~> restInput) <~ opt(";") ^^ {
-      case ifNotExists ~ dbName ~ modelName ~ options ~ query =>
+      case ifNotExists ~ experimentName ~ options ~ query =>
         val optionMap = options.getOrElse(List[(String, String)]()).toMap[String, String]
-        LeoCreateModelCommand(dbName, modelName, optionMap, ifNotExists.isDefined, query)
+        LeoCreateExperimentCommand(experimentName, optionMap, ifNotExists.isDefined, query)
+    }
+
+  /**
+   * DROP EXPERIMENT [IF EXISTS] experimentName
+   */
+  protected lazy val dropExperiment: Parser[LogicalPlan] =
+    DROP ~> EXPERIMENT ~> opt(IF ~> EXISTS) ~ ident <~ opt(";") ^^ {
+      case ifExists ~ experimentName =>
+        LeoDropExperimentCommand(experimentName, ifExists.isDefined)
+    }
+
+  /**
+   * CREATE MODEL [IF NOT EXISTS] modelName
+   * USING EXPERIMENT experimentName
+   * OPTIONS (...)
+   */
+  protected lazy val createModel: Parser[LogicalPlan] =
+    CREATE ~> MODEL ~> opt(IF ~> NOT ~> EXISTS) ~ ident ~
+    (USING ~ EXPERIMENT ~> ident) ~
+    (OPTIONS ~> "(" ~> repsep(createModelOptions, ",") <~ ")").? <~ opt(";") ^^ {
+      case ifNotExists ~ modelName ~ experimentName ~ options =>
+        val optionMap = options.getOrElse(List[(String, String)]()).toMap[String, String]
+        LeoCreateModelCommand(modelName, experimentName, optionMap, ifNotExists.isDefined)
     }
 
   protected lazy val createModelOptions: Parser[(String, String)] =
@@ -95,64 +119,29 @@ class LeoAiSqlParser extends CarbonSpark2SqlParser {
     }
 
   /**
-   * DROP MODEL [IF EXISTS] [dbName.]modelName
+   * DROP MODEL [IF EXISTS] modelName on EXPERIMENT experimentName
    */
   protected lazy val dropModel: Parser[LogicalPlan] =
-    DROP ~> MODEL ~> opt(IF ~> EXISTS) ~ (ident <~ ".").? ~ ident <~ opt(";") ^^ {
-      case ifExists ~ dbName ~ modelName =>
-        LeoDropModelCommand(dbName, modelName, ifExists.isDefined)
+    DROP ~> MODEL ~> opt(IF ~> EXISTS) ~ ident ~ (ON ~ EXPERIMENT ~> ident) <~ opt(";") ^^ {
+      case ifExists ~ modelName ~ experimentName =>
+      LeoDropModelCommand(modelName, experimentName, ifExists.isDefined)
     }
 
   /**
-   * SHOW MODELS
-   */
-  protected lazy val showModels: Parser[LogicalPlan] =
-    SHOW ~> MODELS <~ opt(";") ^^ {
-      case _ =>
-        LeoShowModelsCommand()
-    }
-
-  /**
-   * START JOB jobName ON MODEL modelName OPTIONS(...)
-   */
-  protected lazy val startJOb: Parser[LogicalPlan] =
-    START ~> JOB ~> ident ~ (ON ~> MODEL ~> (ident <~ ".").? ~ ident) ~
-    (OPTIONS ~> "(" ~> repsep(createModelOptions, ",") <~ ")").? <~ opt(";") ^^ {
-      case jobName ~ model ~ options =>
-        val (dbName, modelName) = model match {
-          case databaseName ~ modelName => (databaseName, modelName)
-        }
-        val optionMap = options.getOrElse(List[(String, String)]()).toMap[String, String]
-        LeoStartJobCommand(jobName, dbName, modelName, optionMap)
-    }
-
-  /**
-   * STOP JOB jobName ON MODEL modelName
-   */
-  protected lazy val stopJOb: Parser[LogicalPlan] =
-    STOP ~> JOB ~> ident ~ (ON ~> MODEL ~> (ident <~ ".").? ~ ident) <~ opt(";") ^^ {
-      case jobName ~ model =>
-        val (dbName, modelName) = model match {
-          case databaseName ~ modelName => (databaseName, modelName)
-        }
-        LeoStopJobOnModelCommand(jobName, dbName, modelName)
-    }
-
-  /**
-   * REGISTER [dbName.]modelName AS udfName
+   * REGISTER MODEL experimentName.modelName AS udfName
    */
   protected lazy val registerModel: Parser[LogicalPlan] =
-    REGISTER ~> MODEL ~> (ident <~ ".").? ~ ident ~ (AS ~> ident) <~ opt(";") ^^ {
-      case dbName ~ modelName ~ udfName =>
-        LeoRegisterModelCommand(dbName, modelName, udfName)
+    REGISTER ~> MODEL ~> (ident <~ ".") ~ ident ~ (AS ~> ident) <~ opt(";") ^^ {
+      case experimentName ~ modelName ~ udfName =>
+        LeoRegisterModelCommand(experimentName, modelName, udfName)
     }
 
   /**
-   * UNREGISTER [dbName.]modelName
+   * UNREGISTER MODEL experimentName.modelName
    */
   protected lazy val unregisterModel: Parser[LogicalPlan] =
-    UNREGISTER ~> MODEL ~> (ident <~ ".").? ~ ident <~ opt(";") ^^ {
-      case dbName ~ modelName =>
-        LeoUnregisterModelCommand(dbName, modelName)
+    UNREGISTER ~> MODEL ~> (ident <~ ".") ~ ident <~ opt(";") ^^ {
+      case experimentName ~ modelName =>
+        LeoUnregisterModelCommand(experimentName, modelName)
     }
 }

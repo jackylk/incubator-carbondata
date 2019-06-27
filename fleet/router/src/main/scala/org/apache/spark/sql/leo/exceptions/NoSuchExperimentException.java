@@ -10,14 +10,14 @@ import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandExcepti
  */
 @InterfaceAudience.User
 @InterfaceStability.Stable
-public class NoSuchModelException extends MalformedCarbonCommandException {
+public class NoSuchExperimentException extends MalformedCarbonCommandException {
 
   /**
    * default serial version ID.
    */
   private static final long serialVersionUID = 1L;
 
-  public NoSuchModelException(String modelName) {
-    super("Model with name " + modelName + " does not exist");
+  public NoSuchExperimentException(String modelName) {
+    super("Experiment with name " + modelName + " does not exist");
   }
 }

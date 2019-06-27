@@ -16,9 +16,9 @@
  */
 package org.apache.spark.sql.execution.command.images
 
+import java.io.ByteArrayInputStream
 import javax.imageio.ImageIO
 import javax.imageio.stream.MemoryCacheImageInputStream
-import java.io.ByteArrayInputStream
 
 case class ImageInfo(
   format: String,
@@ -27,8 +27,8 @@ case class ImageInfo(
 )
 
 /**
-  * Image handing udf class
-  */
+ * Image handing udf class
+ */
 
 class ImageInfoFunction extends ((Array[Byte]) => ImageInfo) with Serializable {
 

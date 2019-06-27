@@ -105,10 +105,10 @@ class BinaryFileFormat extends FileFormat with DataSourceRegister {
       val fs = path.getFileSystem(broadcastedHadoopConf.value.value)
       val status = fs.getFileStatus(path)
       if (filterFuncs.forall(_.apply(status))) {
-        /* spark 3.0 :
+        /** spark 3.0 :
          * val writer = new UnsafeRowWriter(requiredSchema.length)
          * writer.resetRowWriter()
-         **/
+         */
         val unsafeRow = new UnsafeRow(requiredSchema.length);
         val bufferHolder = new BufferHolder(unsafeRow)
         val writer = new UnsafeRowWriter(bufferHolder, requiredSchema.length)

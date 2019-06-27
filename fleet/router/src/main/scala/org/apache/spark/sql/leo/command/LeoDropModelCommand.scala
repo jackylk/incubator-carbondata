@@ -17,44 +17,17 @@
 
 package org.apache.spark.sql.leo.command
 
-import scala.collection.JavaConverters._
-
-import org.apache.leo.model.job.TrainJobManager
-import org.apache.spark.sql.{CarbonEnv, LeoDatabase, Row, SparkSession}
+import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.execution.command.RunnableCommand
-import org.apache.spark.sql.leo.{LeoEnv, ModelStoreManager}
-import org.apache.spark.sql.leo.exceptions.NoSuchModelException
 
-import org.apache.carbondata.core.constants.CarbonCommonConstants
-
+/**
+ * Drop's model on given experimentName
+ */
 case class LeoDropModelCommand(
-    dbName: Option[String],
     modelName: String,
-    ifExists: Boolean)
-  extends RunnableCommand {
+    experimentName: String,
+    ifExists: Boolean
+) extends RunnableCommand{
 
-  override def run(sparkSession: SparkSession): Seq[Row] = {
-    val modelSchemas = ModelStoreManager.getInstance().getAllModelSchemas
-    val updatedDbName =
-      LeoDatabase.convertUserDBNameToLeo(CarbonEnv.getDatabaseName(dbName)(sparkSession))
-    val updatedModelName = updatedDbName + CarbonCommonConstants.UNDERSCORE + modelName
-    val ifModelExists = modelSchemas.asScala
-      .exists(model => model.getDataMapName.equalsIgnoreCase(updatedModelName))
-    if (ifModelExists) {
-      val schema = ModelStoreManager.getInstance().getModelSchema(updatedModelName)
-
-      val details = TrainJobManager.getAllEnabledTrainedJobs(updatedModelName)
-      details.foreach{d =>
-        val jobId = d.getProperties.get("job_id")
-        LeoEnv.modelTraingAPI.stopTrainingJob(jobId.toLong)
-      }
-      TrainJobManager.dropModel(updatedModelName)
-      ModelStoreManager.getInstance().dropModelSchema(updatedModelName)
-    } else {
-      if (!ifExists) {
-        throw new NoSuchModelException(updatedModelName)
-      }
-    }
-    Seq.empty
-  }
+  override def run(sparkSession: SparkSession): Seq[Row] = Seq.empty
 }
