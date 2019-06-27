@@ -37,4 +37,8 @@ public abstract class AbstractDataMapJob implements DataMapJob {
   @Override public List<ExtendedBlocklet> execute(DistributableDataMapFormat dataMapFormat) {
     return null;
   }
+
+  @Override public Long executeCountJob(DistributableDataMapFormat dataMapFormat) {
+    return null;
+  }
 }
