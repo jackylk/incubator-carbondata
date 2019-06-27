@@ -32,6 +32,8 @@ public interface RestConstants {
 
   public static String MODELARTS_TRAINING_REST = "training-jobs";
 
+  public static String MODELARTS_TRAINING_VERSIONS = "versions";
+
   public static String SEPARATOR = "/";
 
 }

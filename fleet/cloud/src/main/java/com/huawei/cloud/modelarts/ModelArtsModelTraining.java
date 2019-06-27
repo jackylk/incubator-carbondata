@@ -44,6 +44,7 @@ import org.apache.log4j.Logger;
 
 import static com.huawei.cloud.RestConstants.MODELARTS_CN_NORTH_V1_ENDPOINT;
 import static com.huawei.cloud.RestConstants.MODELARTS_TRAINING_REST;
+import static com.huawei.cloud.RestConstants.MODELARTS_TRAINING_VERSIONS;
 import static com.huawei.cloud.RestConstants.SEPARATOR;
 
 /**
@@ -129,9 +130,28 @@ public class ModelArtsModelTraining implements ModelTrainingAPI {
             + MODELARTS_TRAINING_REST + SEPARATOR + jobId, loginInfo.getToken(), client);
   }
 
-  @Override
-  public Map<String, String> getTrainingJobInfo(long jobId) {
-    return null;
+  @Override public Map<String, String> getTrainingJobInfo(long jobId) throws Exception {
+    // stop and delete the training job in ModelArts
+    LoginRequestManager.LoginInfo loginInfo = getLoginInfo();
+    Response response = RestUtil.get(
+        MODELARTS_CN_NORTH_V1_ENDPOINT + loginInfo.getProjectId() + SEPARATOR
+            + MODELARTS_TRAINING_REST + SEPARATOR + jobId + SEPARATOR + MODELARTS_TRAINING_VERSIONS
+            + SEPARATOR + "1", loginInfo.getToken(), client);
+    if (response.isSuccessful()) {
+      ObjectMapper objectMapper = new ObjectMapper();
+      String rspStr = response.body().string();
+      LOGGER.info(rspStr);
+      Map<String, Object> jsonNodeMap =
+          objectMapper.readValue(rspStr, new TypeReference<Map<String, Object>>() {
+          });
+      Map<String, String> jobDetail = new HashMap<>();
+      jobDetail.put("status", ModelArtsStatusCodes.getStatus(jsonNodeMap.get("status").toString()));
+      jobDetail.put("duration", jsonNodeMap.get("duration").toString());
+      jobDetail.put("json", rspStr);
+      return jobDetail;
+    } else {
+      throw new Exception("Training job retrieval failed" + response.body().string());
+    }
   }
 }
 

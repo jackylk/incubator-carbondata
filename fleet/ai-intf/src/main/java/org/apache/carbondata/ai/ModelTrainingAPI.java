@@ -27,5 +27,5 @@ public interface ModelTrainingAPI {
 
   void stopTrainingJob(long jobId) throws IOException;
 
-  Map<String, String> getTrainingJobInfo(long jobId);
+  Map<String, String> getTrainingJobInfo(long jobId) throws Exception;
 }
