@@ -65,7 +65,8 @@ case class LeoCreateModelCommand(
       ObjectSerializationUtil.convertStringToObject(str).asInstanceOf[DataScan]
     // It starts creating the training job and generates the model in cloud.
     val jobId =
-      LeoEnv.modelTraingAPI.startTrainingJob(optionsMapFinal, updatedExpName, queryObject)
+      LeoEnv.modelTraingAPI.startTrainingJob(optionsMapFinal,
+        updatedExpName+ CarbonCommonConstants.UNDERSCORE + modelName, queryObject)
     optionsMap.put("job_id", jobId.toString)
     val detail = new TrainJobDetail(modelName, optionsMap)
     try {
