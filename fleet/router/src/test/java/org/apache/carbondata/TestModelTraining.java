@@ -33,9 +33,11 @@ import org.apache.carbondata.core.scan.expression.conditional.EqualToExpression;
 import org.apache.carbondata.core.util.CarbonProperties;
 import org.apache.carbondata.core.util.ObjectSerializationUtil;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.spark.sql.LeoDatabase;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.leo.LeoEnv;
-import org.apache.spark.sql.leo.ModelStoreManager;
+import org.apache.spark.sql.leo.ExperimentStoreManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -43,7 +45,7 @@ import org.junit.Test;
 /**
  * unit test for leo model ddl commands
  */
-public class TestCreateModel {
+public class TestModelTraining {
 
   private static SparkSession carbon;
 
@@ -66,22 +68,24 @@ public class TestCreateModel {
   public void testModel() throws IOException {
     carbon.sql("drop table if exists db.test");
     carbon.sql("create table db.test(c1 int, c2 int, c3 int)");
-    carbon.sql("drop model if exists db.m1");
+    carbon.sql("drop experiment if exists m1");
     // create model without options
-    carbon.sql("CREATE MODEL db.m1  as select c1,c2 as a from db.test where c3>5 and c2=1");
+    carbon.sql("CREATE EXPERIMENT m1  as select c1,c2 as a from db.test where c3>5 and c2=1");
+    String expName = LeoDatabase.DEFAULT_PROJECTID() + CarbonCommonConstants.UNDERSCORE + "m1";
     assert (FileFactory.isFileExist(
-        CarbonProperties.getInstance().getSystemFolderLocation() + "/model/m1.dmschema"));
-    carbon.sql("drop model if exists db.m1");
+        CarbonProperties.getInstance().getSystemFolderLocation() + "/model/" + expName + ".dmschema"));
+    carbon.sql("drop experiment if exists m1");
     assert (!FileFactory.isFileExist(
-        CarbonProperties.getInstance().getSystemFolderLocation() + "/model/m1.dmschema"));
-    carbon.sql("drop model if exists db.m2");
+        CarbonProperties.getInstance().getSystemFolderLocation() + "/model/" + expName + ".dmschema"));
+    carbon.sql("drop experiment if exists m2");
     // create model with options
     carbon.sql(
-        "CREATE MODEL if not exists db.m2 OPTIONS('label_col'='c2', 'max_iteration'='100') "
+        "CREATE EXPERIMENT if not exists m2 OPTIONS('label_col'='c2', 'max_iteration'='100') "
             + "as select c1,c2 from db.test where c3>5");
+    expName = LeoDatabase.DEFAULT_PROJECTID() + CarbonCommonConstants.UNDERSCORE + "m2";
     assert (FileFactory.isFileExist(
-        CarbonProperties.getInstance().getSystemFolderLocation() + "/model/m2.dmschema"));
-    carbon.sql("drop model if exists db.m2");
+        CarbonProperties.getInstance().getSystemFolderLocation() + "/model/" + expName + ".dmschema"));
+    carbon.sql("drop experiment if exists m2");
     carbon.sql("drop table if exists db.test");
   }
 
@@ -91,14 +95,17 @@ public class TestCreateModel {
   @Test
   public void testQueryObject()
       throws IOException, NoSuchDataMapException {
+    CarbonProperties.getInstance().addProperty("leo.ma.username", "hwstaff_l00215684");
+    CarbonProperties.getInstance().addProperty("leo.ma.password", "@Huawei123");
     carbon.sql("drop table if exists db.test");
     carbon.sql("create table db.test(c1 int, c2 int, c3 int)");
-    carbon.sql("drop model if exists db.m1");
+    carbon.sql("drop experiment if exists m1");
     carbon.sql(
-        "CREATE MODEL if not exists db.m1 OPTIONS('label_col'='c2', 'max_iteration'='100') "
+        "CREATE experiment if not exists m1 OPTIONS('label_col'='c2', 'max_iteration'='100') "
             + "as select c1,c2 from db.test where c3=5");
-    DataMapSchema m1 = ModelStoreManager.getInstance().getModelSchema("m1");
-    assert(m1.getDataMapName().equalsIgnoreCase("m1"));
+    String expName = LeoDatabase.DEFAULT_PROJECTID() + CarbonCommonConstants.UNDERSCORE + "m1";
+    DataMapSchema m1 = ExperimentStoreManager.getInstance().getExperimentSchema(expName);
+    assert(m1.getDataMapName().equalsIgnoreCase(expName));
     assert(m1.getCtasQuery().equalsIgnoreCase(" select c1,c2 from db.test where c3=5"));
     // get Query Object
     String query = m1.getProperties().get(CarbonCommonConstants.QUERY_OBJECT);
@@ -123,24 +130,28 @@ public class TestCreateModel {
     carbon.sql("create database a1");
     carbon.sql("drop table if exists a1.test");
     carbon.sql("create table a1.test(c1 int, c2 int, c3 int)");
-    carbon.sql("drop model if exists a1.m2");
+    carbon.sql("drop experiment if exists m2");
     // create model with options
     carbon.sql(
-        "CREATE MODEL if not exists a1.m2 OPTIONS('worker_server_num'='1', "
+        "CREATE experiment if not exists m2 OPTIONS('worker_server_num'='1', "
             + "'app_url'='/obs-5b79/train_mnist/', 'boot_file_url'='/obs-5b79/train_mnist/train_mnist.py', "
             + "'data_url'='/obs-5b79/dataset-mnist/','log_url'='/obs-5b79/train-log/','engine_id'='28','spec_id'='1') as select c1,c2 from a1.test where c3>5");
+    String expName = LeoDatabase.DEFAULT_PROJECTID() + CarbonCommonConstants.UNDERSCORE + "m2";
     assert (FileFactory.isFileExist(
-        CarbonProperties.getInstance().getSystemFolderLocation() + "/model/_default_projectid_a1_m2.dmschema"));
+        CarbonProperties.getInstance().getSystemFolderLocation() + "/model/" + expName + ".dmschema"));
 
-    carbon.sql("start job job1 on model a1.m2 OPTIONS('train_url'='/obs-5b79/mnist-model/','params'='num_epochs=1')").show();
+    carbon.sql("create model job1 using experiment m2 OPTIONS('train_url'='/obs-5b79/mnist-model/','params'='num_epochs=1')").show();
 
-    carbon.sql("drop model if exists a1.m2");
+    carbon.sql("drop model if exists job1 on experiment m2");
+
+    carbon.sql("drop experiment if exists m2");
     carbon.sql("drop table if exists a1.test");
     carbon.sql("drop database if exists a1 cascade");
   }
 
-  @AfterClass public static void tearDown() {
+  @AfterClass public static void tearDown() throws IOException {
     carbon.sql("drop database if exists db cascade");
     carbon.close();
+    FileUtils.deleteDirectory(new File("./warehouse"));
   }
 }

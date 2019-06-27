@@ -17,110 +17,66 @@
 
 package org.apache.spark.sql.leo.command
 
-import java.util
-
 import scala.collection.JavaConverters._
 
-import org.apache.spark.sql.{AnalysisException, CarbonEnv, LeoDatabase, Row, SparkSession}
-import org.apache.spark.sql.carbondata.execution.datasources.CarbonSparkDataSourceUtil
-import org.apache.spark.sql.catalyst.catalog.HiveTableRelation
-import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference}
-import org.apache.spark.sql.catalyst.plans.logical.{Filter, Project}
+import org.apache.leo.model.job.{TrainJobDetail, TrainJobManager}
+import org.apache.spark.sql.{AnalysisException, LeoDatabase, Row, SparkSession}
 import org.apache.spark.sql.execution.command.RunnableCommand
-import org.apache.spark.sql.execution.datasources.{DataSourceStrategy, LogicalRelation}
-import org.apache.spark.sql.leo.ModelStoreManager
-import org.apache.spark.sql.types.AtomicType
+import org.apache.spark.sql.leo.{ExperimentStoreManager, LeoEnv}
 
 import org.apache.carbondata.ai.DataScan
 import org.apache.carbondata.core.constants.CarbonCommonConstants
-import org.apache.carbondata.core.datastore.impl.FileFactory
-import org.apache.carbondata.core.metadata.schema.table.{DataMapSchema, RelationIdentifier}
-import org.apache.carbondata.core.scan.expression.{Expression => CarbonExpression}
-import org.apache.carbondata.core.scan.expression.logical.AndExpression
 import org.apache.carbondata.core.util.ObjectSerializationUtil
 
 case class LeoCreateModelCommand(
-    dbName: Option[String],
     modelName: String,
+    experimentName: String,
     options: Map[String, String],
-    ifNotExists: Boolean,
-    queryString: String)
+    ifNotExists: Boolean)
   extends RunnableCommand {
 
   override def run(sparkSession: SparkSession): Seq[Row] = {
     // check if model with modelName already exists
-    val modelSchemas = ModelStoreManager.getInstance().getAllModelSchemas
-    val updatedDbName =
-      LeoDatabase.convertUserDBNameToLeo(CarbonEnv.getDatabaseName(dbName)(sparkSession))
-    val updatedModelName = updatedDbName + CarbonCommonConstants.UNDERSCORE + modelName
-    val ifAlreadyExists = modelSchemas.asScala
-      .exists(model => {
-        model.getDataMapName
-          .equalsIgnoreCase(updatedModelName)
-      })
-    if (ifAlreadyExists) {
-      if (!ifNotExists) {
-        throw new AnalysisException("Model with name " + modelName + " already exists in storage")
-      } else {
-        return Seq.empty
-      }
-    }
-    val dataFrame = sparkSession.sql(queryString)
-    val logicalPlan = dataFrame.logicalPlan
+    val experimentSchemas = ExperimentStoreManager.getInstance().getAllExperimentSchemas
+    val updatedExpName = LeoDatabase.DEFAULT_PROJECTID + CarbonCommonConstants.UNDERSCORE +
+                         experimentName
+    val experiment = experimentSchemas.asScala
+      .find(model => model.getDataMapName.equalsIgnoreCase(updatedExpName))
+    val schema = experiment.getOrElse(
+      throw new AnalysisException(
+        "Experiment with name " + updatedExpName + " does not exist"))
 
-    val parentTable = logicalPlan.collect {
-      case l: LogicalRelation => l.catalogTable.get
-      case h: HiveTableRelation => h.tableMeta
-    }
-    val query = new DataScan
-    val database = LeoDatabase.convertLeoDBNameToUser(parentTable.head.database)
-    query
-      .setTableName(database + CarbonCommonConstants.UNDERSCORE + parentTable.head.identifier.table)
-    query.setTablePath(parentTable.head.storage.locationUri.get.getPath)
-    // get projection columns and filter expression from logicalPlan
-    logicalPlan match {
-      case Project(projects, child: Filter) =>
-        val projectionColumns = new util.ArrayList[String]()
-        // convert expression to sparks source filter
-        val filters = child.condition.flatMap(DataSourceStrategy.translateFilter)
-        val tableSchema = parentTable.head.schema
-        val dataTypeMap = tableSchema.map(f => f.name -> f.dataType).toMap
-        // convert to carbon filter expressions
-        val filter: Option[CarbonExpression] = filters.filterNot{ ref =>
-          ref.references.exists{ p =>
-            !dataTypeMap(p).isInstanceOf[AtomicType]
-          }
-        }.flatMap { filter =>
-          CarbonSparkDataSourceUtil.createCarbonFilter(tableSchema, filter)
-        }.reduceOption(new AndExpression(_, _))
-        query.setFilterExpression(filter.get)
-        projects.map {
-          case attr: AttributeReference =>
-            projectionColumns.add(attr.name)
-          case Alias(attr: AttributeReference, _) =>
-            projectionColumns.add(attr.name)
-        }
-        query.setProjectionColumns(projectionColumns.asScala.toArray)
-    }
-
-    // TODO train model and get options
     val optionsMap = new java.util.HashMap[String, String]()
     optionsMap.putAll(options.asJava)
-    optionsMap
-      .put(CarbonCommonConstants.QUERY_OBJECT, ObjectSerializationUtil.convertObjectToString(query))
-    // create model schema
-    val modelSchema = new DataMapSchema()
-    modelSchema.setDataMapName(updatedModelName)
-    modelSchema.setCtasQuery(queryString)
-    modelSchema.setProperties(optionsMap)
-    // get parent table relation Identifier
-    val parentIdents = parentTable.map { table =>
-      val relationIdentifier = new RelationIdentifier(database, table.identifier.table, "")
-      relationIdentifier.setTablePath(FileFactory.getUpdatedFilePath(table.location.toString))
-      relationIdentifier
+    val details = TrainJobManager.getAllTrainedJobs(updatedExpName)
+    if (details.exists(_.getJobName.equalsIgnoreCase(modelName))) {
+      if (!ifNotExists) {
+        throw new AnalysisException(
+          "Model with name " + modelName + " already exists on Experiment " + updatedExpName)
+      } else {
+        Seq.empty
+      }
     }
-    modelSchema.setParentTables(new util.ArrayList[RelationIdentifier](parentIdents.asJava))
-    ModelStoreManager.getInstance().saveModelSchema(modelSchema)
+    val optionsMapFinal = new java.util.HashMap[String, String]()
+    optionsMapFinal.putAll(optionsMap)
+    optionsMapFinal.putAll(schema.getProperties)
+    val str = schema.getProperties.get(CarbonCommonConstants.QUERY_OBJECT)
+    val queryObject =
+      ObjectSerializationUtil.convertStringToObject(str).asInstanceOf[DataScan]
+    // It starts creating the training job and generates the model in cloud.
+    val jobId =
+      LeoEnv.modelTraingAPI.startTrainingJob(optionsMapFinal, updatedExpName, queryObject)
+    optionsMap.put("job_id", jobId.toString)
+    val detail = new TrainJobDetail(modelName, optionsMap)
+    try {
+      // store experiment schema
+      TrainJobManager.saveTrainJob(updatedExpName, detail)
+    } catch {
+      case e: Exception =>
+        LeoEnv.modelTraingAPI.stopTrainingJob(jobId)
+        throw e
+    }
+
     Seq.empty
   }
 }

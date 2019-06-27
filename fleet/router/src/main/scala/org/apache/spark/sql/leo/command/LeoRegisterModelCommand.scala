@@ -21,7 +21,7 @@ import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.execution.command.RunnableCommand
 
 case class LeoRegisterModelCommand(
-    dbName: Option[String],
+    experimentName: String,
     modelName: String,
     udfName: String)
   extends RunnableCommand {

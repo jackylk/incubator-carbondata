@@ -54,8 +54,9 @@ public class TrainJobManager {
    * @return
    * @throws IOException
    */
-  public static TrainJobDetail[] getAllEnabledTrainedJobs(String modelName) throws IOException {
-    TrainJobDetail[] trainJobDetails = storageProvider.getAllTrainJobs(modelName);
+  public static TrainJobDetail[] getAllEnabledTrainedJobs(String experimentName)
+      throws IOException {
+    TrainJobDetail[] trainJobDetails = storageProvider.getAllTrainJobs(experimentName);
     List<TrainJobDetail> statusDetailList = new ArrayList<>();
     for (TrainJobDetail statusDetail : trainJobDetails) {
       if (statusDetail.getStatus() == TrainJobDetail.Status.CREATED) {
@@ -65,8 +66,8 @@ public class TrainJobManager {
     return statusDetailList.toArray(new TrainJobDetail[statusDetailList.size()]);
   }
 
-  public static TrainJobDetail[] getAllTrainedJobs(String modelName) throws IOException {
-    return storageProvider.getAllTrainJobs(modelName);
+  public static TrainJobDetail[] getAllTrainedJobs(String experimentName) throws IOException {
+    return storageProvider.getAllTrainJobs(experimentName);
   }
 
   /**
@@ -75,20 +76,21 @@ public class TrainJobManager {
    * @throws IOException
    */
   public static TrainJobDetail getTrainJob(
-      String modelName, String trainJobName) throws IOException {
-    return storageProvider.getTrainJob(modelName, trainJobName);
+      String experimentName, String modelName) throws IOException {
+    return storageProvider.getTrainJob(experimentName, modelName);
   }
 
-  public static void dropTrainJob(String modelName, String jobName) throws IOException {
-    storageProvider.dropTrainJob(modelName, jobName);
+  public static void dropTrainJob(String experimentName, String modelName) throws IOException {
+    storageProvider.dropTrainJob(experimentName, modelName);
   }
 
-  public static void dropModel(String modelName) throws IOException {
-    storageProvider.dropModel(modelName);
+  public static void dropModel(String experimentName) throws IOException {
+    storageProvider.dropModel(experimentName);
   }
 
-  public static void saveTrainJob(String modelName, TrainJobDetail jobDetail) throws IOException {
-    storageProvider.saveTrainJob(modelName, jobDetail);
+  public static void saveTrainJob(String experimentName, TrainJobDetail jobDetail)
+      throws IOException {
+    storageProvider.saveTrainJob(experimentName, jobDetail);
   }
 
 }

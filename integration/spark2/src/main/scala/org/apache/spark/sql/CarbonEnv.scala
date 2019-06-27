@@ -26,9 +26,9 @@ import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.catalyst.catalog.SessionCatalog
 import org.apache.spark.sql.events.{MergeBloomIndexEventListener, MergeIndexEventListener}
 import org.apache.spark.sql.execution.command.cache._
+import org.apache.spark.sql.execution.command.images.ImageInfoFunction
 import org.apache.spark.sql.execution.command.mv._
 import org.apache.spark.sql.execution.command.preaaggregate._
-import org.apache.spark.sql.execution.command.images.ImageInfoFunction
 import org.apache.spark.sql.execution.command.timeseries.TimeSeriesFunction
 import org.apache.spark.sql.hive._
 import org.apache.spark.util.CarbonReflectionUtils
@@ -103,7 +103,7 @@ class CarbonEnv {
     // added for handling timeseries function like hour, minute, day , month , year
     sparkSession.udf.register("timeseries", new TimeSeriesFunction)
 
-    //image info related udf
+    // image info related udf
     sparkSession.udf.register("imageinfo", new ImageInfoFunction)
 
     // register for cloud udf
