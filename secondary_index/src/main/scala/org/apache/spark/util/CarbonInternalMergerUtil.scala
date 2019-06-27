@@ -22,6 +22,7 @@ import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.execution.command.{CarbonMergerMapping, CompactionCallableModel}
 import org.apache.spark.sql.optimizer.CarbonFilters
+import org.apache.spark.sql.util.SparkSQLUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.datamap.{DataMapStoreManager, Segment}
@@ -246,7 +247,9 @@ object CarbonInternalMergerUtil {
                 indexCarbonTable.getTableName)) {
               try {
                 IndexServer.getClient
-                  .invalidateSegmentCache(indexCarbonTable, rebuiltSegments.toArray)
+                  .invalidateSegmentCache(indexCarbonTable,
+                    rebuiltSegments.toArray,
+                    SparkSQLUtil.getTaskGroupId(sc.sparkSession))
               } catch {
                 case _: Exception =>
               }

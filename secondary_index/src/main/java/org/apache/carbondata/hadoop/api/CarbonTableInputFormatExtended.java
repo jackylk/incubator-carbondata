@@ -41,6 +41,7 @@ import org.apache.carbondata.indexserver.IndexServer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.log4j.Logger;
+import org.apache.spark.sql.util.SparkSQLUtil;
 import org.apache.spark.util.CarbonInternalScalaUtil;
 
 /**
@@ -135,6 +136,9 @@ public class CarbonTableInputFormatExtended {
           DistributableDataMapFormat dataMapFormat =
               new DistributableDataMapFormat(carbonTable, filterInterface, validSegmentsToAccess,
                   segmentsToBeRefreshed, null, false, null, false);
+          dataMapFormat.setTaskGroupId(SparkSQLUtil.getTaskGroupId(SparkSQLUtil.getSparkSession()));
+          dataMapFormat
+              .setTaskGroupDesc(SparkSQLUtil.getTaskGroupDesc(SparkSQLUtil.getSparkSession()));
           setSegID.addAll(IndexServer.getClient().getPrunedSegments(dataMapFormat).getSegments());
         } catch (Exception e) {
           LOG.warn("Distributed Segment Pruning failed, initiating embedded pruning", e);
@@ -147,7 +151,8 @@ public class CarbonTableInputFormatExtended {
             for (int i = 0; i < validSegments.size(); i++) {
               segmentsToBeCleaned[i] = validSegments.get(i).getSegmentNo();
             }
-            IndexServer.invalidateSegmentCache(carbonTable, segmentsToBeCleaned);
+            IndexServer.invalidateSegmentCache(carbonTable, segmentsToBeCleaned,
+                SparkSQLUtil.getTaskGroupId(SparkSQLUtil.getSparkSession()));
           } catch (Exception ex) {
             LOG.warn("Embedded Segment Pruning failed, initiating driver pruning", ex);
             DataMapStoreManager.getInstance()
