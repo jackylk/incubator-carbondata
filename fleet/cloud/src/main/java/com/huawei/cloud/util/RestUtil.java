@@ -47,6 +47,15 @@ public class RestUtil {
     postAsync(url, json, callback, null, client);
   }
 
+  public static Response get(String url, String token, OkHttpClient client)
+      throws IOException {
+    Request.Builder builder = new Request.Builder().url(url).get();
+    builder = builder.addHeader("X-Auth-Token", token);
+    final Request request = builder.build();
+    Call call = client.newCall(request);
+    return call.execute();
+  }
+
   public static Response delete(String url, String token, OkHttpClient client)
       throws IOException {
     Request.Builder builder = new Request.Builder().url(url).delete();
