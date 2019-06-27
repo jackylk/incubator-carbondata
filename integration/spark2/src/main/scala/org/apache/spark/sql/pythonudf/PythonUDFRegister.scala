@@ -57,7 +57,7 @@ class PythonUDFRegister {
       null)
     spark.udf.registerPython(
       udfName,
-      UserDefinedPythonFunction(udfName, function, returnType, 0, true))
+      UserDefinedPythonFunction(udfName, function, returnType, 100, true))
   }
 
   private def generateScriptFile(funcName: String, script: String, returnType: DataType): String = {
