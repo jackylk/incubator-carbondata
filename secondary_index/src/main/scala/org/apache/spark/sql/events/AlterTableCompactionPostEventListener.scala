@@ -78,7 +78,7 @@ class AlterTableCompactionPostEventListener extends OperationEventListener with 
                   .sparkSession).asInstanceOf[CarbonRelation].carbonTable
 
               val validSegments: mutable.Buffer[Segment] = CarbonDataMergerUtil.getValidSegmentList(
-                carbonMainTable.getAbsoluteTableIdentifier).asScala
+                carbonMainTable.getAbsoluteTableIdentifier, carbonMainTable.isChildTable).asScala
               val validSegmentIds: mutable.Buffer[String] = mutable.Buffer[String]()
               validSegments.foreach { segment =>
                 validSegmentIds += segment.getSegmentNo

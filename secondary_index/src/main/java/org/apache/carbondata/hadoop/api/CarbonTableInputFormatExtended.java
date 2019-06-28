@@ -84,7 +84,7 @@ public class CarbonTableInputFormatExtended {
 
     SegmentStatusManager segmentStatusManager = new SegmentStatusManager(identifier);
     SegmentStatusManager.ValidAndInvalidSegmentsInfo segments =
-        segmentStatusManager.getValidAndInvalidSegments();
+        segmentStatusManager.getValidAndInvalidSegments(carbonTable.isChildTable());
     List<Segment> validSegments = segments.getValidSegments();
     //if no segments in table
     List<Segment> validSegmentsToAccess = new ArrayList<Segment>();
