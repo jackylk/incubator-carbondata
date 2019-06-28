@@ -24,7 +24,7 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.{SparkPlan, SparkStrategy}
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.command.table.{CarbonDescribeFormattedCommand, CarbonShowTablesCommand}
-import org.apache.spark.sql.leo.builtin.{WebSearch, WebSearchExec}
+import org.apache.spark.sql.leo.builtin._
 import org.apache.spark.sql.leo.command.{LeoCreateDatabaseCommand, LeoCreateTableCommand, LeoDropDatabaseCommand, LeoDropTableCommand, LeoShowDatabasesCommand}
 import org.apache.spark.util.CarbonReflectionUtils
 
@@ -88,6 +88,12 @@ class LeoDDLStrategy(session: SparkSession) extends SparkStrategy {
 
       case ws@WebSearch(_, _) =>
         WebSearchExec(session, ws) :: Nil
+
+      case ei@ExperimentInfo(_, _) =>
+        ExperimentInfoExec(session, ei) :: Nil
+
+      case ji@TrainingInfo(_, _) =>
+        JobMetricsExec(session, ji) :: Nil
 
       case _ => Nil
     }
