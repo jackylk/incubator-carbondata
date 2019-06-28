@@ -22,13 +22,19 @@ import org.apache.spark.sql.catalyst.analysis.UnresolvedTableValuedFunction
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, Project}
 import org.apache.spark.sql.catalyst.rules.Rule
-import org.apache.spark.sql.leo.builtin.{WebSearch, WebSearchParams}
+import org.apache.spark.sql.leo.builtin._
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
 
 case class LeoTVFAnalyzerRule(sparkSession: SparkSession) extends Rule[LogicalPlan] {
 
   private val leoTVFunctions: Seq[String] =
     Seq("WebSearch")
+
+  private val leoExperimentTVFunctions: Seq[String] =
+    Seq("Experiment_Info")
+
+  private val leoTrainingTVFunctions: Seq[String] =
+    Seq("Training_Info")
 
   def apply(plan: LogicalPlan): LogicalPlan = {
     plan.transform {
@@ -40,6 +46,19 @@ case class LeoTVFAnalyzerRule(sparkSession: SparkSession) extends Rule[LogicalPl
                        StructField("title", StringType, nullable = false) :: Nil).toAttributes
           p.copy(child = WebSearch(output,
             new WebSearchParams(tvf.functionArgs)))
+        } else if (leoExperimentTVFunctions.exists(f => f.equalsIgnoreCase(tvf.functionName))) {
+          val output: Seq[Attribute] =
+            StructType(StructField("JobName", StringType, nullable = false) ::
+                       StructField("JobProperties", StringType, nullable = false) ::
+                       StructField("Status", StringType, nullable = false) :: Nil).toAttributes
+          p.copy(child = ExperimentInfo(output, new ExperimentInfoParams(tvf.functionArgs)))
+        } else if (leoTrainingTVFunctions.exists(f => f.equalsIgnoreCase(tvf.functionName))) {
+          val output: Seq[Attribute] =
+            StructType(StructField("Job_Id", StringType, nullable = false) ::
+                       StructField("Job_Name", StringType, nullable = false) ::
+                       StructField("Status", StringType, nullable = false) ::
+                       StructField("Duration", StringType, nullable = false) :: Nil).toAttributes
+          p.copy(child = TrainingInfo(output, new TrainingInfoParams(tvf.functionArgs)))
         } else {
           p
         }
