@@ -73,10 +73,9 @@ case class JobMetricsExec(
         val trainingInfo = LeoEnv.modelTraingAPI
           .getTrainingJobInfo(java.lang.Long.parseLong(trainJob.getProperties.get("job_id")))
         val metrics = Array(UTF8String.fromString(trainJob.getProperties.get("job_id")),
-          UTF8String.fromString(trainJob.getProperties.get("job_id")),
           UTF8String.fromString(trainJob.getJobName),
           UTF8String.fromString(trainingInfo.get("status")),
-          UTF8String.fromString("duration"))
+          UTF8String.fromString(trainingInfo.get("duration")))
         val rows = projection(new GenericInternalRow(metrics.asInstanceOf[Array[Any]]))
         session.sparkContext.makeRDD(Array(rows))
       } else {

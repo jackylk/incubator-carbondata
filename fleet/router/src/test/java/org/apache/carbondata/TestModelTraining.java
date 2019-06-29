@@ -158,16 +158,16 @@ public class TestModelTraining {
     CarbonProperties.getInstance().addProperty("leo.ma.password", "@Huawei123");
     carbon.sql("drop table if exists db.test");
     carbon.sql("create table db.test(c1 int, c2 int, c3 int)");
-    carbon.sql("drop experiment if exists e1");
+    carbon.sql("drop experiment if exists e11");
     carbon.sql(
         "CREATE experiment if not exists e11 OPTIONS('worker_server_num'='1', "
             + "'app_url'='/obs-5b79/train_mnist/', 'boot_file_url'='/obs-5b79/train_mnist/train_mnist.py', "
             + "'data_url'='/obs-5b79/dataset-mnist/','log_url'='/obs-5b79/train-log/','engine_id'='28','spec_id'='1') as select c1,c2 from db.test where c3>5");
-    carbon.sql("create model j1 using experiment e11 OPTIONS('train_url'='/obs-5b79/mnist-model/','params'='num_epochs=1')").show();
+    carbon.sql("create model job1 using experiment e11 OPTIONS('train_url'='/obs-5b79/mnist-model/','params'='num_epochs=1')").show();
     // get experiment info for experiment m
-    carbon.sql("select * from experiment_info(e1)").show(false);
-    carbon.sql("drop model if exists j1 on experiment e1").show(false);
-    carbon.sql("drop experiment if exists e1");
+    carbon.sql("select * from experiment_info(e11)").show(false);
+    carbon.sql("drop model if exists job1 on experiment e11").show(false);
+    carbon.sql("drop experiment if exists e11");
     carbon.sql("drop table if exists db.test");
   }
 
@@ -185,10 +185,11 @@ public class TestModelTraining {
         "CREATE experiment if not exists m1 OPTIONS('worker_server_num'='1', "
             + "'app_url'='/obs-5b79/train_mnist/', 'boot_file_url'='/obs-5b79/train_mnist/train_mnist.py', "
             + "'data_url'='/obs-5b79/dataset-mnist/','log_url'='/obs-5b79/train-log/','engine_id'='28','spec_id'='1') as select c1,c2 from db.test where c3>5");
-    carbon.sql("create model j2 using experiment m1 OPTIONS('train_url'='/obs-5b79/mnist-model/','params'='num_epochs=1')").show();
-    // get job metrics for job j2
-    carbon.sql("select * from training_info(m1.j2)").show(false);
-    carbon.sql("drop model if exists job1 on experiment m1").show(false);
+    carbon.sql("drop model if exists j on experiment m1").show(false);
+    carbon.sql("create model j using experiment m1 OPTIONS('train_url'='/obs-5b79/mnist-model/','params'='num_epochs=1')").show();
+    // get job metrics for job j
+    carbon.sql("select * from training_info(m1.j)").show(false);
+    carbon.sql("drop model if exists j on experiment m1").show(false);
     carbon.sql("drop experiment if exists m1");
     carbon.sql("drop table if exists db.test");
   }
