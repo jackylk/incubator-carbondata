@@ -47,9 +47,17 @@ case class LeoDropModelCommand(
         "Experiment with name " + experimentName + " doesn't exists in storage"))
 
     val details = TrainJobManager.getAllTrainedJobs(updatedExpName)
-    val jobDetail = details.find(_.getJobName.equalsIgnoreCase(modelName)).
-      getOrElse(throw new AnalysisException(
-      "Model with name " + modelName + " doesn't exists on experiment " + experimentName))
+    val trainingJobDetail = details.find(_.getJobName.equalsIgnoreCase(modelName))
+    val jobDetail = if (trainingJobDetail.isDefined) {
+      trainingJobDetail.get
+    } else {
+      if (!ifExists) {
+        throw new AnalysisException(
+          "Model with name " + modelName + " doesn't exists on experiment " + experimentName)
+      } else {
+        return Seq.empty
+      }
+    }
     val jobId = jobDetail.getProperties.get("job_id")
     LeoEnv.modelTraingAPI.stopTrainingJob(jobId.toLong)
     TrainJobManager.dropTrainJob(updatedExpName, jobDetail.getJobName)

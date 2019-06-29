@@ -22,6 +22,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -135,8 +136,8 @@ public class ModelArtsModelTraining implements ModelTrainingAPI {
     LoginRequestManager.LoginInfo loginInfo = getLoginInfo();
     Response response = RestUtil.get(
         MODELARTS_CN_NORTH_V1_ENDPOINT + loginInfo.getProjectId() + SEPARATOR
-            + MODELARTS_TRAINING_REST + SEPARATOR + jobId + SEPARATOR + MODELARTS_TRAINING_VERSIONS
-            + SEPARATOR + "1", loginInfo.getToken(), client);
+            + MODELARTS_TRAINING_REST + SEPARATOR + jobId + SEPARATOR + MODELARTS_TRAINING_VERSIONS,
+        loginInfo.getToken(), client);
     if (response.isSuccessful()) {
       ObjectMapper objectMapper = new ObjectMapper();
       String rspStr = response.body().string();
@@ -145,8 +146,12 @@ public class ModelArtsModelTraining implements ModelTrainingAPI {
           objectMapper.readValue(rspStr, new TypeReference<Map<String, Object>>() {
           });
       Map<String, String> jobDetail = new HashMap<>();
-      jobDetail.put("status", ModelArtsStatusCodes.getStatus(jsonNodeMap.get("status").toString()));
-      jobDetail.put("duration", jsonNodeMap.get("duration").toString());
+
+      Object versionsObj = jsonNodeMap.get("versions");
+      ArrayList<LinkedHashMap> versions = (ArrayList) versionsObj;
+      jobDetail
+          .put("status", ModelArtsStatusCodes.getStatus(versions.get(0).get("status").toString()));
+      jobDetail.put("duration", versions.get(0).get("duration").toString());
       jobDetail.put("json", rspStr);
       return jobDetail;
     } else {
