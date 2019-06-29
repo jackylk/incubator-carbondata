@@ -17,7 +17,7 @@
 
 package org.apache.spark.sql.leo
 
-import org.apache.spark.sql.{AnalysisException, CarbonSession, LeoDatabase, SparkSession}
+import org.apache.spark.sql.{CarbonSession, SparkSession}
 import org.apache.spark.sql.catalyst.parser.{AbstractSqlParser, SqlBaseParser}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.internal.{SQLConf, VariableSubstitution}
@@ -35,18 +35,16 @@ class LeoSqlParser(conf: SQLConf, sparkSession: SparkSession) extends AbstractSq
 
   override def parsePlan(sqlText: String): LogicalPlan = {
     CarbonSession.updateSessionInfoToCurrentThread(sparkSession)
-    val (updatedPlanOp, errorMessage) = try {
+    val plan = try {
       val parsedPlan = super.parsePlan(sqlText)
-      val resolvedTVFPlan = LeoTVFAnalyzerRule(sparkSession)(parsedPlan)
-      LeoDatabase.convertUserDBNameToLeoInPlan(resolvedTVFPlan)
+      LeoTVFAnalyzerRule(sparkSession)(parsedPlan)
     } catch {
       case ce: MalformedCarbonCommandException =>
         CarbonScalaUtil.cleanParserThreadLocals()
         throw ce
       case ex: Throwable =>
         try {
-          val plan = parser.parse(sqlText)
-          LeoDatabase.convertUserDBNameToLeoInPlan(plan)
+          parser.parse(sqlText)
         } catch {
           case mce: MalformedCarbonCommandException =>
             throw mce
@@ -60,11 +58,8 @@ class LeoSqlParser(conf: SQLConf, sparkSession: SparkSession) extends AbstractSq
         }
     }
 
-    if (updatedPlanOp.isEmpty) {
-      throw new AnalysisException(errorMessage)
-    }
     CarbonScalaUtil.cleanParserThreadLocals()
-    updatedPlanOp.get
+    plan
   }
 
   protected override def parse[T](command: String)(toResult: SqlBaseParser => T): T = {

@@ -17,7 +17,7 @@
 package org.apache.spark.sql.hive
 
 import org.apache.hadoop.fs.Path
-import org.apache.spark.sql.{CarbonEnv, LeoDatabase, SparkSession}
+import org.apache.spark.sql.{CarbonEnv, SparkSession}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.catalog.{CatalogStorageFormat, CatalogTablePartition}
 import org.apache.spark.sql.catalyst.expressions.Expression

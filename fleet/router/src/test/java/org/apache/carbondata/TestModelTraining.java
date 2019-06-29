@@ -34,10 +34,9 @@ import org.apache.carbondata.core.util.CarbonProperties;
 import org.apache.carbondata.core.util.ObjectSerializationUtil;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.spark.sql.LeoDatabase;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.leo.LeoEnv;
 import org.apache.spark.sql.leo.ExperimentStoreManager;
+import org.apache.spark.sql.leo.LeoEnv;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -71,20 +70,18 @@ public class TestModelTraining {
     carbon.sql("drop experiment if exists m1");
     // create model without options
     carbon.sql("CREATE EXPERIMENT m1  as select c1,c2 as a from db.test where c3>5 and c2=1");
-    String expName = LeoDatabase.DEFAULT_PROJECTID() + CarbonCommonConstants.UNDERSCORE + "m1";
     assert (FileFactory.isFileExist(
-        CarbonProperties.getInstance().getSystemFolderLocation() + "/model/" + expName + ".dmschema"));
+        CarbonProperties.getInstance().getSystemFolderLocation() + "/model/m1.dmschema"));
     carbon.sql("drop experiment if exists m1");
     assert (!FileFactory.isFileExist(
-        CarbonProperties.getInstance().getSystemFolderLocation() + "/model/" + expName + ".dmschema"));
+        CarbonProperties.getInstance().getSystemFolderLocation() + "/model/m1.dmschema"));
     carbon.sql("drop experiment if exists m2");
     // create model with options
     carbon.sql(
         "CREATE EXPERIMENT if not exists m2 OPTIONS('label_col'='c2', 'max_iteration'='100') "
             + "as select c1,c2 from db.test where c3>5");
-    expName = LeoDatabase.DEFAULT_PROJECTID() + CarbonCommonConstants.UNDERSCORE + "m2";
     assert (FileFactory.isFileExist(
-        CarbonProperties.getInstance().getSystemFolderLocation() + "/model/" + expName + ".dmschema"));
+        CarbonProperties.getInstance().getSystemFolderLocation() + "/model/m1.dmschema"));
     carbon.sql("drop experiment if exists m2");
     carbon.sql("drop table if exists db.test");
   }
@@ -103,9 +100,8 @@ public class TestModelTraining {
     carbon.sql(
         "CREATE experiment if not exists m1 OPTIONS('label_col'='c2', 'max_iteration'='100') "
             + "as select c1,c2 from db.test where c3=5");
-    String expName = LeoDatabase.DEFAULT_PROJECTID() + CarbonCommonConstants.UNDERSCORE + "m1";
-    DataMapSchema m1 = ExperimentStoreManager.getInstance().getExperimentSchema(expName);
-    assert(m1.getDataMapName().equalsIgnoreCase(expName));
+    DataMapSchema m1 = ExperimentStoreManager.getInstance().getExperimentSchema("m1");
+    assert(m1.getDataMapName().equalsIgnoreCase("m1"));
     assert(m1.getCtasQuery().equalsIgnoreCase(" select c1,c2 from db.test where c3=5"));
     // get Query Object
     String query = m1.getProperties().get(CarbonCommonConstants.QUERY_OBJECT);
@@ -136,9 +132,8 @@ public class TestModelTraining {
         "CREATE experiment if not exists m2 OPTIONS('worker_server_num'='1', "
             + "'app_url'='/obs-5b79/train_mnist/', 'boot_file_url'='/obs-5b79/train_mnist/train_mnist.py', "
             + "'data_url'='/obs-5b79/dataset-mnist/','log_url'='/obs-5b79/train-log/','engine_id'='28','spec_id'='1') as select c1,c2 from a1.test where c3>5");
-    String expName = LeoDatabase.DEFAULT_PROJECTID() + CarbonCommonConstants.UNDERSCORE + "m2";
     assert (FileFactory.isFileExist(
-        CarbonProperties.getInstance().getSystemFolderLocation() + "/model/" + expName + ".dmschema"));
+        CarbonProperties.getInstance().getSystemFolderLocation() + "/model/m2.dmschema"));
 
     carbon.sql("create model job1 using experiment m2 OPTIONS('train_url'='/obs-5b79/mnist-model/','params'='num_epochs=1')").show();
 

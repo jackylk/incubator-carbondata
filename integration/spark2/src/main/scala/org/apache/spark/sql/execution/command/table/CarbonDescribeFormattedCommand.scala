@@ -94,19 +94,11 @@ private[sql] case class CarbonDescribeFormattedCommand(
     results ++= Seq(
       ("", "", ""),
       ("## Detailed Table Information", "", ""),
-      ("Database",
-        CarbonEnv.getInstance(sparkSession).convertToUserDBName(catalogTable.database), ""),
+      ("Database", catalogTable.database, ""),
       ("Table", catalogTable.identifier.table, ""),
       ("Owner", catalogTable.owner, ""),
-      ("Created", new Date(catalogTable.createTime).toString, ""))
-
-    if (!CarbonEnv.getInstance(sparkSession).isLeo) {
-      results ++= Seq(
-        ("Location ", carbonTable.getTablePath, "")
-      )
-    }
-
-    results ++= Seq(
+      ("Created", new Date(catalogTable.createTime).toString, ""),
+      ("Location ", carbonTable.getTablePath, ""),
       ("External", carbonTable.isExternalTable.toString, ""),
       ("Transactional", carbonTable.isTransactionalTable.toString, ""),
       ("Streaming", streaming, ""),
