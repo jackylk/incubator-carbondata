@@ -21,7 +21,7 @@ import java.util
 
 import scala.collection.JavaConverters._
 
-import org.apache.spark.sql.{AnalysisException, LeoDatabase, Row, SparkSession}
+import org.apache.spark.sql.{AnalysisException, Row, SparkSession}
 import org.apache.spark.sql.carbondata.execution.datasources.CarbonSparkDataSourceUtil
 import org.apache.spark.sql.catalyst.catalog.HiveTableRelation
 import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference}
@@ -49,12 +49,10 @@ case class LeoCreateExperimentCommand(
   override def run(sparkSession: SparkSession): Seq[Row] = {
     // check if experiment with experimentName already exists
     val experimentSchemas = ExperimentStoreManager.getInstance().getAllExperimentSchemas
-    val updatedExpName = LeoDatabase.DEFAULT_PROJECTID + CarbonCommonConstants.UNDERSCORE +
-                         experimentName
     val ifAlreadyExists = experimentSchemas.asScala
       .exists(experiment => {
         experiment.getDataMapName
-          .equalsIgnoreCase(updatedExpName)
+          .equalsIgnoreCase(experimentName)
       })
     if (ifAlreadyExists) {
       if (!ifNotExists) {
@@ -72,7 +70,7 @@ case class LeoCreateExperimentCommand(
       case h: HiveTableRelation => h.tableMeta
     }
     val query = new DataScan
-    val database = LeoDatabase.convertLeoDBNameToUser(parentTable.head.database)
+    val database = parentTable.head.database
     query
       .setTableName(database + CarbonCommonConstants.UNDERSCORE + parentTable.head.identifier.table)
     query.setTablePath(parentTable.head.storage.locationUri.get.getPath)
@@ -108,7 +106,7 @@ case class LeoCreateExperimentCommand(
       .put(CarbonCommonConstants.QUERY_OBJECT, ObjectSerializationUtil.convertObjectToString(query))
     // create experiment schema
     val experimentSchema = new DataMapSchema()
-    experimentSchema.setDataMapName(updatedExpName)
+    experimentSchema.setDataMapName(experimentName)
     experimentSchema.setCtasQuery(queryString)
     experimentSchema.setProperties(optionsMap)
     // get parent table relation Identifier

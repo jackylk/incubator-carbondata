@@ -20,11 +20,10 @@ package org.apache.spark.sql.leo.command
 import scala.collection.JavaConverters._
 
 import org.apache.leo.model.job.TrainJobManager
-import org.apache.spark.sql.{AnalysisException, LeoDatabase, Row, SparkSession}
+import org.apache.spark.sql.{AnalysisException, Row, SparkSession}
 import org.apache.spark.sql.execution.command.RunnableCommand
 import org.apache.spark.sql.leo.{ExperimentStoreManager, LeoEnv}
 
-import org.apache.carbondata.core.constants.CarbonCommonConstants
 
 /**
  * Drop's model on given experimentName
@@ -38,15 +37,13 @@ case class LeoDropModelCommand(
   override def run(sparkSession: SparkSession): Seq[Row] = {
     // check if model with modelName already exists
     val modelSchemas =  ExperimentStoreManager.getInstance().getAllExperimentSchemas
-    val updatedExpName = LeoDatabase.DEFAULT_PROJECTID + CarbonCommonConstants.UNDERSCORE +
-                         experimentName
     val model = modelSchemas.asScala
-      .find(model => model.getDataMapName.equalsIgnoreCase(updatedExpName))
+      .find(model => model.getDataMapName.equalsIgnoreCase(experimentName))
     val schema = model.getOrElse(
       throw new AnalysisException(
         "Experiment with name " + experimentName + " doesn't exists in storage"))
 
-    val details = TrainJobManager.getAllTrainedJobs(updatedExpName)
+    val details = TrainJobManager.getAllTrainedJobs(experimentName)
     val trainingJobDetail = details.find(_.getJobName.equalsIgnoreCase(modelName))
     val jobDetail = if (trainingJobDetail.isDefined) {
       trainingJobDetail.get
@@ -60,7 +57,7 @@ case class LeoDropModelCommand(
     }
     val jobId = jobDetail.getProperties.get("job_id")
     LeoEnv.modelTraingAPI.stopTrainingJob(jobId.toLong)
-    TrainJobManager.dropTrainJob(updatedExpName, jobDetail.getJobName)
+    TrainJobManager.dropTrainJob(experimentName, jobDetail.getJobName)
     Seq.empty
   }
 }

@@ -19,8 +19,6 @@ package org.apache.spark.sql
 
 import java.util.concurrent.ConcurrentHashMap
 
-import scala.util.matching.Regex
-
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.catalyst.catalog.SessionCatalog
@@ -64,18 +62,6 @@ class CarbonEnv {
   SparkReadSupport.readSupportClass = classOf[SparkRowReadSupportImpl]
 
   var initialized = false
-
-  var isLeo = false
-
-  // return the user visible database name by extracting it from the input
-  // database name (for Leo)
-  var convertToUserDBName: String => String = _
-
-  // find and replace all leo database names with user database name in the input string
-  var makeStringValidToUser: String => Option[String] = _
-
-  // find and replace leo database names with user database name in the input exception
-  var makeExceptionValidToUser: Option[Throwable] => Option[Throwable] = _
 
   def init(sparkSession: SparkSession): Unit = {
     val properties = CarbonProperties.getInstance()
@@ -142,60 +128,12 @@ class CarbonEnv {
         }
         CarbonProperties.getInstance
           .addNonSerializableProperty(CarbonCommonConstants.IS_DRIVER_INSTANCE, "true")
-        initLeo(sparkSession)
         initialized = true
       }
     }
     LOGGER.info("Initialize CarbonEnv completed...")
   }
 
-  private def initLeo(sparkSession: SparkSession): Unit = {
-    try {
-      val leo = sparkSession.conf.get("leo.enabled")
-      isLeo = leo.toLowerCase().toBoolean
-    } catch {
-      case e: Exception =>
-        isLeo = false
-    }
-    convertToUserDBName = if (isLeo) LeoDatabase.convertLeoDBNameToUser else noOp
-    makeStringValidToUser = if (isLeo) replaceLeoDBNameInString else noOpOption
-    makeExceptionValidToUser = if (isLeo) replaceLeoDBNameInException else noOpException
-  }
-
-  private def replaceLeoDBNameInString(msg: String): Option[String] = {
-    if (isLeo) {
-      val pattern: Regex = LeoDatabase.leoDBNamePrefix.r
-      if (pattern.findAllMatchIn(msg).isEmpty) {
-        return None
-      }
-      Some(pattern.replaceAllIn(msg, ""))
-    } else {
-      Some(msg)
-    }
-  }
-
-  private def replaceLeoDBNameInException(e: Option[Throwable]): Option[Throwable] = {
-    if (e.isEmpty) return None
-    val newMsgOp = if (e.get != null) {
-      replaceLeoDBNameInString(e.get.getMessage)
-    } else {
-      Some("")
-    }
-    val newCause = if (e.get != null) {
-      replaceLeoDBNameInException(Some(e.get.getCause))
-    } else {
-      None
-    }
-    if (newMsgOp.isEmpty) {
-      e
-    } else {
-      Some(new Exception(newMsgOp.get, newCause.orNull))
-    }
-  }
-
-  private def noOp(string: String): String = string
-  private def noOpOption(string: String): Option[String] = Some(string)
-  private def noOpException(e: Option[Throwable]): Option[Throwable] = e
 }
 
 object CarbonEnv {

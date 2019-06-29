@@ -25,7 +25,7 @@ import org.apache.spark.sql.execution.{SparkPlan, SparkStrategy}
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.command.table.{CarbonDescribeFormattedCommand, CarbonShowTablesCommand}
 import org.apache.spark.sql.leo.builtin._
-import org.apache.spark.sql.leo.command.{LeoCreateDatabaseCommand, LeoCreateTableCommand, LeoDropDatabaseCommand, LeoDropTableCommand, LeoShowDatabasesCommand}
+import org.apache.spark.sql.leo.command.{LeoCreateDatabaseCommand, LeoCreateTableCommand, LeoDropDatabaseCommand, LeoDropTableCommand}
 import org.apache.spark.util.CarbonReflectionUtils
 
 import org.apache.carbondata.common.logging.LogServiceFactory
@@ -45,34 +45,6 @@ class LeoDDLStrategy(session: SparkSession) extends SparkStrategy {
       case cmd@DropDatabaseCommand(_, _, _) =>
         val leoCmd = LeoDropDatabaseCommand(cmd)
         ExecutedCommandExec(leoCmd) :: Nil
-
-      case cmd@ShowDatabasesCommand(databasePattern) =>
-        val leoCmd = LeoShowDatabasesCommand(databasePattern)
-        ExecutedCommandExec(leoCmd) :: Nil
-
-      case cmd@ShowTablesCommand(databaseName, tableIdentifierPattern, isExtended, partitionSpec) =>
-        val carbonCmd = CarbonShowTablesCommand(databaseName, tableIdentifierPattern)
-        ExecutedCommandExec(carbonCmd) :: Nil
-
-      case cmd@DescribeTableCommand(table, partitionSpec, isExtended) =>
-        val isFormatted: Boolean = if (session.version.startsWith("2.1")) {
-          CarbonReflectionUtils.getDescribeTableFormattedField(cmd)
-        } else {
-          false
-        }
-        if (isExtended || isFormatted) {
-          val resolvedTable =
-            session.sessionState.executePlan(UnresolvedRelation(table)).analyzed
-          val resultPlan = session.sessionState.executePlan(resolvedTable).executedPlan
-          ExecutedCommandExec(
-            CarbonDescribeFormattedCommand(
-              resultPlan,
-              plan.output,
-              partitionSpec,
-              table)) :: Nil
-        } else {
-          Nil
-        }
 
       // CREATE TABLE
       case cmd@CreateTableCommand(table, ignoreIfExists) =>

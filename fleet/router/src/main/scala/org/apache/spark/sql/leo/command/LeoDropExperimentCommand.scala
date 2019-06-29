@@ -20,12 +20,11 @@ package org.apache.spark.sql.leo.command
 import scala.collection.JavaConverters._
 
 import org.apache.leo.model.job.TrainJobManager
-import org.apache.spark.sql.{LeoDatabase, Row, SparkSession}
+import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.execution.command.RunnableCommand
 import org.apache.spark.sql.leo.{ExperimentStoreManager, LeoEnv}
 import org.apache.spark.sql.leo.exceptions.NoSuchExperimentException
 
-import org.apache.carbondata.core.constants.CarbonCommonConstants
 
 case class LeoDropExperimentCommand(
     experimentName: String,
@@ -34,23 +33,21 @@ case class LeoDropExperimentCommand(
 
   override def run(sparkSession: SparkSession): Seq[Row] = {
     val experimentSchemas = ExperimentStoreManager.getInstance().getAllExperimentSchemas
-    val updatedExpName = LeoDatabase.DEFAULT_PROJECTID + CarbonCommonConstants.UNDERSCORE +
-                         experimentName
     val ifExperimentExists = experimentSchemas.asScala
-      .exists(experiment => experiment.getDataMapName.equalsIgnoreCase(updatedExpName))
+      .exists(experiment => experiment.getDataMapName.equalsIgnoreCase(experimentName))
     if (ifExperimentExists) {
-      val schema = ExperimentStoreManager.getInstance().getExperimentSchema(updatedExpName)
+      val schema = ExperimentStoreManager.getInstance().getExperimentSchema(experimentName)
 
-      val details = TrainJobManager.getAllEnabledTrainedJobs(updatedExpName)
+      val details = TrainJobManager.getAllEnabledTrainedJobs(experimentName)
       details.foreach { d =>
         val jobId = d.getProperties.get("job_id")
         LeoEnv.modelTraingAPI.stopTrainingJob(jobId.toLong)
       }
-      TrainJobManager.dropModel(updatedExpName)
-      ExperimentStoreManager.getInstance().dropExperimentSchema(updatedExpName)
+      TrainJobManager.dropModel(experimentName)
+      ExperimentStoreManager.getInstance().dropExperimentSchema(experimentName)
     } else {
       if (!ifExists) {
-        throw new NoSuchExperimentException(updatedExpName)
+        throw new NoSuchExperimentException(experimentName)
       }
     }
     Seq.empty

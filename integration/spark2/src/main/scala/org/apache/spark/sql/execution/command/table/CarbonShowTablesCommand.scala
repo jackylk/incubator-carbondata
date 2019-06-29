@@ -59,8 +59,7 @@ private[sql] case class CarbonShowTablesCommand ( databaseName: Option[String],
       case tableIdent if isMainTable(tableIdent) =>
         val isTemp = catalog.isTemporaryTable(tableIdent)
         val dbName = tableIdent.database.getOrElse("default")
-        val userDBName = CarbonEnv.getInstance(sparkSession).convertToUserDBName(dbName)
-        Row(userDBName, tableIdent.table, isTemp)
+        Row(dbName, tableIdent.table, isTemp)
     }
 
   }
