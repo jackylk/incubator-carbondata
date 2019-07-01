@@ -147,7 +147,14 @@ class ErrorMessage(message: String) extends Exception(message) {
       val indexTableExistsInCarbon = indexTables.asScala.contains(indexTableName)
       val indexTableExistsInHive = sparkSession.sessionState.catalog
         .tableExists(TableIdentifier(indexTableName, indexModel.databaseName))
-      if (((indexTableExistsInCarbon && !indexTableExistsInHive) ||
+      if (indexTableExistsInHive && isCreateSIndex) {
+        LOGGER.error(
+          s"Index creation with Database name [$databaseName] and index name " +
+          s"[$indexTableName] failed. " +
+          s"Index [$indexTableName] already exists under database [$databaseName]")
+        throw new ErrorMessage(
+          s"Index [$indexTableName] already exists under database [$databaseName]")
+      } else if (((indexTableExistsInCarbon && !indexTableExistsInHive) ||
         (!indexTableExistsInCarbon && indexTableExistsInHive)) && isCreateSIndex) {
         LOGGER.error(
           s"Index with [$indexTableName] under database [$databaseName] is present in " +
@@ -237,27 +244,17 @@ class ErrorMessage(message: String) extends Exception(message) {
       val indexInfo = IndexTableUtil.checkAndAddIndexTable(oldIndexInfo,
         new IndexTableInfo(databaseName, indexTableName,
           indexTableCols))
-      val indexTableExists: Boolean = sparkSession.sessionState.catalog.listTables(databaseName)
-        .exists(_.table.equalsIgnoreCase(indexTableName))
       val absoluteTableIdentifier = AbsoluteTableIdentifier.
         from(tablePath, databaseName, indexTableName)
       var tableInfo: TableInfo = null
       // if Register Index call then read schema file from the metastore
-       if (!isCreateSIndex && indexTableExists) {
+       if (!isCreateSIndex && indexTableExistsInHive) {
          tableInfo = SchemaReader.getTableInfo(absoluteTableIdentifier)
        } else {
          tableInfo = prepareTableInfo(carbonTable, databaseName,
            tableName, indexTableName, absoluteTableIdentifier)
        }
-      if (isCreateSIndex && indexTableExists) {
-        LOGGER.error(
-          s"Index creation with Database name [$databaseName] and index name " +
-          s"[$indexTableName] failed. " +
-          s"Index [$indexTableName] already exists under database [$databaseName]")
-        throw new ErrorMessage(
-          s"Index [$indexTableName] already exists under database [$databaseName]")
-      } else {
-        if (!isCreateSIndex && !indexTableExists) {
+        if (!isCreateSIndex && !indexTableExistsInHive) {
           LOGGER.error(
             s"Index registration with Database name [$databaseName] and index name " +
             s"[$indexTableName] failed. " +
@@ -359,7 +356,6 @@ class ErrorMessage(message: String) extends Exception(message) {
         val createTablePostExecutionEvent: CreateTablePostExecutionEvent =
           new CreateTablePostExecutionEvent(sparkSession, tableIdentifier)
         OperationListenerBus.getInstance.fireEvent(createTablePostExecutionEvent, operationContext)
-      }
       LOGGER.info(
         s"Index created with Database name [$databaseName] and Index name [$indexTableName]")
     } catch {

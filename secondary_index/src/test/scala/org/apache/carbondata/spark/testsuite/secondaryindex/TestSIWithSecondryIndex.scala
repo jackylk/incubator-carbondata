@@ -197,6 +197,30 @@ class TestSIWithSecondryIndex extends QueryTest with BeforeAndAfterAll {
     assert(errorMessage.contains("Drop table is not permitted on Index Table"))
   }
 
+  // DTS2019070105415
+  test("test SI creation on two tables with the same name") {
+    sql("drop table if exists uniqdataTable1")
+    sql("drop table if exists uniqdataTable2")
+    sql("CREATE table uniqdataTable1 (empno int, empname String, " +
+        "designation String, doj Timestamp, workgroupcategory int, " +
+        "workgroupcategoryname String, deptno int, deptname String, projectcode int, " +
+        "projectjoindate Timestamp, projectenddate Timestamp, attendance int, " +
+        "utilization int,salary int) STORED BY 'org.apache.carbondata.format'")
+    sql(
+      "create index uniqdataidxtable on table uniqdataTable1 (workgroupcategoryname) AS 'org.apache.carbondata.format'")
+
+    sql("CREATE table uniqdataTable2 (empno int, empname String, " +
+        "designation String, doj Timestamp, workgroupcategory int, " +
+        "workgroupcategoryname String, deptno int, deptname String, projectcode int, " +
+        "projectjoindate Timestamp, projectenddate Timestamp, attendance int, " +
+        "utilization int,salary int) STORED BY 'org.apache.carbondata.format'")
+    val errorMessage = intercept[Exception] {
+      sql(
+        "create index uniqdataidxtable on table uniqdataTable2 (workgroupcategoryname) AS 'org.apache.carbondata.format'")
+    }.getMessage
+    assert(errorMessage.contains("Index [uniqdataidxtable] already exists under database [default]"))
+  }
+
   override def afterAll {
     sql("drop index si_altercolumn on table_WithSIAndAlter")
     sql("drop table if exists table_WithSIAndAlter")
