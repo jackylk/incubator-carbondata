@@ -26,7 +26,7 @@ import org.apache.spark.sql.execution.command.table.CarbonDropTableCommand
 
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.core.constants.{CarbonCommonConstants, CarbonCommonConstantsInternal, CarbonLoadOptionConstants}
-import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil, SessionParams}
+import org.apache.carbondata.core.util.{BlockletDataMapUtil, CarbonProperties, CarbonUtil, SessionParams}
 
 case class CarbonDropDatabaseCommand(command: DropDatabaseCommand)
   extends RunnableCommand {
@@ -39,6 +39,8 @@ case class CarbonDropDatabaseCommand(command: DropDatabaseCommand)
     var tablesInDB: Seq[TableIdentifier] = null
     if (sparkSession.sessionState.catalog.listDatabases().exists(_.equalsIgnoreCase(dbName))) {
       tablesInDB = sparkSession.sessionState.catalog.listTables(dbName)
+        .filter(table => !BlockletDataMapUtil
+          .isIndexTable(CarbonEnv.getCarbonTable(table.database, table.table)(sparkSession)))
     }
     var databaseLocation = ""
     try {
