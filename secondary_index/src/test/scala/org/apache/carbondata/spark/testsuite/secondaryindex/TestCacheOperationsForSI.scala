@@ -102,16 +102,12 @@ class TestCacheOperationsForSI extends QueryTest with BeforeAndAfterAll {
     assert(result.get(2).getString(2).equalsIgnoreCase("Secondary Index"))
     assert(!result.get(2).getString(1).equalsIgnoreCase("0 B"))
 
-    sql("SHOW METACACHE").show(false)
-
     val result2 = sql(s"SHOW METACACHE").collectAsList()
 
     // Ensure there is not separate entry for SI table
     assert(result2.size() == 3)
     // Ensure table has summed up index size for SI
-    LOGGER.info(result2.get(0).getString(2))
-    LOGGER.info(result2.get(2).getString(2))
-    assert(result2.get(0).getString(2).equalsIgnoreCase(result2.get(2).getString(2)))
+    assert(result2.get(1).getString(2).equalsIgnoreCase(result2.get(2).getString(2)))
 
     sql(s"DROP TABLE $tableName")
   }
