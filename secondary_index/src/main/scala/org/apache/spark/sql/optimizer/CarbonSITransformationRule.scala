@@ -52,6 +52,9 @@ class CarbonSITransformationRule(sparkSession: SparkSession)
       plan collect {
         case create: CreateHiveTableAsSelectCommand =>
           needProjection = true
+        case create: LogicalPlan if (create.getClass.getSimpleName
+          .equals("OptimizedCreateHiveTableAsSelectCommand")) =>
+          needProjection = true
         case insert: InsertIntoHadoopFsRelationCommand =>
           if (!insert.fileFormat.toString.equals("carbon")) {
             needProjection = true
