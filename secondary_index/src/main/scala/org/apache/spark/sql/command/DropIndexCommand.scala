@@ -66,8 +66,8 @@ private[sql] case class DropIndex(ifExistsSet: Boolean,
                 val parentCarbonTable = Some(catalog
                   .lookupRelation(Some(dbName), parentTableName)(sparkSession)
                   .asInstanceOf[CarbonRelation].metaData.carbonTable)
-                val indexInfo = CarbonInternalScalaUtil.getIndexInfo(parentCarbonTable.get)
-                if (null != indexInfo) {
+                val indexTableList = CarbonInternalScalaUtil.getIndexesTables(parentCarbonTable.get)
+                if (!indexTableList.isEmpty) {
                   locksToBeAcquired foreach {
                     lock => {
                       carbonLocks += CarbonLockUtil
@@ -75,7 +75,8 @@ private[sql] case class DropIndex(ifExistsSet: Boolean,
                     }
                   }
                   CarbonInternalHiveMetadataUtil
-                    .removeIndexInfoFromParentTable(indexInfo,
+                    .removeIndexInfoFromParentTable(CarbonInternalScalaUtil
+                      .getIndexInfo(parentCarbonTable.get),
                       parentCarbonTable.get,
                       dbName,
                       tableName)(sparkSession)

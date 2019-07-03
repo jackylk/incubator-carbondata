@@ -34,6 +34,7 @@ class CarbonIndexFileMergeTestCaseWithSI
     createFile(file2, n * 4, n)
     CarbonProperties.getInstance()
       .addProperty(CarbonInternalCommonConstants.CARBON_SI_SEGMENT_MERGE, "false")
+    sql("use default")
     sql("DROP INDEX IF EXISTS nonindexmerge_index on nonindexmerge")
     sql("DROP INDEX IF EXISTS nonindexmerge_index1 on nonindexmerge")
     sql("DROP INDEX IF EXISTS nonindexmerge_index2 on nonindexmerge")
