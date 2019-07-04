@@ -43,6 +43,18 @@ public class RestUtil {
     call.enqueue(callback);
   }
 
+  public static Response postSync(String url, String json, String token,
+      OkHttpClient client) throws IOException {
+    RequestBody body = RequestBody.create(JSON, json);
+    Request.Builder builder = new Request.Builder().url(url).post(body);
+    if (token != null) {
+      builder = builder.addHeader("X-Auth-Token", token);
+    }
+    final Request request = builder.build();
+    Call call = client.newCall(request);
+    return call.execute();
+  }
+
   public static void postAsync(String url, String json, Callback callback, OkHttpClient client) {
     postAsync(url, json, callback, null, client);
   }
@@ -51,6 +63,15 @@ public class RestUtil {
       throws IOException {
     Request.Builder builder = new Request.Builder().url(url).get();
     builder = builder.addHeader("X-Auth-Token", token);
+    final Request request = builder.build();
+    Call call = client.newCall(request);
+    return call.execute();
+  }
+
+  public static Response postSync(String url, String json, OkHttpClient client)
+      throws IOException {
+    RequestBody body = RequestBody.create(JSON, json);
+    Request.Builder builder = new Request.Builder().url(url).post(body);
     final Request request = builder.build();
     Call call = client.newCall(request);
     return call.execute();

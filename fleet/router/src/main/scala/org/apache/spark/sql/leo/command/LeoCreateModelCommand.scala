@@ -19,7 +19,7 @@ package org.apache.spark.sql.leo.command
 
 import scala.collection.JavaConverters._
 
-import org.apache.leo.model.job.{TrainJobDetail, TrainJobManager}
+import org.apache.leo.model.job.{TrainModelDetail, TrainModelManager}
 import org.apache.spark.sql.{AnalysisException, Row, SparkSession}
 import org.apache.spark.sql.execution.command.RunnableCommand
 import org.apache.spark.sql.leo.{ExperimentStoreManager, LeoEnv}
@@ -46,7 +46,7 @@ case class LeoCreateModelCommand(
 
     val optionsMap = new java.util.HashMap[String, String]()
     optionsMap.putAll(options.asJava)
-    val details = TrainJobManager.getAllTrainedJobs(experimentName)
+    val details = TrainModelManager.getAllTrainedModels(experimentName)
     if (details.exists(_.getJobName.equalsIgnoreCase(modelName))) {
       if (!ifNotExists) {
         throw new AnalysisException(
@@ -66,10 +66,10 @@ case class LeoCreateModelCommand(
       LeoEnv.modelTraingAPI.startTrainingJob(optionsMapFinal,
         experimentName + CarbonCommonConstants.UNDERSCORE + modelName, queryObject)
     optionsMap.put("job_id", jobId.toString)
-    val detail = new TrainJobDetail(modelName, optionsMap)
+    val detail = new TrainModelDetail(modelName, optionsMap)
     try {
       // store experiment schema
-      TrainJobManager.saveTrainJob(experimentName, detail)
+      TrainModelManager.saveTrainModel(experimentName, detail)
     } catch {
       case e: Exception =>
         LeoEnv.modelTraingAPI.stopTrainingJob(jobId)

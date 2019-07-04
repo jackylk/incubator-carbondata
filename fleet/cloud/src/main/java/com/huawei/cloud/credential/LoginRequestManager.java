@@ -20,7 +20,9 @@ package com.huawei.cloud.credential;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Map;
+import java.util.Objects;
 
+import com.google.gson.Gson;
 import com.huawei.cloud.RestConstants;
 import com.huawei.cloud.util.RestUtil;
 import okhttp3.Call;
@@ -98,6 +100,34 @@ public class LoginRequestManager implements Serializable {
     return loginInfo;
   }
 
+  public static Credential getTemporaryAccessKeys(LoginInfo loginInfo, OkHttpClient client)
+      throws Exception {
+    String accessJson = "{\n" +
+        "    \"auth\": {\n" +
+        "        \"identity\": {\n" +
+        "            \"methods\": [\n" +
+        "                \"token\"\n" +
+        "            ],\n" +
+        "            \"token\": {\n" +
+        "                \"id\": \"" + loginInfo.getToken() + "\",\n" +
+        "                \"duration-seconds\": \"3600\"\n" +
+        "\n" +
+        "            }\n" +
+        "        }\n" +
+        "    }\n" +
+        "}";
+
+    Response response =
+        RestUtil.postSync(RestConstants.HUAWEI_CLOUD_SECURITYTOKEN_ENDPOINT, accessJson, client);
+    Gson gson = new Gson();
+    if (response.isSuccessful()) {
+      AccessInfo accessInfo = gson.fromJson(response.body().string(), AccessInfo.class);
+      return accessInfo.getCredential();
+    } else {
+      throw new Exception(response.body().string());
+    }
+  }
+
   public static class LoginInfo {
     private boolean loggedIn = false;
     private String token;
@@ -134,6 +164,74 @@ public class LoginRequestManager implements Serializable {
 
     public void setLoggedIn(boolean loggedIn) {
       this.loggedIn = loggedIn;
+    }
+
+    @Override public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      LoginInfo loginInfo = (LoginInfo) o;
+      return Objects.equals(userName, loginInfo.userName);
+    }
+
+    @Override public int hashCode() {
+
+      return Objects.hash(userName);
+    }
+  }
+
+  public static class AccessInfo implements Serializable {
+
+    private Credential credential;
+
+    public Credential getCredential() {
+      return credential;
+    }
+
+    public void setCredential(Credential credential) {
+      this.credential = credential;
+    }
+  }
+
+  public static class Credential implements Serializable {
+
+    private String access;
+
+    private String secret;
+
+    private String expires_at;
+
+    private String securitytoken;
+
+    public String getAccess() {
+      return access;
+    }
+
+    public void setAccess(String access) {
+      this.access = access;
+    }
+
+    public String getSecret() {
+      return secret;
+    }
+
+    public void setSecret(String secret) {
+      this.secret = secret;
+    }
+
+    public String getExpires_at() {
+      return expires_at;
+    }
+
+    public void setExpires_at(String expires_at) {
+      this.expires_at = expires_at;
+    }
+
+    public String getSecuritytoken() {
+      return securitytoken;
+    }
+
+    public void setSecuritytoken(String securitytoken) {
+      this.securitytoken = securitytoken;
     }
   }
 }

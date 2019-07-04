@@ -21,7 +21,7 @@ import java.util
 
 import scala.collection.JavaConverters._
 
-import org.apache.leo.model.job.TrainJobManager
+import org.apache.leo.model.job.TrainModelManager
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
@@ -63,7 +63,7 @@ case class ExperimentInfoExec(
       .exists(m => m.getDataMapName.equalsIgnoreCase(experimentName))
     if (ifExperimentExists) {
       // get all training jobs started on experiment
-      val jobs = TrainJobManager.getAllEnabledTrainedJobs(experimentName)
+      val jobs = TrainModelManager.getAllEnabledTrainedModels(experimentName)
       val metrics = new util.ArrayList[String]()
       jobs.foreach{ job =>
         val currentJob = Array(job.getJobName,

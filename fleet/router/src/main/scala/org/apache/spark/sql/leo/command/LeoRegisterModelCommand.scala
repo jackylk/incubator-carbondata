@@ -17,8 +17,12 @@
 
 package org.apache.spark.sql.leo.command
 
-import org.apache.spark.sql.{Row, SparkSession}
+import scala.collection.JavaConverters._
+
+import org.apache.leo.model.job.TrainModelManager
+import org.apache.spark.sql.{AnalysisException, Row, SparkSession}
 import org.apache.spark.sql.execution.command.RunnableCommand
+import org.apache.spark.sql.leo.{ExperimentStoreManager, LeoEnv}
 
 case class LeoRegisterModelCommand(
     experimentName: String,
@@ -26,5 +30,26 @@ case class LeoRegisterModelCommand(
     udfName: String)
   extends RunnableCommand {
 
-  override def run(sparkSession: SparkSession): Seq[Row] = Seq.empty
+  override def run(sparkSession: SparkSession): Seq[Row] = {
+
+    // check if model with modelName already exists
+    val modelSchemas =  ExperimentStoreManager.getInstance().getAllExperimentSchemas
+    val model = modelSchemas.asScala
+      .find(model => model.getDataMapName.equalsIgnoreCase(experimentName))
+    val schema = model.getOrElse(
+      throw new AnalysisException(
+        "Experiment with name " + experimentName + " doesn't exists in storage"))
+    val details = TrainModelManager.getAllTrainedModels(experimentName)
+    val jobDetail = details.find(_.getJobName.equalsIgnoreCase(modelName)).
+      getOrElse(throw new AnalysisException(
+        "Model with name " + modelName + " doesn't exists on experiment " + experimentName))
+
+    val modelId = LeoEnv.modelTraingAPI
+      .importModel(jobDetail.getProperties, udfName)
+    jobDetail.getProperties.put("model_id", modelId)
+    TrainModelManager.updateTrainModel(experimentName, jobDetail)
+    //TODO deploy the model.
+
+    Seq.empty
+  }
 }

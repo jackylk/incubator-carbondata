@@ -26,7 +26,7 @@ import org.apache.carbondata.common.annotations.InterfaceAudience;
  * Status of each datamap
  */
 @InterfaceAudience.Internal
-public class TrainJobDetail implements Serializable {
+public class TrainModelDetail implements Serializable {
 
   private static final long serialVersionUID = -1208096889633270490L;
 
@@ -36,10 +36,10 @@ public class TrainJobDetail implements Serializable {
 
   private Status status = Status.CREATED;
 
-  public TrainJobDetail() {
+  public TrainModelDetail() {
   }
 
-  public TrainJobDetail(String jobName, Map<String, String> properties) {
+  public TrainModelDetail(String jobName, Map<String, String> properties) {
     this.jobName = jobName;
     this.properties = properties;
     this.status = Status.CREATED;
