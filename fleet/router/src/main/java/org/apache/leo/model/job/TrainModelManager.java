@@ -20,26 +20,19 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.util.CarbonProperties;
-
-import org.apache.log4j.Logger;
 
 /**
  * Maintains the status of each datamap. As per the status query will decide whether to hit
  * datamap or not.
  */
-public class TrainJobManager {
+public class TrainModelManager {
 
   // Create private constructor to not allow create instance of it
-  private TrainJobManager() {
+  private TrainModelManager() {
 
   }
-
-  private static final Logger LOGGER =
-      LogServiceFactory.getLogService(
-          TrainJobManager.class.getName());
 
   /**
    * TODO Use factory when we have more storage providers
@@ -50,47 +43,63 @@ public class TrainJobManager {
 
 
   /**
-   * Get enabled datamap status details
-   * @return
-   * @throws IOException
+   * Get all non dropped trained models of the given experiment.
    */
-  public static TrainJobDetail[] getAllEnabledTrainedJobs(String experimentName)
+  public static TrainModelDetail[] getAllEnabledTrainedModels(String experimentName)
       throws IOException {
-    TrainJobDetail[] trainJobDetails = storageProvider.getAllTrainJobs(experimentName);
-    List<TrainJobDetail> statusDetailList = new ArrayList<>();
-    for (TrainJobDetail statusDetail : trainJobDetails) {
-      if (statusDetail.getStatus() == TrainJobDetail.Status.CREATED) {
+    TrainModelDetail[] trainModelDetails = storageProvider.getAllTrainModels(experimentName);
+    List<TrainModelDetail> statusDetailList = new ArrayList<>();
+    for (TrainModelDetail statusDetail : trainModelDetails) {
+      if (statusDetail.getStatus() == TrainModelDetail.Status.CREATED) {
         statusDetailList.add(statusDetail);
       }
     }
-    return statusDetailList.toArray(new TrainJobDetail[statusDetailList.size()]);
-  }
-
-  public static TrainJobDetail[] getAllTrainedJobs(String experimentName) throws IOException {
-    return storageProvider.getAllTrainJobs(experimentName);
+    return statusDetailList.toArray(new TrainModelDetail[statusDetailList.size()]);
   }
 
   /**
-   * Get enabled datamap status details
-   * @return
-   * @throws IOException
+   * Get all trained models of given experiment, including dropped models.
    */
-  public static TrainJobDetail getTrainJob(
+  public static TrainModelDetail[] getAllTrainedModels(String experimentName) throws IOException {
+    return storageProvider.getAllTrainModels(experimentName);
+  }
+
+  /**
+   * Get Train Model detail from storage.
+   */
+  public static TrainModelDetail getTrainModel(
       String experimentName, String modelName) throws IOException {
-    return storageProvider.getTrainJob(experimentName, modelName);
+    return storageProvider.getTrainModel(experimentName, modelName);
   }
 
-  public static void dropTrainJob(String experimentName, String modelName) throws IOException {
-    storageProvider.dropTrainJob(experimentName, modelName);
+  /**
+   * Drop the train model from storage.
+   */
+  public static void dropTrainModel(String experimentName, String modelName) throws IOException {
+    storageProvider.dropTrainModel(experimentName, modelName);
   }
 
+  /**
+   * Drop the trained model
+   */
   public static void dropModel(String experimentName) throws IOException {
     storageProvider.dropModel(experimentName);
   }
 
-  public static void saveTrainJob(String experimentName, TrainJobDetail jobDetail)
+  /**
+   * Save the trained model to storage
+   */
+  public static void saveTrainModel(String experimentName, TrainModelDetail modelDetail)
       throws IOException {
-    storageProvider.saveTrainJob(experimentName, jobDetail);
+    storageProvider.saveTrainModel(experimentName, modelDetail);
+  }
+
+  /**
+   * Update the train model
+   */
+  public static void updateTrainModel(String experimentName, TrainModelDetail modelDetail)
+      throws IOException {
+    storageProvider.updateTrainModel(experimentName, modelDetail);
   }
 
 }

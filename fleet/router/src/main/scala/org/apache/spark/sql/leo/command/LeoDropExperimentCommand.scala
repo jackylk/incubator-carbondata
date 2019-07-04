@@ -19,7 +19,7 @@ package org.apache.spark.sql.leo.command
 
 import scala.collection.JavaConverters._
 
-import org.apache.leo.model.job.TrainJobManager
+import org.apache.leo.model.job.TrainModelManager
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.execution.command.RunnableCommand
 import org.apache.spark.sql.leo.{ExperimentStoreManager, LeoEnv}
@@ -38,12 +38,12 @@ case class LeoDropExperimentCommand(
     if (ifExperimentExists) {
       val schema = ExperimentStoreManager.getInstance().getExperimentSchema(experimentName)
 
-      val details = TrainJobManager.getAllEnabledTrainedJobs(experimentName)
+      val details = TrainModelManager.getAllEnabledTrainedModels(experimentName)
       details.foreach { d =>
         val jobId = d.getProperties.get("job_id")
         LeoEnv.modelTraingAPI.stopTrainingJob(jobId.toLong)
       }
-      TrainJobManager.dropModel(experimentName)
+      TrainModelManager.dropModel(experimentName)
       ExperimentStoreManager.getInstance().dropExperimentSchema(experimentName)
     } else {
       if (!ifExists) {

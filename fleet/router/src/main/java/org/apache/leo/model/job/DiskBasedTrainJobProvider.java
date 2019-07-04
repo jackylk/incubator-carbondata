@@ -43,7 +43,7 @@ import com.google.gson.Gson;
 import org.apache.log4j.Logger;
 
 /**
- * It saves/serializes the array of {{@link TrainJobDetail}} to disk in json format.
+ * It saves/serializes the array of {{@link TrainModelDetail}} to disk in json format.
  * It ensures the data consistance while concurrent write through write lock. It saves the status
  * to the datamapstatus under the system folder.
  */
@@ -61,23 +61,23 @@ public class DiskBasedTrainJobProvider implements TrainJobStorageProvider {
   }
 
   @Override
-  public TrainJobDetail[] getAllTrainJobs(String modelName) throws IOException {
-    String statusPath = getJobInfoPath(modelName);
+  public TrainModelDetail[] getAllTrainModels(String experimentName) throws IOException {
+    String statusPath = getJobInfoPath(experimentName);
     Gson gsonObjectToRead = new Gson();
     DataInputStream dataInputStream = null;
     BufferedReader buffReader = null;
     InputStreamReader inStream = null;
-    TrainJobDetail[] trainJobDetails;
+    TrainModelDetail[] trainModelDetails;
     try {
       if (!FileFactory.isFileExist(statusPath)) {
-        return new TrainJobDetail[0];
+        return new TrainModelDetail[0];
       }
       dataInputStream =
           FileFactory.getDataInputStream(statusPath, FileFactory.getFileType(statusPath));
       inStream = new InputStreamReader(dataInputStream,
           Charset.forName(CarbonCommonConstants.DEFAULT_CHARSET));
       buffReader = new BufferedReader(inStream);
-      trainJobDetails = gsonObjectToRead.fromJson(buffReader, TrainJobDetail[].class);
+      trainModelDetails = gsonObjectToRead.fromJson(buffReader, TrainModelDetail[].class);
     } catch (IOException e) {
       LOG.error("Failed to read datamap status", e);
       throw e;
@@ -85,12 +85,12 @@ public class DiskBasedTrainJobProvider implements TrainJobStorageProvider {
       CarbonUtil.closeStreams(buffReader, inStream, dataInputStream);
     }
 
-    // if trainJobDetails is null, return empty array
-    if (null == trainJobDetails) {
-      return new TrainJobDetail[0];
+    // if trainModelDetails is null, return empty array
+    if (null == trainModelDetails) {
+      return new TrainModelDetail[0];
     }
 
-    return trainJobDetails;
+    return trainModelDetails;
   }
 
   private String getJobInfoPath(String modelName) {
@@ -103,23 +103,23 @@ public class DiskBasedTrainJobProvider implements TrainJobStorageProvider {
    * @throws IOException
    */
   @Override
-  public void saveTrainJob(String modelName, TrainJobDetail jobDetail) throws IOException {
+  public void saveTrainModel(String experimentName, TrainModelDetail jobDetail) throws IOException {
     if (jobDetail == null) {
       // There is nothing to save
       return;
     }
-    ICarbonLock modelLock = getModelLock(modelName);
+    ICarbonLock modelLock = getModelLock(experimentName);
     boolean locked = false;
     try {
       locked = modelLock.lockWithRetries();
       if (locked) {
-        LOG.info("Model lock " + modelName + " has been successfully acquired.");
-        TrainJobDetail[] trainJobDetails = getAllTrainJobs(modelName);
-        List<TrainJobDetail> trainJobDetailList = Arrays.asList(trainJobDetails);
-        trainJobDetailList = new ArrayList<>(trainJobDetailList);
-        trainJobDetailList.add(jobDetail);
-        writeJobInfoIntoFile(getJobInfoPath(modelName),
-            trainJobDetailList.toArray(new TrainJobDetail[trainJobDetailList.size()]));
+        LOG.info("Model lock " + experimentName + " has been successfully acquired.");
+        TrainModelDetail[] trainModelDetails = getAllTrainModels(experimentName);
+        List<TrainModelDetail> trainModelDetailList = Arrays.asList(trainModelDetails);
+        trainModelDetailList = new ArrayList<>(trainModelDetailList);
+        trainModelDetailList.add(jobDetail);
+        writeJobInfoIntoFile(getJobInfoPath(experimentName),
+            trainModelDetailList.toArray(new TrainModelDetail[trainModelDetailList.size()]));
       } else {
         String errorMsg =
             "Saving jobinfo is failed due to another process taken the lock" + " for updating it";
@@ -129,9 +129,54 @@ public class DiskBasedTrainJobProvider implements TrainJobStorageProvider {
     } finally {
       if (locked) {
         if (modelLock.unlock()) {
-          LOG.info("Model lock " + modelName + " has been successfully released");
+          LOG.info("Model lock " + experimentName + " has been successfully released");
         } else {
-          LOG.error("Not able to release the lock " + modelName);
+          LOG.error("Not able to release the lock " + experimentName);
+        }
+      }
+    }
+  }
+
+  @Override public void updateTrainModel(String experimentName, TrainModelDetail jobDetail)
+      throws IOException {
+    if (jobDetail == null) {
+      // There is nothing to save
+      return;
+    }
+    ICarbonLock modelLock = getModelLock(experimentName);
+    boolean locked = false;
+    try {
+      locked = modelLock.lockWithRetries();
+      if (locked) {
+        LOG.info("Model lock " + experimentName + " has been successfully acquired.");
+        TrainModelDetail[] trainModelDetails = getAllTrainModels(experimentName);
+        List<TrainModelDetail> trainModelDetailList = Arrays.asList(trainModelDetails);
+        trainModelDetailList = new ArrayList<>(trainModelDetailList);
+        int index = -1;
+        for (int i = 0; i < trainModelDetailList.size(); i++) {
+          if (trainModelDetailList.get(i).getJobName().equalsIgnoreCase(jobDetail.getJobName())) {
+            index = i;
+            break;
+          }
+        }
+        if (index == -1) {
+          throw new IOException("Job name does not exist ");
+        }
+        trainModelDetailList.set(index, jobDetail);
+        writeJobInfoIntoFile(getJobInfoPath(experimentName),
+            trainModelDetailList.toArray(new TrainModelDetail[trainModelDetailList.size()]));
+      } else {
+        String errorMsg =
+            "Saving jobinfo is failed due to another process taken the lock" + " for updating it";
+        LOG.error(errorMsg);
+        throw new IOException(errorMsg + ". Please try after some time.");
+      }
+    } finally {
+      if (locked) {
+        if (modelLock.unlock()) {
+          LOG.info("Model lock " + experimentName + " has been successfully released");
+        } else {
+          LOG.error("Not able to release the lock " + experimentName);
         }
       }
     }
@@ -140,10 +185,10 @@ public class DiskBasedTrainJobProvider implements TrainJobStorageProvider {
   /**
    * writes datamap status details
    *
-   * @param trainJobDetails
+   * @param trainModelDetails
    * @throws IOException
    */
-  private static void writeJobInfoIntoFile(String location, TrainJobDetail[] trainJobDetails)
+  private static void writeJobInfoIntoFile(String location, TrainModelDetail[] trainModelDetails)
       throws IOException {
     AtomicFileOperations fileWrite = AtomicFileOperationFactory.getAtomicFileOperations(location);
     BufferedWriter brWriter = null;
@@ -155,7 +200,7 @@ public class DiskBasedTrainJobProvider implements TrainJobStorageProvider {
       brWriter = new BufferedWriter(new OutputStreamWriter(dataOutputStream,
           Charset.forName(CarbonCommonConstants.DEFAULT_CHARSET)));
 
-      String metadataInstance = gsonObjectToWrite.toJson(trainJobDetails);
+      String metadataInstance = gsonObjectToWrite.toJson(trainModelDetails);
       brWriter.write(metadataInstance);
     } catch (IOException ioe) {
       LOG.error("Error message: " + ioe.getLocalizedMessage());
@@ -172,23 +217,23 @@ public class DiskBasedTrainJobProvider implements TrainJobStorageProvider {
   }
 
   @Override
-  public void dropTrainJob(String modelName, String trainJobName) throws IOException {
-    ICarbonLock modelLock = getModelLock(modelName);
+  public void dropTrainModel(String experimentName, String trainModelName) throws IOException {
+    ICarbonLock modelLock = getModelLock(experimentName);
     boolean locked = false;
     try {
       locked = modelLock.lockWithRetries();
       if (locked) {
-        LOG.info("Model lock " + modelName + " has been successfully acquired.");
-        TrainJobDetail[] trainJobDetails = getAllTrainJobs(modelName);
-        List<TrainJobDetail> trainJobDetailList = Arrays.asList(trainJobDetails);
-        trainJobDetailList = new ArrayList<>(trainJobDetailList);
-        for (TrainJobDetail jobDetail : trainJobDetailList) {
-          if (jobDetail.getJobName().equalsIgnoreCase(trainJobName)) {
-            jobDetail.setStatus(TrainJobDetail.Status.DROPPED);
+        LOG.info("Model lock " + experimentName + " has been successfully acquired.");
+        TrainModelDetail[] trainModelDetails = getAllTrainModels(experimentName);
+        List<TrainModelDetail> trainModelDetailList = Arrays.asList(trainModelDetails);
+        trainModelDetailList = new ArrayList<>(trainModelDetailList);
+        for (TrainModelDetail jobDetail : trainModelDetailList) {
+          if (jobDetail.getJobName().equalsIgnoreCase(trainModelName)) {
+            jobDetail.setStatus(TrainModelDetail.Status.DROPPED);
           }
         }
-        writeJobInfoIntoFile(getJobInfoPath(modelName),
-            trainJobDetailList.toArray(new TrainJobDetail[trainJobDetailList.size()]));
+        writeJobInfoIntoFile(getJobInfoPath(experimentName),
+            trainModelDetailList.toArray(new TrainModelDetail[trainModelDetailList.size()]));
       } else {
         String errorMsg =
             "Saving jobinfo is failed due to another process taken the lock for updating it";
@@ -198,18 +243,18 @@ public class DiskBasedTrainJobProvider implements TrainJobStorageProvider {
     } finally {
       if (locked) {
         if (modelLock.unlock()) {
-          LOG.info("Model lock " + modelName + " has been successfully released");
+          LOG.info("Model lock " + experimentName + " has been successfully released");
         } else {
-          LOG.error("Not able to release the lock " + modelName);
+          LOG.error("Not able to release the lock " + experimentName);
         }
       }
     }
   }
 
   @Override
-  public TrainJobDetail getTrainJob(String modelName, String jobName) throws IOException {
-    TrainJobDetail[] trainJobs = getAllTrainJobs(modelName);
-    for (TrainJobDetail trainJob : trainJobs) {
+  public TrainModelDetail getTrainModel(String experimentName, String jobName) throws IOException {
+    TrainModelDetail[] trainJobs = getAllTrainModels(experimentName);
+    for (TrainModelDetail trainJob : trainJobs) {
       if (trainJob.getJobName().equalsIgnoreCase(jobName)) {
         return trainJob;
       }

@@ -19,7 +19,7 @@ package org.apache.spark.sql.leo.builtin
 
 import scala.collection.JavaConverters._
 
-import org.apache.leo.model.job.TrainJobManager
+import org.apache.leo.model.job.TrainModelManager
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{AnalysisException, SparkSession}
 import org.apache.spark.sql.catalyst.InternalRow
@@ -66,7 +66,7 @@ case class JobMetricsExec(
     val ifExperimentExists = ExperimentStoreManager.getInstance().getAllExperimentSchemas.asScala
       .exists(m => m.getDataMapName.equalsIgnoreCase(experimentName))
     if (ifExperimentExists) {
-      val trainJob = TrainJobManager.getTrainJob(experimentName, modelName)
+      val trainJob = TrainModelManager.getTrainModel(experimentName, modelName)
       if (null != trainJob) {
         val trainingInfo = LeoEnv.modelTraingAPI
           .getTrainingJobInfo(java.lang.Long.parseLong(trainJob.getProperties.get("job_id")))

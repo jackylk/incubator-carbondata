@@ -27,29 +27,35 @@ import java.io.IOException;
 public interface TrainJobStorageProvider {
 
   /**
-   * It reads and returns all enabled train job details from storage.
+   * It reads and returns all enabled train model details from storage.
    *
-   * @return TrainJobDetail[] all trainjob details
+   * @return TrainModelDetail[] all trainjob details
    */
-  TrainJobDetail[] getAllTrainJobs(String modelName) throws IOException;
+  TrainModelDetail[] getAllTrainModels(String experimentName) throws IOException;
 
 
   /**
-   * It reads and returns train job details from storage.
+   * It reads and returns train model details from storage.
    *
    */
-  TrainJobDetail getTrainJob(String modelName, String jobName) throws IOException;
+  TrainModelDetail getTrainModel(String experimentName, String jobName) throws IOException;
 
   /**
-   * Update the status of the given datamaps to the passed datamap status.
+   * Save the model detail of the given experiment.
    *
    */
-  void saveTrainJob(String modelName, TrainJobDetail jobDetail) throws IOException;
+  void saveTrainModel(String experimentName, TrainModelDetail jobDetail) throws IOException;
 
   /**
-   * Drops the train job
+   * Updates the jobDetail of the given experiment.
+   *
    */
-  void dropTrainJob(String modelName, String trainJobName) throws IOException;
+  void updateTrainModel(String experimentName, TrainModelDetail jobDetail) throws IOException;
+
+  /**
+   * Drops the train model
+   */
+  void dropTrainModel(String experimentName, String trainModelName) throws IOException;
 
   /**
    * Drops the model

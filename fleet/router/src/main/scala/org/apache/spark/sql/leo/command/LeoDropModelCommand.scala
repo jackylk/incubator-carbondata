@@ -19,7 +19,7 @@ package org.apache.spark.sql.leo.command
 
 import scala.collection.JavaConverters._
 
-import org.apache.leo.model.job.TrainJobManager
+import org.apache.leo.model.job.TrainModelManager
 import org.apache.spark.sql.{AnalysisException, Row, SparkSession}
 import org.apache.spark.sql.execution.command.RunnableCommand
 import org.apache.spark.sql.leo.{ExperimentStoreManager, LeoEnv}
@@ -43,7 +43,7 @@ case class LeoDropModelCommand(
       throw new AnalysisException(
         "Experiment with name " + experimentName + " doesn't exists in storage"))
 
-    val details = TrainJobManager.getAllTrainedJobs(experimentName)
+    val details = TrainModelManager.getAllTrainedModels(experimentName)
     val trainingJobDetail = details.find(_.getJobName.equalsIgnoreCase(modelName))
     val jobDetail = if (trainingJobDetail.isDefined) {
       trainingJobDetail.get
@@ -57,7 +57,7 @@ case class LeoDropModelCommand(
     }
     val jobId = jobDetail.getProperties.get("job_id")
     LeoEnv.modelTraingAPI.stopTrainingJob(jobId.toLong)
-    TrainJobManager.dropTrainJob(experimentName, jobDetail.getJobName)
+    TrainModelManager.dropTrainModel(experimentName, jobDetail.getJobName)
     Seq.empty
   }
 }

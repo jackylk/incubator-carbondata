@@ -189,9 +189,38 @@ public class TestModelTraining {
     carbon.sql("drop table if exists db.test");
   }
 
+  @Test
+  public void testModelWithModelArtsFlower() throws IOException {
+    CarbonProperties.getInstance().addProperty("leo.ma.username", "hwstaff_l00215684");
+    CarbonProperties.getInstance().addProperty("leo.ma.password", "@Huawei123");
+    carbon.sql("drop database if exists a1 cascade");
+    carbon.sql("create database a1");
+    carbon.sql("drop table if exists a1.test");
+    carbon.sql("create table a1.test(c1 int, c2 int, c3 int)");
+    carbon.sql("drop experiment if exists m2");
+    // create model with options
+    carbon.sql(
+        "CREATE experiment if not exists flower_exp OPTIONS('worker_server_num'='1', "
+            + "'model_id'='7', 'dataset_id'='7EkkgKp0hbbZH6wp3MU', 'dataset_name'='flower', 'dataset_version_name'='V002',"
+            + "'dataset_version_id'='2liks7uf5BazuB4rWai','log_url'='/obs-5b79/train-log/','engine_id'='28','spec_id'='1') as select c1,c2 from a1.test where c3>5");
+    assert (FileFactory.isFileExist(
+        CarbonProperties.getInstance().getSystemFolderLocation() + "/model/flower_exp.dmschema"));
+
+    carbon.sql("create model job1 using experiment flower_exp OPTIONS('train_url'='/obs-5b79/flower_model1/')").show();
+
+    carbon.sql("select * from training_info(flower_exp.job1)").show(false);
+
+    carbon.sql("REGISTER MODEL flower_exp.job1 AS flower_mod");
+
+    carbon.sql("drop model if exists job1 on experiment flower_exp");
+    carbon.sql("drop experiment if exists flower_exp");
+    carbon.sql("drop table if exists a1.test");
+    carbon.sql("drop database if exists a1 cascade");
+  }
+
   @AfterClass public static void tearDown() throws IOException {
-    carbon.sql("drop database if exists db cascade");
+//    carbon.sql("drop database if exists db cascade");
     carbon.close();
-    FileUtils.deleteDirectory(new File("./warehouse"));
+//    FileUtils.deleteDirectory(new File("./warehouse"));
   }
 }

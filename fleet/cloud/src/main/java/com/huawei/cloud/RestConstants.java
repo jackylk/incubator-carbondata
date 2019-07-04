@@ -22,18 +22,28 @@ package com.huawei.cloud;
  */
 public interface RestConstants {
 
-  public static String HUAWEI_CLOUD_AUTH_ENDPOINT =
-      "https://iam.cn-north-1.myhuaweicloud.com/v3/auth/tokens";
+  String HUAWEI_ENDPOINT = "cn-north-1.myhuaweicloud.com";
 
-  public static String AUTH_TOKEN_HEADER = "X-Subject-Token";
+  String HUAWEI_CLOUD_AUTH_ENDPOINT = "https://iam." + HUAWEI_ENDPOINT + "/v3/auth/tokens";
 
-  public static String MODELARTS_CN_NORTH_V1_ENDPOINT =
-      "https://modelarts.cn-north-1.myhuaweicloud.com/v1/";
+  String HUAWEI_CLOUD_SECURITYTOKEN_ENDPOINT =
+      "https://iam." + HUAWEI_ENDPOINT + "/v3.0/OS-CREDENTIAL/securitytokens";
 
-  public static String MODELARTS_TRAINING_REST = "training-jobs";
+  String OBS_ENDPOINT =
+      "https://obs." + HUAWEI_ENDPOINT;
 
-  public static String MODELARTS_TRAINING_VERSIONS = "versions";
+  String AUTH_TOKEN_HEADER = "X-Subject-Token";
 
-  public static String SEPARATOR = "/";
+  String MODELARTS_CN_NORTH_V1_ENDPOINT = "https://modelarts." + HUAWEI_ENDPOINT + "/v1/";
+
+  String OBS_URL_SUFFIX = "obs.myhwclouds.com";
+
+  String MODELARTS_TRAINING_REST = "training-jobs";
+
+  String MODELARTS_MODEL = "models";
+
+  String SEPARATOR = "/";
+
+  String MODELARTS_TRAINING_VERSIONS = "versions";
 
 }
