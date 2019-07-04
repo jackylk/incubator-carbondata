@@ -81,7 +81,7 @@ public class TestModelTraining {
         "CREATE EXPERIMENT if not exists m2 OPTIONS('label_col'='c2', 'max_iteration'='100') "
             + "as select c1,c2 from db.test where c3>5");
     assert (FileFactory.isFileExist(
-        CarbonProperties.getInstance().getSystemFolderLocation() + "/model/m1.dmschema"));
+        CarbonProperties.getInstance().getSystemFolderLocation() + "/model/m2.dmschema"));
     carbon.sql("drop experiment if exists m2");
     carbon.sql("drop table if exists db.test");
   }
@@ -197,7 +197,7 @@ public class TestModelTraining {
     carbon.sql("create database a1");
     carbon.sql("drop table if exists a1.test");
     carbon.sql("create table a1.test(c1 int, c2 int, c3 int)");
-    carbon.sql("drop experiment if exists m2");
+    carbon.sql("drop experiment if exists flower_exp");
     // create model with options
     carbon.sql(
         "CREATE experiment if not exists flower_exp OPTIONS('worker_server_num'='1', "
@@ -205,12 +205,15 @@ public class TestModelTraining {
             + "'dataset_version_id'='2liks7uf5BazuB4rWai','log_url'='/obs-5b79/train-log/','engine_id'='28','spec_id'='1') as select c1,c2 from a1.test where c3>5");
     assert (FileFactory.isFileExist(
         CarbonProperties.getInstance().getSystemFolderLocation() + "/model/flower_exp.dmschema"));
+    carbon.sql("drop model if exists job1 on experiment flower_exp").show(false);
 
     carbon.sql("create model job1 using experiment flower_exp OPTIONS('train_url'='/obs-5b79/flower_model1/')").show();
 
     carbon.sql("select * from training_info(flower_exp.job1)").show(false);
 
     carbon.sql("REGISTER MODEL flower_exp.job1 AS flower_mod");
+
+    carbon.sql("select * from model_info(flower_mod)").show(false);
 
     carbon.sql("drop model if exists job1 on experiment flower_exp");
     carbon.sql("drop experiment if exists flower_exp");
@@ -219,8 +222,8 @@ public class TestModelTraining {
   }
 
   @AfterClass public static void tearDown() throws IOException {
-//    carbon.sql("drop database if exists db cascade");
+    carbon.sql("drop database if exists db cascade");
     carbon.close();
-//    FileUtils.deleteDirectory(new File("./warehouse"));
+    FileUtils.deleteDirectory(new File("./warehouse"));
   }
 }

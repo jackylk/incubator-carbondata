@@ -180,7 +180,7 @@ public class ModelArtsModelTraining implements ModelTrainingAPI {
   }
 
   @Override
-  public String importModel(Map<String, String> options, String jobName) throws Exception {
+  public String importModel(Map<String, String> options, String udfName) throws Exception {
     String train_url = options.get("train_url");
     LoginRequestManager.LoginInfo loginInfo = getLoginInfo();
     LoginRequestManager.Credential credential = getCredental(loginInfo);
@@ -209,7 +209,7 @@ public class ModelArtsModelTraining implements ModelTrainingAPI {
     ModelArtsImportModelVO.Config config =
         gson.fromJson(objectinString, ModelArtsImportModelVO.Config.class);
 
-    String json = ModelArtsImportModelVO.generateJSON(options, jobName, config, executionCode);
+    String json = ModelArtsImportModelVO.generateJSON(options, udfName, config, executionCode);
     LOGGER.info(json);
     Response response = RestUtil.postSync(
         MODELARTS_CN_NORTH_V1_ENDPOINT + loginInfo.getProjectId() + SEPARATOR + MODELARTS_MODEL,
@@ -228,6 +228,32 @@ public class ModelArtsModelTraining implements ModelTrainingAPI {
               + response.body().string());
     }
   }
+
+  @Override public Map<String, String> getModelInfo(String modelId) throws Exception {
+    LoginRequestManager.LoginInfo loginInfo = getLoginInfo();
+    Response response = RestUtil.get(
+        MODELARTS_CN_NORTH_V1_ENDPOINT + loginInfo.getProjectId() + SEPARATOR + MODELARTS_MODEL
+            + SEPARATOR + modelId, loginInfo.getToken(), client);
+    if (response.isSuccessful()) {
+      ObjectMapper objectMapper = new ObjectMapper();
+      String rspStr = response.body().string();
+      LOGGER.info(rspStr);
+      Map<String, Object> jsonNodeMap =
+          objectMapper.readValue(rspStr, new TypeReference<Map<String, Object>>() {
+          });
+      Map<String, String> modelDetail = new HashMap<>();
+      modelDetail.put("modelName", jsonNodeMap.get("model_name").toString());
+      modelDetail.put("modelType", jsonNodeMap.get("model_type").toString());
+      modelDetail.put("modelSize", jsonNodeMap.get("model_size").toString());
+      modelDetail.put("modelStatus", jsonNodeMap.get("model_status").toString());
+      modelDetail.put("modelVersion", jsonNodeMap.get("model_version").toString());
+      modelDetail.put("json", rspStr);
+      return modelDetail;
+    } else {
+      throw new Exception("Imported model retrieval failed" + response.body().string());
+    }
+  }
+
 }
 
 

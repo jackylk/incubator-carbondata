@@ -33,9 +33,6 @@ class LeoAiSqlParser extends CarbonSpark2SqlParser {
   protected val EXPERIMENT: Regex = leoKeyWord("EXPERIMENT")
   protected val REGISTER: Regex = leoKeyWord("REGISTER")
   protected val UNREGISTER: Regex = leoKeyWord("UNREGISTER")
-  protected val START: Regex = leoKeyWord("START")
-  protected val STOP: Regex = leoKeyWord("STOP")
-  protected val JOB: Regex = leoKeyWord("JOB")
 
   /**
    * This will convert key word to regular expression.
