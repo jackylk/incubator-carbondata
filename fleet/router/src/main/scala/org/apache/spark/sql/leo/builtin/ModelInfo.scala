@@ -17,13 +17,19 @@
 
 package org.apache.spark.sql.leo.builtin
 
+import scala.collection.JavaConverters._
+import scala.util.control.Breaks._
+
+import org.apache.leo.model.job.{TrainModelDetail, TrainModelManager}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{AnalysisException, SparkSession}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.{MultiInstanceRelation, UnresolvedAttribute}
-import org.apache.spark.sql.catalyst.expressions.{Attribute, Expression}
+import org.apache.spark.sql.catalyst.expressions.{Attribute, Expression, GenericInternalRow, UnsafeProjection}
 import org.apache.spark.sql.catalyst.plans.logical.LeafNode
 import org.apache.spark.sql.execution.LeafExecNode
+import org.apache.spark.sql.leo.{ExperimentStoreManager, LeoEnv}
+import org.apache.spark.unsafe.types.UTF8String
 
 /**
  * Logical plan for ModelInfo TVF
@@ -48,5 +54,36 @@ case class ModelInfoExec(
 
   override def output: Seq[Attribute] = udfInfo.output
 
-  override protected def doExecute(): RDD[InternalRow] = null
+  override protected def doExecute(): RDD[InternalRow] = {
+    val projection = UnsafeProjection.create(output.map(_.dataType).toArray)
+    val udfName = udfInfo.param.udfName
+    val experimentSchemas = ExperimentStoreManager.getInstance().getAllExperimentSchemas
+    var jobDetail: TrainModelDetail = null
+    breakable {
+      experimentSchemas.asScala.foreach(experiment => {
+        val jobDetails = TrainModelManager.getAllTrainedModels(experiment.getDataMapName)
+        val detail = jobDetails.find(_.getProperties.containsKey("udfName"))
+        if (detail.isDefined) {
+          if (detail.get.getProperties.get("udfName").equalsIgnoreCase(udfName)) {
+            jobDetail = detail.get
+            break()
+          }
+        }
+      })
+    }
+    if (null != jobDetail) {
+      val modelId: String = jobDetail.getProperties.get("model_id")
+      val modelDetail = LeoEnv.modelTraingAPI.getModelInfo(modelId)
+      val metrics = Array(UTF8String.fromString(modelId),
+        UTF8String.fromString(modelDetail.get("modelName")),
+        UTF8String.fromString(modelDetail.get("modelType")),
+        UTF8String.fromString(modelDetail.get("modelSize")),
+        UTF8String.fromString(modelDetail.get("modelStatus")),
+        UTF8String.fromString(modelDetail.get("modelVersion")))
+      val rows = projection(new GenericInternalRow(metrics.asInstanceOf[Array[Any]]))
+      session.sparkContext.makeRDD(Array(rows))
+    } else {
+      throw new AnalysisException("Experiment or Model not found for udfName: " + udfName)
+    }
+  }
 }

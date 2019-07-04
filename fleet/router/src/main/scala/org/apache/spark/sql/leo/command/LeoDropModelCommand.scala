@@ -36,7 +36,7 @@ case class LeoDropModelCommand(
 
   override def run(sparkSession: SparkSession): Seq[Row] = {
     // check if model with modelName already exists
-    val modelSchemas =  ExperimentStoreManager.getInstance().getAllExperimentSchemas
+    val modelSchemas = ExperimentStoreManager.getInstance().getAllExperimentSchemas
     val model = modelSchemas.asScala
       .find(model => model.getDataMapName.equalsIgnoreCase(experimentName))
     val schema = model.getOrElse(

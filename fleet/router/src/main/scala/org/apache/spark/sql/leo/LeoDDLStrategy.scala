@@ -67,6 +67,9 @@ class LeoDDLStrategy(session: SparkSession) extends SparkStrategy {
       case ji@TrainingInfo(_, _) =>
         JobMetricsExec(session, ji) :: Nil
 
+      case m@ModelInfo(_, _) =>
+        ModelInfoExec(session, m) :: Nil
+
       case _ => Nil
     }
   }

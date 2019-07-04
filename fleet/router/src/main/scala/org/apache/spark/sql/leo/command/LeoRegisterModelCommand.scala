@@ -33,10 +33,10 @@ case class LeoRegisterModelCommand(
   override def run(sparkSession: SparkSession): Seq[Row] = {
 
     // check if model with modelName already exists
-    val modelSchemas =  ExperimentStoreManager.getInstance().getAllExperimentSchemas
-    val model = modelSchemas.asScala
+    val experimentSChemas = ExperimentStoreManager.getInstance().getAllExperimentSchemas
+    val experiment = experimentSChemas.asScala
       .find(model => model.getDataMapName.equalsIgnoreCase(experimentName))
-    val schema = model.getOrElse(
+    val schema = experiment.getOrElse(
       throw new AnalysisException(
         "Experiment with name " + experimentName + " doesn't exists in storage"))
     val details = TrainModelManager.getAllTrainedModels(experimentName)
@@ -47,8 +47,9 @@ case class LeoRegisterModelCommand(
     val modelId = LeoEnv.modelTraingAPI
       .importModel(jobDetail.getProperties, udfName)
     jobDetail.getProperties.put("model_id", modelId)
+    jobDetail.getProperties.put("udfName", udfName)
     TrainModelManager.updateTrainModel(experimentName, jobDetail)
-    //TODO deploy the model.
+    // TODO deploy the model.
 
     Seq.empty
   }

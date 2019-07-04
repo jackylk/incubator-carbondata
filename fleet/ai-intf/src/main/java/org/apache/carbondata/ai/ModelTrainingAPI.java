@@ -29,5 +29,7 @@ public interface ModelTrainingAPI {
 
   Map<String, String> getTrainingJobInfo(long jobId) throws Exception;
 
-  String importModel(Map<String, String> options, String jobName) throws Exception;
+  String importModel(Map<String, String> options, String udfName) throws Exception;
+
+  Map<String, String> getModelInfo(String modelId) throws Exception;
 }

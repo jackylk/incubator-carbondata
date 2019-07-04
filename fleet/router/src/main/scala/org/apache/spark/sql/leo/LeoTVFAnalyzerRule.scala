@@ -27,43 +27,50 @@ import org.apache.spark.sql.types.{StringType, StructField, StructType}
 
 case class LeoTVFAnalyzerRule(sparkSession: SparkSession) extends Rule[LogicalPlan] {
 
-  private val leoTVFunctions: Seq[String] =
-    Seq("WebSearch")
-
-  private val leoExperimentTVFunctions: Seq[String] =
-    Seq("Experiment_Info")
-
-  private val leoTrainingTVFunctions: Seq[String] =
-    Seq("Training_Info")
-
   def apply(plan: LogicalPlan): LogicalPlan = {
     plan.transform {
       case p: Project if p.child.isInstanceOf[UnresolvedTableValuedFunction] =>
         val tvf = p.child.asInstanceOf[UnresolvedTableValuedFunction]
-        if (leoTVFunctions.contains(tvf.functionName)) {
-          val output: Seq[Attribute] =
-            StructType(StructField("url", StringType, nullable = false) ::
-                       StructField("title", StringType, nullable = false) :: Nil).toAttributes
-          p.copy(child = WebSearch(output,
-            new WebSearchParams(tvf.functionArgs)))
-        } else if (leoExperimentTVFunctions.exists(f => f.equalsIgnoreCase(tvf.functionName))) {
-          val output: Seq[Attribute] =
-            StructType(StructField("JobName", StringType, nullable = false) ::
-                       StructField("JobProperties", StringType, nullable = false) ::
-                       StructField("Status", StringType, nullable = false) :: Nil).toAttributes
-          p.copy(child = ExperimentInfo(output, new ExperimentInfoParams(tvf.functionArgs)))
-        } else if (leoTrainingTVFunctions.exists(f => f.equalsIgnoreCase(tvf.functionName))) {
-          val output: Seq[Attribute] =
-            StructType(StructField("Job_Id", StringType, nullable = false) ::
-                       StructField("Job_Name", StringType, nullable = false) ::
-                       StructField("Status", StringType, nullable = false) ::
-                       StructField("Duration", StringType, nullable = false) :: Nil).toAttributes
-          p.copy(child = TrainingInfo(output, new TrainingInfoParams(tvf.functionArgs)))
-        } else {
-          p
+        LeoTVFunctions.withName(tvf.functionName.toLowerCase) match {
+          case LeoTVFunctions.websearch =>
+            val output: Seq[Attribute] =
+              StructType(StructField("url", StringType, nullable = false) ::
+                         StructField("title", StringType, nullable = false) :: Nil).toAttributes
+            p.copy(child = WebSearch(output,
+              new WebSearchParams(tvf.functionArgs)))
+          case LeoTVFunctions.experiment_info =>
+            val output: Seq[Attribute] =
+              StructType(StructField("JobName", StringType, nullable = false) ::
+                         StructField("JobProperties", StringType, nullable = false) ::
+                         StructField("Status", StringType, nullable = false) :: Nil).toAttributes
+            p.copy(child = ExperimentInfo(output, new ExperimentInfoParams(tvf.functionArgs)))
+          case LeoTVFunctions.training_info =>
+            val output: Seq[Attribute] =
+              StructType(StructField("Job_Id", StringType, nullable = false) ::
+                         StructField("Job_Name", StringType, nullable = false) ::
+                         StructField("Status", StringType, nullable = false) ::
+                         StructField("Duration", StringType, nullable = false) :: Nil).toAttributes
+            p.copy(child = TrainingInfo(output, new TrainingInfoParams(tvf.functionArgs)))
+          case LeoTVFunctions.model_info =>
+            val output: Seq[Attribute] =
+              StructType(StructField("Model_Id", StringType, nullable = false) ::
+                         StructField("Model_Name", StringType, nullable = false) ::
+                         StructField("Model_Type", StringType, nullable = false) ::
+                         StructField("Model_Size", StringType, nullable = false) ::
+                         StructField("Model_Status", StringType, nullable = false) ::
+                         StructField("Model_Version", StringType, nullable = false) :: Nil)
+                .toAttributes
+            p.copy(child = ModelInfo(output, new ModelInfoParams(tvf.functionArgs)))
+          case _ =>
+            p
         }
       case other => other
     }
+  }
+
+  object LeoTVFunctions extends Enumeration {
+    type leoTVFunctions = Value
+    val websearch, experiment_info, training_info, model_info = Value
   }
 
 }
