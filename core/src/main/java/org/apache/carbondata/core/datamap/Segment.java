@@ -69,6 +69,16 @@ public class Segment implements Serializable, Writable {
 
   private long indexSize = 0;
 
+  /**
+   * Path of segment where it exists
+   */
+  private transient String segmentPath;
+
+  /**
+   * Properties of the segment.
+   */
+  private transient Map<String, String> options;
+
   public Segment() {
 
   }
@@ -99,6 +109,13 @@ public class Segment implements Serializable, Writable {
     } else {
       segmentString = segmentNo;
     }
+  }
+
+  public Segment(String segmentNo, String segmentFileName, String segmentPath,
+      Map<String, String> options) {
+    this(segmentNo, segmentFileName);
+    this.segmentPath = segmentPath;
+    this.options = options;
   }
 
   /**
@@ -280,6 +297,18 @@ public class Segment implements Serializable, Writable {
 
   public void setIndexSize(long indexSize) {
     this.indexSize = indexSize;
+  }
+
+  public String getSegmentPath() {
+    return segmentPath;
+  }
+
+  public Map<String, String> getOptions() {
+    return options;
+  }
+
+  public void setOptions(Map<String, String> options) {
+    this.options = options;
   }
 
   @Override public void write(DataOutput out) throws IOException {

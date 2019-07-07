@@ -170,6 +170,52 @@ public class SegmentFileStore {
     return writeSegmentFile(carbonTable, segmentId, UUID, null);
   }
 
+
+  /**
+   * Write segment file to the metadata folder of the table.
+   *
+   * @param carbonTable CarbonTable
+   * @param segment segment
+   * @return boolean , whether write is success or fail.
+   */
+  public static boolean writeSegmentFile(CarbonTable carbonTable, Segment segment)
+      throws IOException {
+    String tablePath = carbonTable.getTablePath();
+    CarbonFile segmentFolder = FileFactory.getCarbonFile(segment.getSegmentPath());
+    CarbonFile[] indexFiles = segmentFolder.listFiles(new CarbonFileFilter() {
+      @Override public boolean accept(CarbonFile file) {
+        return (file.getName().endsWith(CarbonTablePath.INDEX_FILE_EXT) || file.getName()
+            .endsWith(CarbonTablePath.MERGE_INDEX_FILE_EXT));
+      }
+    });
+    if (indexFiles != null && indexFiles.length > 0) {
+      SegmentFile segmentFile = new SegmentFile();
+      segmentFile.setOptions(segment.getOptions());
+      FolderDetails folderDetails = new FolderDetails();
+      folderDetails.setStatus(SegmentStatus.SUCCESS.getMessage());
+      folderDetails.setRelative(false);
+      segmentFile.addPath(segment.getSegmentPath(), folderDetails);
+      for (CarbonFile file : indexFiles) {
+        if (file.getName().endsWith(CarbonTablePath.MERGE_INDEX_FILE_EXT)) {
+          folderDetails.setMergeFileName(file.getName());
+        } else {
+          folderDetails.getFiles().add(file.getName());
+        }
+      }
+      String segmentFileFolder = CarbonTablePath.getSegmentFilesLocation(tablePath);
+      CarbonFile carbonFile = FileFactory.getCarbonFile(segmentFileFolder);
+      if (!carbonFile.exists()) {
+        carbonFile.mkdirs(segmentFileFolder);
+      }
+      // write segment info to new file.
+      writeSegmentFile(segmentFile,
+          segmentFileFolder + File.separator + segment.getSegmentFileName());
+
+      return true;
+    }
+    return false;
+  }
+
   /**
    * Write segment file to the metadata folder of the table selecting only the current load files
    *
@@ -232,7 +278,6 @@ public class SegmentFileStore {
     }
     return null;
   }
-
 
   /**
    * Move the loaded data from source folder to destination folder.
@@ -326,6 +371,18 @@ public class SegmentFileStore {
    */
   public static boolean updateSegmentFile(CarbonTable carbonTable, String segmentId,
       String segmentFile, String tableId, SegmentFileStore segmentFileStore) throws IOException {
+    return updateSegmentFile(carbonTable, segmentId, segmentFile, tableId, segmentFileStore, null);
+  }
+
+  /**
+   * This API will update the segmentFile of a passed segment.
+   *
+   * @return boolean which determines whether status update is done or not.
+   * @throws IOException
+   */
+  public static boolean updateSegmentFile(CarbonTable carbonTable, String segmentId,
+      String segmentFile, String tableId, SegmentFileStore segmentFileStore,
+      SegmentStatus segmentStatus) throws IOException {
     boolean status = false;
     String tablePath = carbonTable.getTablePath();
     String tableStatusPath = CarbonTablePath.getTableStatusFilePath(tablePath);
@@ -355,6 +412,9 @@ public class SegmentFileStore {
             detail.setSegmentFile(segmentFile);
             detail.setIndexSize(String.valueOf(CarbonUtil
                 .getCarbonIndexSize(segmentFileStore, segmentFileStore.getLocationMap())));
+            if (segmentStatus != null) {
+              detail.setSegmentStatus(segmentStatus);
+            }
             break;
           }
         }
@@ -1050,6 +1110,11 @@ public class SegmentFileStore {
      */
     private Map<String, FolderDetails> locationMap;
 
+    /**
+     * Segment option properties
+     */
+    private Map<String, String> options;
+
     SegmentFile() {
       locationMap = new HashMap<>();
     }
@@ -1085,6 +1150,13 @@ public class SegmentFileStore {
       locationMap.put(path, details);
     }
 
+    public Map<String, String> getOptions() {
+      return options;
+    }
+
+    public void setOptions(Map<String, String> options) {
+      this.options = options;
+    }
   }
 
   /**
