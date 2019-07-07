@@ -192,6 +192,7 @@ abstract class CarbonDDLSqlParser extends AbstractCarbonSparkSQLParser {
   protected val STREAMS = carbonKeyWord("STREAMS")
   protected val STMPROPERTIES = carbonKeyWord("STMPROPERTIES")
   protected val CARBONCLI = carbonKeyWord("CARBONCLI")
+  protected val PATH = carbonKeyWord("PATH")
 
   protected val JSON = carbonKeyWord("JSON")
 
