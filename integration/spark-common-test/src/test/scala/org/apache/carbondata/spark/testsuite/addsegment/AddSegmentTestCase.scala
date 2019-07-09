@@ -45,7 +45,7 @@ class AddSegmentTestCase extends QueryTest with BeforeAndAfterAll {
   }
 
   test("Test add segment ") {
-
+    sql("drop table if exists addsegment1")
     sql(
       """
         | CREATE TABLE addsegment1 (empname String, designation String, doj Timestamp,
@@ -69,10 +69,42 @@ class AddSegmentTestCase extends QueryTest with BeforeAndAfterAll {
     val rows = sql("select count(*) from addsegment1").collect()
     checkAnswer(sql("select count(*) from addsegment1"), Seq(Row(10)))
 
-    sql(s"add segment on table addsegment1 with path '$newPath' options('format'='carbon')").show()
+    sql(s"alter table addsegment1 add segment options('path'='$newPath', 'format'='carbon')").show()
     checkAnswer(sql("select count(*) from addsegment1"), Seq(Row(20)))
     sql("select * from addsegment1").show()
     FileFactory.deleteAllFilesOfDir(new File(newPath))
+  }
+
+  test("Test move segment ") {
+    sql("drop table if exists addsegment1")
+    sql(
+      """
+        | CREATE TABLE addsegment1 (empname String, designation String, doj Timestamp,
+        |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
+        |  projectcode int, projectjoindate Timestamp, projectenddate Date,attendance int,
+        |  utilization int,salary int, empno int)
+        | STORED BY 'org.apache.carbondata.format'
+      """.stripMargin)
+
+    sql(s"""LOAD DATA local inpath '$resourcesPath/data.csv' INTO TABLE addsegment1 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
+
+    sql(s"""LOAD DATA local inpath '$resourcesPath/data.csv' INTO TABLE addsegment1 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
+
+    sql("select count(*) from addsegment1").show()
+    val table = CarbonEnv.getCarbonTable(None, "addsegment1") (sqlContext.sparkSession)
+    val path = CarbonTablePath.getSegmentPath(table.getTablePath, "1")
+    val newPath = storeLocation + "/" + "addsegtest"
+    move(path, newPath)
+    sql("delete from table addsegment1 where segment.id in (1)")
+    sql("clean files for table addsegment1")
+    val rows = sql("select count(*) from addsegment1").collect()
+    checkAnswer(sql("select count(*) from addsegment1"), Seq(Row(10)))
+
+    sql(s"alter table addsegment1 add segment options('path'='$newPath')").show()
+    checkAnswer(sql("select count(*) from addsegment1"), Seq(Row(20)))
+    sql("alter table addsegment1 move segment '2'")
+    checkAnswer(sql("select count(*) from addsegment1"), Seq(Row(20)))
+    sql("select * from addsegment1").show()
   }
 
   def move(oldLoc: String, newLoc: String): Unit = {

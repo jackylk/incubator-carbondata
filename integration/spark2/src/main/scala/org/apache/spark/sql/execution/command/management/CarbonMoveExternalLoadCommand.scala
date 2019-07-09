@@ -17,21 +17,19 @@
 
 package org.apache.spark.sql.execution.command.management
 
-import java.util
-
 import scala.collection.JavaConverters._
 
+import org.apache.spark.rdd.CarbonCopyFilesRDD
 import org.apache.spark.sql.{AnalysisException, CarbonEnv, Row, SparkSession}
-import org.apache.spark.sql.execution.command.{Checker, MetadataCommand}
+import org.apache.spark.sql.execution.command.{Checker, DataCommand}
 
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.core.datamap.Segment
+import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.exception.ConcurrentOperationException
 import org.apache.carbondata.core.metadata.SegmentFileStore
 import org.apache.carbondata.core.statusmanager.{SegmentStatus, SegmentStatusManager}
 import org.apache.carbondata.core.util.path.CarbonTablePath
-import org.apache.carbondata.processing.loading.model.{CarbonDataLoadSchema, CarbonLoadModel}
-import org.apache.carbondata.processing.util.CarbonLoaderUtil
 
 
 /**
@@ -39,13 +37,13 @@ import org.apache.carbondata.processing.util.CarbonLoaderUtil
  * In case of external carbon data folder user no need to specify the format in options. But for
  * other formats like parquet user must specify the format=parquet in options.
  */
-case class CarbonAddLoadCommand(
+case class CarbonMoveExternalLoadCommand(
     databaseNameOp: Option[String],
     tableName: String,
-    options: Option[Map[String, String]])
-  extends MetadataCommand {
+    segmentName: String)
+  extends DataCommand {
 
-  override def processMetadata(sparkSession: SparkSession): Seq[Row] = {
+  override def processData(sparkSession: SparkSession): Seq[Row] = {
     Checker.validateTableExists(databaseNameOp, tableName, sparkSession)
     val carbonTable = CarbonEnv.getCarbonTable(databaseNameOp, tableName)(sparkSession)
     setAuditTable(carbonTable)
@@ -55,41 +53,50 @@ case class CarbonAddLoadCommand(
 
     // if insert overwrite in progress, do not allow add segment
     if (SegmentStatusManager.isOverwriteInProgressInTable(carbonTable)) {
-      throw new ConcurrentOperationException(carbonTable, "insert overwrite", "add segment")
+      throw new ConcurrentOperationException(carbonTable, "insert overwrite", "move segment")
     }
 
-    val model = new CarbonLoadModel
-    model.setCarbonTransactionalTable(true)
-    model.setCarbonDataLoadSchema(new CarbonDataLoadSchema(carbonTable))
-    model.setDatabaseName(carbonTable.getDatabaseName)
-    model.setTableName(carbonTable.getTableName)
+    val details =
+      SegmentStatusManager.readLoadMetadata(
+        CarbonTablePath.getMetadataPath(carbonTable.getTablePath))
+    val detail = details.find(_.getLoadName.equalsIgnoreCase(segmentName))
+      .getOrElse(throw new AnalysisException(s"Segment name $segmentName doesn't exist"))
 
-    CarbonLoaderUtil.readAndUpdateLoadProgressInTableMeta(model, false)
-    val segmentPath = options
-      .getOrElse(throw new UnsupportedOperationException("options are manadatory"))
-      .getOrElse("path", throw new UnsupportedOperationException("PATH is manadatory"))
-    val segment = new Segment(model.getSegmentId,
-      SegmentFileStore.genSegmentFileName(
-        model.getSegmentId,
-        System.nanoTime().toString) + CarbonTablePath.SEGMENT_EXT,
-      segmentPath,
-      options.map(o => new util.HashMap[String, String](o.asJava)).getOrElse(new util.HashMap()))
+    val store = new SegmentFileStore(carbonTable.getTablePath, detail.getSegmentFile)
+    val location = store.getLocationMap.asScala.head._1
+    val destLocation = CarbonTablePath.getSegmentPath(carbonTable.getTablePath, segmentName)
+    val configuration = sparkSession.sessionState.newHadoopConf()
+    FileFactory.mkdirs(destLocation, configuration)
+    val segment = new Segment(segmentName,
+      detail.getSegmentFile,
+      location,
+      store.getSegmentFile.getOptions)
+
+    new CarbonCopyFilesRDD(sparkSession, segment, destLocation).collect()
+
+    val segmentDest = new Segment(segmentName,
+      detail.getSegmentFile,
+      destLocation,
+      store.getSegmentFile.getOptions)
+
     val isSuccess =
-      SegmentFileStore.writeSegmentFile(carbonTable, segment)
+      SegmentFileStore.writeSegmentFile(carbonTable, segmentDest)
 
     if (isSuccess) {
       SegmentFileStore.updateSegmentFile(
         carbonTable,
-        model.getSegmentId,
-        segment.getSegmentFileName,
+        segmentName,
+        segmentDest.getSegmentFileName,
         carbonTable.getCarbonTableIdentifier.getTableId,
-        new SegmentFileStore(carbonTable.getTablePath, segment.getSegmentFileName),
+        new SegmentFileStore(carbonTable.getTablePath, segmentDest.getSegmentFileName),
         SegmentStatus.SUCCESS)
+      FileFactory.deleteAllCarbonFilesOfDir(FileFactory.getCarbonFile(location, configuration))
     } else {
-      throw new AnalysisException("Adding segment with path failed.")
+      throw new AnalysisException("Move segment with dest path failed.")
     }
     Seq.empty
   }
 
-  override protected def opName: String = "ADD SEGMENT WITH PATH"
+  override protected def opName: String =
+    "ALTER SEGMENT ON TABLE tableName MOVE SEGMENT 'segmentID'"
 }
