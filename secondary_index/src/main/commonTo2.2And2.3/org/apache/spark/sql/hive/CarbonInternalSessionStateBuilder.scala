@@ -11,6 +11,8 @@
  */
 package org.apache.spark.sql.hive
 
+import java.util.concurrent.Callable
+
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.spark.acl.CarbonUserGroupInformation
@@ -20,7 +22,7 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql._
 import org.apache.spark.sql.acl._
-import org.apache.spark.sql.catalyst.TableIdentifier
+import org.apache.spark.sql.catalyst.{QualifiedTableName,TableIdentifier}
 import org.apache.spark.sql.catalyst.analysis.{Analyzer, FunctionRegistry}
 import org.apache.spark.sql.catalyst.catalog._
 import org.apache.spark.sql.catalyst.expressions.Expression
@@ -106,7 +108,7 @@ class CarbonACLSessionCatalog(
   }
 
   override def lookupRelation(name: TableIdentifier): LogicalPlan = {
-    val rtnRelation: LogicalPlan =
+    var rtnRelation: LogicalPlan =
       try {
         super.lookupRelation(name)
       } catch {
@@ -117,12 +119,19 @@ class CarbonACLSessionCatalog(
           throw ex
       }
     val isRelationRefreshed =
-      CarbonSessionUtil.refreshRelation(rtnRelation, name)(sparkSession)
+      CarbonSessionUtil.refreshRelationAndSetStats(rtnRelation, name)(sparkSession)
     if (isRelationRefreshed) {
-      super.lookupRelation(name)
-    } else {
-      rtnRelation
+      rtnRelation = super.lookupRelation(name)
+      // Reset the stats after lookup.
+      CarbonSessionUtil.refreshRelationAndSetStats(rtnRelation, name)(sparkSession)
     }
+    rtnRelation
+  }
+
+  override def getCachedPlan(t: QualifiedTableName,
+      c: Callable[LogicalPlan]): LogicalPlan = {
+    val plan = super.getCachedPlan(t, c)
+    CarbonSessionUtil.updateCachedPlan(plan)
   }
 
   /**
