@@ -14,21 +14,24 @@ package org.apache.carbondata.spark.rdd
 import java.util.concurrent.Callable
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable.ListBuffer
 
 import org.apache.spark.rdd.CarbonMergeFilesRDD
 import org.apache.spark.sql.{CarbonEnv, SQLContext}
 import org.apache.spark.sql.command.SecondaryIndexModel
 import org.apache.spark.sql.hive.CarbonRelation
-import org.apache.spark.sql.util.SparkSQLUtil
+import org.apache.spark.sql.util.{CarbonException, SparkSQLUtil}
 import org.apache.spark.util.CarbonInternalMergerUtil
 import org.apache.spark.util.CarbonInternalScalaUtil
 import org.apache.spark.util.si.FileInternalUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
+import org.apache.carbondata.core.locks.{CarbonLockFactory, ICarbonLock, LockUsage}
 import org.apache.carbondata.core.metadata.{CarbonTableIdentifier, SegmentFileStore}
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.statusmanager.{SegmentStatus, SegmentStatusManager}
 import org.apache.carbondata.core.util.{CarbonProperties, ThreadLocalSessionInfo}
+import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.events.{LoadTableSIPostExecutionEvent, LoadTableSIPreExecutionEvent, OperationContext, OperationListenerBus}
 import org.apache.carbondata.processing.loading.TableProcessingOperations
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel
@@ -78,9 +81,28 @@ object SecondaryIndexCreator {
     OperationListenerBus.getInstance
       .fireEvent(loadTableSIPreExecutionEvent, operationContext)
 
+    var segmentLocks: ListBuffer[ICarbonLock] = ListBuffer.empty
+
     try {
-      SegmentStatusManager.deleteLoadsAndUpdateMetadata(indexCarbonTable, false, null)
-      TableProcessingOperations.deletePartialLoadDataIfExist(indexCarbonTable, false)
+      for (eachSegment <- secondaryIndexModel.validSegments) {
+        // take segment lock before starting the actual load, so that the clearing the invalid
+        // segments in the parallel load to SI will not clear the current valid loading segment
+        // and this new segment will not be added as failed segment in
+        // SILoadEventListenerForFailedSegments as the failed segments list
+        // is validated based on the segment lock
+        val segmentLock = CarbonLockFactory
+          .getCarbonLockObj(indexCarbonTable.getAbsoluteTableIdentifier,
+            CarbonTablePath.addSegmentPrefix(eachSegment) + LockUsage.LOCK)
+        if (segmentLock.lockWithRetries()) {
+          segmentLocks += segmentLock
+        } else {
+          LOGGER.error(s"Not able to acquire the segment lock for table" +
+                       s" ${indexCarbonTable.getTableUniqueName} for segment: $eachSegment")
+          CarbonException.analysisException(
+            s"Segment $eachSegment is already locked for load. Please try after some time.")
+        }
+      }
+
       FileInternalUtil
         .updateTableStatus(secondaryIndexModel.validSegments,
           secondaryIndexModel.carbonLoadModel.getDatabaseName,
@@ -268,19 +290,23 @@ object SecondaryIndexCreator {
               String](),
             indexCarbonTable,
             sc.sparkSession)
-        try {
-          SegmentStatusManager
-            .deleteLoadsAndUpdateMetadata(indexCarbonTable, false, null)
-          TableProcessingOperations.deletePartialLoadDataIfExist(indexCarbonTable, false)
-        } catch {
-          case e: Exception =>
-            LOGGER
-              .error("Problem while cleaning up stale folder for index table " +
-                        secondaryIndexModel.secondaryIndex.indexTableName, e)
-        }
         LOGGER.error(ex)
         throw ex
     } finally {
+      // release the segment locks
+      segmentLocks.foreach(segmentLock => {
+        segmentLock.unlock()
+      })
+      try {
+        SegmentStatusManager
+          .deleteLoadsAndUpdateMetadata(indexCarbonTable, false, null)
+        TableProcessingOperations.deletePartialLoadDataIfExist(indexCarbonTable, false)
+      } catch {
+        case e: Exception =>
+          LOGGER
+            .error("Problem while cleaning up stale folder for index table " +
+                   secondaryIndexModel.secondaryIndex.indexTableName, e)
+      }
       // close the executor service
       if (null != executorService) {
         executorService.shutdownNow()
