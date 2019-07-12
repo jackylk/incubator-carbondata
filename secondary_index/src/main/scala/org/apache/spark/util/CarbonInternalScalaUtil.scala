@@ -281,8 +281,14 @@ object CarbonInternalScalaUtil {
       .mutable.ListBuffer[String]()
 
     if (isLoadToFailedSISegments && null != failedLoadMetaDataDetils) {
+      val metadata = CarbonInternalLoaderUtil
+        .getListOfValidSlices(SegmentStatusManager.readLoadMetadata(indexTable.getMetadataPath))
       failedLoadMetaDataDetils.asScala.foreach(loadMetaDetail => {
-        segmentsToReload.append(loadMetaDetail.getLoadName)
+        // check whether this segment is valid or invalid, if it is present in the valid list
+        // then don't consider it for reloading
+        if (!metadata.contains(loadMetaDetail.getLoadName)) {
+          segmentsToReload.append(loadMetaDetail.getLoadName)
+        }
       })
       LOGGER.info(
         s"SI segments to be reloaded for index table: ${

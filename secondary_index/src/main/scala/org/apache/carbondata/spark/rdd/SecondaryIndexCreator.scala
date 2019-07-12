@@ -11,6 +11,7 @@
  */
 package org.apache.carbondata.spark.rdd
 
+import java.util
 import java.util.concurrent.Callable
 
 import scala.collection.JavaConverters._
@@ -82,6 +83,8 @@ object SecondaryIndexCreator {
       .fireEvent(loadTableSIPreExecutionEvent, operationContext)
 
     var segmentLocks: ListBuffer[ICarbonLock] = ListBuffer.empty
+    val validSegments: java.util.List[String] = new util.ArrayList[String]()
+    var validSegmentList = List.empty[String]
 
     try {
       for (eachSegment <- secondaryIndexModel.validSegments) {
@@ -95,16 +98,24 @@ object SecondaryIndexCreator {
             CarbonTablePath.addSegmentPrefix(eachSegment) + LockUsage.LOCK)
         if (segmentLock.lockWithRetries()) {
           segmentLocks += segmentLock
+          // add only the segments for which we are able to get segments lock and trigger
+          // loading for these segments. if some segments are skippped,
+          // skipped segments load will be handled in SILoadEventListenerForFailedSegments
+          validSegments.add(eachSegment)
         } else {
           LOGGER.error(s"Not able to acquire the segment lock for table" +
-                       s" ${indexCarbonTable.getTableUniqueName} for segment: $eachSegment")
-          CarbonException.analysisException(
-            s"Segment $eachSegment is already locked for load. Please try after some time.")
+                       s" ${indexCarbonTable.getTableUniqueName} for segment: $eachSegment. " +
+                       s"Skipping this segment from loading.")
         }
       }
 
+      validSegmentList = validSegments.asScala.toList
+
+      LOGGER.info(s"${indexCarbonTable.getTableUniqueName}: SI loading is started " +
+              s"for segments: $validSegmentList")
+
       FileInternalUtil
-        .updateTableStatus(secondaryIndexModel.validSegments,
+        .updateTableStatus(validSegmentList,
           secondaryIndexModel.carbonLoadModel.getDatabaseName,
           secondaryIndexModel.secondaryIndex.indexTableName,
           SegmentStatus.INSERT_IN_PROGRESS,
@@ -130,7 +141,7 @@ object SecondaryIndexCreator {
         }
       }
       var futureObjectList = List[java.util.concurrent.Future[Array[(String, Boolean)]]]()
-      for (eachSegment <- secondaryIndexModel.validSegments) {
+      for (eachSegment <- validSegmentList) {
         val segId = eachSegment
         futureObjectList :+= executorService.submit(new Callable[Array[(String, Boolean)]] {
           @throws(classOf[Exception])
@@ -280,7 +291,7 @@ object SecondaryIndexCreator {
     } catch {
       case ex: Exception =>
         FileInternalUtil
-          .updateTableStatus(secondaryIndexModel.validSegments,
+          .updateTableStatus(validSegmentList,
             secondaryIndexModel.carbonLoadModel.getDatabaseName,
             secondaryIndexModel.secondaryIndex.indexTableName,
             SegmentStatus.MARKED_FOR_DELETE,
@@ -298,9 +309,11 @@ object SecondaryIndexCreator {
         segmentLock.unlock()
       })
       try {
-        SegmentStatusManager
-          .deleteLoadsAndUpdateMetadata(indexCarbonTable, false, null)
-        TableProcessingOperations.deletePartialLoadDataIfExist(indexCarbonTable, false)
+        if (!isCompactionCall) {
+          SegmentStatusManager
+            .deleteLoadsAndUpdateMetadata(indexCarbonTable, false, null)
+          TableProcessingOperations.deletePartialLoadDataIfExist(indexCarbonTable, false)
+        }
       } catch {
         case e: Exception =>
           LOGGER

@@ -30,6 +30,7 @@ import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.events.{Event, OperationContext, OperationEventListener}
 import org.apache.carbondata.processing.loading.events.LoadEvents.LoadTablePostStatusUpdateEvent
 import org.apache.carbondata.spark.core.metadata.IndexMetadata
+import org.apache.carbondata.spark.spark.load.CarbonInternalLoaderUtil
 
 /**
  * This Listener is to load the data to failed segments of Secondary index table(s)
@@ -105,21 +106,11 @@ class SILoadEventListenerForFailedSegments extends OperationEventListener with L
                             CarbonTablePath.addSegmentPrefix(loadMetaDetail.getLoadName) +
                             LockUsage.LOCK)
                         try {
-                          if (segmentLock.lockWithRetries(1, 5)) {
+                          if (segmentLock.lockWithRetries(1, 0)) {
                             LOGGER
                               .info("SIFailedLoadListener: Acquired segment lock on segment:" +
                                     loadMetaDetail.getLoadName)
-                            val currentDetails = SegmentStatusManager
-                              .readLoadMetadata(indexTable.getMetadataPath)
-                            val currentLoadDetail = currentDetails.toList
-                              .filter(oneLoad => oneLoad.getLoadName == loadMetaDetail.getLoadName)
-                              .head
-                            if (currentLoadDetail.getSegmentStatus ==
-                                SegmentStatus.INSERT_IN_PROGRESS ||
-                                currentLoadDetail.getSegmentStatus ==
-                                SegmentStatus.INSERT_OVERWRITE_IN_PROGRESS) {
-                              failedLoadMetadataDetails.add(currentLoadDetail)
-                            }
+                            failedLoadMetadataDetails.add(loadMetaDetail)
                           }
                         } finally {
                           segmentLock.unlock()
@@ -129,6 +120,18 @@ class SILoadEventListenerForFailedSegments extends OperationEventListener with L
                         }
                       }
                   }
+                  // check for the skipped segments. compare the main table and SI table table
+                  // status file and get the skipped segments if any
+                  CarbonInternalLoaderUtil.getListOfValidSlices(mainTableDetails).asScala
+                    .foreach(metadataDetail => {
+                      val detail = details
+                        .filter(metadata => metadata.getLoadName.equals(metadataDetail))
+                      if (null == detail || detail.length == 0) {
+                        val newDetails = new LoadMetadataDetails
+                        newDetails.setLoadName(metadataDetail)
+                        failedLoadMetadataDetails.add(newDetails)
+                      }
+                    })
                   try {
                     if (!failedLoadMetadataDetails.isEmpty) {
                       CarbonInternalScalaUtil

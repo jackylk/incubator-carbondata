@@ -93,8 +93,14 @@ private[sql] case class LoadDataForSecondaryIndex(indexModel: SecondaryIndex) ex
     }
     if (!carbonLoadModel.getLoadMetadataDetails.isEmpty) {
       try {
+        val metastore = CarbonEnv.getInstance(sparkSession).carbonMetaStore
+        indexCarbonTable = metastore
+          .lookupRelation(Some(carbonLoadModel.getDatabaseName),
+            secondaryIndex.indexTableName)(sparkSession).asInstanceOf[CarbonRelation].carbonTable
         // get list of valid segments for which secondary index need to be created
-        val validSegments = CarbonInternalLoaderUtil.getListOfValidSlices(details).asScala.toList
+        val validSegments = CarbonInternalLoaderUtil
+          .getListOfValidSlices(getSegmentsToBeLoadedToSI(details, indexCarbonTable).asScala
+            .toArray).asScala.toList
         if (validSegments.nonEmpty) {
           val segmentIdToLoadStartTimeMapping:
             scala.collection.mutable.Map[String, java.lang.Long] =
@@ -128,6 +134,28 @@ private[sql] case class LoadDataForSecondaryIndex(indexModel: SecondaryIndex) ex
       val metadataPath = model.getCarbonDataLoadSchema.getCarbonTable.getMetadataPath
       val details = SegmentStatusManager.readLoadMetadata(metadataPath)
       details
+    }
+
+    /**
+     * Get only the segments which are to be loaded, not all the segments
+     * from the main table metadata details
+     *
+     * @param details
+     * @param indexTable
+     * @return
+     */
+    def getSegmentsToBeLoadedToSI(details: Array[LoadMetadataDetails],
+      indexTable: CarbonTable): java.util.List[LoadMetadataDetails] = {
+      val loadMetadataDetails: java.util.List[LoadMetadataDetails] = new java.util
+        .ArrayList[LoadMetadataDetails]
+      val metadata = (SegmentStatusManager.readLoadMetadata(indexTable.getMetadataPath).toSeq)
+        .map(loadMetadataDetail => loadMetadataDetail.getLoadName)
+      details.foreach(loadMetadataDetail => {
+        if (!metadata.contains(loadMetadataDetail.getLoadName)) {
+          loadMetadataDetails.add(loadMetadataDetail)
+        }
+      })
+      loadMetadataDetails
     }
   }
 }
