@@ -410,10 +410,19 @@ public class SegmentFileStore {
           // if the segments is in the list of marked for delete then update the status.
           if (segmentId.equals(detail.getLoadName())) {
             detail.setSegmentFile(segmentFile);
-            detail.setIndexSize(String.valueOf(CarbonUtil
-                .getCarbonIndexSize(segmentFileStore, segmentFileStore.getLocationMap())));
             if (segmentStatus != null) {
+              HashMap<String, Long> dataSizeAndIndexSize =
+                  CarbonUtil.getDataSizeAndIndexSize(segmentFileStore);
+              detail.setDataSize(
+                  dataSizeAndIndexSize.get(CarbonCommonConstants.CARBON_TOTAL_DATA_SIZE)
+                      .toString());
+              detail.setIndexSize(
+                  dataSizeAndIndexSize.get(CarbonCommonConstants.CARBON_TOTAL_INDEX_SIZE)
+                      .toString());
               detail.setSegmentStatus(segmentStatus);
+            } else {
+              detail.setIndexSize(String.valueOf(CarbonUtil
+                  .getCarbonIndexSize(segmentFileStore, segmentFileStore.getLocationMap())));
             }
             break;
           }
