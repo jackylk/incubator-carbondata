@@ -101,8 +101,19 @@ class AddSegmentTestCase extends QueryTest with BeforeAndAfterAll {
     checkAnswer(sql("select count(*) from addsegment1"), Seq(Row(10)))
 
     sql(s"alter table addsegment1 add segment options('path'='$newPath')").show()
+    sql("show segments addsegment1 extended").show(false)
+    var segments = sql("show segments addsegment1 extended").collect()
+    assert(segments(0).getString(8).equals(newPath))
     checkAnswer(sql("select count(*) from addsegment1"), Seq(Row(20)))
+
     sql("alter table addsegment1 move segment '2'")
+    sql("show segments addsegment1 extended").show(false)
+    segments = sql("show segments addsegment1 extended").collect()
+
+    val folder = FileFactory.getCarbonFile(newPath)
+    FileFactory.deleteAllCarbonFilesOfDir(folder)
+
+    assert(segments(0).getString(8).equals(CarbonTablePath.getSegmentPath(table.getTablePath, "2")))
     checkAnswer(sql("select count(*) from addsegment1"), Seq(Row(20)))
     sql("select * from addsegment1").show()
   }

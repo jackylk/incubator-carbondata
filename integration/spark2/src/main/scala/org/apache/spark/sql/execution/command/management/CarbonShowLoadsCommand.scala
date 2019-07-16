@@ -17,6 +17,8 @@
 
 package org.apache.spark.sql.execution.command.management
 
+import scala.collection.mutable.ArrayBuffer
+
 import org.apache.spark.sql.{CarbonEnv, Row, SparkSession}
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
 import org.apache.spark.sql.execution.command.{Checker, DataCommand}
@@ -29,31 +31,36 @@ case class CarbonShowLoadsCommand(
     databaseNameOp: Option[String],
     tableName: String,
     limit: Option[String],
-    showHistory: Boolean = false)
+    showHistory: Boolean = false,
+    extended: Boolean = false)
   extends DataCommand {
 
   // add new columns of show segments at last
   override def output: Seq[Attribute] = {
-    if (showHistory) {
-      Seq(AttributeReference("SegmentSequenceId", StringType, nullable = false)(),
-        AttributeReference("Status", StringType, nullable = false)(),
-        AttributeReference("Load Start Time", StringType, nullable = false)(),
-        AttributeReference("Load End Time", StringType, nullable = true)(),
-        AttributeReference("Merged To", StringType, nullable = false)(),
-        AttributeReference("File Format", StringType, nullable = false)(),
-        AttributeReference("Visibility", StringType, nullable = false)(),
-        AttributeReference("Data Size", StringType, nullable = false)(),
-        AttributeReference("Index Size", StringType, nullable = false)())
+    var base = ArrayBuffer(
+      AttributeReference("SegmentId", StringType, nullable = false)(),
+      AttributeReference("Status", StringType, nullable = false)(),
+      AttributeReference("Load Start Time", StringType, nullable = false)(),
+      AttributeReference("Load End Time", StringType, nullable = true)(),
+      AttributeReference("Data Size", StringType, nullable = false)(),
+      AttributeReference("Index Size", StringType, nullable = false)())
+
+    base = if (showHistory) {
+      base ++= Seq(AttributeReference("Visibility", StringType, nullable = false)())
     } else {
-      Seq(AttributeReference("SegmentSequenceId", StringType, nullable = false)(),
-        AttributeReference("Status", StringType, nullable = false)(),
-        AttributeReference("Load Start Time", StringType, nullable = false)(),
-        AttributeReference("Load End Time", StringType, nullable = true)(),
+      base
+    }
+
+    base = if (extended) {
+      base ++= Seq(
         AttributeReference("Merged To", StringType, nullable = false)(),
         AttributeReference("File Format", StringType, nullable = false)(),
-        AttributeReference("Data Size", StringType, nullable = false)(),
-        AttributeReference("Index Size", StringType, nullable = false)())
+        AttributeReference("Location", StringType, nullable = false)())
+    } else {
+      base
     }
+
+    base
   }
 
   override def processData(sparkSession: SparkSession): Seq[Row] = {
@@ -66,7 +73,8 @@ case class CarbonShowLoadsCommand(
     CarbonStore.showSegments(
       limit,
       carbonTable.getTablePath,
-      showHistory
+      showHistory,
+      extended
     )
   }
 

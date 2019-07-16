@@ -544,14 +544,21 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
         }
     }
 
+  /**
+   * SHOW [HISTORY] SEGMENTS [FOR TABLE] [dbName.]tableName [EXTENDED] [LIMIT number]
+   *   -history: show all history segments, even for the ones whose data is deleted by CLEAN FILES
+   *   -extended: show more information for each segment, including format, location, etc.
+   */
   protected lazy val showLoads: Parser[LogicalPlan] =
-    (SHOW ~> opt(HISTORY) <~ SEGMENTS <~ FOR <~ TABLE) ~ (ident <~ ".").? ~ ident ~
+    (SHOW ~> opt(HISTORY) <~ SEGMENTS <~ opt(FOR <~ TABLE)) ~
+    (ident <~ ".").? ~ ident ~
+    opt(EXTENDED) ~
     (LIMIT ~> numericLit).? <~
     opt(";") ^^ {
-      case showHistory ~ databaseName ~ tableName ~ limit =>
+      case showHistory ~ databaseName ~ tableName ~ extended ~ limit =>
         CarbonShowLoadsCommand(
           convertDbNameToLowerCase(databaseName), tableName.toLowerCase(), limit,
-          showHistory.isDefined)
+          showHistory.isDefined, extended.isDefined)
     }
 
   protected lazy val showCache: Parser[LogicalPlan] =
