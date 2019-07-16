@@ -73,9 +73,10 @@ case class CarbonMoveExternalLoadCommand(
       store.getSegmentFile.getOptions)
 
     new CarbonCopyFilesRDD(sparkSession, segment, destLocation).collect()
-
+    store.getSegmentFile.getOptions.put("path", destLocation)
     val segmentDest = new Segment(segmentName,
-      detail.getSegmentFile,
+      SegmentFileStore.genSegmentFileName(detail.getLoadName,
+        System.nanoTime().toString) + CarbonTablePath.SEGMENT_EXT,
       destLocation,
       store.getSegmentFile.getOptions)
 
