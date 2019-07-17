@@ -20,8 +20,10 @@ package org.apache.carbondata.api
 import java.lang.Long
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable.ArrayBuffer
 
 import org.apache.spark.sql.Row
+import org.apache.spark.sql.catalyst.expressions.GenericRow
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.util.CarbonException
 import org.apache.spark.unsafe.types.UTF8String
@@ -47,7 +49,8 @@ object CarbonStore {
   def showSegments(
       limit: Option[String],
       tablePath: String,
-      showHistory: Boolean): Seq[Row] = {
+      showHistory: Boolean,
+      extended: Boolean): Seq[Row] = {
     val metaFolder = CarbonTablePath.getMetadataPath(tablePath)
     val loadMetadataDetailsArray = if (showHistory) {
       SegmentStatusManager.readLoadMetadata(metaFolder) ++
@@ -117,28 +120,32 @@ object CarbonStore {
               if (load.getIndexSize == null) -1L else load.getIndexSize.toLong)
           }
 
-          if (showHistory) {
-            Row(
-              load.getLoadName,
-              load.getSegmentStatus.getMessage,
-              startTime,
-              endTime,
-              mergedTo,
-              load.getFileFormat.toString,
-              load.getVisibility,
-              Strings.formatSize(dataSize.toFloat),
-              Strings.formatSize(indexSize.toFloat))
+          val segmentLocation = CarbonTablePath.getSegmentPath(tablePath, load)
+
+          var values = ArrayBuffer(
+            load.getLoadName,
+            load.getSegmentStatus.getMessage,
+            startTime,
+            endTime,
+            Strings.formatSize(dataSize.toFloat),
+            Strings.formatSize(indexSize.toFloat))
+
+          values = if (showHistory) {
+            values ++= Seq(load.getVisibility)
           } else {
-            Row(
-              load.getLoadName,
-              load.getSegmentStatus.getMessage,
-              startTime,
-              endTime,
+            values
+          }
+
+          values = if (extended) {
+            values ++= Seq(
               mergedTo,
               load.getFileFormat.toString,
-              Strings.formatSize(dataSize.toFloat),
-              Strings.formatSize(indexSize.toFloat))
+              segmentLocation)
+          } else {
+            values
           }
+
+          new GenericRow(values.toArray.asInstanceOf[Array[Any]])
         }.toSeq
     } else {
       Seq.empty

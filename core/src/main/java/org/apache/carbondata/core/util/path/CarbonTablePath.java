@@ -17,6 +17,7 @@
 package org.apache.carbondata.core.util.path;
 
 import java.io.File;
+import java.io.IOException;
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.filesystem.CarbonFile;
@@ -24,6 +25,8 @@ import org.apache.carbondata.core.datastore.filesystem.CarbonFileFilter;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.locks.LockUsage;
 import org.apache.carbondata.core.metadata.ColumnarFormatVersion;
+import org.apache.carbondata.core.metadata.SegmentFileStore;
+import org.apache.carbondata.core.statusmanager.LoadMetadataDetails;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -295,6 +298,22 @@ public class CarbonTablePath {
    */
   public static String getSegmentPath(String tablePath, String segmentId) {
     return getPartitionDir(tablePath) + File.separator + SEGMENT_PREFIX + segmentId;
+  }
+
+  public static String getSegmentPath(String tablePath, LoadMetadataDetails load)
+      throws IOException {
+    SegmentFileStore.SegmentFile segment = SegmentFileStore.readSegmentFile(
+        getSegmentFilePath(tablePath, load.getSegmentFile()));
+    if (segment != null) {
+      if (segment.getLocationMap().values().toArray(
+          new SegmentFileStore.FolderDetails[0])[0].isRelative()) {
+        return getSegmentPath(tablePath, load.getLoadName());
+      } else {
+        return segment.getOptions().get("path");
+      }
+    } else {
+      return "NA";
+    }
   }
 
   /**
