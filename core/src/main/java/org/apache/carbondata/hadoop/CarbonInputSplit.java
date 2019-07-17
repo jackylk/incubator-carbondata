@@ -390,11 +390,6 @@ public class CarbonInputSplit extends FileSplit
       validBlockletIds.add((int) in.readShort());
     }
     this.isLegacyStore = in.readBoolean();
-    int numberOfDeleteDeltaFiles = in.readInt();
-    deleteDeltaFiles = new String[numberOfDeleteDeltaFiles];
-    for (int i = 0; i < numberOfDeleteDeltaFiles; i++) {
-      deleteDeltaFiles[i] = in.readUTF();
-    }
   }
 
   @Override public void write(DataOutput out) throws IOException {
@@ -409,9 +404,6 @@ public class CarbonInputSplit extends FileSplit
       writeDeleteDeltaFile(out);
       out.writeUTF(bucketId);
       out.write(serializeData, offset, actualLen);
-      // delete delta will written in main driver, so after writing serialize
-      // data in case of index server write the delete delta file
-      writeDeleteDeltaFile(out);
       return;
     }
     // please refer writeDetailInfo doc
@@ -452,7 +444,6 @@ public class CarbonInputSplit extends FileSplit
       out.writeShort(blockletId);
     }
     out.writeBoolean(isLegacyStore);
-    writeDeleteDeltaFile(out);
   }
 
   private void writeDeleteDeltaFile(DataOutput out) throws IOException {

@@ -91,7 +91,7 @@ public class BlockletDataMapModel extends DataMapModel {
   public List<DataFileFooter> getIndexInfos() {
     return indexInfos;
   }
-  
+
   public boolean isSerializeDmStore() {
     return serializeDmStore;
   }

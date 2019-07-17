@@ -296,7 +296,7 @@ public class BlockletDataMapIndexStore
       final BlockletDataMapModel blockletDataMapModel = new BlockletDataMapModel(carbonTable,
           identifier.getIndexFilePath() + CarbonCommonConstants.FILE_SEPARATOR + identifier
               .getIndexFileName(), indexFileStore.getFileData(identifier.getIndexFileName()),
-      blockMetaInfoMap, identifier.getSegmentId(), addTableBlockToUnsafe, configuration,
+          blockMetaInfoMap, identifier.getSegmentId(), addTableBlockToUnsafe, configuration,
           serializeDmStore);
       blockletDataMapModel.setIndexInfos(indexInfos);
       dataMap.init(blockletDataMapModel);
