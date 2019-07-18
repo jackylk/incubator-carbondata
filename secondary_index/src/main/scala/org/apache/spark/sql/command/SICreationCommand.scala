@@ -41,6 +41,7 @@ import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
 import org.apache.carbondata.events.{CreateTablePostExecutionEvent, CreateTablePreExecutionEvent, OperationContext, OperationListenerBus}
 import org.apache.carbondata.spark.core.metadata.IndexMetadata
 import org.apache.carbondata.spark.spark.indextable.{IndexTableInfo, IndexTableUtil}
+import org.apache.carbondata.spark.spark.load.CarbonInternalLoaderUtil
 import org.apache.carbondata.spark.spark.secondaryindex.exception.IndexTableExistException
 
 class ErrorMessage(message: String) extends Exception(message) {
@@ -349,10 +350,16 @@ class ErrorMessage(message: String) extends Exception(message) {
         if (isCreateSIndex) {
           LoadDataForSecondaryIndex(indexModel).run(sparkSession)
         }
-        // enable the SI table
-        sparkSession.sql(
-          s"""ALTER TABLE $databaseName.$indexTableName SET
-             |SERDEPROPERTIES ('isSITableEnabled' = 'true')""".stripMargin)
+
+        val isMaintableSegEqualToSISegs = CarbonInternalLoaderUtil
+          .checkMainTableSegEqualToSISeg(carbonTable.getMetadataPath,
+            indexCarbonTable.getMetadataPath)
+        if (isMaintableSegEqualToSISegs) {
+          // enable the SI table
+          sparkSession.sql(
+            s"""ALTER TABLE $databaseName.$indexTableName SET
+               |SERDEPROPERTIES ('isSITableEnabled' = 'true')""".stripMargin)
+        }
         val createTablePostExecutionEvent: CreateTablePostExecutionEvent =
           new CreateTablePostExecutionEvent(sparkSession, tableIdentifier)
         OperationListenerBus.getInstance.fireEvent(createTablePostExecutionEvent, operationContext)

@@ -96,10 +96,10 @@ object SecondaryIndexCreator {
         val segmentLock = CarbonLockFactory
           .getCarbonLockObj(indexCarbonTable.getAbsoluteTableIdentifier,
             CarbonTablePath.addSegmentPrefix(eachSegment) + LockUsage.LOCK)
-        if (segmentLock.lockWithRetries()) {
+        if (segmentLock.lockWithRetries(1, 0)) {
           segmentLocks += segmentLock
           // add only the segments for which we are able to get segments lock and trigger
-          // loading for these segments. if some segments are skippped,
+          // loading for these segments. if some segments are skipped,
           // skipped segments load will be handled in SILoadEventListenerForFailedSegments
           validSegments.add(eachSegment)
         } else {

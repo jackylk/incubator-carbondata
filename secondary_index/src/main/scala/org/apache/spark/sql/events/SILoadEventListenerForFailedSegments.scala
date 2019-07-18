@@ -83,6 +83,11 @@ class SILoadEventListenerForFailedSegments extends OperationEventListener with L
                       indexTableName)(sparkSession).asInstanceOf[CarbonRelation].carbonTable
 
                   var details = SegmentStatusManager.readLoadMetadata(indexTable.getMetadataPath)
+                  // If it empty, then no need to do further computations because the
+                  // tabletstatus might not have been created and hence next load will take care
+                  if (details.isEmpty) {
+                    return
+                  }
 
                   val failedLoadMetadataDetails: java.util.List[LoadMetadataDetails] = new util
                   .ArrayList[LoadMetadataDetails]()
@@ -129,6 +134,7 @@ class SILoadEventListenerForFailedSegments extends OperationEventListener with L
                       if (null == detail || detail.length == 0) {
                         val newDetails = new LoadMetadataDetails
                         newDetails.setLoadName(metadataDetail)
+                        LOGGER.error("Added in SILoadFailedSegment " + newDetails.getLoadName)
                         failedLoadMetadataDetails.add(newDetails)
                       }
                     })
@@ -144,19 +150,17 @@ class SILoadEventListenerForFailedSegments extends OperationEventListener with L
 
                       // get the current load metadata details of the index table
                       details = SegmentStatusManager.readLoadMetadata(indexTable.getMetadataPath)
-
-                      // check if there are any IN_PROGRESS segments in the index table
-                      val isInProgressSegmentsExists = (details
-                        .filter(loadMetadataDetail => loadMetadataDetail.getSegmentStatus ==
-                                                      SegmentStatus.INSERT_IN_PROGRESS)).nonEmpty
-                      // only if there is no IN_PROGRESS segments enable the SI table
-                      if (!isInProgressSegmentsExists) {
-                        // enable the SI table if it was disabled earlier due to failure during SI
-                        // creation time
-                        sparkSession.sql(
-                          s"""ALTER TABLE ${carbonLoadModel.getDatabaseName}.$indexTableName SET
-                              |SERDEPROPERTIES ('isSITableEnabled' = 'true')""".stripMargin)
-                      }
+                    }
+                    // Only if the valid segments of maintable match the valid segments of SI
+                    // table then we can enable the SI for query
+                    if (CarbonInternalLoaderUtil
+                      .checkMainTableSegEqualToSISeg(carbonTable.getMetadataPath,
+                        indexTable.getMetadataPath)) {
+                      // enable the SI table if it was disabled earlier due to failure during SI
+                      // creation time
+                      sparkSession.sql(
+                        s"""ALTER TABLE ${carbonLoadModel.getDatabaseName}.$indexTableName SET
+                           |SERDEPROPERTIES ('isSITableEnabled' = 'true')""".stripMargin)
                     }
                   } catch {
                     case ex: Exception =>

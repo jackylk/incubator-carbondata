@@ -14,6 +14,7 @@ package org.apache.carbondata.spark.spark.load;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -314,6 +315,32 @@ public class CarbonInternalLoaderUtil {
       }
     }
     return tableStatusUpdationStatus;
+  }
+
+  /**
+   * Method to check if main table and SI have same number of valid segments or not
+   *
+   * @param carbonTablePath
+   * @param indexTablePath
+   * @return
+   */
+  public static boolean checkMainTableSegEqualToSISeg(String carbonTablePath,
+      String indexTablePath) {
+    List<String> mainList =
+        getListOfValidSlices(SegmentStatusManager.readLoadMetadata(carbonTablePath));
+    List<String> indexList =
+        getListOfValidSlices(SegmentStatusManager.readLoadMetadata(indexTablePath));
+    Collections.sort(mainList);
+    Collections.sort(indexList);
+    if (indexList.size() != mainList.size()) {
+      return false;
+    }
+    for (int i = 0; i < indexList.size(); i++) {
+      if (!indexList.get(i).equalsIgnoreCase(mainList.get(i))) {
+        return false;
+      }
+    }
+    return true;
   }
 
 }
