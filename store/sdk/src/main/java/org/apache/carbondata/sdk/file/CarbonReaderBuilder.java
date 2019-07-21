@@ -29,6 +29,7 @@ import org.apache.carbondata.common.annotations.InterfaceStability;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datamap.DataMapStoreManager;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
+import org.apache.carbondata.core.metadata.schema.SchemaReader;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.scan.expression.Expression;
 import org.apache.carbondata.core.scan.model.ProjectionDimension;
@@ -39,6 +40,9 @@ import org.apache.carbondata.core.util.CarbonUtil;
 import org.apache.carbondata.core.util.ThreadLocalSessionInfo;
 import org.apache.carbondata.hadoop.CarbonInputSplit;
 import org.apache.carbondata.hadoop.api.CarbonFileInputFormat;
+import org.apache.carbondata.hadoop.api.CarbonTableInputFormat;
+import org.apache.carbondata.hadoop.readsupport.CarbonReadSupport;
+import org.apache.carbondata.hadoop.readsupport.impl.CarbonRowReadSupport;
 import org.apache.carbondata.hadoop.util.CarbonVectorizedRecordReader;
 
 import org.apache.commons.lang3.StringUtils;
@@ -65,6 +69,8 @@ public class CarbonReaderBuilder {
   private InputSplit inputSplit;
   private boolean useArrowReader;
   private List fileLists;
+  private String schemaFilePath;
+  private Class<? extends CarbonReadSupport> readSupportClass;
 
   /**
    * Construct a CarbonReaderBuilder with table path and table name
@@ -129,6 +135,26 @@ public class CarbonReaderBuilder {
     List fileLists = new ArrayList();
     fileLists.add(file);
     return withFileLists(fileLists);
+  }
+
+  /**
+   * set schema file to use
+   * @param schemaFilePath schema file path
+   * @return CarbonReaderBuilder object
+   */
+  public CarbonReaderBuilder withSchemaFile(String schemaFilePath) {
+    this.schemaFilePath = schemaFilePath;
+    return this;
+  }
+
+  /**
+   * set read support class
+   * @param readSupportClass read support class
+   * @return CarbonReaderBuilder object
+   */
+  public CarbonReaderBuilder withReadSupport(Class<? extends CarbonReadSupport> readSupportClass) {
+    this.readSupportClass = readSupportClass;
+    return this;
   }
 
   /**
@@ -241,25 +267,31 @@ public class CarbonReaderBuilder {
       tableName = "UnknownTable" + UUID.randomUUID();
     }
     CarbonTable table;
-    // now always infer schema. TODO:Refactor in next version.
-    if (null == this.fileLists && null == tablePath) {
-      throw new IllegalArgumentException("Please set table path first.");
-    }
-    if (null != this.fileLists) {
-      if (fileLists.size() < 1) {
-        throw new IllegalArgumentException("fileLists must have one file in list as least!");
-      }
-      String commonString = String.valueOf(fileLists.get(0));
-      for (int i = 1; i < fileLists.size(); i++) {
-        commonString = commonString.substring(0, StringUtils.indexOfDifference(commonString,
-            String.valueOf(fileLists.get(i))));
-      }
-      int index = commonString.lastIndexOf("/");
-      commonString = commonString.substring(0, index);
-
-      table = CarbonTable.buildTable(commonString, tableName, hadoopConf);
+    if (schemaFilePath != null) {
+      table = SchemaReader.readCarbonTableFromSchema(schemaFilePath, hadoopConf);
+      table.getTableInfo().setTablePath(tablePath);
+      table.setTransactionalTable(false);
     } else {
-      table = CarbonTable.buildTable(tablePath, tableName, hadoopConf);
+      // infer schema
+      if (null == this.fileLists && null == tablePath) {
+        throw new IllegalArgumentException("Please set table path first.");
+      }
+      if (null != this.fileLists) {
+        if (fileLists.size() < 1) {
+          throw new IllegalArgumentException("fileLists must have one file in list as least!");
+        }
+        String commonString = String.valueOf(fileLists.get(0));
+        for (int i = 1; i < fileLists.size(); i++) {
+          commonString = commonString.substring(0,
+              StringUtils.indexOfDifference(commonString, String.valueOf(fileLists.get(i))));
+        }
+        int index = commonString.lastIndexOf("/");
+        commonString = commonString.substring(0, index);
+
+        table = CarbonTable.buildTable(commonString, tableName, hadoopConf);
+      } else {
+        table = CarbonTable.buildTable(tablePath, tableName, hadoopConf);
+      }
     }
     if (enableBlockletDistribution) {
       // set cache level to blocklet level
@@ -341,6 +373,7 @@ public class CarbonReaderBuilder {
     if (hadoopConf == null) {
       hadoopConf = FileFactory.getConfiguration();
     }
+    CarbonTableInputFormat.setCarbonReadSupport(hadoopConf, readSupportClass);
     final Job job = new Job(new JobConf(hadoopConf));
     CarbonFileInputFormat format = prepareFileInputFormat(job, false, true);
     try {
@@ -370,6 +403,7 @@ public class CarbonReaderBuilder {
     if (hadoopConf == null) {
       hadoopConf = FileFactory.getConfiguration();
     }
+    CarbonTableInputFormat.setCarbonReadSupport(hadoopConf, readSupportClass);
     final Job job = new Job(new JobConf(hadoopConf));
     CarbonFileInputFormat format = prepareFileInputFormat(job, false, true);
     format.setAllColumnProjectionIfNotConfigured(job,

@@ -21,6 +21,7 @@ import java.io.{BufferedWriter, File, FileWriter}
 
 import org.apache.spark.sql.{CarbonEnv, Row}
 import org.apache.spark.sql.test.util.QueryTest
+import org.junit.Assert
 import org.scalatest.BeforeAndAfterAll
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
@@ -70,7 +71,7 @@ class TestSDKWithTransactionalTable extends QueryTest with BeforeAndAfterAll {
     buildTestData
   }
   
-  test("test sdk with transactional table") {
+  test("test sdk with transactional table, read as arrow") {
 
     sql(
       """
@@ -86,20 +87,50 @@ class TestSDKWithTransactionalTable extends QueryTest with BeforeAndAfterAll {
 
     val table = CarbonEnv.getCarbonTable(None, "carbon_load1")(sqlContext.sparkSession)
 
-    val value:ArrowCarbonReader[Array[Object]] =
+    val reader:ArrowCarbonReader[Array[Object]] =
       CarbonReader.builder(table.getTablePath, table.getTableName).buildArrowReader()
 
     val schema = CarbonSchemaReader.readSchema(table.getTablePath)
 
-    val l = value.readArrowBatchAddress(schema)
+    val l = reader.readArrowBatchAddress(schema)
     println(l)
     var count = 0
-    while(value.hasNext) {
-      value.readNextRow()
+    while(reader.hasNext) {
+      reader.readNextRow()
       count += 1
     }
-    value.close()
+    reader.close()
     checkAnswer(sql("select count(*) from carbon_load1"), Seq(Row(count)))
+    sql("DROP TABLE carbon_load1")
+  }
+
+  test("test sdk with transactional table, read as row") {
+
+    sql(
+      """
+        | CREATE TABLE carbon_load1(
+        |   c1 string, c2 string, c3 string, c4 string, c5 string,
+        |   c6 string, c7 int, c8 int, c9 int, c10 int)
+        | STORED AS carbondata
+      """.stripMargin)
+
+    sql(s"LOAD DATA LOCAL INPATH '$filePath' into table carbon_load1 ")
+    sql(s"LOAD DATA LOCAL INPATH '$filePath' into table carbon_load1 ")
+    sql(s"LOAD DATA LOCAL INPATH '$filePath' into table carbon_load1 ")
+
+    val table = CarbonEnv.getCarbonTable(None, "carbon_load1")(sqlContext.sparkSession)
+    val reader = CarbonReader.builder(table.getTablePath, table.getTableName).build()
+
+    var count = 0
+    while ( { reader.hasNext }) {
+      var row = reader.readNextRow.asInstanceOf[Array[AnyRef]]
+      count += 1
+    }
+    reader.close()
+
+
+    checkAnswer(sql("select count(*) from carbon_load1"), Seq(Row(count)))
+    sql("DROP TABLE carbon_load1")
   }
 
   test("test load with binary data") {
