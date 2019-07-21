@@ -17,11 +17,11 @@
 
 package org.apache.spark.sql.leo
 
-import com.huawei.cloud.modelarts.ModelArtsModelTraining
+import com.huawei.cloud.modelarts.ModelArtsModelAPI
 import org.apache.spark.sql.{CarbonSession, SparkSession}
 import org.apache.spark.sql.leo.builtin.LeoUDF
 
-import org.apache.carbondata.ai.ModelTrainingAPI
+import org.apache.carbondata.ai.ModelAPI
 
 object LeoEnv {
   def getOrCreateLeoSession(builder: SparkSession.Builder): SparkSession = {
@@ -41,7 +41,7 @@ object LeoEnv {
     sesssion
   }
 
-  private lazy val modelTrainingAPIInstance = new ModelArtsModelTraining
+  private lazy val modelTrainingAPIInstance = new ModelArtsModelAPI
 
-  def modelTraingAPI: ModelTrainingAPI = modelTrainingAPIInstance
+  def modelTraingAPI: ModelAPI = modelTrainingAPIInstance
 }

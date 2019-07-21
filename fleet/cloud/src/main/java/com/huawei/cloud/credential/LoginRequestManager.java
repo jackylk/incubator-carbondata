@@ -101,7 +101,7 @@ public class LoginRequestManager implements Serializable {
   }
 
   public static Credential getTemporaryAccessKeys(LoginInfo loginInfo, OkHttpClient client)
-      throws Exception {
+      throws IOException {
     String accessJson = "{\n" +
         "    \"auth\": {\n" +
         "        \"identity\": {\n" +
@@ -124,7 +124,7 @@ public class LoginRequestManager implements Serializable {
       AccessInfo accessInfo = gson.fromJson(response.body().string(), AccessInfo.class);
       return accessInfo.getCredential();
     } else {
-      throw new Exception(response.body().string());
+      throw new IOException(response.body().string());
     }
   }
 

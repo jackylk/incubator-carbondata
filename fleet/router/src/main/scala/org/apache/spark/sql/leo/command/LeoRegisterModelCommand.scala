@@ -18,10 +18,12 @@
 package org.apache.spark.sql.leo.command
 
 import scala.collection.JavaConverters._
+import scala.util.control.Breaks
 
 import org.apache.leo.model.job.TrainModelManager
 import org.apache.spark.sql.{AnalysisException, Row, SparkSession}
 import org.apache.spark.sql.execution.command.RunnableCommand
+import org.apache.spark.sql.leo.builtin.MoldelArtsUdf
 import org.apache.spark.sql.leo.{ExperimentStoreManager, LeoEnv}
 
 case class LeoRegisterModelCommand(
@@ -43,14 +45,40 @@ case class LeoRegisterModelCommand(
     val jobDetail = details.find(_.getJobName.equalsIgnoreCase(modelName)).
       getOrElse(throw new AnalysisException(
         "Model with name " + modelName + " doesn't exists on experiment " + experimentName))
-
     val modelId = LeoEnv.modelTraingAPI
       .importModel(jobDetail.getProperties, udfName)
     jobDetail.getProperties.put("model_id", modelId)
+    var loop = new Breaks
+    loop.breakable {
+      while (true) {
+        // wait till status changes to published
+        Thread.sleep(10000)
+        val map = LeoEnv.modelTraingAPI.getModelDetails(modelId)
+        val status = map.get("model_status")
+        if (status != null && status.toString.equalsIgnoreCase("published")) {
+          loop.break()
+        }
+      }
+    }
     jobDetail.getProperties.put("udfName", udfName)
+    Thread.sleep(10000)
+    val serviceId = LeoEnv.modelTraingAPI
+      .deployModel(jobDetail.getProperties, udfName)
+    loop = new Breaks
+    loop.breakable {
+      while (true) {
+        //wait till it is deployed and gets the address.
+        Thread.sleep(10000)
+        val map = LeoEnv.modelTraingAPI.getModelServiceDetails(serviceId)
+        if (map.get("status").equals("running")) {
+          jobDetail.getProperties.put("access_address", map.get("access_address").toString)
+          loop.break()
+        }
+      }
+    }
+    jobDetail.getProperties.put("service_id", serviceId)
     TrainModelManager.updateTrainModel(experimentName, jobDetail)
-    // TODO deploy the model.
-
+    MoldelArtsUdf.register(sparkSession, jobDetail, udfName)
     Seq.empty
   }
 }

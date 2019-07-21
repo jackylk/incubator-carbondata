@@ -22,7 +22,7 @@ import java.io.Serializable;
 import org.apache.carbondata.core.scan.expression.Expression;
 
 /**
- * It holds projection, filterExpression of queryString used in ModelTrainingAPI
+ * It holds projection, filterExpression of queryString used in ModelAPI
  */
 public class DataScan implements Serializable {
 

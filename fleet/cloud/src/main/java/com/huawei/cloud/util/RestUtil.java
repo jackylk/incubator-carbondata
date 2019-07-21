@@ -19,17 +19,12 @@ package com.huawei.cloud.util;
 
 import java.io.IOException;
 
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
+import okhttp3.*;
 
 public class RestUtil {
 
   private static MediaType JSON = MediaType.get("application/json; charset=utf-8");
+  public static MediaType BINARY = MediaType.get("multipart/form-data; boundary=xxBOUNDARYxx");
 
   public static void postAsync(String url, String json, Callback callback, String token,
       OkHttpClient client) {
@@ -46,6 +41,17 @@ public class RestUtil {
   public static Response postSync(String url, String json, String token,
       OkHttpClient client) throws IOException {
     RequestBody body = RequestBody.create(JSON, json);
+    Request.Builder builder = new Request.Builder().url(url).post(body);
+    if (token != null) {
+      builder = builder.addHeader("X-Auth-Token", token);
+    }
+    final Request request = builder.build();
+    Call call = client.newCall(request);
+    return call.execute();
+  }
+
+  public static Response postSync(String url, RequestBody body, String token,
+      OkHttpClient client) throws IOException {
     Request.Builder builder = new Request.Builder().url(url).post(body);
     if (token != null) {
       builder = builder.addHeader("X-Auth-Token", token);

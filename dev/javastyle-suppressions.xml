@@ -39,5 +39,5 @@
     <suppress checks=".*"
               files="com/huawei/cloud/orc/HWOcrClientToken.java"/>
     <suppress checks=".*"
-              files="com/huawei/cloud/modelarts/ModelArtsModelTraining.java"/>
+              files="com/huawei/cloud/modelarts/ModelArtsModelAPI.java"/>
 </suppressions>

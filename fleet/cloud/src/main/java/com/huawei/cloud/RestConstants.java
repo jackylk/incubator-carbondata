@@ -42,6 +42,8 @@ public interface RestConstants {
 
   String MODELARTS_MODEL = "models";
 
+  String MODELARTS_SERVICES = "services";
+
   String SEPARATOR = "/";
 
   String MODELARTS_TRAINING_VERSIONS = "versions";

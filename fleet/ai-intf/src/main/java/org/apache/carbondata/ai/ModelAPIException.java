@@ -14,22 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.carbondata.ai;
 
-import java.io.IOException;
-import java.util.Map;
+public class ModelAPIException extends Exception {
 
-public interface ModelTrainingAPI {
+  public ModelAPIException(String message) {
+    super(message);
+  }
 
-  long startTrainingJob(Map<String, String> options, String modelName,
-      DataScan dataScan);
+  public ModelAPIException(String message, Throwable cause) {
+    super(message, cause);
+  }
 
-  void stopTrainingJob(long jobId) throws IOException;
-
-  Map<String, String> getTrainingJobInfo(long jobId) throws Exception;
-
-  String importModel(Map<String, String> options, String udfName) throws Exception;
-
-  Map<String, String> getModelInfo(String modelId) throws Exception;
+  public ModelAPIException(Throwable cause) {
+    super(cause);
+  }
 }

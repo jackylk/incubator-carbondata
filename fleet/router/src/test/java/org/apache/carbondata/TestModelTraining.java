@@ -212,18 +212,23 @@ public class TestModelTraining {
     carbon.sql("select * from training_info(flower_exp.job1)").show(false);
 
     carbon.sql("REGISTER MODEL flower_exp.job1 AS flower_mod");
-
     carbon.sql("select * from model_info(flower_mod)").show(false);
-
+    carbon.sql("drop table if exists a1.testIMG");
+    carbon.sql("create table a1.testIMG(c1 string, c2 binary)");
+    carbon.sql("LOAD DATA LOCAL INPATH '/home/root1/carbon/carbondata/fleet/router/src/test/resources/img.csv' INTO TABLE a1.testIMG OPTIONS('header'='false','DELIMITER'=',','binary_decoder'='baSe64')").show();
+    carbon.sql("select flower_mod(c2) from a1.testIMG").show(false);
+    carbon.sql("drop table if exists a1.testIMG");
     carbon.sql("drop model if exists job1 on experiment flower_exp");
     carbon.sql("drop experiment if exists flower_exp");
     carbon.sql("drop table if exists a1.test");
     carbon.sql("drop database if exists a1 cascade");
   }
 
+
+
   @AfterClass public static void tearDown() throws IOException {
-    carbon.sql("drop database if exists db cascade");
+//    carbon.sql("drop database if exists db cascade");
     carbon.close();
-    FileUtils.deleteDirectory(new File("./warehouse"));
+//    FileUtils.deleteDirectory(new File("./warehouse"));
   }
 }

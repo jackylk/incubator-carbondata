@@ -16,7 +16,6 @@
  */
 package com.huawei.cloud.modelarts;
 
-import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -224,8 +223,15 @@ public class ModelArtsImportModelVO implements Serializable {
   }
 
   public static String generateJSON(Map<String, String> options, String jobName, Config config,
-      String executionCode) throws IOException {
+      String executionCode) {
     Gson gson = new Gson();
+    ModelArtsImportModelVO modelVO =
+        getModelArtsImportModelVO(options, jobName, config, executionCode, gson);
+    return gson.toJson(modelVO);
+  }
+
+  public static ModelArtsImportModelVO getModelArtsImportModelVO(Map<String, String> options,
+      String jobName, Config config, String executionCode, Gson gson) {
     ModelArtsImportModelVO modelVO = new ModelArtsImportModelVO();
     modelVO.setModel_name(jobName);
     modelVO.setModel_version("0.0.1");
@@ -240,13 +246,16 @@ public class ModelArtsImportModelVO implements Serializable {
     modelVO.setOutput_params(getParameters(config, false));
     modelVO.setModel_algorithm(config.getModel_algorithm());
     modelVO.setModel_metrics(gson.toJson(config.getMetrics()));
-    return gson.toJson(modelVO);
+    return modelVO;
   }
 
   /**
    * Get the OBS path which in terms of http url.
    */
   private static String getObsUrl(String path) {
+    if (path == null || path.isEmpty()) {
+      return path;
+    }
     int index = path.indexOf("/", 1);
     if (index < 0) {
       index = path.length();
@@ -259,8 +268,7 @@ public class ModelArtsImportModelVO implements Serializable {
         .substring(index, path.length());
   }
 
-  private static List<Parameter> getParameters(Config config, boolean isRequest)
-      throws IOException {
+  private static List<Parameter> getParameters(Config config, boolean isRequest) {
     List<Parameter> parameters = new ArrayList<>();
     List<CloudAPI> apis = config.getApis();
     Gson gson = new Gson();

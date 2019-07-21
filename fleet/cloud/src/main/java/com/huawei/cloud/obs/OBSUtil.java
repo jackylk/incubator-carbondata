@@ -17,6 +17,7 @@
 package com.huawei.cloud.obs;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,8 +32,7 @@ import com.obs.services.model.ObsObject;
 
 public class OBSUtil {
 
-  public static List<String> listFiles(String path, LoginRequestManager.Credential credential)
-      throws Exception {
+  public static List<String> listFiles(String path, LoginRequestManager.Credential credential) {
     ObsClient obsClient = getObsClient(credential);
     String[] obsBucketAndPath = getObsBucketAndPath(path);
     ListObjectsRequest listObjectsRequest = new ListObjectsRequest(obsBucketAndPath[0]);
@@ -73,7 +73,7 @@ public class OBSUtil {
   }
 
   public static String getObjectinString(String path, String objectKey,
-      LoginRequestManager.Credential credential) throws Exception {
+      LoginRequestManager.Credential credential) throws IOException {
     ObsClient obsClient = getObsClient(credential);
     String[] obsBucketAndPath = getObsBucketAndPath(path);
     ObsObject object = obsClient.getObject(obsBucketAndPath[0], objectKey);
