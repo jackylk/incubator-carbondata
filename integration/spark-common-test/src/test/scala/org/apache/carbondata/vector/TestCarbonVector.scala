@@ -45,7 +45,7 @@ class TestCarbonVector extends QueryTest with BeforeAndAfterAll {
         Record(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)
       ))
     val df = sqlContext.createDataFrame(rdd)
-    df.createOrReplaceTempView("base_table")
+    df.createOrReplaceTempView(tableName)
   }
 
   override protected def afterAll(): Unit = {

@@ -109,6 +109,7 @@
     <module>fleet/ai-intf</module>
     <module>fleet/router</module>
     <module>fleet/core</module>
+    <module>fleet/vision</module>
     <module>fleet/vector</module>
     <module>fleet/cloud</module>
     <module>integration/hbase</module>
