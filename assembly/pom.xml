@@ -61,16 +61,6 @@
       <artifactId>carbondata-spark2</artifactId>
       <version>${project.version}</version>
     </dependency>
-    <dependency>
-      <groupId>org.apache.carbondata</groupId>
-      <artifactId>carbondata-mv-plan</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.carbondata</groupId>
-      <artifactId>carbondata-mv-core</artifactId>
-      <version>${project.version}</version>
-    </dependency>
   </dependencies>
 
   <build>
@@ -186,6 +176,21 @@
           </plugin>
         </plugins>
       </build>
+    </profile>
+    <profile>
+      <id>mv</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.carbondata</groupId>
+          <artifactId>carbondata-mv-plan</artifactId>
+          <version>${project.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.carbondata</groupId>
+          <artifactId>carbondata-mv-core</artifactId>
+          <version>${project.version}</version>
+        </dependency>
+      </dependencies>
     </profile>
   </profiles>
 
