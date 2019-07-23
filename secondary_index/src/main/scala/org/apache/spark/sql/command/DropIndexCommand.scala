@@ -18,9 +18,7 @@ import org.apache.spark.sql.{CarbonEnv, Row, SparkSession}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.execution.command.RunnableCommand
-import org.apache.spark.sql.hive.CarbonInternalHiveMetadataUtil
-import org.apache.spark.sql.hive.CarbonInternalMetastore
-import org.apache.spark.sql.hive.CarbonRelation
+import org.apache.spark.sql.hive.{CarbonInternalHiveMetadataUtil, CarbonInternalMetastore, CarbonRelation, CarbonSessionCatalog}
 import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
@@ -105,7 +103,7 @@ private[sql] case class DropIndex(ifExistsSet: Boolean,
         CarbonInternalMetastore.refreshIndexInfo(dbName, tableName, carbonTable.get)(sparkSession)
         val isIndexTableBool = CarbonInternalScalaUtil.isIndexTable(carbonTable.get)
         val parentTableName = CarbonInternalScalaUtil.getParentTableName(carbonTable.get)
-        val parentCarbonTable = CarbonEnv.getInstance(sparkSession).carbonMetaStore
+        var parentCarbonTable = CarbonEnv.getInstance(sparkSession).carbonMetaStore
           .lookupRelation(Some(dbName), parentTableName)(sparkSession).asInstanceOf[CarbonRelation]
           .carbonTable
         if (!isIndexTableBool) {
@@ -137,6 +135,28 @@ private[sql] case class DropIndex(ifExistsSet: Boolean,
           tablePath,
           parentCarbonTable,
           removeEntryFromParentTable = true)(sparkSession)
+
+        // take the refreshed table object after dropping and updating the index table
+        parentCarbonTable = CarbonEnv.getInstance(sparkSession).carbonMetaStore
+          .lookupRelation(Some(dbName), parentTableName)(sparkSession).asInstanceOf[CarbonRelation]
+          .carbonTable
+
+        val indexTables = CarbonInternalScalaUtil.getIndexesTables(parentCarbonTable)
+        // if all the indexes are dropped then the main table holds no index tables,
+        // so change the "indexTableExists" property to false, iff all the indexes are deleted
+        if (null == indexTables || indexTables.isEmpty) {
+          val tableIdentifier = TableIdentifier(parentCarbonTable.getTableName,
+            Some(parentCarbonTable.getDatabaseName))
+          val schema = CarbonEnv.getInstance(sparkSession).carbonMetaStore
+            .lookupRelation(tableIdentifier)(sparkSession).schema.json
+          // modify the tableProperties of mainTable by adding "indexTableExists" property
+          CarbonInternalScalaUtil
+            .addOrModifyTableProperty(parentCarbonTable,
+              Map("indexTableExists" -> "false"), schema, false)(sparkSession,
+              sparkSession.sessionState.catalog.asInstanceOf[CarbonSessionCatalog])
+
+          CarbonInternalHiveMetadataUtil.refreshTable(dbName, parentTableName, sparkSession)
+        }
       }
     } catch {
       case ex: Exception =>

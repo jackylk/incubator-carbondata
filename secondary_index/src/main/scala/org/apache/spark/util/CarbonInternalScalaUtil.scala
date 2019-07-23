@@ -14,19 +14,24 @@ package org.apache.spark.util
 import java.util
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 
 import org.apache.spark.sql.{CarbonDatasourceHadoopRelation, CarbonEnv, SparkSession}
 import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, LogicalPlan}
+import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.command.{SecondaryIndex, SecondaryIndexModel}
 import org.apache.spark.sql.execution.datasources.LogicalRelation
-import org.apache.spark.sql.hive.CarbonRelation
+import org.apache.spark.sql.hive.{CarbonInternalMetastore, CarbonRelation, CarbonSessionCatalog}
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.compression.CompressorFactory
+import org.apache.carbondata.core.locks.{CarbonLockUtil, ICarbonLock, LockUsage}
+import org.apache.carbondata.core.metadata.converter.ThriftWrapperSchemaConverterImpl
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.mutate.CarbonUpdateUtil
 import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatus, SegmentStatusManager}
+import org.apache.carbondata.format.{SchemaEvolutionEntry, TableInfo}
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 import org.apache.carbondata.spark.core.metadata.IndexMetadata
 import org.apache.carbondata.spark.rdd.SecondaryIndexCreator
@@ -56,6 +61,17 @@ object CarbonInternalScalaUtil {
     if (null != indexMeta) {
       IndexMetadata.deserialize(indexMeta).removeIndexTableInfo(tableName)
     }
+  }
+
+  /**
+   * Check if the index meta data for the table exists or not
+   *
+   * @param carbonTable
+   * @return
+   */
+  def isIndexTableExists(carbonTable: CarbonTable): String = {
+    carbonTable.getTableInfo.getFactTable.getTableProperties
+      .get("indextableexists")
   }
 
   def getIndexesMap(carbonTable: CarbonTable): java.util.Map[String, java.util.List[String]] = {
@@ -327,6 +343,102 @@ object CarbonInternalScalaUtil {
         forceAccessSegment = true,
         isCompactionCall = false,
         isLoadToFailedSISegments)
+  }
+
+  /**
+   * This method add/modify the table properties.
+   *
+   * @param carbonTable
+   * @param properties
+   * @param sparkSession
+   */
+  def addOrModifyTableProperty(carbonTable: CarbonTable,
+    properties: Map[String, String],
+    schema: String, needLock: Boolean = true)
+    (sparkSession: SparkSession, catalog: CarbonSessionCatalog): Unit = {
+    val tableName = carbonTable.getTableName
+    val dbName = carbonTable.getDatabaseName
+    val locksToBeAcquired = List(LockUsage.METADATA_LOCK, LockUsage.COMPACTION_LOCK)
+    val locks: java.util.List[ICarbonLock] = new java.util.ArrayList[ICarbonLock]
+    try {
+      try {
+        if (needLock) {
+          locksToBeAcquired.foreach { lock =>
+            locks.add(CarbonLockUtil.getLockObject(carbonTable.getAbsoluteTableIdentifier, lock))
+          }
+        }
+      } catch {
+        case e: Exception =>
+          AlterTableUtil.releaseLocks(locks.asScala.toList)
+          throw e
+      }
+      val metaStore = CarbonEnv.getInstance(sparkSession).carbonMetaStore
+      val lowerCasePropertiesMap: mutable.Map[String, String] = mutable.Map.empty
+      // convert all the keys to lower case
+      properties.foreach { entry =>
+        lowerCasePropertiesMap.put(entry._1.toLowerCase, entry._2)
+      }
+
+      val thriftTableInfo: TableInfo = metaStore.getThriftTableInfo(carbonTable)
+      val schemaConverter = new ThriftWrapperSchemaConverterImpl()
+      val wrapperTableInfo = schemaConverter.fromExternalToWrapperTableInfo(
+        thriftTableInfo,
+        dbName,
+        tableName,
+        carbonTable.getTablePath)
+      val thriftTable = schemaConverter.fromWrapperToExternalTableInfo(
+        wrapperTableInfo, dbName, tableName)
+      val tblPropertiesMap: mutable.Map[String, String] =
+        thriftTable.fact_table.getTableProperties.asScala
+
+      // This overrides/add the newProperties of thriftTable
+      lowerCasePropertiesMap.foreach { property =>
+        if (tblPropertiesMap.get(property._1) != null) {
+          tblPropertiesMap.put(property._1, property._2)
+        }
+      }
+      val (tableIdentifier, schemParts) = updateSchemaInfo(
+        carbonTable = carbonTable,
+        thriftTable = thriftTable, schema = schema)(sparkSession)
+      catalog.alterTable(tableIdentifier, schemParts, None)
+      // remove from the cache so that the table will be loaded again with the new tableproperties
+      CarbonInternalMetastore
+        .removeTableFromMetadataCache(carbonTable.getDatabaseName, tableName)(sparkSession)
+      // refersh the parent table relation
+      sparkSession.catalog.refreshTable(tableIdentifier.quotedString)
+
+      LOGGER.info(s"Adding/Modifying tableProperties is successful for table $dbName.$tableName")
+    } catch {
+      case e: Exception =>
+        sys.error(s"Adding/Modifying tableProperties operation failed: ${e.getMessage}")
+    } finally {
+      // release lock after command execution completion
+      AlterTableUtil.releaseLocks(locks.asScala.toList)
+    }
+  }
+
+  /**
+   * @param carbonTable
+   * @param schemaEvolutionEntry
+   * @param thriftTable
+   * @param sparkSession
+   */
+  def updateSchemaInfo(carbonTable: CarbonTable,
+    schemaEvolutionEntry: SchemaEvolutionEntry = null,
+    thriftTable: TableInfo, schema: String)
+    (sparkSession: SparkSession): (TableIdentifier, String) = {
+    val dbName = carbonTable.getDatabaseName
+    val tableName = carbonTable.getTableName
+    CarbonEnv.getInstance(sparkSession).carbonMetaStore
+      .updateTableSchemaForAlter(carbonTable.getCarbonTableIdentifier,
+        carbonTable.getCarbonTableIdentifier,
+        thriftTable,
+        schemaEvolutionEntry,
+        carbonTable.getAbsoluteTableIdentifier.getTablePath)(sparkSession)
+    val tableIdentifier = TableIdentifier(tableName, Some(dbName))
+    val schemaParts = AlterTableUtil
+      .prepareSchemaJsonForAlterTable(sparkSession.sparkContext.getConf, schema)
+    (tableIdentifier, schemaParts)
   }
 
 }

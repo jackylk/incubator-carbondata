@@ -22,7 +22,7 @@ import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.parser.ParseException
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.execution.command.AtomicRunnableCommand
-import org.apache.spark.sql.hive.{CarbonInternalHiveMetadataUtil, CarbonInternalMetastore, CarbonRelation}
+import org.apache.spark.sql.hive.{CarbonInternalHiveMetadataUtil, CarbonInternalMetastore, CarbonRelation, CarbonSessionCatalog}
 import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
@@ -329,11 +329,24 @@ class ErrorMessage(message: String) extends Exception(message) {
         }
 
         CarbonInternalScalaUtil.addIndexTableInfo(carbonTable, indexTableName, indexTableCols)
+
         CarbonInternalHiveMetadataUtil.refreshTable(databaseName, indexTableName, sparkSession)
 
         sparkSession.sql(
           s"""ALTER TABLE $databaseName.$tableName SET SERDEPROPERTIES ('indexInfo' =
               |'$indexInfo')""".stripMargin)
+
+      val tableIdent = TableIdentifier(tableName, Some(databaseName))
+      val schema = CarbonEnv.getInstance(sparkSession).carbonMetaStore
+        .lookupRelation(tableIdent)(sparkSession).schema.json
+
+      // modify the tableProperties of mainTable by adding "indexTableExists" property
+      CarbonInternalScalaUtil
+        .addOrModifyTableProperty(carbonTable,
+          Map("indexTableExists" -> "true"), schema, false)(sparkSession,
+          sparkSession.sessionState.catalog.asInstanceOf[CarbonSessionCatalog])
+
+      CarbonInternalHiveMetadataUtil.refreshTable(databaseName, tableName, sparkSession)
 
         // update the timestamp for modified.mdt file after completion of the operation.
         // This is done for concurrent scenarios where another DDL say Alter table drop column is

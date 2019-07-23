@@ -141,12 +141,16 @@ object CarbonInternalMetastore {
 
   def refreshIndexInfo(dbName: String, tableName: String,
       carbonTable: CarbonTable)(sparkSession: SparkSession): Unit = {
-    // When Index information is not loaded in main table, then it will fetch
-    // index info from hivemetastore and set it in the carbon table.
-    if (null != carbonTable) {
+    val indexTableExists = CarbonInternalScalaUtil.isIndexTableExists(carbonTable)
+    // tables created without property "indexTableExists", will return null, for those tables enter
+    // into below block, gather the actual data from hive and then set this property to true/false
+    // then once the property has a value true/false, make decision based on the property value
+    if (null != carbonTable && (null == indexTableExists || indexTableExists.toBoolean)) {
+      // When Index information is not loaded in main table, then it will fetch
+      // index info from hivemetastore and set it in the carbon table.
       val indexTableMap = new ConcurrentHashMap[String, java.util.List[String]]
       try {
-        val (isIndexTable, parentTableName, indexInfo, parentTablePath, parentTableId) =
+        val (isIndexTable, parentTableName, indexInfo, parentTablePath, parentTableId, schema) =
           indexInfoFromHive(dbName, tableName)(sparkSession)
         if (isIndexTable.equals("true")) {
           val indexMeta = new IndexMetadata(indexTableMap,
@@ -169,6 +173,26 @@ object CarbonInternalMetastore {
               parentTablePath, parentTableId)
           carbonTable.getTableInfo.getFactTable.getTableProperties
             .put(carbonTable.getCarbonTableIdentifier.getTableId, indexMetadata.serialize)
+        }
+        if (null == indexTableExists && !isIndexTable.equals("true")) {
+          val indexTables = CarbonInternalScalaUtil.getIndexesTables(carbonTable)
+          val tableIdentifier = new TableIdentifier(carbonTable.getTableName,
+            Some(carbonTable.getDatabaseName))
+          if (indexTables.isEmpty) {
+            // modify the tableProperties of mainTable by adding "indexTableExists" property
+            // to false as there is no index table for this table
+            CarbonInternalScalaUtil
+              .addOrModifyTableProperty(carbonTable,
+                Map("indexTableExists" -> "false"), schema)(sparkSession,
+                sparkSession.sessionState.catalog.asInstanceOf[CarbonSessionCatalog])
+          } else {
+            // modify the tableProperties of mainTable by adding "indexTableExists" property
+            // to true as there are some index table for this table
+            CarbonInternalScalaUtil
+              .addOrModifyTableProperty(carbonTable,
+                Map("indexTableExists" -> "true"), schema)(sparkSession,
+                sparkSession.sessionState.catalog.asInstanceOf[CarbonSessionCatalog])
+          }
         }
       } catch {
         case e: Exception =>
@@ -198,7 +222,7 @@ object CarbonInternalMetastore {
   }
 
   private def indexInfoFromHive(databaseName: String, tableName: String)
-    (sparkSession: SparkSession): (String, String, String, String, String) = {
+    (sparkSession: SparkSession): (String, String, String, String, String, String) = {
     val hiveTable = sparkSession.sessionState.catalog
       .getTableMetadata(TableIdentifier(tableName, Some(databaseName)))
     val indexList = hiveTable.storage.properties.getOrElse(
@@ -216,7 +240,8 @@ object CarbonInternalMetastore {
       ""
     }
     val parentTableId = datasourceOptions.getOrElse("parentTableId", "")
-    (isIndexTable, parentTableName, indexList, parentTablePath, parentTableId)
+    (isIndexTable, parentTableName, indexList, parentTablePath, parentTableId, hiveTable.schema
+      .json)
   }
 
   private def optionsValueFromParts(table: CatalogTable): Map[String, String] = {
