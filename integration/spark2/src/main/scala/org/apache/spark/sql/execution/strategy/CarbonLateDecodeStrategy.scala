@@ -494,9 +494,11 @@ private[sql] class CarbonLateDecodeStrategy extends SparkStrategy {
       val partition = getPartitioning(table.carbonTable, updateRequestedColumns)
       val rdd = scanBuilder(updateRequestedColumns, candidatePredicates,
         pushedFilters, needDecoder, partitions)
-      CarbonReflectionUtils.getRowDataSourceScanExecObj(relation, output,
+      val scan = CarbonReflectionUtils.getRowDataSourceScanExecObj(relation, output,
         pushedFilters, handledFilters,
         rdd, partition, metadata)
+      scan.relation.asInstanceOf[CarbonDatasourceHadoopRelation].needPriv = relation.needPriv
+      scan
     }
   }
 

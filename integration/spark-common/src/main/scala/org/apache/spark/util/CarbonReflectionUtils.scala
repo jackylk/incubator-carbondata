@@ -277,13 +277,13 @@ object CarbonReflectionUtils {
     if (SparkUtil.isSparkVersionEqualTo("2.1") || SparkUtil.isSparkVersionEqualTo("2.2")) {
       createObject(className, output, rdd, relation.relation,
         partition, metadata,
-        relation.catalogTable.map(_.identifier), Predef.boolean2Boolean(relation.needPriv))._1
+        relation.catalogTable.map(_.identifier), Predef.boolean2Boolean(false))._1
         .asInstanceOf[RowDataSourceScanExec]
     } else if (SparkUtil.isSparkVersionXandAbove("2.3")) {
       createObject(className, output, output.map(output.indexOf),
         pushedFilters.toSet, handledFilters.toSet, rdd,
         relation.relation,
-        relation.catalogTable.map(_.identifier), Predef.boolean2Boolean(relation.needPriv))._1
+        relation.catalogTable.map(_.identifier), Predef.boolean2Boolean(false))._1
         .asInstanceOf[RowDataSourceScanExec]
     } else {
       throw new UnsupportedOperationException("Spark version not supported")

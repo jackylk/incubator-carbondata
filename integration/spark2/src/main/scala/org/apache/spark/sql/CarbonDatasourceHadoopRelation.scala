@@ -57,6 +57,10 @@ case class CarbonDatasourceHadoopRelation(
     caseInsensitiveMap("tablename"))
   CarbonSession.updateSessionInfoToCurrentThread(sparkSession)
 
+  // Incase of RowDataSourceScanExec,
+  // logical relation will not be present, so use needPriv from this base relation extension class
+  var needPriv = false
+
   @transient lazy val carbonRelation: CarbonRelation =
     CarbonEnv.getInstance(sparkSession).carbonMetaStore.
     createCarbonRelation(parameters, identifier, sparkSession)

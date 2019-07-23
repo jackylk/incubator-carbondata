@@ -154,7 +154,8 @@ private[sql] case class CarbonPrivCheck(sparkSession: SparkSession,
               if (scan.rdd.isInstanceOf[CarbonScanRDD[InternalRow]] &&
                   scan.relation.isInstanceOf[CarbonDatasourceHadoopRelation]) &&
                  !isSameTable(scan.relation.asInstanceOf[CarbonDatasourceHadoopRelation],
-                   internalTable) && scan.needPriv =>
+                   internalTable) &&
+                 scan.relation.asInstanceOf[CarbonDatasourceHadoopRelation].needPriv =>
               checkPrivilege(SparkObjectCreationHelper.getOutputObjectFromRowDataSourceScan(scan),
                 scan.relation.asInstanceOf[CarbonDatasourceHadoopRelation].carbonRelation,
                 scan.rdd.asInstanceOf[CarbonScanRDD[InternalRow]])
@@ -179,7 +180,8 @@ private[sql] case class CarbonPrivCheck(sparkSession: SparkSession,
                  scan.rdd.asInstanceOf[CarbonDecoderRDD].prev
                    .isInstanceOf[CarbonScanRDD[InternalRow]] &&
                  !isSameTable(scan.relation.asInstanceOf[CarbonDatasourceHadoopRelation],
-                   internalTable) && scan.needPriv =>
+                   internalTable) &&
+                 scan.relation.asInstanceOf[CarbonDatasourceHadoopRelation].needPriv =>
               checkPrivilege(SparkObjectCreationHelper.getOutputObjectFromRowDataSourceScan(scan),
                 scan.relation.asInstanceOf[CarbonDatasourceHadoopRelation].carbonRelation,
                 scan.rdd.asInstanceOf[CarbonDecoderRDD].prev
