@@ -30,8 +30,8 @@ import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.datamap.{AbstractDataMapJob, DataMapStoreManager}
 import org.apache.carbondata.core.datamap.dev.CacheableDataMap
 import org.apache.carbondata.core.datastore.block.SegmentPropertiesAndSchemaHolder
-import org.apache.carbondata.core.indexstore.{BlockletDataMapIndexStore, BlockletDataMapIndexWrapper, TableBlockIndexUniqueIdentifier, TableBlockIndexUniqueIdentifierWrapper}
-import org.apache.carbondata.core.indexstore.blockletindex.{BlockDataMap, BlockletDataMapDistributable}
+import org.apache.carbondata.core.indexstore.{BlockletDataMapIndexWrapper, TableBlockIndexUniqueIdentifier, TableBlockIndexUniqueIdentifierWrapper}
+import org.apache.carbondata.core.indexstore.blockletindex.BlockDataMap
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.util.{BlockletDataMapDetailsWithSchema, CarbonUtil}
 import org.apache.carbondata.hadoop.DistributableBlockletDataMapLoader
@@ -120,16 +120,11 @@ class SparkBlockletDataMapLoaderJob extends AbstractDataMapJob {
     // add segmentProperties in the segmentPropertyCache
     uniqueColumnCardinalityToWrapperList.foreach { entry =>
       val segmentId = entry._2(0)._1.getSegmentId
-      val newSegmentPropertyIndex = SegmentPropertiesAndSchemaHolder.getInstance()
+      val wrapper = SegmentPropertiesAndSchemaHolder.getInstance()
         .addSegmentProperties(carbonTable, tableColumnSchema, entry._1.cardinality, segmentId)
       entry._2.foreach { dataMapWrapper =>
-        // add all the segmentId's for given segmentPropertyIndex
-        SegmentPropertiesAndSchemaHolder.getInstance()
-          .addSegmentId(newSegmentPropertyIndex, dataMapWrapper._1.getSegmentId)
-        // update all dataMaps with new segmentPropertyIndex
-        dataMapWrapper._2.getBlockletDataMapIndexWrapper.getDataMaps.asScala.foreach { dataMap =>
-          dataMap.setSegmentPropertiesIndex(newSegmentPropertyIndex)
-        }
+        dataMapWrapper._2.getBlockletDataMapIndexWrapper.getDataMaps.asScala
+          .foreach(_.setSegmentPropertiesWrapper(wrapper))
       }
     }
   }
@@ -144,14 +139,14 @@ class DataMapCacher(
     if (carbonTable.getTableInfo.isSchemaModified) {
       val dataMaps: util.List[BlockDataMap] = dataMapIndexWrapper._2.getBlockletDataMapIndexWrapper
         .getDataMaps
-      val newSegmentPropertyIndex = SegmentPropertiesAndSchemaHolder.getInstance()
+      val wrapper = SegmentPropertiesAndSchemaHolder.getInstance()
         .addSegmentProperties(carbonTable,
           dataMapIndexWrapper._2.getColumnSchemaList,
           dataMapIndexWrapper._2.getColumnCardinality,
           dataMapIndexWrapper._1.getSegmentId)
       // update all dataMaps with new segmentPropertyIndex
       dataMaps.asScala.foreach { dataMap =>
-        dataMap.setSegmentPropertiesIndex(newSegmentPropertyIndex)
+        dataMap.setSegmentPropertiesWrapper(wrapper)
       }
     }
     // create identifier wrapper object

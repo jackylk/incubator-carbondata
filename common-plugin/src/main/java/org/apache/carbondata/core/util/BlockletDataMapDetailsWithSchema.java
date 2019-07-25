@@ -42,10 +42,8 @@ public class BlockletDataMapDetailsWithSchema implements Serializable {
     if (!dataMaps.isEmpty()) {
       // In one task all dataMaps will have the same cardinality and schema therefore
       // segmentPropertyIndex can be fetched from one dataMap
-      int segmentPropertiesIndex = dataMaps.get(0).getSegmentPropertiesIndex();
-      SegmentPropertiesAndSchemaHolder.SegmentPropertiesWrapper segmentPropertiesWrapper =
-          SegmentPropertiesAndSchemaHolder.getInstance()
-              .getSegmentPropertiesWrapper(segmentPropertiesIndex);
+      SegmentPropertiesAndSchemaHolder.SegmentPropertiesWrapper
+          segmentPropertiesWrapper = dataMaps.get(0).getSegmentPropertiesWrapper();
       columnCardinality = segmentPropertiesWrapper.getColumnCardinality();
       // flag to check whether carbon table schema is modified. ColumnSchemaList will be
       // serialized from executor to driver only if schema is modified

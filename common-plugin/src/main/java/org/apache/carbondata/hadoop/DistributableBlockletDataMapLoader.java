@@ -173,7 +173,7 @@ public class DistributableBlockletDataMapLoader
             // as segmentId will be same for all the dataMaps and segmentProperties cache is
             // maintained at segment level so it need to be called only once for clearing
             SegmentPropertiesAndSchemaHolder.getInstance()
-                .invalidate(segmentId, wrapper.getDataMaps().get(0).getSegmentPropertiesIndex(),
+                .invalidate(segmentId, wrapper.getDataMaps().get(0).getSegmentPropertiesWrapper(),
                     tableBlockIndexUniqueIdentifierWrapper.isAddTableBlockToUnsafeAndLRUCache());
           }
         }

@@ -1113,4 +1113,9 @@ public class BlockDataMap extends CoarseGrainDataMap
       return 1;
     }
   }
+
+  public void setSegmentPropertiesWrapper(
+      SegmentPropertiesAndSchemaHolder.SegmentPropertiesWrapper segmentPropertiesWrapper) {
+    this.segmentPropertiesWrapper = segmentPropertiesWrapper;
+  }
 }
