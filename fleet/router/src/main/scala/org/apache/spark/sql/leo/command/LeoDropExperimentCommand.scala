@@ -36,8 +36,6 @@ case class LeoDropExperimentCommand(
     val ifExperimentExists = experimentSchemas.asScala
       .exists(experiment => experiment.getDataMapName.equalsIgnoreCase(experimentName))
     if (ifExperimentExists) {
-      val schema = ExperimentStoreManager.getInstance().getExperimentSchema(experimentName)
-
       val details = TrainModelManager.getAllEnabledTrainedModels(experimentName)
       details.foreach { d =>
         val jobId = d.getProperties.get("job_id")

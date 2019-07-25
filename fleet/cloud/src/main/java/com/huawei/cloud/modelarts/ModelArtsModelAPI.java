@@ -408,6 +408,30 @@ public class ModelArtsModelAPI implements ModelAPI {
     }
   }
 
+  @Override public void deleteModel(String modelId) throws ModelAPIException {
+    // delete the model in ModelArts
+    LoginRequestManager.LoginInfo loginInfo = getLoginInfo();
+    try {
+      Response response = RestUtil.delete(
+          MODELARTS_CN_NORTH_V1_ENDPOINT + loginInfo.getProjectId() + SEPARATOR + MODELARTS_MODEL
+              + SEPARATOR + modelId, loginInfo.getToken(), client);
+    } catch (IOException e) {
+      throw new ModelAPIException("deleting model failed", e);
+    }
+  }
+
+  @Override public void deleteModelService(String serviceId) throws ModelAPIException {
+    // delete the model service in ModelArts
+    LoginRequestManager.LoginInfo loginInfo = getLoginInfo();
+    try {
+      Response response = RestUtil.delete(
+          MODELARTS_CN_NORTH_V1_ENDPOINT + loginInfo.getProjectId() + SEPARATOR + MODELARTS_SERVICES
+              + SEPARATOR + serviceId, loginInfo.getToken(), client);
+    } catch (IOException e) {
+      throw new ModelAPIException("deleting model service failed", e);
+    }
+  }
+
 }
 
 
