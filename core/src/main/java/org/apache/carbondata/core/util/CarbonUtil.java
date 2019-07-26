@@ -2254,7 +2254,6 @@ public final class CarbonUtil {
     org.apache.carbondata.format.TableInfo tableInfo =
         new org.apache.carbondata.format.TableInfo(thriftFactTable,
             new ArrayList<org.apache.carbondata.format.TableSchema>());
-
     tableInfo.setDataMapSchemas(null);
     return tableInfo;
   }
