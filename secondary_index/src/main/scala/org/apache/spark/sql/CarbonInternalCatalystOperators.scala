@@ -24,7 +24,9 @@ case class ShowIndexesCommand(databaseNameOp: Option[String],
   extends Command {
 
   override def output: Seq[Attribute] = {
-    Seq(AttributeReference("result", StringType, nullable = false)())
+    Seq(AttributeReference("Index Table Name", StringType, nullable = false)(),
+      AttributeReference("Index Status", StringType, nullable = false)(),
+      AttributeReference("Indexed Columns", StringType, nullable = false)())
   }
 }
 
