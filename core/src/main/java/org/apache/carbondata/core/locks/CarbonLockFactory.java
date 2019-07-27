@@ -68,7 +68,7 @@ public class CarbonLockFactory {
     FileFactory.FileType fileType = FileFactory.getFileType(absoluteLockPath);
     if (lockTypeConfigured.equals(CarbonCommonConstants.CARBON_LOCK_TYPE_ZOOKEEPER)) {
       return new ZooKeeperLocking(absoluteLockPath, lockFile);
-    } else if (fileType == FileFactory.FileType.S3) {
+    } else if (fileType == FileFactory.FileType.S3 || fileType == FileFactory.FileType.OBS) {
       lockTypeConfigured = CarbonCommonConstants.CARBON_LOCK_TYPE_S3;
       return new S3FileLock(absoluteLockPath,
                 lockFile);

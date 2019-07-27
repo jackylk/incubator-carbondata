@@ -88,6 +88,7 @@ public final class FileFactory {
       case ALLUXIO:
       case VIEWFS:
       case S3:
+      case OBS:
         return new DFSFileReaderImpl(configuration);
       default:
         return new FileReaderImpl();
@@ -129,6 +130,8 @@ public final class FileFactory {
         .startsWith(CarbonCommonConstants.S3A_PREFIX) || lowerCase
         .startsWith(CarbonCommonConstants.S3_PREFIX)) {
       return FileType.S3;
+    } else if (lowerCase.startsWith(CarbonCommonConstants.OBS_PREFIX)) {
+      return FileType.OBS;
     }
     return null;
   }
@@ -144,6 +147,8 @@ public final class FileFactory {
         .startsWith(CarbonCommonConstants.S3A_PREFIX) || path
         .startsWith(CarbonCommonConstants.S3_PREFIX)) {
       return FileType.S3;
+    } else if (path.startsWith(CarbonCommonConstants.OBS_PREFIX)) {
+      return FileType.OBS;
     }
     return null;
   }
@@ -374,6 +379,7 @@ public final class FileFactory {
       case VIEWFS:
       case CUSTOM:
       case S3:
+      case OBS:
         // if hadoop version >= 2.7, it can call method 'FileSystem.truncate' to truncate file,
         // this method was new in hadoop 2.7, otherwise use CarbonFile.truncate to do this.
         try {
@@ -418,7 +424,7 @@ public final class FileFactory {
   }
 
   public enum FileType {
-    LOCAL, HDFS, ALLUXIO, VIEWFS, S3, CUSTOM
+    LOCAL, HDFS, ALLUXIO, VIEWFS, S3, OBS, CUSTOM
   }
 
   /**
@@ -439,6 +445,7 @@ public final class FileFactory {
       case ALLUXIO:
       case VIEWFS:
       case S3:
+      case OBS:
       case CUSTOM:
       default:
         return filePath;
@@ -459,6 +466,7 @@ public final class FileFactory {
       case HDFS:
       case VIEWFS:
       case S3:
+      case OBS:
       case CUSTOM:
         return filePath;
       case ALLUXIO:
@@ -511,6 +519,7 @@ public final class FileFactory {
       case ALLUXIO:
       case VIEWFS:
       case S3:
+      case OBS:
       case CUSTOM:
         Path path = new Path(filePath);
         FileSystem fs = path.getFileSystem(getConfiguration());
@@ -550,6 +559,7 @@ public final class FileFactory {
     FileFactory.FileType fileType = FileFactory.getFileType(directoryPath);
     switch (fileType) {
       case S3:
+      case OBS:
       case HDFS:
       case ALLUXIO:
       case VIEWFS:
@@ -592,7 +602,8 @@ public final class FileFactory {
         .startsWith(CarbonCommonConstants.VIEWFSURL_PREFIX) || lowerPath
         .startsWith(CarbonCommonConstants.S3N_PREFIX) || lowerPath
         .startsWith(CarbonCommonConstants.S3A_PREFIX) || lowerPath
-        .startsWith(CarbonCommonConstants.S3_PREFIX)) {
+        .startsWith(CarbonCommonConstants.S3_PREFIX) || lowerPath
+        .startsWith(CarbonCommonConstants.OBS_PREFIX)) {
       return path;
     } else if (defaultFs != null) {
       return defaultFs + CarbonCommonConstants.FILE_SEPARATOR + path;
@@ -620,7 +631,8 @@ public final class FileFactory {
         .startsWith(CarbonCommonConstants.ALLUXIOURL_PREFIX) || lowerPath
         .startsWith(CarbonCommonConstants.S3N_PREFIX) || lowerPath
         .startsWith(CarbonCommonConstants.S3_PREFIX) || lowerPath
-        .startsWith(CarbonCommonConstants.S3A_PREFIX);
+        .startsWith(CarbonCommonConstants.S3A_PREFIX) || lowerPath
+        .startsWith(CarbonCommonConstants.OBS_PREFIX);
   }
 
   /**

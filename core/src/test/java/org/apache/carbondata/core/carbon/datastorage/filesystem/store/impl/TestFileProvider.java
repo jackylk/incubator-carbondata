@@ -21,6 +21,7 @@ import org.apache.carbondata.core.datastore.filesystem.AlluxioCarbonFile;
 import org.apache.carbondata.core.datastore.filesystem.CarbonFile;
 import org.apache.carbondata.core.datastore.filesystem.HDFSCarbonFile;
 import org.apache.carbondata.core.datastore.filesystem.LocalCarbonFile;
+import org.apache.carbondata.core.datastore.filesystem.OBSCarbonFile;
 import org.apache.carbondata.core.datastore.filesystem.S3CarbonFile;
 import org.apache.carbondata.core.datastore.filesystem.ViewFSCarbonFile;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
@@ -44,6 +45,8 @@ public class TestFileProvider implements FileTypeInterface {
         return new HDFSCarbonFile(path, configuration);
       case S3:
         return new S3CarbonFile(path, configuration);
+      case OBS:
+        return new OBSCarbonFile(path, configuration);
       case ALLUXIO:
         return new AlluxioCarbonFile(path);
       case VIEWFS:

@@ -23,7 +23,8 @@ public class AtomicFileOperationFactory {
 
   public static AtomicFileOperations getAtomicFileOperations(String filePath) {
     FileFactory.FileType fileType = FileFactory.getFileType(filePath);
-    if (fileType == FileFactory.FileType.S3 || fileType == FileFactory.FileType.ALLUXIO) {
+    if (fileType == FileFactory.FileType.S3 || fileType == FileFactory.FileType.OBS
+        || fileType == FileFactory.FileType.ALLUXIO) {
       return new AtomicFileOperationS3Impl(filePath);
     } else {
       return new AtomicFileOperationsImpl(filePath, fileType);

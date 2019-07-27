@@ -34,7 +34,7 @@ public class HDFSCarbonFile extends AbstractDFSCarbonFile {
   /**
    * LOGGER
    */
-  private static final Logger LOGGER =
+  protected static final Logger LOGGER =
       LogServiceFactory.getLogService(HDFSCarbonFile.class.getName());
 
   public HDFSCarbonFile(String filePath) {

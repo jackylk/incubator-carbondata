@@ -608,6 +608,9 @@ object ACLFileUtils {
   }
 
   def isACLSupported(tablePath: String): Boolean = {
-    !StringUtils.isEmpty(tablePath) && !tablePath.startsWith("s3")
+    !StringUtils.isEmpty(tablePath) && !tablePath.startsWith(CarbonCommonConstants.S3N_PREFIX) &&
+    !tablePath.startsWith(CarbonCommonConstants.S3A_PREFIX) &&
+    !tablePath.startsWith(CarbonCommonConstants.S3_PREFIX) &&
+    !tablePath.startsWith(CarbonCommonConstants.OBS_PREFIX)
   }
 }

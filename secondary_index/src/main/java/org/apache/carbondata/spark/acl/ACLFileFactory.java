@@ -13,6 +13,7 @@ package org.apache.carbondata.spark.acl;
 
 import org.apache.carbondata.core.datastore.filesystem.CarbonFile;
 import org.apache.carbondata.core.datastore.filesystem.LocalCarbonFile;
+import org.apache.carbondata.core.datastore.filesystem.OBSCarbonFile;
 import org.apache.carbondata.core.datastore.filesystem.S3CarbonFile;
 import org.apache.carbondata.core.datastore.impl.DefaultFileTypeProvider;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
@@ -40,6 +41,8 @@ public class ACLFileFactory extends DefaultFileTypeProvider {
         return new LocalCarbonFile(FileFactory.getUpdatedFilePath(path, fileType));
       case S3:
         return new S3CarbonFile(path, conf);
+      case OBS:
+        return new OBSCarbonFile(path, conf);
       case HDFS:
         return new HDFSACLCarbonFile(path, conf);
       case ALLUXIO:

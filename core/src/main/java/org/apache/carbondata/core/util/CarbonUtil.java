@@ -693,7 +693,8 @@ public final class CarbonUtil {
     String lowerPath = filePath.toLowerCase(Locale.getDefault());
     if (lowerPath.startsWith(CarbonCommonConstants.S3N_PREFIX) ||
         lowerPath.startsWith(CarbonCommonConstants.S3A_PREFIX) ||
-        lowerPath.startsWith(CarbonCommonConstants.S3_PREFIX)) {
+        lowerPath.startsWith(CarbonCommonConstants.S3_PREFIX) ||
+        lowerPath.startsWith(CarbonCommonConstants.OBS_PREFIX)) {
       int prefixLength = filePath.indexOf(":", 0) + 3;
       int pathOffset = filePath.indexOf("@");
       if (pathOffset > 0) {
@@ -2556,6 +2557,7 @@ public final class CarbonUtil {
       case ALLUXIO:
       case VIEWFS:
       case S3:
+      case OBS:
       case CUSTOM:
         Path path = new Path(segmentPath);
         FileSystem fs = path.getFileSystem(FileFactory.getConfiguration());

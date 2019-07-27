@@ -1600,6 +1600,8 @@ public final class CarbonCommonConstants {
 
   public static final String S3A_PREFIX = "s3a://";
 
+  public static final String OBS_PREFIX = "obs://";
+
   /**
    * Access Key for s3n
    */
