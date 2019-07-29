@@ -228,6 +228,95 @@ public class TestModelTraining {
     carbon.sql("drop database if exists a1 cascade");
   }
 
+  @Test
+  public void testExperimentIfAlreadyExists() throws IOException {
+    carbon.sql("drop table if exists db.test");
+    carbon.sql("create table db.test(c1 int, c2 int, c3 int)");
+    carbon.sql("drop experiment if exists m1");
+    carbon.sql("CREATE EXPERIMENT m1  as select c1,c2 as a from db.test where c3>5 and c2=1");
+    assert (FileFactory.isFileExist(
+        CarbonProperties.getInstance().getSystemFolderLocation() + "/model/m1.dmschema"));
+    // create experiment with same name
+    try {
+      carbon.sql("CREATE EXPERIMENT m1  as select c1,c2 as a from db.test where c3>5 and c2=1");
+    } catch (Exception e) {
+      assert(e.getMessage().contains("Experiment with name m1 already exists in storage;"));
+    }
+    carbon.sql("drop experiment if exists m1");
+    carbon.sql("drop table if exists db.test");
+  }
+
+  @Test
+  public void testExperimentWithInvalidOptions() {
+    carbon.sql("drop table if exists db.test");
+    carbon.sql("create table db.test(c1 int, c2 int, c3 int)");
+    carbon.sql("drop experiment if exists m1");
+    // create experiment with invalid options
+    try {
+      carbon.sql("CREATE experiment if not exists flower_exp OPTIONS('worker_server_num'='1', "
+          + "'model_id'='7', 'dataset_id'='7EkkgKp0hbbZH6wp3MU', 'dataset_name'='flower', 'dataset_version_name'='V002',"
+          + "'dataset_version_id'='2liks7uf5BazuB4rWai','log_url'='/obs-5b79/train-log/','engine_id'='28','spec_id'='1', 'user_name'='abc') "
+          + "as select c1,c2 from db.test where c3>5");
+    } catch (Exception e) {
+      assert(e.getMessage().contains("Invalid Options: {user_name}"));
+    }
+    carbon.sql("drop experiment if exists m1");
+    carbon.sql("drop table if exists db.test");
+  }
+
+  @Test
+  public void testCreateMoreModelsOnSameExperiment() throws IOException {
+    CarbonProperties.getInstance().addProperty("leo.ma.username", "hwstaff_l00215684");
+    CarbonProperties.getInstance().addProperty("leo.ma.password", "@Huawei123");
+    carbon.sql("drop database if exists a1 cascade");
+    carbon.sql("create database a1");
+    carbon.sql("drop table if exists a1.test");
+    carbon.sql("create table a1.test(c1 int, c2 int, c3 int)");
+    carbon.sql("drop experiment if exists exp");
+    // create model with options
+    carbon.sql(
+        "CREATE experiment if not exists exp OPTIONS('worker_server_num'='1', "
+            + "'app_url'='/obs-5b79/train_mnist/', 'boot_file_url'='/obs-5b79/train_mnist/train_mnist.py', "
+            + "'data_url'='/obs-5b79/dataset-mnist/','log_url'='/obs-5b79/train-log/','engine_id'='28','spec_id'='1') as select c1,c2 from a1.test where c3>5");
+    assert (FileFactory.isFileExist(
+        CarbonProperties.getInstance().getSystemFolderLocation() + "/model/exp.dmschema"));
+
+    carbon.sql("create model job_1 using experiment exp OPTIONS('train_url'='/obs-5b79/mnist-model/','params'='num_epochs=1')").show();
+    carbon.sql("create model job_2 using experiment exp OPTIONS('train_url'='/obs-5b79/flower_model1/','params'='num_epochs=3')").show();
+    assert (carbon.sql("select * from experiment_info(exp)").count() == 2);
+
+    carbon.sql("drop model if exists job_1 on experiment exp");
+    carbon.sql("drop model if exists job_2 on experiment exp");
+    carbon.sql("drop experiment if exists exp");
+    carbon.sql("drop table if exists a1.test");
+    carbon.sql("drop database if exists a1 cascade");
+  }
+
+  @Test public void testCreateModelWithInvalidOptions() throws IOException {
+    CarbonProperties.getInstance().addProperty("leo.ma.username", "hwstaff_l00215684");
+    CarbonProperties.getInstance().addProperty("leo.ma.password", "@Huawei123");
+    carbon.sql("drop database if exists a1 cascade");
+    carbon.sql("create database a1");
+    carbon.sql("drop table if exists a1.test");
+    carbon.sql("create table a1.test(c1 int, c2 int, c3 int)");
+    carbon.sql("drop experiment if exists exp");
+    // create model with options
+    carbon.sql("CREATE experiment if not exists exp OPTIONS('worker_server_num'='1', "
+        + "'app_url'='/obs-5b79/train_mnist/', 'boot_file_url'='/obs-5b79/train_mnist/train_mnist.py', "
+        + "'data_url'='/obs-5b79/dataset-mnist/','log_url'='/obs-5b79/train-log/','engine_id'='28','spec_id'='1') "
+        + "as select c1,c2 from a1.test where c3>5");
+    assert (FileFactory.isFileExist(
+        CarbonProperties.getInstance().getSystemFolderLocation() + "/model/exp.dmschema"));
+    try {
+      carbon.sql("create model job_1 using experiment exp OPTIONS('train_url'='/obs-5b79/mnist-model/','params'='num_epochs=1', 'user_name'='abc')").show();
+    } catch (Exception e) {
+      assert (e.getMessage().contains("Invalid Options: {user_name}"));
+    }
+    carbon.sql("drop model if exists job_1 on experiment exp");
+    carbon.sql("drop experiment if exists exp");
+    carbon.sql("drop table if exists a1.test");
+    carbon.sql("drop database if exists a1 cascade");
+  }
 
 
   @AfterClass public static void tearDown() throws IOException {

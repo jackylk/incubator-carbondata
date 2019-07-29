@@ -62,6 +62,7 @@ case class LeoCreateExperimentCommand(
         return Seq.empty
       }
     }
+    ModelUtil.validateOptions(options)
     val dataFrame = sparkSession.sql(queryString)
     val logicalPlan = dataFrame.logicalPlan
 
@@ -118,5 +119,19 @@ case class LeoCreateExperimentCommand(
     experimentSchema.setParentTables(new util.ArrayList[RelationIdentifier](parentIdents.asJava))
     ExperimentStoreManager.getInstance().saveExperimentSchema(experimentSchema)
     Seq.empty
+  }
+}
+
+object ModelUtil {
+  def validateOptions(options: Map[String, String]): Unit = {
+    val supportedOptions = Array("worker_server_num", "app_url", "boot_file_url", "parameter",
+      "data_url", "dataset_id", "dataset_version_id", "dataset_name", "dataset_version_name",
+      "data_source", "spec_id", "engine_id", "model_id", "train_url", "log_url", "user_image_url",
+      "create_version", "params")
+    val inValidOptions = options
+      .filter(f => !supportedOptions.exists(prop => prop.equalsIgnoreCase(f._1)))
+    if (inValidOptions.nonEmpty) {
+      throw new AnalysisException("Invalid Options: {" + inValidOptions.keySet.mkString(",") + "}")
+    }
   }
 }

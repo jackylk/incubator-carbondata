@@ -23,7 +23,7 @@ import scala.util.control.Breaks
 import org.apache.leo.model.job.TrainModelManager
 import org.apache.spark.sql.{AnalysisException, Row, SparkSession}
 import org.apache.spark.sql.execution.command.RunnableCommand
-import org.apache.spark.sql.leo.builtin.MoldelArtsUdf
+import org.apache.spark.sql.leo.builtin.ModelArtsUdf
 import org.apache.spark.sql.leo.{ExperimentStoreManager, LeoEnv}
 
 case class LeoRegisterModelCommand(
@@ -60,10 +60,15 @@ case class LeoRegisterModelCommand(
         }
       }
     }
-    jobDetail.getProperties.put("udfName", udfName)
-    Thread.sleep(10000)
-    val serviceId = LeoEnv.modelTraingAPI
-      .deployModel(jobDetail.getProperties, udfName)
+    var serviceId = ""
+    try {
+      serviceId = LeoEnv.modelTraingAPI
+        .deployModel(jobDetail.getProperties, udfName)
+    } catch {
+      case e: Exception =>
+        LeoEnv.modelTraingAPI.deleteModel(modelId)
+        throw new AnalysisException(e.getMessage)
+    }
     loop = new Breaks
     loop.breakable {
       while (true) {
@@ -78,7 +83,14 @@ case class LeoRegisterModelCommand(
     }
     jobDetail.getProperties.put("service_id", serviceId)
     TrainModelManager.updateTrainModel(experimentName, jobDetail)
-    MoldelArtsUdf.register(sparkSession, jobDetail, udfName)
+    try {
+      ModelArtsUdf.register(sparkSession, jobDetail, udfName)
+    } catch {
+      case e: Exception =>
+        LeoEnv.modelTraingAPI.deleteModelService(serviceId)
+        LeoEnv.modelTraingAPI.deleteModel(modelId)
+        throw new AnalysisException(e.getMessage)
+    }
     Seq.empty
   }
 }

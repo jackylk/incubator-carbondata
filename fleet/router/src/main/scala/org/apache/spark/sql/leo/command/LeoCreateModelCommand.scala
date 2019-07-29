@@ -44,6 +44,7 @@ case class LeoCreateModelCommand(
       throw new AnalysisException(
         "Experiment with name " + experimentName + " does not exist"))
 
+    ModelUtil.validateOptions(options)
     val optionsMap = new java.util.HashMap[String, String]()
     optionsMap.putAll(options.asJava)
     val details = TrainModelManager.getAllTrainedModels(experimentName)

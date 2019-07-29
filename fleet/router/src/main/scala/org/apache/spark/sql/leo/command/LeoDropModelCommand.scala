@@ -55,6 +55,14 @@ case class LeoDropModelCommand(
         return Seq.empty
       }
     }
+    val modelId = jobDetail.getProperties.getOrDefault("model_id", "")
+    val serviceId = jobDetail.getProperties.getOrDefault("service_id", "")
+    val udf = jobDetail.getProperties.getOrDefault("udfName", "")
+    if (!udf.isEmpty && !serviceId.isEmpty && !modelId.isEmpty) {
+      sparkSession.sessionState.catalog.dropTempFunction(udf, true)
+      LeoEnv.modelTraingAPI.deleteModelService(serviceId)
+      LeoEnv.modelTraingAPI.deleteModel(modelId)
+    }
     val jobId = jobDetail.getProperties.get("job_id")
     LeoEnv.modelTraingAPI.stopTrainingJob(jobId.toLong)
     TrainModelManager.dropTrainModel(experimentName, jobDetail.getJobName)

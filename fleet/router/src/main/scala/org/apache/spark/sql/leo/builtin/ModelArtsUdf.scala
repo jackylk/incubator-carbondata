@@ -17,15 +17,17 @@
 
 package org.apache.spark.sql.leo.builtin
 
-import org.apache.leo.model.job.TrainModelDetail
+import scala.collection.JavaConverters._
+
+import org.apache.leo.model.job.{TrainModelDetail, TrainModelManager}
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.leo.LeoEnv
+import org.apache.spark.sql.leo.{ExperimentStoreManager, LeoEnv}
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 /**
  * Util of Model Arts Udf
  */
-object MoldelArtsUdf {
+object ModelArtsUdf {
 
   /**
    * register ModelArts UDF
@@ -63,6 +65,30 @@ object MoldelArtsUdf {
       throw new UnsupportedOperationException("Udf with more than 4 parameters are not supported")
     }
   }
+
+  /**
+   * register ModelArts UDF to spark
+   */
+  def registerAllModelArtsUDF(sparkSession: SparkSession): SparkSession = {
+    val LOGGER = LogServiceFactory.getLogService(this.getClass.getName)
+    val experimentSchemas = ExperimentStoreManager.getInstance().getAllExperimentSchemas
+    LOGGER.info("Started registering all ModelArts UDF to spark")
+    experimentSchemas.asScala.foreach {
+      experimentSchema =>
+        val trainingJobDetails = TrainModelManager
+          .getAllTrainedModels(experimentSchema.getDataMapName)
+        trainingJobDetails.foreach {
+          jobDetail =>
+            val udfName = jobDetail.getProperties.getOrDefault("udfName", "")
+            if (!udfName.isEmpty) {
+              register(sparkSession, jobDetail, udfName)
+            }
+        }
+    }
+    LOGGER.info("Finished registering all ModelArts UDF to spark")
+    sparkSession
+  }
+
 }
 
 

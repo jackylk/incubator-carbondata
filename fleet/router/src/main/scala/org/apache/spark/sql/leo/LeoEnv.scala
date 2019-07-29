@@ -19,7 +19,7 @@ package org.apache.spark.sql.leo
 
 import com.huawei.cloud.modelarts.ModelArtsModelAPI
 import org.apache.spark.sql.{CarbonSession, SparkSession}
-import org.apache.spark.sql.leo.builtin.LeoUDF
+import org.apache.spark.sql.leo.builtin.{LeoUDF, ModelArtsUdf}
 
 import org.apache.carbondata.ai.ModelAPI
 
@@ -32,6 +32,8 @@ object LeoEnv {
       .enableHiveSupport()
 
     val session = new CarbonSession.CarbonBuilder(builder).getOrCreateCarbonSession()
+    // register all ModelArts udf to spark
+    ModelArtsUdf.registerAllModelArtsUDF(session)
     registerLeoBuiltinUDF(session)
   }
 

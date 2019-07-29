@@ -39,6 +39,14 @@ case class LeoDropExperimentCommand(
       val details = TrainModelManager.getAllEnabledTrainedModels(experimentName)
       details.foreach { d =>
         val jobId = d.getProperties.get("job_id")
+        val modelId = d.getProperties.getOrDefault("model_id", "")
+        val serviceId = d.getProperties.getOrDefault("service_id", "")
+        val udf = d.getProperties.getOrDefault("udfName", "")
+        if (!udf.isEmpty && !serviceId.isEmpty && !modelId.isEmpty) {
+          sparkSession.sessionState.catalog.dropTempFunction(udf, true)
+          LeoEnv.modelTraingAPI.deleteModelService(serviceId)
+          LeoEnv.modelTraingAPI.deleteModel(modelId)
+        }
         LeoEnv.modelTraingAPI.stopTrainingJob(jobId.toLong)
       }
       TrainModelManager.dropModel(experimentName)
