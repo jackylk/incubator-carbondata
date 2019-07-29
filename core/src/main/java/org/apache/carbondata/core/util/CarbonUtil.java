@@ -2652,7 +2652,7 @@ public final class CarbonUtil {
       if (null != mergeFileName) {
         String mergeIndexPath;
         if (entry.getValue().isRelative()) {
-         mergeIndexPath =
+          mergeIndexPath =
             fileStore.getTablePath() + entry.getKey() + CarbonCommonConstants.FILE_SEPARATOR
                 + mergeFileName;
         } else {
@@ -2664,8 +2664,8 @@ public final class CarbonUtil {
       for (String indexFile : carbonindexFiles) {
         String indexPath;
         if (entry.getValue().isRelative()) {
-          indexPath =
-              fileStore.getTablePath() + entry.getKey() + CarbonCommonConstants.FILE_SEPARATOR + indexFile;
+          indexPath = fileStore.getTablePath() + entry.getKey() +
+              CarbonCommonConstants.FILE_SEPARATOR + indexFile;
         } else {
           indexPath = entry.getKey() + CarbonCommonConstants.FILE_SEPARATOR + indexFile;
         }
