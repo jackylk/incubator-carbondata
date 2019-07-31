@@ -31,6 +31,7 @@ import org.apache.spark.sql.execution.command.mv._
 import org.apache.spark.sql.execution.command.preaaggregate._
 import org.apache.spark.sql.execution.command.timeseries.TimeSeriesFunction
 import org.apache.spark.sql.hive._
+import org.apache.spark.sql.profiler.Profiler
 import org.apache.spark.util.CarbonReflectionUtils
 
 import org.apache.carbondata.cloud.CloudUdfRegister
@@ -146,6 +147,7 @@ class CarbonEnv {
         initialized = true
       }
     }
+    Profiler.initialize(sparkSession.sparkContext)
     LOGGER.info("Initialize CarbonEnv completed...")
   }
 
