@@ -827,7 +827,10 @@ public class CarbonWriterBuilder {
         }
       }
     }
-    String primaryKeyCols = options.get(CarbonCommonConstants.PRIMARY_KEY_COLUMNS);
+    String primaryKeyCols = null;
+    if (options != null) {
+      primaryKeyCols = options.get(CarbonCommonConstants.PRIMARY_KEY_COLUMNS);
+    }
     List<String> primaryKeyList = new ArrayList<>();
     if (primaryKeyCols != null) {
       String[] split = primaryKeyCols.split(",");
