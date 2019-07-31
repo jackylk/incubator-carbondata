@@ -300,6 +300,14 @@ public class CarbonTablePath {
     return getPartitionDir(tablePath) + File.separator + SEGMENT_PREFIX + segmentId;
   }
 
+  /**
+   * Return the segment id from segmentPath
+   */
+  public static String getSegmentId(String segmentPath) {
+    return segmentPath.substring(segmentPath.lastIndexOf(CarbonCommonConstants.UNDERSCORE) + 1,
+        segmentPath.length());
+  }
+
   public static String getSegmentPath(String tablePath, LoadMetadataDetails load)
       throws IOException {
     SegmentFileStore.SegmentFile segment = SegmentFileStore.readSegmentFile(

@@ -2228,6 +2228,9 @@ public final class CarbonCommonConstants {
    */
   public static final String QUERY_OBJECT = "query_object";
 
+  // default segment size in MB
+  public static final long SEGMENT_SIZE_DEFAULT = 1024;
+
   @CarbonProperty
   /**
    * Max in memory serialization size after reaching threshold data will

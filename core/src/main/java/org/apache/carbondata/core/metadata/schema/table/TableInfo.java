@@ -117,6 +117,10 @@ public class TableInfo implements Serializable, Writable {
     return factTable;
   }
 
+  public String getTablePath() {
+    return tablePath;
+  }
+
   /**
    * @param factTable the factTable to set
    */

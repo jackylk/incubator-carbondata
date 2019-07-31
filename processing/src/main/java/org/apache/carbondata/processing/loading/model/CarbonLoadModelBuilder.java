@@ -153,7 +153,7 @@ public class CarbonLoadModelBuilder {
       boolean isDataFrame) throws InvalidLoadOptionException, IOException {
     carbonLoadModel.setTableName(table.getTableName());
     carbonLoadModel.setDatabaseName(table.getDatabaseName());
-    carbonLoadModel.setTablePath(table.getTablePath());
+    carbonLoadModel.setTablePath(table.getTableInfo().getTablePath());
     carbonLoadModel.setTableName(table.getTableName());
     carbonLoadModel.setCarbonTransactionalTable(table.isTransactionalTable());
     CarbonDataLoadSchema dataLoadSchema = new CarbonDataLoadSchema(table);

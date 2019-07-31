@@ -187,7 +187,13 @@ public class CarbonSchemaReader {
     SchemaConverter schemaConverter = new ThriftWrapperSchemaConverterImpl();
     TableSchema factTable =
         schemaConverter.fromExternalToWrapperTableInfo(tableInfo, "", "", "").getFactTable();
-    List<ColumnSchema> schemaList = factTable.getListOfColumns();
+    List<ColumnSchema> schemaList = new ArrayList<>();
+    for (ColumnSchema columnSchema : factTable.getListOfColumns()) {
+      if (!columnSchema.getColumnName()
+          .equalsIgnoreCase(CarbonCommonConstants.DEFAULT_INVISIBLE_DUMMY_MEASURE)) {
+        schemaList.add(columnSchema);
+      }
+    }
     return new Schema(schemaList, factTable.getTableProperties());
   }
 
