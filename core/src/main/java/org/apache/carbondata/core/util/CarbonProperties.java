@@ -1828,13 +1828,33 @@ public final class CarbonProperties {
           .getProperty(CarbonCommonConstants.ASYNC_QUERY_RESULT_LIMIT,
               CarbonCommonConstants.ASYNC_QUERY_RESULT_LIMIT_DEFAULT));
     } catch (NumberFormatException exc) {
-      LOGGER.warn(
-          "The value of '" + CarbonCommonConstants.ASYNC_QUERY_RESULT_LIMIT
-              + "' is invalid. Using the default value "
-              + CarbonCommonConstants.ASYNC_QUERY_RESULT_LIMIT_DEFAULT);
-      limit = Integer.parseInt(
-          CarbonCommonConstants.ASYNC_QUERY_RESULT_LIMIT_DEFAULT);
+      LOGGER.warn("The value of '" + CarbonCommonConstants.ASYNC_QUERY_RESULT_LIMIT + "' is invalid. Using the default value "
+          + CarbonCommonConstants.ASYNC_QUERY_RESULT_LIMIT_DEFAULT);
+      limit = Integer.parseInt(CarbonCommonConstants.ASYNC_QUERY_RESULT_LIMIT_DEFAULT);
     }
     return limit;
+  }
+  /**
+   * Validate and get the input metrics interval
+   *
+   * @return input metrics interval
+   */
+  public static Long getInputMetricsInterval() {
+    String metrics = CarbonProperties.getInstance()
+        .getProperty(CarbonCommonConstants.INPUT_METRICS_UPDATE_INTERVAL);
+    if (metrics == null) {
+      return CarbonCommonConstants.INPUT_METRICS_UPDATE_INTERVAL_DEFAULT;
+    } else {
+      try {
+        long configuredValue = Long.parseLong(metrics);
+        if (configuredValue < 0) {
+          return CarbonCommonConstants.INPUT_METRICS_UPDATE_INTERVAL_DEFAULT;
+        } else {
+          return configuredValue;
+        }
+      } catch (Exception ex) {
+        return CarbonCommonConstants.INPUT_METRICS_UPDATE_INTERVAL_DEFAULT;
+      }
+    }
   }
 }
