@@ -31,9 +31,6 @@ class TestImageTransformations extends QueryTest with BeforeAndAfterAll {
   val imageTransTable: String = "imageTransTable"
 
   override protected def beforeAll(): Unit = {
-    nu.pattern.OpenCV.loadShared()
-    System.loadLibrary(Core.NATIVE_LIBRARY_NAME)
-
     VisionSparkUDFs.registerAll(sqlContext)
 
     sql(s"DROP TABLE IF EXISTS $imageSourceTable")

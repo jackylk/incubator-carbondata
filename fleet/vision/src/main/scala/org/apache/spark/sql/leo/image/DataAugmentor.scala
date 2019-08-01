@@ -15,13 +15,13 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.leo
+package org.apache.spark.sql.leo.image
+
+import org.apache.spark.sql.leo.image.Utils.lucky
+import org.opencv.core._
+import org.opencv.imgproc.Imgproc
 
 import scala.util.Random
-
-import org.opencv.core.{Core, CvType, Mat, Point, Scalar, Size}
-import Utils.lucky
-import org.opencv.imgproc.Imgproc
 
 
 /**

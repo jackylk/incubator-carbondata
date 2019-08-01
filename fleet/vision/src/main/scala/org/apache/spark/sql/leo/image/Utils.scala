@@ -15,13 +15,12 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.leo
+package org.apache.spark.sql.leo.image
 
-import scala.util.Random
-
-import org.apache.spark.sql.SQLContext
 import org.opencv.core.{Mat, MatOfByte, MatOfInt}
 import org.opencv.imgcodecs.Imgcodecs
+
+import scala.util.Random
 
 
 /**

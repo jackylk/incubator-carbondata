@@ -17,6 +17,7 @@
 
 package org.apache.spark
 
+import org.apache.spark.sql.leo.VisionSparkUDFs
 import org.apache.spark.sql.pythonudf.PythonUDFRegister
 import org.apache.spark.sql.test.util.QueryTest
 import org.apache.spark.sql.types.{BooleanType, IntegerType, StructField, StructType}
@@ -39,45 +40,7 @@ class TestExtractVideoFrames extends QueryTest with BeforeAndAfterAll {
     sql("DROP TABLE IF EXISTS sourcetable")
     sql("CREATE TEMPORARY TABLE sourcetable USING binaryfile OPTIONS(path='" + dataDirPath + "')")
 
-    val script =
-      s"""
-         |import sys
-         |import time
-         |
-         |def generate_x_frames_per_sec(video_file, x, images_dir):
-         |    import cv2
-         |    sys.path.insert(0, '${ scriptsDirPath }')
-         |    from video_frames import Video
-         |
-         |    if not os.path.isdir(images_dir):
-         |        os.mkdir(images_dir)
-         |
-         |    start_time = time.time()
-         |
-         |    try:
-         |        with Video(video_file[5:]) as video:
-         |            count = 0
-         |            for i, img in video.get_x_frames_per_sec(x):
-         |                cv2.imwrite(images_dir + '/{}.jpg'.format(i), img)
-         |                count += 1
-         |            return True, count, int(time.time() - start_time)
-         |    except Exception as e:
-         |        return False, 0, int(time.time() - start_time)
-       """.stripMargin
-
-    PythonUDFRegister.registerPythonUDF(
-      sqlContext.sparkSession,
-      "generate_x_frames_per_sec",
-      "generate_x_frames_per_sec",
-      script,
-      Array[String](),
-      new StructType(Array(
-        StructField(name = "success", dataType = BooleanType, nullable = false),
-        StructField(name = "num-files", dataType = IntegerType, nullable = false),
-        StructField(name = "time", dataType = IntegerType, nullable = false)
-      )),
-      true
-    )
+    VisionSparkUDFs.registerExtractFramesFromVideo(sqlContext.sparkSession, scriptsDirPath)
 
     sql(
       s"""

@@ -15,12 +15,12 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.leo
+package org.apache.spark.sql.leo.image
+
+import org.opencv.core._
+import org.opencv.imgproc.Imgproc
 
 import scala.collection.JavaConverters._
-
-import org.opencv.core.{Core, CvType, Mat, MatOfPoint, MatOfPoint2f, Point, Rect, RotatedRect, Scalar, Size}
-import org.opencv.imgproc.Imgproc
 
 object GeometricTransformations extends Serializable {
 

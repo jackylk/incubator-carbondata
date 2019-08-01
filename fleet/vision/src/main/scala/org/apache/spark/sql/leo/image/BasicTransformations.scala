@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.leo
+package org.apache.spark.sql.leo.image
 
 import org.opencv.core.{Mat, Rect, Size}
 import org.opencv.imgproc.Imgproc
