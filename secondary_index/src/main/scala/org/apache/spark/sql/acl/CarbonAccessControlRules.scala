@@ -14,8 +14,8 @@ package org.apache.spark.sql.acl
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-import org.apache.spark.sql._
 import org.apache.spark.sql.CarbonExpressions.{CarbonDescribeTable => DescribeTableCommand}
+import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.catalog.SessionCatalog
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
@@ -147,10 +147,19 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
           // check for drop
           var dataMapSchema: DataMapSchema = null
           try {
-            // in case of datamaps like MV, lucene, bloom datamap, get the details from schema
             dataMapSchema = DataMapStoreManager.getInstance().getDataMapSchema(dataMapName)
-            tableName = dataMapName + "_table"
-            databaseName = dataMapSchema.getRelationIdentifier.getDatabaseName
+            // If drop command is for MV then construct the table name using 'table' keyword.
+            if (dataMapSchema.getProviderName.equalsIgnoreCase(DataMapClassProvider.MV.getShortName)) {
+              // in case of datamaps like MV, lucene, bloom datamap, get the details from schema
+              tableName = dataMapName + "_table"
+              databaseName = dataMapSchema.getRelationIdentifier.getDatabaseName
+            } else if (table.isDefined) {
+              tableName = table.get.table
+              databaseName = CarbonEnv.getDatabaseName(table.get.database)(sparkSession)
+            } else {
+              tableName = dataMapSchema.getRelationIdentifier.getTableName
+              databaseName = dataMapSchema.getRelationIdentifier.getDatabaseName
+            }
           } catch {
             case ex: NoSuchDataMapException =>
               // in case of preagg , schema wont be present, so get the table from identifier if
