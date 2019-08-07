@@ -17,10 +17,16 @@
 
 package org.apache.carbondata;
 
+import java.util.List;
+
+import org.apache.carbondata.core.datastore.impl.FileFactory;
+
+import org.apache.spark.sql.Row;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class TestWebSearch extends LeoTest {
+public class TestPythonFunc extends LeoTest {
 
   @BeforeClass
   public static void setup() {
@@ -30,7 +36,7 @@ public class TestWebSearch extends LeoTest {
   }
 
   @Test
-  public void testUDTF() {
+  public void testWebSearch() {
     sql("create table db1.t1 (name string, age int)");
     sql("select url, title from WebSearch('key_word'='特朗普', 'page_num'='3')").show(100, false);
     sql("drop table db1.t1");
@@ -42,5 +48,22 @@ public class TestWebSearch extends LeoTest {
     sql("insert into db1.t1 select download('https://www.baidu.com/img/bd_logo1.png?qua=high&where=super')");
     sql("select * from db1.t1").show();
     sql("drop table db1.t1");
+  }
+
+  @Test
+  public void testRunScript() {
+    String s = FileFactory.getCarbonFile("./").getAbsolutePath();
+    String scriptPath = s + "/src/test/python/test.py";
+    List<Row> rows = sql("RUN SCRIPT \"" + scriptPath + "\" PYFUNC \"add\" " +
+        "WITH PARAMS (\"x\"=\"4\", \"y\"=\"2\") OUTPUT (v long)").collectAsList();
+    Assert.assertEquals(rows.get(0).get(0), 6l);
+
+    rows = sql("RUN SCRIPT \"" + scriptPath + "\" PYFUNC \"sub\" " +
+        "WITH PARAMS (\"x\"=\"100\", \"y\"=\"5\") OUTPUT (v long)").collectAsList();
+    Assert.assertEquals(rows.get(0).get(0), 95l);
+
+    rows = sql("RUN SCRIPT \"" + scriptPath + "\" PYFUNC \"numpyTest\" " +
+        "OUTPUT (s string)").collectAsList();
+    Assert.assertEquals(rows.get(0).get(0), "(2, 3)");
   }
 }

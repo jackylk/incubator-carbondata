@@ -33,7 +33,7 @@ object LeoEnv {
 
     val session = new CarbonSession.CarbonBuilder(builder).getOrCreateCarbonSession()
     // register all ModelArts udf to spark
-    ModelArtsUdf.registerAllModelArtsUDF(session)
+//    ModelArtsUdf.registerAllModelArtsUDF(session)
     registerLeoBuiltinUDF(session)
   }
 

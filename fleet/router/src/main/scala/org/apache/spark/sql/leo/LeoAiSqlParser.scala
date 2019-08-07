@@ -33,6 +33,11 @@ class LeoAiSqlParser extends CarbonSpark2SqlParser {
   protected val EXPERIMENT: Regex = leoKeyWord("EXPERIMENT")
   protected val REGISTER: Regex = leoKeyWord("REGISTER")
   protected val UNREGISTER: Regex = leoKeyWord("UNREGISTER")
+  protected val RUN: Regex = leoKeyWord("RUN")
+  protected val SCRIPT: Regex = leoKeyWord("SCRIPT")
+  protected val PYFUNC: Regex = leoKeyWord("PYFUNC")
+  protected val PARAMS: Regex = leoKeyWord("PARAMS")
+  protected val OUTPUT: Regex = leoKeyWord("OUTPUT")
 
   /**
    * This will convert key word to regular expression.
@@ -65,12 +70,14 @@ class LeoAiSqlParser extends CarbonSpark2SqlParser {
   }
 
   override protected lazy val start: Parser[LogicalPlan] = explainPlan | startCommand |
-                                                           modelManagement | serviceManagement
+                                                           modelManagement | serviceManagement |
+                                                           scriptManagement
 
   protected lazy val modelManagement: Parser[LogicalPlan] = createModel | dropModel |
                                                             createExperiment | dropExperiment
   protected lazy val serviceManagement: Parser[LogicalPlan] = registerModel | unregisterModel
 
+  protected lazy val scriptManagement: Parser[LogicalPlan] = runScript
 
   /**
    * CREATE EXPERIMENT [IF NOT EXISTS] experimentName
@@ -78,8 +85,8 @@ class LeoAiSqlParser extends CarbonSpark2SqlParser {
    * AS select_query
    */
   protected lazy val createExperiment: Parser[LogicalPlan] =
-    CREATE ~> EXPERIMENT ~> opt(IF ~> NOT ~> EXISTS) ~  ident ~
-    (OPTIONS ~> "(" ~> repsep(createModelOptions, ",") <~ ")").? ~
+    CREATE ~> EXPERIMENT ~> opt(IF ~> NOT ~> EXISTS) ~ ident ~
+    (OPTIONS ~> "(" ~> repsep(keyValueOptions, ",") <~ ")").? ~
     (AS ~> restInput) <~ opt(";") ^^ {
       case ifNotExists ~ experimentName ~ options ~ query =>
         val optionMap = options.getOrElse(List[(String, String)]()).toMap[String, String]
@@ -103,15 +110,21 @@ class LeoAiSqlParser extends CarbonSpark2SqlParser {
   protected lazy val createModel: Parser[LogicalPlan] =
     CREATE ~> MODEL ~> opt(IF ~> NOT ~> EXISTS) ~ ident ~
     (USING ~ EXPERIMENT ~> ident) ~
-    (OPTIONS ~> "(" ~> repsep(createModelOptions, ",") <~ ")").? <~ opt(";") ^^ {
+    (OPTIONS ~> "(" ~> repsep(keyValueOptions, ",") <~ ")").? <~ opt(";") ^^ {
       case ifNotExists ~ modelName ~ experimentName ~ options =>
         val optionMap = options.getOrElse(List[(String, String)]()).toMap[String, String]
         LeoCreateModelCommand(modelName, experimentName, optionMap, ifNotExists.isDefined)
     }
 
-  protected lazy val createModelOptions: Parser[(String, String)] =
+  protected lazy val keyValueOptions: Parser[(String, String)] =
     (stringLit <~ "=") ~ stringLit ^^ {
       case opt ~ optvalue => (opt.trim.toLowerCase(), optvalue)
+      case _ => ("", "")
+    }
+
+  protected lazy val outputList: Parser[(String, String)] =
+    (ident ~ ident) ^^ {
+      case fieldName ~ fieldType => (fieldName.trim.toLowerCase(), fieldType.trim.toLowerCase())
       case _ => ("", "")
     }
 
@@ -140,5 +153,22 @@ class LeoAiSqlParser extends CarbonSpark2SqlParser {
     UNREGISTER ~> MODEL ~> (ident <~ ".") ~ ident <~ opt(";") ^^ {
       case experimentName ~ modelName =>
         LeoUnregisterModelCommand(experimentName, modelName)
+    }
+
+  /**
+   * RUN SCRIPT path PYFUNC func
+   * [WITH PARAMS ("param1"="value1", ...)]
+   * [OUTPUT (fieldName fieldType, ...)]
+   *
+   * By default, output schema is (value string)
+   */
+  protected lazy val runScript: Parser[LogicalPlan] =
+    RUN ~> (SCRIPT ~> stringLit) ~ (PYFUNC ~> stringLit) ~
+    (WITH ~> PARAMS ~> "(" ~> repsep(keyValueOptions, ",") <~ ")").? ~
+    (OUTPUT ~> "(" ~> repsep(outputList, ",") <~ ")").? <~ opt(";") ^^ {
+      case scriptPath ~ funcName ~ params ~ output =>
+        val paramMap = params.getOrElse(List[(String, String)]()).toMap[String, String]
+        val outputMap = output.getOrElse(List[(String, String)]()).toMap[String, String]
+        LeoRunScriptCommand(scriptPath, funcName, paramMap, outputMap)
     }
 }

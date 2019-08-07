@@ -16,6 +16,7 @@
  */
 package org.apache.spark.carbondata.pythonudf
 
+import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.pythonudf.PythonUDFRegister
 import org.apache.spark.sql.test.util.QueryTest
 import org.apache.spark.sql.types.LongType
@@ -39,18 +40,21 @@ class TestRegisterPythonUDF extends QueryTest with BeforeAndAfterEach {
       s * s
     }
 
-    new PythonUDFRegister()
-      .registerPythonUDF(sqlContext.sparkSession,
-        "square",
-        "square",
-        script,
-        Array[String](),
-        LongType)
+    PythonUDFRegister.registerPythonUDF(
+      sqlContext.sparkSession,
+      "square",
+      "square",
+      script,
+      Array[String](),
+      LongType)
     sqlContext.sparkSession.udf.register("scalasquare", squared)
     sqlContext.sparkSession.range(1, 20).registerTempTable("test")
     checkAnswer(sql("select id, square(id) as id_squared from test where id=9"),
       sql("select id, scalasquare(id) as id_squared from test where id=9"))
-  }
 
+    PythonUDFRegister.unregisterPythonUDF(sqlContext.sparkSession, "square")
+    intercept[AnalysisException](
+      sql("select id, square(id) as id_squared from test where id=9"))
+  }
 
 }
