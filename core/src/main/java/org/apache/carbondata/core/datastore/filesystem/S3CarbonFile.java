@@ -44,6 +44,11 @@ public class S3CarbonFile extends HDFSCarbonFile {
     super(path, hadoopConf);
   }
 
+  public S3CarbonFile(FileStatus fileStatus, Configuration hadoopConf) {
+    super(fileStatus);
+    this.hadoopConf = hadoopConf;
+  }
+
   /**
     TODO: The current implementation of renameForce is not correct as it deletes the destination
           object and then performs rename(copy).
