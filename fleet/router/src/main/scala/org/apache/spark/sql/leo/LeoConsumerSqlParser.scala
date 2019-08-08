@@ -25,6 +25,8 @@ import org.apache.spark.sql.util.CarbonException
 
 import scala.util.matching.Regex
 
+import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
+
 class LeoConsumerSqlParser extends LeoAiSqlParser {
 
   protected val CONSUMER: Regex = leoKeyWord("CONSUMER")
@@ -55,9 +57,13 @@ class LeoConsumerSqlParser extends LeoAiSqlParser {
               x
             case logicalPlan => logicalPlan
           }
-        case failureOrError =>
-          CarbonScalaUtil.cleanParserThreadLocals()
-          CarbonException.analysisException(failureOrError.toString)
+        case failure: Failure =>
+          try {
+            super.parse(input)
+          } catch {
+            case mce: MalformedCarbonCommandException => throw mce
+            case e: Throwable => CarbonException.analysisException(e.getMessage)
+          }
       }
     }
   }
