@@ -12,7 +12,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <artifactId>carbondata-project</artifactId>
-  <name> Apache Carbondata :: Project </name>
+  <name> Apache Carbondata :: Leo Project </name>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

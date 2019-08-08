@@ -12,7 +12,7 @@
   </parent>
 
   <artifactId>fleet-router</artifactId>
-  <name> Fleet :: Router </name>
+  <name> Apache Carbondata :: Leo Router </name>
 
   <properties>
     <dev.path>${basedir}/../../dev</dev.path>

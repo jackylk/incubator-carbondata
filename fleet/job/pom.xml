@@ -12,7 +12,7 @@
   </parent>
 
   <artifactId>fleet-job</artifactId>
-  <name> Fleet :: Job </name>
+  <name> Apache Carbondata :: Leo Job </name>
 
   <properties>
     <dev.path>${basedir}/../../dev</dev.path>

@@ -12,7 +12,7 @@
   </parent>
 
   <artifactId>fleet-vision</artifactId>
-  <name> Fleet :: Vision </name>
+  <name> Apache Carbondata :: Leo Vision </name>
 
   <properties>
     <dev.path>${basedir}/../../dev</dev.path>
