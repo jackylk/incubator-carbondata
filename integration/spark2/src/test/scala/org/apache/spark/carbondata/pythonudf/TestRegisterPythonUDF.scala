@@ -55,7 +55,7 @@ class TestRegisterPythonUDF extends QueryTest with BeforeAndAfterEach {
     PythonUDFRegister.unregisterPythonUDF(sqlContext.sparkSession, "square")
     intercept[AnalysisException](
       sql("select id, square(id) as id_squared from test where id=9"))
-    
+
     PythonUDFRegister.unregisterPythonUDF(sqlContext.sparkSession, "square")
     intercept[AnalysisException](
       sql("select id, square(id) as id_squared from test where id=9"))
