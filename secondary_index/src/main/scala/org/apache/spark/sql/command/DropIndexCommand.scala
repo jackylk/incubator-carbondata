@@ -47,56 +47,51 @@ private[sql] case class DropIndex(ifExistsSet: Boolean,
     var isValidDeletion = false
     val carbonLocks: scala.collection.mutable.ArrayBuffer[ICarbonLock] = ArrayBuffer[ICarbonLock]()
     try {
-      catalog.checkSchemasModifiedTimeAndReloadTable(TableIdentifier(tableName, Option(dbName)))
       carbonTable =
-        catalog.getTableFromMetadataCache(dbName, tableName) match {
-          case Some(carbonTable) => Some(carbonTable)
-          case None => try {
-            Some(catalog.lookupRelation(Some(dbName), tableName)(sparkSession)
-              .asInstanceOf[CarbonRelation].metaData.carbonTable)
-          } catch {
-            case ex: NoSuchTableException =>
-              var isIndexTableExists = false
-              // even if the index table does not exists
-              // check if the parent table exists and remove the index table reference
-              // in case if the parent table hold the deleted index table reference
-              try {
-                val parentCarbonTable = Some(catalog
-                  .lookupRelation(Some(dbName), parentTableName)(sparkSession)
-                  .asInstanceOf[CarbonRelation].metaData.carbonTable)
-                val indexTableList = CarbonInternalScalaUtil.getIndexesTables(parentCarbonTable.get)
-                if (!indexTableList.isEmpty) {
-                  locksToBeAcquired foreach {
-                    lock => {
-                      carbonLocks += CarbonLockUtil
-                        .getLockObject(parentCarbonTable.get.getAbsoluteTableIdentifier, lock)
-                    }
+        try {
+          Some(CarbonEnv.getCarbonTable(Some(dbName), tableName)(sparkSession))
+        } catch {
+          case ex: NoSuchTableException =>
+            var isIndexTableExists = false
+            // even if the index table does not exists
+            // check if the parent table exists and remove the index table reference
+            // in case if the parent table hold the deleted index table reference
+            try {
+              val parentCarbonTable = Some(catalog
+                .lookupRelation(Some(dbName), parentTableName)(sparkSession)
+                .asInstanceOf[CarbonRelation].metaData.carbonTable)
+              val indexTableList = CarbonInternalScalaUtil.getIndexesTables(parentCarbonTable.get)
+              if (!indexTableList.isEmpty) {
+                locksToBeAcquired foreach {
+                  lock => {
+                    carbonLocks += CarbonLockUtil
+                      .getLockObject(parentCarbonTable.get.getAbsoluteTableIdentifier, lock)
                   }
-                  CarbonInternalHiveMetadataUtil
-                    .removeIndexInfoFromParentTable(CarbonInternalScalaUtil
-                      .getIndexInfo(parentCarbonTable.get),
-                      parentCarbonTable.get,
-                      dbName,
-                      tableName)(sparkSession)
-                  // clear parent table from meta store cache as it is also required to be
-                  // refreshed when SI table is dropped
-                  CarbonInternalMetastore
-                    .removeTableFromMetadataCache(dbName, parentTableName)(sparkSession)
-                  isIndexTableExists = true
                 }
-              } catch {
-                case ex: NoSuchTableException =>
-                  if (!ifExistsSet) {
-                    throw ex
-                  }
-                case e: Exception =>
-                  throw e
+                CarbonInternalHiveMetadataUtil
+                  .removeIndexInfoFromParentTable(CarbonInternalScalaUtil
+                    .getIndexInfo(parentCarbonTable.get),
+                    parentCarbonTable.get,
+                    dbName,
+                    tableName)(sparkSession)
+                // clear parent table from meta store cache as it is also required to be
+                // refreshed when SI table is dropped
+                CarbonInternalMetastore
+                  .removeTableFromMetadataCache(dbName, parentTableName)(sparkSession)
+                isIndexTableExists = true
               }
-              if (!ifExistsSet && !isIndexTableExists) {
-                throw ex
-              }
-              None
-          }
+            } catch {
+              case ex: NoSuchTableException =>
+                if (!ifExistsSet) {
+                  throw ex
+                }
+              case e: Exception =>
+                throw e
+            }
+            if (!ifExistsSet && !isIndexTableExists) {
+              throw ex
+            }
+            None
         }
 
       if (carbonTable.isDefined) {

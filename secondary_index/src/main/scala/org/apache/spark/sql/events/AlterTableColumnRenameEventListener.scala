@@ -117,8 +117,7 @@ class AlterTableColumnRenameEventListener extends OperationEventListener with Lo
         val needRevert = indexTablesToRenameColumn.length != indexTablesRenamedSuccess.length
         if (needRevert) {
           indexTablesRenamedSuccess.foreach { indexTable =>
-            val indexCarbonTable = catalog.getTableFromMetadataCache(databaseName.get, indexTable)
-              .orNull
+            val indexCarbonTable = CarbonEnv.getCarbonTable(databaseName, indexTable)(sparkSession)
             if (indexCarbonTable != null) {
               // failure tables will be automatically taken care in
               // CarbonAlterTableColRenameDataTypeChangeCommand, just need to revert the success
@@ -138,8 +137,8 @@ class AlterTableColumnRenameEventListener extends OperationEventListener with Lo
           val database = sparkSession.catalog.currentDatabase
           // set the new indexInfo after column rename
           indexTablesRenamedSuccess.foreach { indexTable =>
-            val indexCarbonTable = catalog.
-              getTableFromMetadataCache(databaseName.getOrElse(database), indexTable).orNull
+            val indexCarbonTable = CarbonEnv
+              .getCarbonTable(databaseName, indexTable)(sparkSession)
             val indexTableCols: java.util.List[String] = new util.ArrayList[String]()
             val oldIndexInfo = CarbonInternalScalaUtil.getIndexInfo(carbonTable)
             indexCarbonTable.getTableInfo.getFactTable.getListOfColumns.asScala.foreach { column =>

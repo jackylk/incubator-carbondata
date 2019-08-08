@@ -152,18 +152,18 @@ class CarbonFileMetastore extends CarbonMetaStore {
     tables match {
       case Some(t) =>
         if (isSchemaRefreshed(absIdentifier, sparkSession)) {
-          readCarbonSchema(absIdentifier, parameters)
+          readCarbonSchema(absIdentifier, parameters, sparkSession)
         } else {
           CarbonRelation(database, tableName, CarbonSparkUtil.createSparkMeta(t), t)
         }
       case None =>
-        readCarbonSchema(absIdentifier, parameters)
+        readCarbonSchema(absIdentifier, parameters, sparkSession)
     }
   }
 
   private def readCarbonSchema(absIdentifier: AbsoluteTableIdentifier,
-      parameters: Map[String, String]): CarbonRelation = {
-    readCarbonSchema(absIdentifier,
+      parameters: Map[String, String], sparkSession: SparkSession): CarbonRelation = {
+    val relation = readCarbonSchema(absIdentifier,
       !parameters.getOrElse("isTransactional", "true").toBoolean) match {
       case Some(meta) =>
         CarbonRelation(absIdentifier.getDatabaseName, absIdentifier.getTableName,
