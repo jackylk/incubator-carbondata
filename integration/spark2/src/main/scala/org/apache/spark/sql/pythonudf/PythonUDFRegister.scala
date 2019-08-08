@@ -35,22 +35,26 @@ object PythonUDFRegister {
       funcName: String,
       script: String,
       libraryIncludes: Array[String],
-      returnType: DataType = StringType): Unit = {
+      returnType: DataType = StringType,
+      usePython3AsDefault: Boolean = true): Unit = {
     // Generate a wrapper script to wrap the user input script
     // Run the script to get the serialized python executable object (binary)
     // Register the executable object to spark
 
     val fileName = generateScriptFile(funcName, script, returnType)
-    val inBinary = PythonExecUtil.runPythonScript(spark, libraryIncludes, fileName)
+    val inBinary = PythonExecUtil.runPythonScript(spark, libraryIncludes, fileName, Seq.empty, usePython3AsDefault)
     FileFactory.deleteFile(fileName, FileFactory.getFileType(fileName))
+
+    val default_python_version = if (usePython3AsDefault) "3.5" else "2.7"
+    val default_python_exec = if (usePython3AsDefault) "python3" else "python2"
 
     // TODO handle big udf bigger than 1 MB, they supposed to be broadcasted.
     val function = PythonFunction(
       inBinary,
       new java.util.HashMap[String, String](),
       new java.util.ArrayList[String](),
-      spark.sparkContext.getConf.get("spark.python.exec", "python"),
-      spark.sparkContext.getConf.get("spark.python.version", "3.7"),
+      spark.sparkContext.getConf.get("spark.python.exec", default_python_exec),
+      spark.sparkContext.getConf.get("spark.python.version", default_python_version),
       new java.util.ArrayList[Broadcast[PythonBroadcast]](),
       null)
     spark.udf.registerPython(
