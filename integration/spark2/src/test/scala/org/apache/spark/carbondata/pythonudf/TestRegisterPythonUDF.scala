@@ -19,7 +19,7 @@ package org.apache.spark.carbondata.pythonudf
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.pythonudf.PythonUDFRegister
 import org.apache.spark.sql.test.util.QueryTest
-import org.apache.spark.sql.types.LongType
+import org.apache.spark.sql.types.{LongType, StringType}
 import org.scalatest.BeforeAndAfterEach
 
 /**
@@ -55,10 +55,39 @@ class TestRegisterPythonUDF extends QueryTest with BeforeAndAfterEach {
     PythonUDFRegister.unregisterPythonUDF(sqlContext.sparkSession, "square")
     intercept[AnalysisException](
       sql("select id, square(id) as id_squared from test where id=9"))
-
-    PythonUDFRegister.unregisterPythonUDF(sqlContext.sparkSession, "square")
-    intercept[AnalysisException](
-      sql("select id, square(id) as id_squared from test where id=9"))
   }
+
+  test("test python version") {
+    val python_version =
+      s"""
+         |import sys
+         |
+         |def python_version():
+         |  return sys.version
+       """.stripMargin
+
+    PythonUDFRegister.registerPythonUDF(
+      sqlContext.sparkSession,
+      "python3_version",
+      "python_version",
+      python_version,
+      Array[String](),
+      StringType,
+      true)
+
+    assert(sql("select python3_version()").collectAsList().get(0).getString(0).startsWith("3."))
+
+    PythonUDFRegister.registerPythonUDF(
+      sqlContext.sparkSession,
+      "python2_version",
+      "python_version",
+      python_version,
+      Array[String](),
+      StringType,
+      false)
+
+    assert(sql("select python2_version()").collectAsList().get(0).getString(0).startsWith("2.7"))
+  }
+
 
 }

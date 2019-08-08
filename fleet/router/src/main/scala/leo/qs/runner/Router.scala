@@ -18,7 +18,6 @@
 package leo.qs.runner
 
 import java.util
-import java.util.Map
 
 import scala.collection.mutable
 
@@ -27,34 +26,31 @@ import leo.job.QueryDef.QueryType
 import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
 import org.apache.spark.sql.catalyst.expressions.{And, AttributeReference, Expression, In, Not, Or}
 import org.apache.spark.sql.{CarbonDatasourceHadoopRelation, CarbonEnv, DeleteRecords,
-  LeoDatabase, SparkSession, UpdateTable}
+  SparkSession, UpdateTable}
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.execution.command.datamap.{CarbonCreateDataMapCommand,
   CarbonDataMapRebuildCommand, CarbonDataMapShowCommand, CarbonDropDataMapCommand}
 import org.apache.spark.sql.execution.command.management.{CarbonAlterTableCompactionCommand,
-  CarbonAlterTableFinishStreaming, CarbonCleanFilesCommand, CarbonCliCommand,
+  CarbonAlterTableFinishStreaming, CarbonCleanFilesCommand,
   CarbonDeleteLoadByIdCommand, CarbonDeleteLoadByLoadDateCommand, CarbonInsertColumnsCommand,
-  CarbonLoadDataCommand, CarbonShowLoadsCommand, RefreshCarbonTableCommand}
+  CarbonLoadDataCommand, CarbonShowLoadsCommand}
 import org.apache.spark.sql.execution.command.mutation.{CarbonProjectForDeleteCommand,
   CarbonProjectForUpdateCommand}
 import org.apache.spark.sql.execution.command.partition.{CarbonAlterTableAddHivePartitionCommand,
-  CarbonAlterTableDropHivePartitionCommand, CarbonAlterTableDropPartitionCommand,
-  CarbonAlterTableSplitPartitionCommand, CarbonShowCarbonPartitionsCommand}
+  CarbonAlterTableDropHivePartitionCommand,
+  CarbonAlterTableSplitPartitionCommand}
 import org.apache.spark.sql.execution.command.schema.{CarbonAlterTableAddColumnCommand,
   CarbonAlterTableColRenameDataTypeChangeCommand, CarbonAlterTableDropColumnCommand,
   CarbonAlterTableRenameCommand, CarbonAlterTableSetCommand, CarbonAlterTableUnsetCommand}
-import org.apache.spark.sql.execution.command.{CreateDataSourceTableCommand,
-  CreateDatabaseCommand, CreateTableCommand, DDLUtils, DescribeColumnCommand,
+import org.apache.spark.sql.execution.command.{
+  CreateDatabaseCommand, DescribeColumnCommand,
   DescribeTableCommand, DropDatabaseCommand, DropTableCommand, ExplainCommand, LoadDataCommand,
   RunnableCommand, SetCommand, SetDatabaseCommand, ShowDatabasesCommand, ShowTablesCommand}
 import org.apache.spark.sql.execution.command.stream.{CarbonCreateStreamCommand,
   CarbonDropStreamCommand, CarbonShowStreamsCommand}
 import org.apache.spark.sql.execution.command.table.CarbonExplainCommand
 import org.apache.spark.sql.execution.datasources.{CreateTable, LogicalRelation}
-import org.apache.spark.sql.leo.command.{LeoCreateConsumerCommand, LeoCreateExperimentCommand,
-  LeoCreateModelCommand, LeoDescConsumerCommand, LeoDropConsumerCommand,
-  LeoDropExperimentCommand, LeoDropModelCommand, LeoRegisterModelCommand,
-  LeoShowConsumersCommand, LeoShowModelsCommand, LeoUnregisterModelCommand}
+import org.apache.spark.sql.leo.command.{LeoCreateConsumerCommand, LeoCreateExperimentCommand, LeoCreateModelCommand, LeoDescConsumerCommand, LeoDropConsumerCommand, LeoDropExperimentCommand, LeoDropModelCommand, LeoRegisterModelCommand, LeoRunScriptCommand, LeoShowConsumersCommand, LeoShowModelsCommand, LeoUnregisterModelCommand}
 import org.apache.spark.sql.util.SparkSQLUtil
 
 object Router {
@@ -220,6 +216,8 @@ object Router {
           Query.makeQueryWithTypeName(originSql, cmd, originSql, QueryType.REGISTER_MODEL.name())
         case cmd@LeoUnregisterModelCommand(_, _) =>
           Query.makeQueryWithTypeName(originSql, cmd, originSql, QueryType.UNREGISTER_MODEL.name())
+        case cmd@LeoRunScriptCommand(_, _, _, _) =>
+          Query.makeQueryWithTypeName(originSql, cmd, originSql, QueryType.RUN_SCRIPT.name())
 
         ///////////////////////////////////////////////////////////////
         //                          Others                           //

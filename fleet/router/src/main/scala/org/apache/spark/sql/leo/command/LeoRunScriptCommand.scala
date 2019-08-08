@@ -29,7 +29,7 @@ import org.apache.spark.sql.{AnalysisException, Row, SparkSession}
 
 /**
  * Run the given script by sending one task to executor and run the script.
- * This is done by executing a UDF against an empty table
+ * This is done by executing a UDF against a temporary table
  *
  * @param scriptPath
  * @param funcName
@@ -71,7 +71,7 @@ case class LeoRunScriptCommand(
     if (output.length > 1) {
       throw new AnalysisException("output fields should be less than 2")
     }
-    // create a temporary UDF and use it in an empty table
+    // create a temporary UDF and use it in a temporary table
     PythonUDFRegister.registerPythonUDF(
       spark,
       "foo",

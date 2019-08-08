@@ -99,6 +99,7 @@ public class QueryDef {
     addDef(QueryType.STOP_JOB, true, false, true);
     addDef(QueryType.REGISTER_MODEL, true, false, true);
     addDef(QueryType.UNREGISTER_MODEL, true, false, true);
+    addDef(QueryType.RUN_SCRIPT, true, false, true);
 
     ///////////////////////////////////////////////////////////////
     //                          Consumer                         //
@@ -195,6 +196,7 @@ public class QueryDef {
     STOP_JOB,
     REGISTER_MODEL,
     UNREGISTER_MODEL,
+    RUN_SCRIPT,
 
     ///////////////////////////////////////////////////////////////
     //                          Consumer                         //
