@@ -30,19 +30,24 @@ import org.apache.spark.sql.SparkSession
  */
 object PythonExecUtil {
 
-  def runPythonScript(
-      spark: SparkSession,
+  def runPythonScript(spark: SparkSession,
       libraryIncludes: Array[String],
       scriptPath: String,
-      scriptArgs: Seq[String] = Seq.empty): Array[Byte] = {
+      scriptArgs: Seq[String] = Seq.empty,
+      usePython3AsDefault: Boolean = true): Array[Byte] = {
+
+    val default_python_exec = if (usePython3AsDefault) "python3" else "python2"
+
     val pathElements = new ArrayBuffer[String]
     pathElements += PythonUtils.sparkPythonPath
-    pathElements += sys.env.getOrElse("PYTHONPATH", "")
-    pathElements += Seq(sys.env("SPARK_HOME"), "python").mkString("/")
+    pathElements += sys.env.getOrElse("PYTHONPATH", "/usr/bin/" + default_python_exec)
+    for (sparkHome <- sys.env.get("SPARK_HOME")) {
+      pathElements += Seq(sparkHome, default_python_exec).mkString(File.separator)
+    }
     pathElements ++= libraryIncludes
     val pythonPath = PythonUtils.mergePythonPaths(pathElements: _*)
 
-    val pythonExec = spark.sparkContext.getConf.get("spark.python.exec", "python")
+    val pythonExec = spark.sparkContext.getConf.get("spark.python.exec", default_python_exec)
 
     val pb = new ProcessBuilder((Seq(pythonExec, scriptPath) ++ scriptArgs).asJava)
     val workerEnv = pb.environment()
