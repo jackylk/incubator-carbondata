@@ -42,4 +42,9 @@ public interface ModelAPI {
 
   ModelInputParams parseConfig(Map<String, String> options) throws ModelAPIException;
 
+  void deleteModel(String modelId) throws ModelAPIException;
+
+  void deleteModelService(String serviceId) throws ModelAPIException;
+
+
 }
