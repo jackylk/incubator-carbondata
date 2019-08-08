@@ -41,7 +41,7 @@ import org.apache.carbondata.processing.loading.FailureCauses
  * IUD update delete and compaction framework.
  *
  */
-private[sql] case class CarbonProjectForDeleteCommand(
+case class CarbonProjectForDeleteCommand(
     plan: LogicalPlan,
     databaseNameOp: Option[String],
     tableName: String,

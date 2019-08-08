@@ -23,8 +23,8 @@ import okhttp3.*;
 
 public class RestUtil {
 
-  private static MediaType JSON = MediaType.get("application/json; charset=utf-8");
-  public static MediaType BINARY = MediaType.get("multipart/form-data; boundary=xxBOUNDARYxx");
+  private static MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+  public static MediaType BINARY = MediaType.parse("multipart/form-data; boundary=xxBOUNDARYxx");
 
   public static void postAsync(String url, String json, Callback callback, String token,
       OkHttpClient client) {

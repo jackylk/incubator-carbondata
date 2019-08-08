@@ -17,16 +17,12 @@
 
 package leo.qs.client;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 import org.apache.carbondata.common.annotations.InterfaceAudience;
 import org.apache.carbondata.common.annotations.InterfaceStability;
 import org.apache.carbondata.core.datastore.row.CarbonRow;
 
-import leo.qs.model.view.SqlResponse;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
 /**
@@ -45,15 +41,17 @@ public class RouterRestClient {
   }
 
   public List<CarbonRow> sql(String sqlString) {
-    Objects.requireNonNull(sqlString);
-    ResponseEntity<SqlResponse> response =
-        restTemplate.postForEntity(serviceUri + "/table/sql", sqlString, SqlResponse.class);
-    Object[][] rows = Objects.requireNonNull(response.getBody()).getRows();
-    List<CarbonRow> output = new ArrayList<>(rows.length);
-    for (Object[] row : rows) {
-      output.add(new CarbonRow(row));
-    }
-    return output;
+    //Async job can not get job from this request directly.
+    return null;
+//    Objects.requireNonNull(sqlString);
+//    ResponseEntity<SqlResponse> response =
+//        restTemplate.postForEntity(serviceUri + "/table/sql", sqlString, SqlResponse.class);
+//    Object[][] rows = Objects.requireNonNull(response.getBody()).getRows();
+//    List<CarbonRow> output = new ArrayList<>(rows.length);
+//    for (Object[] row : rows) {
+//      output.add(new CarbonRow(row));
+//    }
+//    return output;
   }
 
 }

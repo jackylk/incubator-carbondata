@@ -237,7 +237,7 @@ class DataSummary implements Command {
   private void collectBlockDetails(String blockFilePath) throws IOException {
     outPuts.add("");
     outPuts.add("## Filtered Block Details for: " + blockFilePath
-        .substring(blockFilePath.lastIndexOf(File.separator) + 1, blockFilePath.length()));
+        .substring(blockFilePath.lastIndexOf("/") + 1, blockFilePath.length()));
     TableFormatter tableFormatter =
         new TableFormatter(new String[] { "BLKLT", "NumPages", "NumRows", "Size" }, outPuts);
     CarbonFile datafile = FileFactory.getCarbonFile(blockFilePath);

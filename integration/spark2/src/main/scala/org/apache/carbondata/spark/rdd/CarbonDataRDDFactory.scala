@@ -583,7 +583,7 @@ object CarbonDataRDDFactory {
           CarbonLoaderUtil.deleteSegment(carbonLoadModel, carbonLoadModel.getSegmentId.toInt)
           // delete corresponding segment file from metadata
           val segmentFile = CarbonTablePath.getSegmentFilesLocation(carbonLoadModel.getTablePath) +
-                            File.separator + segmentFileName
+                            "/" + segmentFileName
           FileFactory.deleteFile(segmentFile, FileFactory.getFileType(segmentFile))
           clearDataMapFiles(carbonTable, carbonLoadModel.getSegmentId)
         }

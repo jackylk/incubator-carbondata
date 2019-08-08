@@ -17,7 +17,6 @@
 
 package org.apache.spark
 
-
 import org.apache.spark.sql.leo.VisionSparkUDFs
 import org.apache.spark.sql.test.util.QueryTest
 import org.opencv.core.{Core, MatOfByte, Size}

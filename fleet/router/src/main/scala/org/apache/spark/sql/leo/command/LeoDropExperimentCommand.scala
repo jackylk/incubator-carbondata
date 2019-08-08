@@ -20,11 +20,12 @@ package org.apache.spark.sql.leo.command
 import scala.collection.JavaConverters._
 
 import org.apache.leo.model.job.TrainModelManager
-import org.apache.spark.sql.{Row, SparkSession}
+import org.apache.spark.sql.{LeoDatabase, Row, SparkSession}
 import org.apache.spark.sql.execution.command.RunnableCommand
 import org.apache.spark.sql.leo.{ExperimentStoreManager, LeoEnv}
 import org.apache.spark.sql.leo.exceptions.NoSuchExperimentException
 
+import org.apache.carbondata.core.constants.CarbonCommonConstants
 
 case class LeoDropExperimentCommand(
     experimentName: String,
@@ -33,27 +34,23 @@ case class LeoDropExperimentCommand(
 
   override def run(sparkSession: SparkSession): Seq[Row] = {
     val experimentSchemas = ExperimentStoreManager.getInstance().getAllExperimentSchemas
+    val updatedExpName = LeoDatabase.DEFAULT_PROJECTID + CarbonCommonConstants.UNDERSCORE +
+                         experimentName
     val ifExperimentExists = experimentSchemas.asScala
-      .exists(experiment => experiment.getDataMapName.equalsIgnoreCase(experimentName))
+      .exists(experiment => experiment.getDataMapName.equalsIgnoreCase(updatedExpName))
     if (ifExperimentExists) {
-      val details = TrainModelManager.getAllEnabledTrainedModels(experimentName)
+      val schema = ExperimentStoreManager.getInstance().getExperimentSchema(updatedExpName)
+
+      val details = TrainModelManager.getAllEnabledTrainedModels(updatedExpName)
       details.foreach { d =>
         val jobId = d.getProperties.get("job_id")
-        val modelId = d.getProperties.getOrDefault("model_id", "")
-        val serviceId = d.getProperties.getOrDefault("service_id", "")
-        val udf = d.getProperties.getOrDefault("udfName", "")
-        if (!udf.isEmpty && !serviceId.isEmpty && !modelId.isEmpty) {
-          sparkSession.sessionState.catalog.dropTempFunction(udf, true)
-          LeoEnv.modelTraingAPI.deleteModelService(serviceId)
-          LeoEnv.modelTraingAPI.deleteModel(modelId)
-        }
         LeoEnv.modelTraingAPI.stopTrainingJob(jobId.toLong)
       }
-      TrainModelManager.dropModel(experimentName)
-      ExperimentStoreManager.getInstance().dropExperimentSchema(experimentName)
+      TrainModelManager.dropModel(updatedExpName)
+      ExperimentStoreManager.getInstance().dropExperimentSchema(updatedExpName)
     } else {
       if (!ifExists) {
-        throw new NoSuchExperimentException(experimentName)
+        throw new NoSuchExperimentException(updatedExpName)
       }
     }
     Seq.empty

@@ -172,7 +172,7 @@ public class BadRecordsLogger {
       throws CarbonDataLoadingException {
     if (null == logFilePath) {
       logFilePath =
-          this.storePath + File.separator + this.fileName + CarbonCommonConstants.LOG_FILE_EXTENSION
+          this.storePath + "/" + this.fileName + CarbonCommonConstants.LOG_FILE_EXTENSION
               + CarbonCommonConstants.FILE_INPROGRESS_STATUS;
     }
     try {
@@ -212,7 +212,7 @@ public class BadRecordsLogger {
       throws CarbonDataLoadingException {
     if (null == csvFilePath) {
       csvFilePath =
-          this.storePath + File.separator + this.fileName + CarbonCommonConstants.CSV_FILE_EXTENSION
+          this.storePath + "/" + this.fileName + CarbonCommonConstants.CSV_FILE_EXTENSION
               + CarbonCommonConstants.FILE_INPROGRESS_STATUS;
     }
     try {

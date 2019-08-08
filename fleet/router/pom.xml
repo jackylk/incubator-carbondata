@@ -7,7 +7,7 @@
   <parent>
     <groupId>org.apache.carbondata</groupId>
     <artifactId>carbondata-parent</artifactId>
-    <version>1.6.0-SNAPSHOT</version>
+    <version>1.6.1.0100</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
@@ -16,20 +16,9 @@
 
   <properties>
     <dev.path>${basedir}/../../dev</dev.path>
-    <spring.version>1.5.14.RELEASE</spring.version>
   </properties>
 
   <dependencies>
-    <dependency>
-      <groupId>org.apache.carbondata</groupId>
-      <artifactId>carbondata-spark2</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.carbondata</groupId>
-      <artifactId>carbondata-ai-intf</artifactId>
-      <version>${project.version}</version>
-    </dependency>
     <dependency>
       <groupId>org.apache.carbondata</groupId>
       <artifactId>fleet-job</artifactId>
@@ -41,23 +30,9 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>com.huaweicloud</groupId>
-      <artifactId>esdk-obs-java</artifactId>
-      <version>3.1.3</version>
-      <exclusions>
-        <exclusion>
-          <groupId>com.fasterxml.jackson.core</groupId>
-          <artifactId>*</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.squareup.okhttp3</groupId>
-          <artifactId>*</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.logging.log4j</groupId>
-          <artifactId>*</artifactId>
-        </exclusion>
-      </exclusions>
+      <groupId>org.apache.carbondata</groupId>
+      <artifactId>carbondata-ai-intf</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>

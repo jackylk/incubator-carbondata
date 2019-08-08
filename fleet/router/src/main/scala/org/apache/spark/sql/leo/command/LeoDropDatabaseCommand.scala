@@ -17,49 +17,80 @@
 
 package org.apache.spark.sql.leo.command
 
-import org.apache.spark.sql.{CarbonEnv, Row, SparkSession}
+import org.apache.spark.sql.{AnalysisException, CarbonEnv, Row, SparkSession}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
 import org.apache.spark.sql.catalyst.expressions.Attribute
-import org.apache.spark.sql.execution.command.{DropDatabaseCommand, RunnableCommand}
-import org.apache.spark.sql.execution.command.table.CarbonDropTableCommand
+import org.apache.spark.sql.execution.command.{DropDatabaseCommand, DropTableCommand, RunnableCommand}
+import org.apache.spark.sql.leo.LeoEnv
+import org.apache.spark.sql.leo.util.OBSUtil
 
+import org.apache.carbondata.common.logging.LogServiceFactory
+import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.util.CarbonUtil
 
 case class LeoDropDatabaseCommand(command: DropDatabaseCommand)
   extends RunnableCommand {
 
+  val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
+
   override val output: Seq[Attribute] = command.output
+  val dbName : String = command.databaseName
+  val bucket: String = LeoEnv.bucketName(dbName)
+  val ifExists : Boolean = command.ifExists
 
   override def run(sparkSession: SparkSession): Seq[Row] = {
-
-    // delete name space in hbase
-    // drop db in carbon
-
-    var rows: Seq[Row] = Seq()
-    val dbName = command.databaseName
-    var tablesInDB: Seq[TableIdentifier] = null
-    if (sparkSession.sessionState.catalog.listDatabases().exists(_.equalsIgnoreCase(dbName))) {
-      tablesInDB = sparkSession.sessionState.catalog.listTables(dbName)
-    }
-    var databaseLocation = ""
-    try {
-      databaseLocation = CarbonEnv.getDatabaseLocation(dbName, sparkSession)
+    // step 1. check whether the input db exists
+    val databaseLocation = try {
+      CarbonEnv.getDatabaseLocation(dbName, sparkSession)
     } catch {
       case e: NoSuchDatabaseException =>
         // if database not found and ifExists true return empty
         if (command.ifExists) {
-          return rows
+          return Seq.empty
+        } else {
+          throw e
         }
     }
-    // DropHiveDB command will fail if cascade is false and one or more table exists in database
-    if (command.cascade && tablesInDB != null) {
-      tablesInDB.foreach { tableName =>
-        CarbonDropTableCommand(true, tableName.database, tableName.table).run(sparkSession)
+
+    // step 2. drop all tables if cascaded is set
+    val tablesInDB: Seq[TableIdentifier] =
+      if (sparkSession.sessionState.catalog.listDatabases().exists(_.equalsIgnoreCase(dbName))) {
+        sparkSession.sessionState.catalog.listTables(dbName)
+      } else {
+        Seq.empty
       }
+
+    // DropHiveDB command will fail if cascade is false and one or more table exists in database
+    if (command.cascade) {
+      tablesInDB.foreach { tableName =>
+        LeoDropTableCommand(
+          DropTableCommand(tableName, ifExists = true, isView = false, purge = true),
+          ifExistsSet = true,
+          tableName.database,
+          tableName.table
+        ).run(sparkSession)
+      }
+    } else if (tablesInDB.nonEmpty) {
+      throw new AnalysisException("database is not empty")
     }
-    rows = command.run(sparkSession)
-    CarbonUtil.dropDatabaseDirectory(databaseLocation)
-    rows
+
+    // 4. delete meta in hive metastore
+    command.run(sparkSession)
+
+    // 5. drop db in carbon by deleting data folder, and delete bucket if it is using OBS
+    try {
+      CarbonUtil.dropDatabaseDirectory(databaseLocation)
+      LeoEnv.fileSystemType match {
+        case FileFactory.FileType.OBS =>
+          OBSUtil.deleteBucket(bucket, ifExists, sparkSession)
+      }
+    } catch {
+      case e: Exception =>
+        LOGGER.error(e)
+        // ignore, we need to delete namespace and meta anyway
+        LOGGER.warn(s"failed to delete database folder: $databaseLocation")
+    }
+    Seq.empty
   }
 }

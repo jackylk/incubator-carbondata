@@ -37,7 +37,7 @@ import org.apache.carbondata.core.statusmanager.SegmentStatusManager
 import org.apache.carbondata.events.{AlterTableRenamePostEvent, AlterTableRenamePreEvent, OperationContext, OperationListenerBus}
 import org.apache.carbondata.format.SchemaEvolutionEntry
 
-private[sql] case class CarbonAlterTableRenameCommand(
+case class CarbonAlterTableRenameCommand(
     alterTableRenameModel: AlterTableRenameModel)
   extends MetadataCommand {
 

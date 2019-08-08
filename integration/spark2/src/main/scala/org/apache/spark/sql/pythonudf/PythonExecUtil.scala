@@ -38,7 +38,7 @@ object PythonExecUtil {
     val pathElements = new ArrayBuffer[String]
     pathElements += PythonUtils.sparkPythonPath
     pathElements += sys.env.getOrElse("PYTHONPATH", "")
-    pathElements += Seq(sys.env("SPARK_HOME"), "python").mkString(File.separator)
+    pathElements += Seq(sys.env("SPARK_HOME"), "python").mkString("/")
     pathElements ++= libraryIncludes
     val pythonPath = PythonUtils.mergePythonPaths(pathElements: _*)
 

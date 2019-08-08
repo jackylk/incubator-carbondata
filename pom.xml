@@ -112,7 +112,6 @@
     <module>fleet/vision</module>
     <module>fleet/vector</module>
     <module>fleet/cloud</module>
-    <module>integration/hbase</module>
   </modules>
 
   <properties>

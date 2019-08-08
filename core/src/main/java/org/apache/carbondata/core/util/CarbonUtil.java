@@ -2768,7 +2768,7 @@ public final class CarbonUtil {
       CarbonFile localCarbonFile =
           FileFactory.getCarbonFile(localFilePath, FileFactory.getFileType(localFilePath));
       String carbonFilePath = carbonDataDirectoryPath + localFilePath
-          .substring(localFilePath.lastIndexOf(File.separator));
+          .substring(localFilePath.lastIndexOf("/"));
       copyLocalFileToCarbonStore(carbonFilePath, localFilePath,
           CarbonCommonConstants.BYTEBUFFER_SIZE,
           getMaxOfBlockAndFileSize(fileSizeInBytes, localCarbonFile.getSize()));

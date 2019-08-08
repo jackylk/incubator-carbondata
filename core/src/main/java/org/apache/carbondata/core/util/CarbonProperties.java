@@ -1820,4 +1820,21 @@ public final class CarbonProperties {
     }
     return numOfThreadsForPruning;
   }
+
+  public int getAsyncQueryResLimit() {
+    int limit;
+    try {
+      limit = Integer.parseInt(CarbonProperties.getInstance()
+          .getProperty(CarbonCommonConstants.ASYNC_QUERY_RESULT_LIMIT,
+              CarbonCommonConstants.ASYNC_QUERY_RESULT_LIMIT_DEFAULT));
+    } catch (NumberFormatException exc) {
+      LOGGER.warn(
+          "The value of '" + CarbonCommonConstants.ASYNC_QUERY_RESULT_LIMIT
+              + "' is invalid. Using the default value "
+              + CarbonCommonConstants.ASYNC_QUERY_RESULT_LIMIT_DEFAULT);
+      limit = Integer.parseInt(
+          CarbonCommonConstants.ASYNC_QUERY_RESULT_LIMIT_DEFAULT);
+    }
+    return limit;
+  }
 }

@@ -17,9 +17,14 @@
 
 package leo.qs.model.view;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+@JsonAutoDetect
 public class Response {
-  private long responseId;
-  private String message;
+  @JsonProperty("response_id")
+  protected long responseId;
+  protected String message;
 
   public Response() {
   }
@@ -35,5 +40,9 @@ public class Response {
 
   public String getMessage() {
     return message;
+  }
+
+  public void setMessage(String message) {
+    this.message = message;
   }
 }

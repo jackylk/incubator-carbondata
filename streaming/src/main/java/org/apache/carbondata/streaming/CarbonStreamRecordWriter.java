@@ -172,7 +172,7 @@ public class CarbonStreamRecordWriter extends RecordWriter<Void, Object> {
     converter.initialize();
 
     // initialize data writer and compressor
-    String filePath = segmentDir + File.separator + fileName;
+    String filePath = segmentDir + "/" + fileName;
     FileFactory.FileType fileType = FileFactory.getFileType(filePath);
     CarbonFile carbonFile = FileFactory.getCarbonFile(filePath, fileType);
     if (carbonFile.exists()) {

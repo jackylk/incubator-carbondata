@@ -20,11 +20,12 @@ package org.apache.spark.sql.leo.command
 import scala.collection.JavaConverters._
 
 import org.apache.leo.model.job.{TrainModelDetail, TrainModelManager}
-import org.apache.spark.sql.{AnalysisException, Row, SparkSession}
+import org.apache.spark.sql.{AnalysisException, LeoDatabase, Row, SparkSession}
 import org.apache.spark.sql.execution.command.RunnableCommand
 import org.apache.spark.sql.leo.{ExperimentStoreManager, LeoEnv}
 
 import org.apache.carbondata.ai.DataScan
+import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.util.ObjectSerializationUtil
 
@@ -34,24 +35,26 @@ case class LeoCreateModelCommand(
     options: Map[String, String],
     ifNotExists: Boolean)
   extends RunnableCommand {
+  val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
 
   override def run(sparkSession: SparkSession): Seq[Row] = {
     // check if model with modelName already exists
     val experimentSchemas = ExperimentStoreManager.getInstance().getAllExperimentSchemas
+    val updatedExpName = LeoDatabase.DEFAULT_PROJECTID + CarbonCommonConstants.UNDERSCORE +
+                         experimentName
     val experiment = experimentSchemas.asScala
-      .find(model => model.getDataMapName.equalsIgnoreCase(experimentName))
+      .find(model => model.getDataMapName.equalsIgnoreCase(updatedExpName))
     val schema = experiment.getOrElse(
       throw new AnalysisException(
-        "Experiment with name " + experimentName + " does not exist"))
+        "Experiment with name " + updatedExpName + " does not exist"))
 
-    ModelUtil.validateOptions(options)
     val optionsMap = new java.util.HashMap[String, String]()
     optionsMap.putAll(options.asJava)
-    val details = TrainModelManager.getAllTrainedModels(experimentName)
+    val details = TrainModelManager.getAllEnabledTrainedModels(updatedExpName)
     if (details.exists(_.getJobName.equalsIgnoreCase(modelName))) {
       if (!ifNotExists) {
         throw new AnalysisException(
-          "Model with name " + modelName + " already exists on Experiment " + experimentName)
+          "Model with name " + modelName + " already exists on Experiment " + updatedExpName)
       } else {
         Seq.empty
       }
@@ -65,14 +68,15 @@ case class LeoCreateModelCommand(
     // It starts creating the training job and generates the model in cloud.
     val jobId =
       LeoEnv.modelTraingAPI.startTrainingJob(optionsMapFinal,
-        experimentName + CarbonCommonConstants.UNDERSCORE + modelName, queryObject)
+        updatedExpName + CarbonCommonConstants.UNDERSCORE + modelName, queryObject)
     optionsMap.put("job_id", jobId.toString)
     val detail = new TrainModelDetail(modelName, optionsMap)
     try {
       // store experiment schema
-      TrainModelManager.saveTrainModel(experimentName, detail)
+      TrainModelManager.saveTrainModel(updatedExpName, detail)
     } catch {
       case e: Exception =>
+        LOGGER.error(e)
         LeoEnv.modelTraingAPI.stopTrainingJob(jobId)
         throw e
     }

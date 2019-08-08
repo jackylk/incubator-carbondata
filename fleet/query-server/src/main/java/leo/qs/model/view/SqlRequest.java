@@ -17,7 +17,10 @@
 
 package leo.qs.model.view;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class SqlRequest extends Request {
+  @JsonProperty("sql")
   private String sqlStatement;
 
   public SqlRequest() {

@@ -17,7 +17,6 @@
 
 package org.apache.spark.sql.leo
 
-
 object ColorMap {
 
   // Colors are in RGB format

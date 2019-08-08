@@ -89,7 +89,7 @@ object Utils {
           FileFactory.createDirectoryAndSetPermission(storeLocation,
             ACLFileUtils.getPermissionsOnDatabase()
           )
-          FileFactory.createDirectoryAndSetPermission(storeLocation + File.separator + "default",
+          FileFactory.createDirectoryAndSetPermission(storeLocation + "/" + "default",
             ACLFileUtils.getPermissionsOnDatabase()
           )
         } catch {

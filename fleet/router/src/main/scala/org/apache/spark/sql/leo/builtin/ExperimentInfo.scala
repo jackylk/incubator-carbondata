@@ -23,7 +23,7 @@ import scala.collection.JavaConverters._
 
 import org.apache.leo.model.job.TrainModelManager
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{LeoDatabase, SparkSession}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.{MultiInstanceRelation, UnresolvedAttribute}
 import org.apache.spark.sql.catalyst.expressions.{Attribute, Expression, GenericInternalRow, UnsafeProjection}
@@ -59,11 +59,13 @@ case class ExperimentInfoExec(
   override protected def doExecute(): RDD[InternalRow] = {
     val projection = UnsafeProjection.create(output.map(_.dataType).toArray)
     val experimentName = experimentInfo.param.experimentName
+    val updatedExpName = LeoDatabase.DEFAULT_PROJECTID + CarbonCommonConstants.UNDERSCORE +
+                         experimentName
     val ifExperimentExists = ExperimentStoreManager.getInstance().getAllExperimentSchemas.asScala
-      .exists(m => m.getDataMapName.equalsIgnoreCase(experimentName))
+      .exists(m => m.getDataMapName.equalsIgnoreCase(updatedExpName))
     if (ifExperimentExists) {
       // get all training jobs started on experiment
-      val jobs = TrainModelManager.getAllEnabledTrainedModels(experimentName)
+      val jobs = TrainModelManager.getAllEnabledTrainedModels(updatedExpName)
       val metrics = new util.ArrayList[String]()
       jobs.foreach{ job =>
         val currentJob = Array(job.getJobName,
@@ -76,7 +78,7 @@ case class ExperimentInfoExec(
       }
       session.sparkContext.makeRDD(rows)
     } else {
-     throw new NoSuchExperimentException(experimentName)
+     throw new NoSuchExperimentException(updatedExpName)
     }
   }
 

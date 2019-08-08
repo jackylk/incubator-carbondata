@@ -19,11 +19,23 @@ package org.apache.spark.sql.leo
 
 import com.huawei.cloud.modelarts.ModelArtsModelAPI
 import org.apache.spark.sql.{CarbonSession, SparkSession}
-import org.apache.spark.sql.leo.builtin.{LeoUDF, ModelArtsUdf}
+import org.apache.spark.sql.leo.builtin.LeoUDF
+import org.apache.spark.sql.leo.builtin.LeoUDF
 
+import org.apache.carbondata.core.datastore.impl.FileFactory
+import org.apache.carbondata.core.datastore.impl.FileFactory.FileType
+import org.apache.carbondata.core.util.CarbonProperties
+import org.apache.spark.sql.{CarbonEnv, CarbonSession, SparkSession}
+import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
+import org.apache.spark.sql.catalyst.catalog.CatalogTable
+
+import org.apache.carbondata.cloud.CloudUdfRegister
 import org.apache.carbondata.ai.ModelAPI
+import org.apache.carbondata.core.constants.CarbonCommonConstants
 
 object LeoEnv {
+  val fileSystemType = FileType.OBS
+
   def getOrCreateLeoSession(builder: SparkSession.Builder): SparkSession = {
     builder
       .config("leo.enabled", "true")
@@ -32,9 +44,27 @@ object LeoEnv {
       .enableHiveSupport()
 
     val session = new CarbonSession.CarbonBuilder(builder).getOrCreateCarbonSession()
-    // register all ModelArts udf to spark
-    ModelArtsUdf.registerAllModelArtsUDF(session)
+    CloudUdfRegister.register(session)
     registerLeoBuiltinUDF(session)
+  }
+
+  def bucketName(dbName: String): String = {
+    "leo-db-" + dbName
+  }
+
+  def getDefaultDBPath(dbName: String, sparkSession: SparkSession): String = {
+    fileSystemType match {
+      case FileFactory.FileType.OBS =>
+        CarbonCommonConstants.OBS_PREFIX + bucketName(dbName) + "/" + dbName + ".db"
+      case _ =>
+        try {
+          CarbonEnv.getDatabaseLocation(dbName, sparkSession)
+        } catch {
+          case e: NoSuchDatabaseException =>
+            CarbonProperties.getStorePath
+        }
+
+    }
   }
 
   private def registerLeoBuiltinUDF(sesssion: SparkSession): SparkSession = {

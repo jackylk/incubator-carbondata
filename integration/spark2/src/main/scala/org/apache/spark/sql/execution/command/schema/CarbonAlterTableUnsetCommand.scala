@@ -24,7 +24,7 @@ import org.apache.spark.sql.hive.CarbonSessionCatalog
 import org.apache.spark.util.AlterTableUtil
 
 
-private[sql] case class CarbonAlterTableUnsetCommand(
+case class CarbonAlterTableUnsetCommand(
     tableIdentifier: TableIdentifier,
     propKeys: Seq[String],
     ifExists: Boolean,

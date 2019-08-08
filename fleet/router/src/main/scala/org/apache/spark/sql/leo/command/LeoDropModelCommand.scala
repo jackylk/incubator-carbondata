@@ -20,10 +20,11 @@ package org.apache.spark.sql.leo.command
 import scala.collection.JavaConverters._
 
 import org.apache.leo.model.job.TrainModelManager
-import org.apache.spark.sql.{AnalysisException, Row, SparkSession}
+import org.apache.spark.sql.{AnalysisException, LeoDatabase, Row, SparkSession}
 import org.apache.spark.sql.execution.command.RunnableCommand
 import org.apache.spark.sql.leo.{ExperimentStoreManager, LeoEnv}
 
+import org.apache.carbondata.core.constants.CarbonCommonConstants
 
 /**
  * Drop's model on given experimentName
@@ -37,13 +38,15 @@ case class LeoDropModelCommand(
   override def run(sparkSession: SparkSession): Seq[Row] = {
     // check if model with modelName already exists
     val modelSchemas = ExperimentStoreManager.getInstance().getAllExperimentSchemas
+    val updatedExpName = LeoDatabase.DEFAULT_PROJECTID + CarbonCommonConstants.UNDERSCORE +
+                         experimentName
     val model = modelSchemas.asScala
-      .find(model => model.getDataMapName.equalsIgnoreCase(experimentName))
+      .find(model => model.getDataMapName.equalsIgnoreCase(updatedExpName))
     val schema = model.getOrElse(
       throw new AnalysisException(
         "Experiment with name " + experimentName + " doesn't exists in storage"))
 
-    val details = TrainModelManager.getAllTrainedModels(experimentName)
+    val details = TrainModelManager.getAllTrainedModels(updatedExpName)
     val trainingJobDetail = details.find(_.getJobName.equalsIgnoreCase(modelName))
     val jobDetail = if (trainingJobDetail.isDefined) {
       trainingJobDetail.get
@@ -55,17 +58,9 @@ case class LeoDropModelCommand(
         return Seq.empty
       }
     }
-    val modelId = jobDetail.getProperties.getOrDefault("model_id", "")
-    val serviceId = jobDetail.getProperties.getOrDefault("service_id", "")
-    val udf = jobDetail.getProperties.getOrDefault("udfName", "")
-    if (!udf.isEmpty && !serviceId.isEmpty && !modelId.isEmpty) {
-      sparkSession.sessionState.catalog.dropTempFunction(udf, true)
-      LeoEnv.modelTraingAPI.deleteModelService(serviceId)
-      LeoEnv.modelTraingAPI.deleteModel(modelId)
-    }
     val jobId = jobDetail.getProperties.get("job_id")
     LeoEnv.modelTraingAPI.stopTrainingJob(jobId.toLong)
-    TrainModelManager.dropTrainModel(experimentName, jobDetail.getJobName)
+    TrainModelManager.dropTrainModel(updatedExpName, jobDetail.getJobName)
     Seq.empty
   }
 }

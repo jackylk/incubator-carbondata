@@ -17,7 +17,7 @@
 
 package org.apache.carbondata.cloud
 
-import org.apache.spark.sql.{CloudUtils, SparkSession, UDFRegistration}
+import org.apache.spark.sql.{CloudUtils, SparkSession}
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.util.CarbonProperties
@@ -27,13 +27,21 @@ import org.apache.carbondata.core.util.CarbonProperties
  */
 object CloudUdfRegister {
 
+  // avoid to register UDF more than one time
+  var isRegistered = false
+
   val LOGGER = LogServiceFactory.getLogService(CloudUdfRegister.getClass.getCanonicalName)
 
   def register(sparkSession: SparkSession): Unit = {
-    LOGGER.info("starting the registration of cloud udf")
-    // ocr
-    OCRUdf.register(sparkSession)
-    LOGGER.info("finished the registration of cloud udf")
+    if (isRegistered) {
+      LOGGER.info("already register cloud udf")
+    } else {
+      LOGGER.info("starting the registration of cloud udf")
+      // ocr
+      OCRUdf.register(sparkSession)
+      LOGGER.info("finished the registration of cloud udf")
+      isRegistered = true
+    }
   }
 
   /**

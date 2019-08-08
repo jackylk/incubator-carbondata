@@ -133,7 +133,7 @@ public final class CarbonDataProcessorUtil {
       String tmpStore = baseTmpStorePathArray[i];
       String carbonDataDirectoryPath = CarbonTablePath.getSegmentPath(tmpStore, segmentId);
 
-      localDataFolderLocArray[i] = carbonDataDirectoryPath + File.separator + taskId;
+      localDataFolderLocArray[i] = carbonDataDirectoryPath + "/" + taskId;
     }
     return localDataFolderLocArray;
   }

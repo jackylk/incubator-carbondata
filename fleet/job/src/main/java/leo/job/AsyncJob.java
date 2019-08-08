@@ -21,5 +21,5 @@ package leo.job;
  * Represent a asynchronous job executing by fleet-core
  */
 public interface AsyncJob {
-
+  String getJobId();
 }

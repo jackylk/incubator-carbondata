@@ -17,20 +17,20 @@
 
 package leo.qs.intf;
 
+import java.io.IOException;
 import java.util.List;
 
-import org.apache.carbondata.common.annotations.InterfaceAudience;
-
 import leo.job.AsyncJob;
-import leo.job.JobID;
+import leo.job.JobMeta;
 import leo.job.Query;
+import leo.model.view.SqlResult;
+import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
 /**
  * Implement this to support query job on fleet compute cluster.
  * It can be spark/presto/hive/hbasedirect
  */
-@InterfaceAudience.Developer("fleet-engine")
 public interface QueryRunner {
 
   /**
@@ -38,10 +38,10 @@ public interface QueryRunner {
    * SQL statement maybe rewritten if there is any MV or Query Result Cache matched
    *
    * @param query query request
-   * @param jobID job id
+   * @param jobMeta
    * @return job handler
    */
-  AsyncJob doAsyncJob(Query query, JobID jobID);
+  AsyncJob doAsyncJob(Query query, JobMeta jobMeta);
 
   /**
    * perform a synchronous query job.
@@ -50,21 +50,29 @@ public interface QueryRunner {
    * @param query query request
    * @return query result
    */
-  List<Row> doJob(Query query);
+  SqlResult doJob(Query query);
 
   /**
-   * perform a synchronous query based on primary key.
-   *
-   * @param query query request
-   * @return query result
+   * get job meta from query runner cache or meta store client if not found.
+   * @param  jobId
+   * @return job JobMeta
    */
-  List<Row> doPKQuery(Query query);
+  JobMeta getJobMeta(String jobId, String projectId);
 
   /**
-   * start a continuous job, like streaming ingestion job
-   * @param query query statement
-   * @param jobID job id
-   * @return job handler
+   * get all query result from file path for async job by spark dataframe.
+   * @param  path of query result
+   * @return result
    */
-  AsyncJob doContinuousJob(Query query, JobID jobID);
+  Dataset<Row> fetchResult(String path);
+
+  /**
+   * get query result page from file path according to offset and limit for async job by
+   * local reader impl.
+   * @param  path of query result
+   * @return result
+   */
+  List<String[]> fetchResultPage(String path, int startLineNum, int limit)
+      throws Exception;
+
 }

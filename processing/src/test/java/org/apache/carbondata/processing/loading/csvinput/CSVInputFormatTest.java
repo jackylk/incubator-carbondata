@@ -138,11 +138,11 @@ public class CSVInputFormatTest extends TestCase {
     job.setInputFormatClass(CSVInputFormat.class);
 
     String inputFolder = new File("src/test/resources/csv").getCanonicalPath();
-    FileInputFormat.addInputPath(job, new Path(inputFolder + File.separator + "data.csv"));
-    FileInputFormat.addInputPath(job, new Path(inputFolder + File.separator + "data.csv.bz2"));
-    FileInputFormat.addInputPath(job, new Path(inputFolder + File.separator + "data.csv.gz"));
-    // FileInputFormat.addInputPath(job, new Path(inputFolder + File.separator + "data.csv.lz4"));
-    // FileInputFormat.addInputPath(job, new Path(inputFolder + File.separator + "data.csv.snappy"));
+    FileInputFormat.addInputPath(job, new Path(inputFolder + "/" + "data.csv"));
+    FileInputFormat.addInputPath(job, new Path(inputFolder + "/" + "data.csv.bz2"));
+    FileInputFormat.addInputPath(job, new Path(inputFolder + "/" + "data.csv.gz"));
+    // FileInputFormat.addInputPath(job, new Path(inputFolder + "/" + "data.csv.lz4"));
+    // FileInputFormat.addInputPath(job, new Path(inputFolder + "/" + "data.csv.snappy"));
 
     deleteOutput(output);
     FileOutputFormat.setOutputPath(job, new Path(output.getCanonicalPath()));
@@ -168,9 +168,9 @@ public class CSVInputFormatTest extends TestCase {
     job.setInputFormatClass(CSVInputFormat.class);
 
     String inputFolder = new File("src/test/resources/csv").getCanonicalPath();
-    FileInputFormat.addInputPath(job, new Path(inputFolder + File.separator + "csv_with_bom.csv"));
-    FileInputFormat.addInputPath(job, new Path(inputFolder + File.separator + "csv_with_bom.csv.bz2"));
-    FileInputFormat.addInputPath(job, new Path(inputFolder + File.separator + "csv_with_bom.csv.gz"));
+    FileInputFormat.addInputPath(job, new Path(inputFolder + "/" + "csv_with_bom.csv"));
+    FileInputFormat.addInputPath(job, new Path(inputFolder + "/" + "csv_with_bom.csv.bz2"));
+    FileInputFormat.addInputPath(job, new Path(inputFolder + "/" + "csv_with_bom.csv.gz"));
 
     deleteOutput(output);
     FileOutputFormat.setOutputPath(job, new Path(output.getCanonicalPath()));

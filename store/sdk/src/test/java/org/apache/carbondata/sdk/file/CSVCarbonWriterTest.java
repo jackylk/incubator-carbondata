@@ -388,8 +388,8 @@ public class CSVCarbonWriterTest {
       Assert.assertNotNull(dataFiles);
       Assert.assertTrue(dataFiles.length > 0);
       String taskNo = CarbonTablePath.DataFileUtil.getTaskNo(dataFiles[0].getName());
-      String taskID = CarbonTablePath.DataFileUtil.getTaskIdFromTaskNo(taskNo);
-      Assert.assertEquals("Task Id is not matched", taskID, "5");
+      long taskID = CarbonTablePath.DataFileUtil.getTaskIdFromTaskNo(taskNo);
+      Assert.assertEquals("Task Id is not matched", taskID, 5);
     } catch (Exception e) {
       e.printStackTrace();
       Assert.fail(e.getMessage());

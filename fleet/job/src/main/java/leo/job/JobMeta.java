@@ -17,28 +17,42 @@
 
 package leo.job;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+@JsonAutoDetect
 public class JobMeta {
-  private JobID jobId;
+  @JsonProperty("job_id")
+  private String jobId;
+  @JsonProperty("start_ts")
   private long startTs;
+  @JsonProperty("end_ts")
   private long endTs;
   private String query;
   private int status;
   private String path;
+  @JsonProperty("job_schema")
+  private String jobSchema;
+  @JsonProperty("cluster_name")
+  private String clusterName;
+  @JsonProperty("project_id")
+  private String projectId;
+  @JsonProperty("failed_reason")
+  private String failedReason;
 
-  public JobMeta(JobID jobId, long startTs, long endTs, String query, int status, String path) {
-    this.jobId = jobId;
-    this.startTs = startTs;
-    this.endTs = endTs;
-    this.query = query;
-    this.status = status;
-    this.path = path;
+  public JobMeta() {
   }
 
-  public JobID getJobId() {
+  public JobMeta(String jobId, String projectId) {
+    this.jobId = jobId;
+    this.projectId = projectId;
+  }
+
+  public String getJobId() {
     return jobId;
   }
 
-  public void setJobId(JobID jobId) {
+  public void setJobId(String jobId) {
     this.jobId = jobId;
   }
 
@@ -80,5 +94,37 @@ public class JobMeta {
 
   public void setPath(String path) {
     this.path = path;
+  }
+
+  public String getJobSchema() {
+    return jobSchema;
+  }
+
+  public void setJobSchema(String jobSchema) {
+    this.jobSchema = jobSchema;
+  }
+
+  public String getClusterName() {
+    return clusterName;
+  }
+
+  public void setClusterName(String clusterName) {
+    this.clusterName = clusterName;
+  }
+
+  public String getProjectId() {
+    return projectId;
+  }
+
+  public void setProjectId(String projectId) {
+    this.projectId = projectId;
+  }
+
+  public String getFailedReason() {
+    return failedReason;
+  }
+
+  public void setFailedReason(String failedReason) {
+    this.failedReason = failedReason;
   }
 }

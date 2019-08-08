@@ -17,6 +17,9 @@
 
 package leo.qs.model.view;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+
+@JsonAutoDetect
 class Request {
   private long requestId;
 

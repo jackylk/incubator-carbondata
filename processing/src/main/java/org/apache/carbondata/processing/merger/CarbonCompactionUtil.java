@@ -640,6 +640,24 @@ public class CarbonCompactionUtil {
     return taskIdSet.size();
   }
 
+  private static int compare(Object[] left, Object[] right, boolean[] isDictEncode) {
+    int compare = 0;
+    for (int i = 0; i < isDictEncode.length; i++) {
+      if (isDictEncode[i]) {
+        compare = Integer.compare((Integer) left[i], (Integer) right[i]);
+        if (compare != 0) {
+          return compare;
+        }
+      } else {
+        compare = ByteUtil.compare((byte[]) left[i], (byte[]) right[i]);
+        if (compare != 0) {
+          return compare;
+        }
+      }
+    }
+    return compare;
+  }
+
   private static boolean compareSortColumns(CarbonTable table, List<ColumnSchema> fileColumns) {
     // When sort_columns is modified, it will be consider as no_sort also.
     List<CarbonDimension> sortColumnsOfSegment = new ArrayList<>();

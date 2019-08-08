@@ -119,16 +119,9 @@ public class BlockDataMap extends CoarseGrainDataMap
     BlockletDataMapModel blockletDataMapInfo = (BlockletDataMapModel) dataMapModel;
     DataFileFooterConverter fileFooterConverter =
         new DataFileFooterConverter(dataMapModel.getConfiguration());
-    List<DataFileFooter> indexInfo = null;
-    if (blockletDataMapInfo.getIndexInfos() == null || blockletDataMapInfo.getIndexInfos()
-        .isEmpty()) {
-      indexInfo = fileFooterConverter
-          .getIndexInfo(blockletDataMapInfo.getFilePath(), blockletDataMapInfo.getFileData(),
-              blockletDataMapInfo.getCarbonTable().isTransactionalTable());
-    } else {
-      // when index info is already read and converted to data file footer object
-      indexInfo = blockletDataMapInfo.getIndexInfos();
-    }
+    List<DataFileFooter> indexInfo = fileFooterConverter
+        .getIndexInfo(blockletDataMapInfo.getFilePath(), blockletDataMapInfo.getFileData(),
+            blockletDataMapInfo.getCarbonTable().isTransactionalTable());
     Path path = new Path(blockletDataMapInfo.getFilePath());
     // store file path only in case of partition table, non transactional table and flat folder
     // structure
@@ -158,9 +151,6 @@ public class BlockDataMap extends CoarseGrainDataMap
       DataMapRowImpl summaryRow =
           loadMetadata(taskSummarySchema, segmentProperties, blockletDataMapInfo, indexInfo);
       finishWriting(taskSummarySchema, filePath, fileName, segmentId, summaryRow);
-      if (((BlockletDataMapModel) dataMapModel).isSerializeDmStore()) {
-        serializeDmStore();
-      }
     }
     if (LOGGER.isDebugEnabled()) {
       LOGGER.debug(
@@ -178,15 +168,6 @@ public class BlockDataMap extends CoarseGrainDataMap
       addTaskSummaryRowToUnsafeMemoryStore(taskSummarySchema, summaryRow, filePath, fileName,
           segmentId);
       taskSummaryDMStore.finishWriting();
-    }
-  }
-
-  private void serializeDmStore() {
-    if (memoryDMStore != null) {
-      memoryDMStore.serializeMemoryBlock();
-    }
-    if (null != taskSummaryDMStore) {
-      taskSummaryDMStore.serializeMemoryBlock();
     }
   }
 
@@ -1027,7 +1008,6 @@ public class BlockDataMap extends CoarseGrainDataMap
     if (null != taskSummaryDMStore) {
       taskSummaryDMStore.freeMemory();
     }
-    segmentPropertiesWrapper = null;
   }
 
   public long getMemorySize() {
@@ -1069,8 +1049,7 @@ public class BlockDataMap extends CoarseGrainDataMap
   }
 
   protected short[] getPrimaryKeyIndexes() {
-    return SegmentPropertiesAndSchemaHolder.getInstance()
-        .getSegmentPropertiesWrapper(segmentPropertiesIndex).getPrimaryKeyColIndexes();
+    return segmentPropertiesWrapper.getPrimaryKeyColIndexes();
   }
 
   protected CarbonRowSchema[] getTaskSummarySchema() {
@@ -1099,21 +1078,6 @@ public class BlockDataMap extends CoarseGrainDataMap
       taskSummaryDMStore.freeMemory();
       taskSummaryDMStore = unsafeSummaryMemoryDMStore;
     }
-
-    if (memoryDMStore instanceof UnsafeMemoryDMStore) {
-      if (memoryDMStore.isSerialized()) {
-        memoryDMStore.copyToMemoryBlock();
-      }
-    }
-    if (taskSummaryDMStore instanceof UnsafeMemoryDMStore) {
-      if (taskSummaryDMStore.isSerialized()) {
-        taskSummaryDMStore.copyToMemoryBlock();
-      }
-    }
-  }
-
-  public SegmentPropertiesAndSchemaHolder.SegmentPropertiesWrapper getSegmentPropertiesWrapper() {
-    return segmentPropertiesWrapper;
   }
 
   @Override public int getNumberOfEntries() {
@@ -1134,4 +1098,9 @@ public class BlockDataMap extends CoarseGrainDataMap
       SegmentPropertiesAndSchemaHolder.SegmentPropertiesWrapper segmentPropertiesWrapper) {
     this.segmentPropertiesWrapper = segmentPropertiesWrapper;
   }
+
+  public SegmentPropertiesAndSchemaHolder.SegmentPropertiesWrapper getSegmentPropertiesWrapper() {
+    return segmentPropertiesWrapper;
+  }
+
 }

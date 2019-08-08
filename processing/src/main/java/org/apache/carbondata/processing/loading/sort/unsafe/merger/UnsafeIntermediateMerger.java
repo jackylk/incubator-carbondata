@@ -133,7 +133,7 @@ public class UnsafeIntermediateMerger {
     String[] tempFileLocations = parameters.getTempFileLocation();
     String targetLocation = tempFileLocations[new Random().nextInt(tempFileLocations.length)];
 
-    File file = new File(targetLocation + File.separator + parameters.getTableName()
+    File file = new File(targetLocation + "/" + parameters.getTableName()
         + '_' + parameters.getRangeId() + '_' + System.nanoTime()
         + CarbonCommonConstants.MERGERD_EXTENSION);
     UnsafeIntermediateFileMerger merger =

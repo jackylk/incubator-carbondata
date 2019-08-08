@@ -199,7 +199,7 @@ public class SegmentPropertiesAndSchemaHolder {
     List<SegmentPropertiesWrapper> segmentPropertiesWrappersToBeRemoved = new ArrayList<>();
     // remove segmentProperties wrapper entries from the copyOnWriteArrayList
     for (Map.Entry<SegmentPropertiesWrapper, SegmentIdAndSegmentPropertiesIndexWrapper> entry :
-          segmentPropWrapperToSegmentSetMap.entrySet()) {
+        segmentPropWrapperToSegmentSetMap.entrySet()) {
       SegmentPropertiesWrapper segmentPropertiesWrapper = entry.getKey();
       if (segmentPropertiesWrapper.getTableIdentifier().getCarbonTableIdentifier()
           .getTableUniqueName()
@@ -218,6 +218,42 @@ public class SegmentPropertiesAndSchemaHolder {
     absoluteTableIdentifierByteMap
         .remove(absoluteTableIdentifier.getCarbonTableIdentifier().getTableUniqueName());
   }
+
+  /**
+   * Method to remove the given segment ID
+   *
+   * @param segmentId
+   * @param segmentPropertiesIndex
+   * @param clearSegmentWrapperFromMap flag to specify whether to clear segmentPropertiesWrapper
+   *                                   from Map if all the segment's using it have become stale
+   */
+  public void invalidate(String segmentId, int segmentPropertiesIndex,
+      boolean clearSegmentWrapperFromMap) {
+    SegmentPropertiesWrapper segmentPropertiesWrapper =
+        indexToSegmentPropertiesWrapperMapping.get(segmentPropertiesIndex);
+    if (null != segmentPropertiesWrapper) {
+      SegmentIdAndSegmentPropertiesIndexWrapper segmentIdAndSegmentPropertiesIndexWrapper =
+          segmentPropWrapperToSegmentSetMap.get(segmentPropertiesWrapper);
+      synchronized (getOrCreateTableLock(segmentPropertiesWrapper.getTableIdentifier())) {
+        segmentIdAndSegmentPropertiesIndexWrapper.removeSegmentId(segmentId);
+        // if after removal of given SegmentId, the segmentIdSet becomes empty that means this
+        // segmentPropertiesWrapper is not getting used at all. In that case this object can be
+        // removed from all the holders
+        if (clearSegmentWrapperFromMap && segmentIdAndSegmentPropertiesIndexWrapper.segmentIdSet
+            .isEmpty()) {
+          indexToSegmentPropertiesWrapperMapping.remove(segmentPropertiesIndex);
+          segmentPropWrapperToSegmentSetMap.remove(segmentPropertiesWrapper);
+        } else if (!clearSegmentWrapperFromMap
+            && segmentIdAndSegmentPropertiesIndexWrapper.segmentIdSet.isEmpty()) {
+          // min max columns can very when cache is modified. So even though entry is not required
+          // to be deleted from map clear the column cache so that it can filled again
+          segmentPropertiesWrapper.clear();
+          LOGGER.info("cleared min max for segmentProperties at index: " + segmentPropertiesIndex);
+        }
+      }
+    }
+  }
+
 
   /**
    * Method to remove the given segment ID

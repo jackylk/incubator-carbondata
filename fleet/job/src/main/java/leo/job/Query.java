@@ -17,7 +17,13 @@
 
 package leo.job;
 
+import java.util.Map;
+
+import leo.job.QueryDef.QueryTypeDef;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
+
+import static leo.job.QueryDef.QueryType.CARBON_SELECT;
+import static leo.job.QueryDef.QueryType.HBASE_SELECT;
 
 public class Query {
 
@@ -25,21 +31,21 @@ public class Query {
 
   private String rewrittenSql;
 
-  private KVQueryParams kvQueryParams;
-
   private LogicalPlan originPlan;
+
+  private Map<String, String> tblProperties;
 
   // in case on NPKQuery, query result will be stored in this path
   // this variable is valid only if query type is NPKQuery
   private String resultPath;
 
-  private Type type;
+  private QueryTypeDef type;
 
-  public enum Type {
-    PKQuery, NPKQuery, ContinuousQuery
+  public enum ConsumerJobType {
+    CreateConsumer, DropConsumer, DescConsumer, ShowConsumers
   }
 
-  private Query(String originSql, Type type) {
+  private Query(String originSql, QueryTypeDef type) {
     this.originSql = originSql;
     this.type = type;
   }
@@ -50,9 +56,10 @@ public class Query {
    * @param kvQueryParams
    * @return a new Query object
    */
-  public static Query makePKQuery(String originSql, KVQueryParams kvQueryParams) {
-    Query query = new Query(originSql, Type.PKQuery);
-    query.kvQueryParams = kvQueryParams;
+
+  public static Query makePKQuery(String originSql, LogicalPlan originPlan) {
+    Query query = new Query(originSql, QueryDef.getQueryTypeDef(HBASE_SELECT.name()));
+    query.originPlan = originPlan;
     return query;
   }
 
@@ -63,45 +70,50 @@ public class Query {
    * @param rewrittenSql
    * @return a new Query object
    */
-  public static Query makeNPKQuery(String originSql, LogicalPlan originPlan, String rewrittenSql) {
-    Query query = new Query(originSql, Type.NPKQuery);
+  public static Query makeNPKQuery(String originSql, LogicalPlan originPlan, String rewrittenSql,
+      Map<String, String> tblProperties) {
+    Query query = new Query(originSql, QueryDef.getQueryTypeDef(CARBON_SELECT.name()));
     query.originPlan = originPlan;
     query.rewrittenSql = rewrittenSql;
-    query.resultPath = generateResultPathForQuery(originPlan);
+    query.tblProperties = tblProperties;
+    return query;
+  }
+
+  /**
+   * create a job with type name, dml ddl etc.
+   * @param originSql
+   * @param originPlan
+   * @param rewrittenSql
+   * @return a new Query object
+   */
+  public static Query makeQueryWithTypeName(String originSql, LogicalPlan originPlan,
+      String rewrittenSql, String typeName) {
+    Query query = new Query(originSql, QueryDef.getQueryTypeDef(typeName));
+    query.originPlan = originPlan;
+    query.rewrittenSql = rewrittenSql;
     return query;
   }
 
   /**
    * Generate the result path based on the query
-   * @param plan query plan
    * @return result path
    */
-  private static String generateResultPathForQuery(LogicalPlan plan) {
-    // TODO
-    return null;
-  }
-
-  /**
-   * create a continuous query
-   * @param originSql
-   * @param originPlan
-   * @return a new Query object
-   */
-  public static Query makeContinuousQuery(String originSql, LogicalPlan originPlan) {
-    Query query = new Query(originSql, Type.ContinuousQuery);
-    query.originPlan = originPlan;
-    return query;
+  public String generateResultPathForQuery() {
+    /*
+     * Before create a leader, a bucket should be created with region name, the sql result would
+     * store into a file like 'obs://${bucketName-this-region}/${dirName-this-cluster}/${jobId}',
+     * Here, it only return the path, not include jobId, the jobId will set only after generated.
+     */
+    String bucketName = System.getProperty(JobConf.LEO_QUERY_BUCKET_NAME);
+    String clusterName = System.getProperty(JobConf.LEO_CLUSTER_NAME);
+    return "obs://" + bucketName + "/" + JobConf.QUERY_RESULT_DIR_PREFIX + clusterName + "/";
   }
 
   public String getRewrittenSql() {
     return rewrittenSql;
   }
 
-  public KVQueryParams getKvQueryParams() {
-    return kvQueryParams;
-  }
-
-  public Type getType() {
+  public QueryDef.QueryTypeDef getTypeDef() {
     return type;
   }
 
@@ -111,5 +123,21 @@ public class Query {
 
   public LogicalPlan getOriginPlan() {
     return originPlan;
+  }
+
+  public String getResultPath() {
+    return resultPath;
+  }
+
+  public void setResultPath(String resultPath) {
+    this.resultPath = resultPath;
+  }
+
+  public Map<String, String> getTblProperties() {
+    return tblProperties;
+  }
+
+  public void setTblProperties(Map<String, String> tblProperties) {
+    this.tblProperties = tblProperties;
   }
 }

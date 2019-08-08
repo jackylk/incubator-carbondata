@@ -145,7 +145,7 @@ public class StreamPruner {
     try {
       while (indexReader.hasNext()) {
         BlockIndex blockIndex = indexReader.readBlockIndexInfo();
-        String filePath = segmentDir + File.separator + blockIndex.getFile_name();
+        String filePath = segmentDir + "/" + blockIndex.getFile_name();
         long length = blockIndex.getFile_size();
         StreamFile streamFile = new StreamFile(segment.getSegmentNo(), filePath, length);
         streamFileList.add(streamFile);

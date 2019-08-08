@@ -35,7 +35,7 @@ import scala.collection.mutable
 
 class VarcharDataTypesBasicTestCase extends QueryTest with BeforeAndAfterEach with BeforeAndAfterAll {
   private val longStringTable = "long_string_table"
-  private val inputDir = s"$resourcesPath${File.separator}varchartype${File.separator}"
+  private val inputDir = s"$resourcesPath${"/"}varchartype${"/"}"
   private val fileName = s"longStringData.csv"
   private val inputFile = s"$inputDir$fileName"
   private val fileName_2g_column_page = s"longStringData_exceed_2gb_column_page.csv"

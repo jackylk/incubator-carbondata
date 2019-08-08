@@ -34,7 +34,7 @@ import org.apache.carbondata.events.{AlterTableAddColumnPostEvent, AlterTableAdd
 import org.apache.carbondata.format.TableInfo
 import org.apache.carbondata.spark.rdd.{AlterTableAddColumnRDD, AlterTableDropColumnRDD}
 
-private[sql] case class CarbonAlterTableAddColumnCommand(
+case class CarbonAlterTableAddColumnCommand(
     alterTableAddColumnsModel: AlterTableAddColumnsModel)
   extends MetadataCommand {
 

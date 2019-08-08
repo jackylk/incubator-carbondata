@@ -17,18 +17,34 @@
 
 package leo.qs.model.validate;
 
+import org.apache.carbondata.core.util.CarbonProperties;
+
+import leo.qs.exception.InvalidArgumentsException;
 import leo.qs.model.view.SqlRequest;
-import leo.qs.util.CarbonException;
 import org.apache.commons.lang.StringUtils;
 
 public class RequestValidator {
 
-  public static void validateSql(SqlRequest request) throws CarbonException {
+  public static void validateSql(SqlRequest request) throws InvalidArgumentsException {
     if (request == null) {
-      throw new CarbonException("Select should not be null");
+      throw new InvalidArgumentsException("Select should not be null");
     }
     if (StringUtils.isEmpty(request.getSqlStatement())) {
-      throw new CarbonException("sql statement is invalid");
+      throw new InvalidArgumentsException("sql statement is invalid");
+    }
+  }
+
+  public static void validateOffsetLimit(int offset, int limit) throws InvalidArgumentsException {
+    if (offset < 0 || offset > CarbonProperties.getInstance().getAsyncQueryResLimit()) {
+      throw new InvalidArgumentsException("offset should be integer between 0 to " +
+          CarbonProperties.getInstance().getAsyncQueryResLimit());
+    }
+    if (limit < 0 || limit > 1000) {
+      throw new InvalidArgumentsException("offset should be integer between 0 to 1000.");
+    }
+    if (offset + limit > CarbonProperties.getInstance().getAsyncQueryResLimit()) {
+      throw new InvalidArgumentsException("offset plus limit should be integer less than " +
+          CarbonProperties.getInstance().getAsyncQueryResLimit());
     }
   }
 }

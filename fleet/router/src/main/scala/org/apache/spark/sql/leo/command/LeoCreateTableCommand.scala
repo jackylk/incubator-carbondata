@@ -17,20 +17,61 @@
 
 package org.apache.spark.sql.leo.command
 
-import org.apache.spark.sql.{CarbonSource, Row, SparkSession}
+import org.apache.spark.sql.{AnalysisException, CarbonEnv, CarbonSource, Row, SparkSession}
 import org.apache.spark.sql.catalyst.catalog.CatalogTable
 import org.apache.spark.sql.execution.command.{CreateDataSourceTableCommand, RunnableCommand}
 
+import org.apache.carbondata.common.logging.LogServiceFactory
+import org.apache.carbondata.core.datastore.impl.FileFactory
+
+/**
+ * non PK Table
+ * @param table
+ * @param ignoreIfExists
+ */
 case class LeoCreateTableCommand(
     table: CatalogTable,
     ignoreIfExists: Boolean)
   extends RunnableCommand {
+  val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
+  val db: String = table.database
+  val tableName: String = table.identifier.table
 
   override def run(sparkSession: SparkSession): Seq[Row] = {
-    val updatedCatalog = CarbonSource.updateCatalogTableWithCarbonSchema(table, sparkSession)
-    val newTable = updatedCatalog.copy(provider = Some("org.apache.spark.sql.CarbonSource"))
-    val rows = CreateDataSourceTableCommand(newTable, ignoreIfExists).run(sparkSession)
-    rows
+    // check whether the table exists
+    if (CarbonEnv.isTableExists(table.identifier)(sparkSession)) {
+      if (ignoreIfExists) return Seq.empty
+      else throw new AnalysisException("table " + table.identifier + " already exists")
+    }
+    createNPKTable(sparkSession)
+
   }
 
+  private def createNPKTable(sparkSession: SparkSession): Seq[Row] = {
+    // step 1: create table in carbon (persist schema file)
+    val updatedCatalog = try {
+      CarbonSource.updateCatalogTableWithCarbonSchema(table, sparkSession)
+        .copy(provider = Some("org.apache.spark.sql.CarbonSource"))
+    } catch {
+      case e: Exception =>
+        LOGGER.error(e)
+        throw e
+    }
+
+    // step 2: save meta in metastore, undo previous steps if failed
+    try {
+      val cmd = CreateDataSourceTableCommand(updatedCatalog, ignoreIfExists)
+      cmd.run(sparkSession)
+    } catch {
+      case e: Exception =>
+        LOGGER.error(e)
+        deleteCarbonTableFolder(table)
+        throw e
+    }
+  }
+
+  private def deleteCarbonTableFolder(table: CatalogTable): Boolean = {
+    val path = table.properties("tablePath")
+    FileFactory.deleteAllCarbonFilesOfDir(FileFactory.getCarbonFile(path))
+  }
 }

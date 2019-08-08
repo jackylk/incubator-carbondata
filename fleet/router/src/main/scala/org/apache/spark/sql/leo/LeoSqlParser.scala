@@ -17,7 +17,7 @@
 
 package org.apache.spark.sql.leo
 
-import org.apache.spark.sql.{CarbonSession, SparkSession}
+import org.apache.spark.sql.{AnalysisException, CarbonSession, LeoDatabase, SparkSession}
 import org.apache.spark.sql.catalyst.parser.{AbstractSqlParser, SqlBaseParser}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.internal.{SQLConf, VariableSubstitution}
@@ -29,22 +29,24 @@ import org.apache.carbondata.spark.util.CarbonScalaUtil
 
 class LeoSqlParser(conf: SQLConf, sparkSession: SparkSession) extends AbstractSqlParser {
 
-  private val parser: LeoAiSqlParser = new LeoAiSqlParser
+  private val parser: LeoConsumerSqlParser = new LeoConsumerSqlParser
   override val astBuilder = CarbonReflectionUtils.getAstBuilder(conf, parser, sparkSession)
   private val substitutor = new VariableSubstitution(conf)
 
   override def parsePlan(sqlText: String): LogicalPlan = {
     CarbonSession.updateSessionInfoToCurrentThread(sparkSession)
-    val plan = try {
+    val (updatedPlanOp, errorMessage) = try {
       val parsedPlan = super.parsePlan(sqlText)
-      LeoTVFAnalyzerRule(sparkSession)(parsedPlan)
+      val resolvedTVFPlan = LeoTVFAnalyzerRule(sparkSession)(parsedPlan)
+      LeoDatabase.convertUserDBNameToLeoInPlan(resolvedTVFPlan)
     } catch {
       case ce: MalformedCarbonCommandException =>
         CarbonScalaUtil.cleanParserThreadLocals()
         throw ce
       case ex: Throwable =>
         try {
-          parser.parse(sqlText)
+          val plan = parser.parse(sqlText)
+          LeoDatabase.convertUserDBNameToLeoInPlan(plan)
         } catch {
           case mce: MalformedCarbonCommandException =>
             throw mce
@@ -58,8 +60,11 @@ class LeoSqlParser(conf: SQLConf, sparkSession: SparkSession) extends AbstractSq
         }
     }
 
+    if (updatedPlanOp.isEmpty) {
+      throw new AnalysisException(errorMessage)
+    }
     CarbonScalaUtil.cleanParserThreadLocals()
-    plan
+    updatedPlanOp.get
   }
 
   protected override def parse[T](command: String)(toResult: SqlBaseParser => T): T = {

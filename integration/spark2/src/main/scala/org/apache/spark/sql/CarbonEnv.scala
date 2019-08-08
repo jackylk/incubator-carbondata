@@ -355,5 +355,13 @@ object CarbonEnv {
       defaultValue
     }
   }
+  def isTableExists(tableIdentifier: TableIdentifier)(sparkSession: SparkSession): Boolean = {
+    getInstance(sparkSession).carbonMetaStore.tableExists(tableIdentifier)(sparkSession)
+  }
+
+  def isTableExists(dbNameOp: Option[String], tableName: String)
+    (sparkSession: SparkSession): Boolean = {
+    getInstance(sparkSession).carbonMetaStore.tableExists(tableName, dbNameOp)(sparkSession)
+  }
 
 }

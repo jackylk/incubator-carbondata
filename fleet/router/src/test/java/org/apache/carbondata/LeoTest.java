@@ -17,9 +17,6 @@
 
 package org.apache.carbondata;
 
-import java.io.File;
-import java.io.IOException;
-
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -30,16 +27,16 @@ public class LeoTest {
   private static SparkSession session;
 
   private static void init() {
-    String warehouse = null;
-    try {
-      warehouse = new File("./warehouse").getCanonicalPath();
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
     SparkSession.Builder builder = SparkSession.builder()
         .master("local")
         .config("spark.driver.host", "localhost")
-        .config("spark.sql.warehouse.dir", warehouse);
+        .config("fs.s3a.endpoint", "obs.cn-north-7.ulanqab.huawei.com:5443")
+        .config("fs.s3a.access.key", "Q0T7MOHUY0KVLKMEEM3M")
+        .config("fs.s3a.secret.key", "HWmgXbcIWu2333e2HVdjq19oD9AfJULAuEdRgyDO")
+        .config("hive.warehouse.subdir.inherit.perms", false)
+        .config("spark.sql.warehouse.dir", "s3a://leo/")
+        .config("hive.exec.scratchdir", "s3a://leo/tmp/hive");
+
     session = LeoEnv.getOrCreateLeoSession(builder);
     session.sparkContext().setLogLevel("ERROR");
   }

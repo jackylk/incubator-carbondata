@@ -2268,4 +2268,7 @@ public final class CarbonCommonConstants {
    * hive column-name maximum length
    */
   public static final int MAXIMUM_CHAR_LENGTH = 128;
+
+  public static final String ASYNC_QUERY_RESULT_LIMIT = "carbon.async.query.result.limit";
+  public static final String ASYNC_QUERY_RESULT_LIMIT_DEFAULT = "5000";
 }

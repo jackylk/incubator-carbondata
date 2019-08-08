@@ -17,10 +17,13 @@
 
 package org.apache.spark.sql.leo.command
 
-import org.apache.spark.sql.{Row, SparkSession}
+import org.apache.spark.sql.{AnalysisException, CarbonEnv, Row, SparkSession}
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.execution.command.{DropTableCommand, RunnableCommand}
 import org.apache.spark.sql.execution.command.table.CarbonDropTableCommand
+import org.apache.spark.sql.leo.LeoEnv
+
+import org.apache.carbondata.core.datastore.impl.FileFactory
 
 case class LeoDropTableCommand(
     sparkCommand: DropTableCommand,
@@ -32,6 +35,20 @@ case class LeoDropTableCommand(
   override val output: Seq[Attribute] = sparkCommand.output
 
   override def run(sparkSession: SparkSession): Seq[Row] = {
-    CarbonDropTableCommand(ifExistsSet, databaseNameOp, tableName, dropChildTable).run(sparkSession)
+    // check whether the table exists
+    if (!CarbonEnv.isTableExists(databaseNameOp, tableName)(sparkSession)) {
+      if (ifExistsSet) return Seq.empty
+      else throw new AnalysisException("table " +
+                                       CarbonEnv.getDatabaseName(databaseNameOp)(sparkSession) +
+                                       "." + tableName + " is not exist")
+    }
+
+    // delete carbon table
+    val carbonTable = CarbonEnv.getCarbonTable(databaseNameOp, tableName)(sparkSession)
+    CarbonDropTableCommand(ifExistsSet = ifExistsSet, databaseNameOp, tableName).run(sparkSession)
+
+    // delete the carbon table folder
+    FileFactory.getCarbonFile(carbonTable.getTablePath).delete()
+    Seq.empty
   }
 }

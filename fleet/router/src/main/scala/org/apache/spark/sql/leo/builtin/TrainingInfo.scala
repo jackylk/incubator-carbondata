@@ -21,7 +21,7 @@ import scala.collection.JavaConverters._
 
 import org.apache.leo.model.job.TrainModelManager
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{AnalysisException, SparkSession}
+import org.apache.spark.sql.{AnalysisException, LeoDatabase, SparkSession}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.{MultiInstanceRelation, UnresolvedAttribute}
 import org.apache.spark.sql.catalyst.expressions.{Attribute, Expression, GenericInternalRow, UnsafeProjection}
@@ -62,11 +62,13 @@ case class JobMetricsExec(
     }
     val experimentName = job.substring(0, job.indexOf("."))
     val modelName = job.substring(job.indexOf(".") + 1, job.length)
+    val updatedExpName = LeoDatabase.DEFAULT_PROJECTID + CarbonCommonConstants.UNDERSCORE +
+                         experimentName
 
     val ifExperimentExists = ExperimentStoreManager.getInstance().getAllExperimentSchemas.asScala
-      .exists(m => m.getDataMapName.equalsIgnoreCase(experimentName))
+      .exists(m => m.getDataMapName.equalsIgnoreCase(updatedExpName))
     if (ifExperimentExists) {
-      val trainJob = TrainModelManager.getTrainModel(experimentName, modelName)
+      val trainJob = TrainModelManager.getTrainModel(updatedExpName, modelName)
       if (null != trainJob) {
         val trainingInfo = LeoEnv.modelTraingAPI
           .getTrainingJobInfo(java.lang.Long.parseLong(trainJob.getProperties.get("job_id")))
@@ -78,10 +80,10 @@ case class JobMetricsExec(
         session.sparkContext.makeRDD(Array(rows))
       } else {
         throw new AnalysisException(
-          "Model with name " + modelName + " does not exist on Experiment: " + experimentName)
+          "Model with name " + modelName + " does not exist on Experiment: " + updatedExpName)
       }
     } else {
-      throw new NoSuchExperimentException(experimentName)
+      throw new NoSuchExperimentException(updatedExpName)
     }
   }
 
