@@ -112,6 +112,7 @@
     <module>fleet/vision</module>
     <module>fleet/vector</module>
     <module>fleet/cloud</module>
+    <module>fleet/project</module>
   </modules>
 
   <properties>
