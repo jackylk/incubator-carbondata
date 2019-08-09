@@ -29,7 +29,7 @@ import org.apache.carbondata.spark.util.CarbonScalaUtil
 
 class LeoSqlParser(conf: SQLConf, sparkSession: SparkSession) extends AbstractSqlParser {
 
-  private val parser: LeoConsumerSqlParser = new LeoConsumerSqlParser
+  private val parser: LeoAiSqlParser = new LeoAiSqlParser
   override val astBuilder = CarbonReflectionUtils.getAstBuilder(conf, parser, sparkSession)
   private val substitutor = new VariableSubstitution(conf)
 
