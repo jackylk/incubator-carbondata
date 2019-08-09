@@ -64,8 +64,12 @@ object LeoDatabase {
   }
 
   def validateDBName(userDBName: String): Unit = {
+    var toValidate = userDBName
+    if (toValidate.startsWith(leoDBNamePrefix)) {
+      toValidate = toValidate.substring(leoDBNamePrefix.length)
+    }
     // len, char,
-    if (!dbNamePattern.matcher(userDBName).matches()) {
+    if (!dbNamePattern.matcher(toValidate).matches()) {
       throw new IllegalArgumentException(
         "database name is illegal, it should starts with [a-z], contains [a-z] or [0-9] and the" +
         " total length from 1 to 32 characters")
