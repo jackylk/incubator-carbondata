@@ -19,38 +19,52 @@ package leo.qs.runner
 
 import java.util
 
-import scala.collection.mutable
-
 import leo.job.{Query, QueryDef}
 import leo.job.QueryDef.QueryType
-import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
-import org.apache.spark.sql.catalyst.expressions.{And, AttributeReference, Expression, In, Not, Or}
-import org.apache.spark.sql.{CarbonDatasourceHadoopRelation, CarbonEnv, DeleteRecords,
-  SparkSession, UpdateTable}
+import org.apache.spark.sql.{
+  CarbonDatasourceHadoopRelation, CarbonEnv, DeleteRecords,
+  SparkSession, UpdateTable
+}
 import org.apache.spark.sql.catalyst.plans.logical._
-import org.apache.spark.sql.execution.command.datamap.{CarbonCreateDataMapCommand,
-  CarbonDataMapRebuildCommand, CarbonDataMapShowCommand, CarbonDropDataMapCommand}
-import org.apache.spark.sql.execution.command.management.{CarbonAlterTableCompactionCommand,
+import org.apache.spark.sql.execution.command.datamap.{
+  CarbonCreateDataMapCommand,
+  CarbonDataMapRebuildCommand, CarbonDataMapShowCommand, CarbonDropDataMapCommand
+}
+import org.apache.spark.sql.execution.command.management.{
+  CarbonAlterTableCompactionCommand,
   CarbonAlterTableFinishStreaming, CarbonCleanFilesCommand,
   CarbonDeleteLoadByIdCommand, CarbonDeleteLoadByLoadDateCommand, CarbonInsertColumnsCommand,
-  CarbonLoadDataCommand, CarbonShowLoadsCommand}
-import org.apache.spark.sql.execution.command.mutation.{CarbonProjectForDeleteCommand,
-  CarbonProjectForUpdateCommand}
-import org.apache.spark.sql.execution.command.partition.{CarbonAlterTableAddHivePartitionCommand,
+  CarbonLoadDataCommand, CarbonShowLoadsCommand
+}
+import org.apache.spark.sql.execution.command.mutation.{
+  CarbonProjectForDeleteCommand,
+  CarbonProjectForUpdateCommand
+}
+import org.apache.spark.sql.execution.command.partition.{
+  CarbonAlterTableAddHivePartitionCommand,
   CarbonAlterTableDropHivePartitionCommand,
-  CarbonAlterTableSplitPartitionCommand}
-import org.apache.spark.sql.execution.command.schema.{CarbonAlterTableAddColumnCommand,
+  CarbonAlterTableSplitPartitionCommand
+}
+import org.apache.spark.sql.execution.command.schema.{
+  CarbonAlterTableAddColumnCommand,
   CarbonAlterTableColRenameDataTypeChangeCommand, CarbonAlterTableDropColumnCommand,
-  CarbonAlterTableRenameCommand, CarbonAlterTableSetCommand, CarbonAlterTableUnsetCommand}
+  CarbonAlterTableRenameCommand, CarbonAlterTableSetCommand, CarbonAlterTableUnsetCommand
+}
 import org.apache.spark.sql.execution.command.{
   CreateDatabaseCommand, DescribeColumnCommand,
   DescribeTableCommand, DropDatabaseCommand, DropTableCommand, ExplainCommand, LoadDataCommand,
-  RunnableCommand, SetCommand, SetDatabaseCommand, ShowDatabasesCommand, ShowTablesCommand}
-import org.apache.spark.sql.execution.command.stream.{CarbonCreateStreamCommand,
-  CarbonDropStreamCommand, CarbonShowStreamsCommand}
+  RunnableCommand, SetCommand, SetDatabaseCommand, ShowDatabasesCommand, ShowTablesCommand
+}
+import org.apache.spark.sql.execution.command.stream.{
+  CarbonCreateStreamCommand,
+  CarbonDropStreamCommand, CarbonShowStreamsCommand
+}
 import org.apache.spark.sql.execution.command.table.CarbonExplainCommand
 import org.apache.spark.sql.execution.datasources.{CreateTable, LogicalRelation}
-import org.apache.spark.sql.leo.command.{LeoCreateConsumerCommand, LeoCreateExperimentCommand, LeoCreateModelCommand, LeoDescConsumerCommand, LeoDropConsumerCommand, LeoDropExperimentCommand, LeoDropModelCommand, LeoRegisterModelCommand, LeoRunScriptCommand, LeoShowConsumersCommand, LeoShowModelsCommand, LeoUnregisterModelCommand}
+import org.apache.spark.sql.leo.command.{LeoCreateConsumerCommand, LeoCreateExperimentCommand,
+  LeoCreateModelCommand, LeoDescConsumerCommand, LeoDropConsumerCommand,
+  LeoDropExperimentCommand, LeoDropModelCommand, LeoRegisterModelCommand, LeoRunScriptCommand,
+  LeoShowConsumersCommand, LeoShowModelsCommand, LeoUnregisterModelCommand}
 import org.apache.spark.sql.util.SparkSQLUtil
 
 object Router {
@@ -253,65 +267,16 @@ object Router {
     }
   }
 
-    def pkCandidatesForInExprTooMuch(session: SparkSession,
-        expr: Expression,
-        filterKeys: mutable.Set[String]): Boolean = {
-      expr match {
-        case and: And =>
-          pkCandidatesForInExprTooMuch(session, and.left, filterKeys)
-          pkCandidatesForInExprTooMuch(session, and.right, filterKeys)
-        case or: Or =>
-          pkCandidatesForInExprTooMuch(session, or.left, filterKeys)
-          pkCandidatesForInExprTooMuch(session, or.right, filterKeys)
-        case _ =>
-          if (expr.children != null && expr.isInstanceOf[In]) {
-            val colName = expr.asInstanceOf[In].value.asInstanceOf[AttributeReference].name
-              .toLowerCase
-            val candidates = expr.asInstanceOf[In].list
-            if (filterKeys.contains(colName) &&
-                candidates.size > session.conf.get("leo.hbase.in.candidates.num", "10").toInt) {
-              return true
-            }
-          }
-      }
-      false
-    }
+  def rewriteCarbonQuery(originSql: String, analyzed: LogicalPlan): String = {
+    // TODO ->rewrite carbon sql string.
+    originSql
+  }
 
-    def transFormBinaryTree(expr: Expression, filterKeys: mutable.Set[String],
-        primaryKeys: Array[String]): Boolean = {
-      expr match {
-        case and: And =>
-          transFormBinaryTree(and.left, filterKeys, primaryKeys)
-          transFormBinaryTree(and.right, filterKeys, primaryKeys)
-        case or: Or =>
-          transFormBinaryTree(or.left, filterKeys, primaryKeys)
-          transFormBinaryTree(or.right, filterKeys, primaryKeys)
-        case not: Not => transFormBinaryTree(not.child, filterKeys, primaryKeys)
-        case _ =>
-          if (expr.children != null) {
-            expr.children.foreach(attr =>
-              if (attr.isInstanceOf[AttributeReference]) {
-                val filterColName = attr.asInstanceOf[AttributeReference].name.toLowerCase
-                if (primaryKeys.contains(filterColName)) {
-                  filterKeys += filterColName
-                }
-              }
-            )
-          }
-      }
-      true
-    }
-
-    def rewriteCarbonQuery(originSql: String, analyzed: LogicalPlan): String = {
-      // TODO ->rewrite carbon sql string.
-      originSql
-    }
-
-    // runnable cmd or some logical plan can not execute queryExecution to get solved plan, as they
-    // will run once.
-    def isRunnableCmdOrPlan(unsolvedPlan: LogicalPlan): Boolean = {
-      unsolvedPlan.isInstanceOf[RunnableCommand] || unsolvedPlan.isInstanceOf[CreateTable] ||
-      unsolvedPlan.isInstanceOf[InsertIntoTable] || unsolvedPlan.isInstanceOf[UpdateTable] ||
-      unsolvedPlan.isInstanceOf[DeleteRecords]
-    }
+  // runnable cmd or some logical plan can not execute queryExecution to get solved plan, as they
+  // will run once.
+  def isRunnableCmdOrPlan(unsolvedPlan: LogicalPlan): Boolean = {
+    unsolvedPlan.isInstanceOf[RunnableCommand] || unsolvedPlan.isInstanceOf[CreateTable] ||
+    unsolvedPlan.isInstanceOf[InsertIntoTable] || unsolvedPlan.isInstanceOf[UpdateTable] ||
+    unsolvedPlan.isInstanceOf[DeleteRecords]
+  }
 }

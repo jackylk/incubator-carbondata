@@ -35,15 +35,9 @@ public class Query {
 
   private Map<String, String> tblProperties;
 
-  // in case on NPKQuery, query result will be stored in this path
-  // this variable is valid only if query type is NPKQuery
   private String resultPath;
 
   private QueryTypeDef type;
-
-  public enum ConsumerJobType {
-    CreateConsumer, DropConsumer, DescConsumer, ShowConsumers
-  }
 
   private Query(String originSql, QueryTypeDef type) {
     this.originSql = originSql;
@@ -51,20 +45,6 @@ public class Query {
   }
 
   /**
-   * create a query containing primary key filter
-   * @param originSql
-   * @param kvQueryParams
-   * @return a new Query object
-   */
-
-  public static Query makePKQuery(String originSql, LogicalPlan originPlan) {
-    Query query = new Query(originSql, QueryDef.getQueryTypeDef(HBASE_SELECT.name()));
-    query.originPlan = originPlan;
-    return query;
-  }
-
-  /**
-   * create a query without primary key filter
    * @param originSql
    * @param originPlan
    * @param rewrittenSql

@@ -18,7 +18,6 @@
 package leo.qs.controller;
 
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -130,7 +129,7 @@ public class Controller {
     } else {
         // others including ddl should execute sync
         try {
-          SqlResult jobResult = queryRunner.doJob(query);
+          SqlResult jobResult = queryRunner.doSyncJob(query);
           return createSyncSqlResponse(query.getTypeDef().getType().name(), request,
               jobID.getId(), jobResult.getSchema(), jobResult.getRows(),
               false);

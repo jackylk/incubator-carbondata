@@ -27,7 +27,6 @@ import leo.model.view.SqlResult;
 import leo.util.SqlResultUtil;
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
-import org.apache.carbondata.core.datastore.row.CarbonRow;
 import org.apache.carbondata.core.util.CarbonProperties;
 
 import com.google.common.cache.Cache;
@@ -50,10 +49,6 @@ import org.apache.spark.sql.execution.command.RunnableCommand;
 import org.apache.spark.sql.leo.util.OBSUtil;
 import org.apache.spark.sql.util.SparkSQLUtil;
 
-/**
- * Do PKQuery by constructing scan query to hbase locally,
- * otherwise execute the job by spark.
- */
 public class LocalQueryRunner implements QueryRunner {
 
   private static final Logger LOGGER =
@@ -121,18 +116,6 @@ public class LocalQueryRunner implements QueryRunner {
       return jobMeta;
     }
 
-    return null;
-  }
-
-  @Override
-  public Dataset<Row> fetchResult(String path) {
-    try {
-      return sparkSession.read().format("csv")
-          .option("timestampformat", CarbonCommonConstants.CARBON_TIMESTAMP_DEFAULT_FORMAT)
-          .option("dateformat", CarbonCommonConstants.CARBON_DATE_DEFAULT_FORMAT).load(path);
-    } catch (Throwable e) {
-      LOGGER.error(e.getMessage());
-    }
     return null;
   }
 
@@ -234,15 +217,10 @@ public class LocalQueryRunner implements QueryRunner {
   }
 
   @Override
-  public SqlResult doJob(Query query) {
-    //         queryType == DDL
+  public SqlResult doSyncJob(Query query) {
     Dataset<Row> rows = SparkSQLUtil.ofRows(sparkSession, query.getOriginPlan());
     SqlResult sqlResult = SqlResultUtil.convertRows(rows);
     return sqlResult;
-  }
-
-  public List<CarbonRow> doJob(String sqlString) {
-    return null;
   }
 
   public SparkSession getSparkSession() {

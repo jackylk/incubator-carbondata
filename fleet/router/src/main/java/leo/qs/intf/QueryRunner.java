@@ -17,25 +17,20 @@
 
 package leo.qs.intf;
 
-import java.io.IOException;
 import java.util.List;
 
 import leo.job.AsyncJob;
 import leo.job.JobMeta;
 import leo.job.Query;
 import leo.model.view.SqlResult;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 
 /**
  * Implement this to support query job on fleet compute cluster.
- * It can be spark/presto/hive/hbasedirect
  */
 public interface QueryRunner {
 
   /**
    * perform an asynchronous query job.
-   * SQL statement maybe rewritten if there is any MV or Query Result Cache matched
    *
    * @param query query request
    * @param jobMeta
@@ -45,12 +40,11 @@ public interface QueryRunner {
 
   /**
    * perform a synchronous query job.
-   * SQL statement maybe rewritten if there is any MV or Query Result Cache matched
    *
    * @param query query request
    * @return query result
    */
-  SqlResult doJob(Query query);
+  SqlResult doSyncJob(Query query);
 
   /**
    * get job meta from query runner cache or meta store client if not found.
@@ -58,13 +52,6 @@ public interface QueryRunner {
    * @return job JobMeta
    */
   JobMeta getJobMeta(String jobId, String projectId);
-
-  /**
-   * get all query result from file path for async job by spark dataframe.
-   * @param  path of query result
-   * @return result
-   */
-  Dataset<Row> fetchResult(String path);
 
   /**
    * get query result page from file path according to offset and limit for async job by
