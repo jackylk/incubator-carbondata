@@ -31,14 +31,6 @@
     <dependency>
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-om_${scala.binary.version}</artifactId>
-      <version>${spark.version}</version>
-      <scope>${spark.deps.scope}</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>javax.servlet</groupId>
-          <artifactId>servlet-api</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.carbondata</groupId>
@@ -356,7 +348,7 @@
         </dependency>
       </dependencies>
       <properties>
-        <spark.version>2.3.2.0201</spark.version>
+        <spark.version>2.3.2.0101</spark.version>
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11.8</scala.version>
       </properties>

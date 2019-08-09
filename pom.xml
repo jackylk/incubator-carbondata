@@ -123,9 +123,17 @@
     <httpcore.version>4.3-alpha1</httpcore.version>
     <scala.binary.version>2.11</scala.binary.version>
     <scala.version>2.11.8</scala.version>
+    <hive.version>1.2.1</hive.version>
+    <aws.sdk.version>1.11.271</aws.sdk.version>
+    <hadoop.aws.version>2.8.3</hadoop.aws.version>
+    <arrow.version>0.12.0</arrow.version>
+    <avro.version>1.8.1</avro.version>
     <hadoop.deps.scope>compile</hadoop.deps.scope>
     <spark.deps.scope>compile</spark.deps.scope>
     <scala.deps.scope>compile</scala.deps.scope>
+    <hive.deps.scope>compile</hive.deps.scope>
+    <arrow.deps.scope>compile</arrow.deps.scope>
+    <avro.deps.scope>compile</avro.deps.scope>
     <dev.path>${basedir}/dev</dev.path>
     <spark.master.url>local[2]</spark.master.url>
     <hdfs.url>local</hdfs.url>
@@ -226,6 +234,52 @@
         </exclusions>
       </dependency>
       <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-client</artifactId>
+        <version>${hadoop.version}</version>
+        <scope>${hadoop.deps.scope}</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hive</groupId>
+        <artifactId>hive-exec</artifactId>
+        <version>${hive.version}</version>
+        <scope>${hive.deps.scope}</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.hive</groupId>
+            <artifactId>hive-metastore</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.hive</groupId>
+            <artifactId>hive-shims</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.hive</groupId>
+            <artifactId>hive-ant</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.hive</groupId>
+            <artifactId>spark-client</artifactId>
+          </exclusion>
+          <exclusion>
+            <artifactId>kryo</artifactId>
+            <groupId>com.esotericsoftware.kryo</groupId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hive</groupId>
+        <artifactId>hive-service</artifactId>
+        <version>${hive.version}</version>
+        <scope>${hive.deps.scope}</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hive</groupId>
+        <artifactId>hive-jdbc</artifactId>
+        <version>${hive.version}</version>
+        <scope>${hive.deps.scope}</scope>
+      </dependency>
+      <dependency>
         <groupId>org.apache.spark</groupId>
         <artifactId>spark-core_${scala.binary.version}</artifactId>
         <version>${spark.version}</version>
@@ -278,6 +332,60 @@
             <artifactId>lz4</artifactId>
           </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.spark</groupId>
+        <artifactId>spark-om_${scala.binary.version}</artifactId>
+        <version>${spark.version}</version>
+        <scope>${spark.deps.scope}</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>javax.servlet</groupId>
+            <artifactId>servlet-api</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.avro</groupId>
+        <artifactId>avro</artifactId>
+        <version>${avro.version}</version>
+        <scope>${avro.deps.scope}</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.arrow</groupId>
+        <artifactId>arrow-format</artifactId>
+        <version>${arrow.version}</version>
+        <scope>${arrow.deps.scope}</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.arrow</groupId>
+        <artifactId>arrow-memory</artifactId>
+        <version>${arrow.version}</version>
+        <scope>${arrow.deps.scope}</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.arrow</groupId>
+        <artifactId>arrow-vector</artifactId>
+        <version>${arrow.version}</version>
+        <scope>${arrow.deps.scope}</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.arrow</groupId>
+        <artifactId>arrow-plasma</artifactId>
+        <version>${arrow.version}</version>
+        <scope>${arrow.deps.scope}</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.arrow</groupId>
+        <artifactId>arrow-flight</artifactId>
+        <version>${arrow.version}</version>
+        <scope>${arrow.deps.scope}</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.arrow</groupId>
+        <artifactId>arrow-tools</artifactId>
+        <version>${arrow.version}</version>
+        <scope>${arrow.deps.scope}</scope>
       </dependency>
       <dependency>
         <groupId>org.scala-lang</groupId>
