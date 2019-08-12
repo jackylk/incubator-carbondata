@@ -81,7 +81,8 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
     cacheManagement | alterDataMap
 
   protected lazy val loadManagement: Parser[LogicalPlan] =
-    deleteLoadsByID | deleteLoadsByLoadDate | cleanFiles | loadDataNew
+    deleteLoadsByID | deleteLoadsByLoadDate | cleanFiles | loadDataNew | insertColumns | addLoad |
+    moveLoad
 
   protected lazy val restructure: Parser[LogicalPlan] =
     alterTableColumnRenameAndModifyDataType | alterTableDropColumn | alterTableAddColumns
@@ -459,6 +460,30 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
           partition = partitionSpec)
     }
 
+  lazy val jsonDataType: Parser[Field] =
+    JSON ^^ {
+      case e1 =>
+        Field(null, Some(e1), None, None)
+    }
+
+  lazy val fieldWithDataTypeOption: Parser[Field] =
+    (ident | stringLit) ~ (jsonDataType | nestedType).? ^^ {
+      case e1 ~ e2 =>
+        if (e2.isDefined) {
+          Field(e1, e2.get.dataType, Some(e1), e2.get.children)
+        } else {
+          Field(e1, None, Some(e1), None)
+        }
+    }
+
+  protected lazy val insertColumns: Parser[LogicalPlan] =
+    INSERT ~> COLUMNS ~> ( "(" ~> repsep(fieldWithDataTypeOption, ",") <~ ")" ) ~
+    (INTO ~> TABLE.? ~> (ident <~ ".").?) ~ ident ~
+    restInput <~ opt(";") ^^ {
+      case columns~ dbName ~ tableName ~ query =>
+        CarbonInsertColumnsCommand(columns, dbName, tableName, query)
+    }
+
   protected lazy val deleteLoadsByID: Parser[LogicalPlan] =
     DELETE ~> FROM ~ TABLE ~> (ident <~ ".").? ~ ident ~
     (WHERE ~> (SEGMENT ~ "." ~ ID) ~> IN ~> "(" ~> repsep(segmentId, ",")) <~ ")" ~
@@ -481,6 +506,26 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
         }
     }
 
+  /**
+   * ADD SEGMENT ON TABLE <db.tableName> with path '<path>' OPTIONS('key'='value')
+   */
+  protected lazy val addLoad: Parser[LogicalPlan] =
+    ALTER ~ TABLE ~> (ident <~ ".").? ~ ident ~ (ADD ~> SEGMENT) ~
+    (OPTIONS ~> "(" ~> repsep(loadOptions, ",") <~ ")").? <~ opt(";") ^^ {
+      case dbName ~ tableName ~ segment ~ optionsList =>
+        CarbonAddLoadCommand(dbName, tableName, optionsList.map(_.toMap))
+    }
+
+  /**
+   * ALTER SEGMENT ON TABLE <db.tableName> MOVE '<segmentid>'
+   */
+  protected lazy val moveLoad: Parser[LogicalPlan] =
+    ALTER ~ TABLE ~> (ident <~ ".").? ~ ident ~ (MOVE ~ SEGMENT ~> stringLit) ~
+    (OPTIONS ~> "(" ~> repsep(loadOptions, ",") <~ ")").? <~ opt(";") ^^ {
+      case dbName ~ tableName ~ segmentId ~ optionsList =>
+        CarbonMoveExternalLoadCommand(dbName, tableName, segmentId)
+    }
+
   protected lazy val cleanFiles: Parser[LogicalPlan] =
     CLEAN ~> FILES ~> FOR ~> TABLE ~> (ident <~ ".").? ~ ident <~ opt(";") ^^ {
       case databaseName ~ tableName =>
@@ -499,14 +544,21 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
         }
     }
 
+  /**
+   * SHOW [HISTORY] SEGMENTS [FOR TABLE] [dbName.]tableName [EXTENDED] [LIMIT number]
+   *   -history: show all history segments, even for the ones whose data is deleted by CLEAN FILES
+   *   -extended: show more information for each segment, including format, location, etc.
+   */
   protected lazy val showLoads: Parser[LogicalPlan] =
-    (SHOW ~> opt(HISTORY) <~ SEGMENTS <~ FOR <~ TABLE) ~ (ident <~ ".").? ~ ident ~
+    (SHOW ~> opt(HISTORY) <~ SEGMENTS <~ opt(FOR <~ TABLE)) ~
+    (ident <~ ".").? ~ ident ~
+    opt(EXTENDED) ~
     (LIMIT ~> numericLit).? <~
     opt(";") ^^ {
-      case showHistory ~ databaseName ~ tableName ~ limit =>
+      case showHistory ~ databaseName ~ tableName ~ extended ~ limit =>
         CarbonShowLoadsCommand(
           convertDbNameToLowerCase(databaseName), tableName.toLowerCase(), limit,
-          showHistory.isDefined)
+          showHistory.isDefined, extended.isDefined)
     }
 
   protected lazy val showCache: Parser[LogicalPlan] =

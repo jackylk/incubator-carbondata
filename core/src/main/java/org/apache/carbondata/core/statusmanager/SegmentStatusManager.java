@@ -289,7 +289,7 @@ public class SegmentStatusManager {
    * @param loadMetadataDetails
    * @return
    */
-  public static int getMaxSegmentId(LoadMetadataDetails[] loadMetadataDetails) {
+  private static int getMaxSegmentId(LoadMetadataDetails[] loadMetadataDetails) {
     int newSegmentId = -1;
     for (int i = 0; i < loadMetadataDetails.length; i++) {
       try {
@@ -607,7 +607,7 @@ public class SegmentStatusManager {
    * @param invalidLoadTimestamps
    * @return invalidLoadTimestamps
    */
-  public static List<String> updateDeletionStatus(AbsoluteTableIdentifier absoluteTableIdentifier,
+  private static List<String> updateDeletionStatus(AbsoluteTableIdentifier absoluteTableIdentifier,
       String loadDate, LoadMetadataDetails[] listOfLoadFolderDetailsArray,
       List<String> invalidLoadTimestamps, Long loadStartTime) {
     // For each load timestamp loop through data and if the
@@ -679,7 +679,7 @@ public class SegmentStatusManager {
    * @return
    */
 
-  public static List<LoadMetadataDetails> updateLatestTableStatusDetails(
+  private static List<LoadMetadataDetails> updateLatestTableStatusDetails(
       LoadMetadataDetails[] oldMetadata, LoadMetadataDetails[] newMetadata) {
 
     List<LoadMetadataDetails> newListMetadata =
@@ -697,7 +697,7 @@ public class SegmentStatusManager {
    *
    * @param loadMetadata
    */
-  public static void updateSegmentMetadataDetails(LoadMetadataDetails loadMetadata) {
+  private static void updateSegmentMetadataDetails(LoadMetadataDetails loadMetadata) {
     // update status only if the segment is not marked for delete
     if (SegmentStatus.MARKED_FOR_DELETE != loadMetadata.getSegmentStatus()) {
       loadMetadata.setSegmentStatus(SegmentStatus.MARKED_FOR_DELETE);
@@ -861,7 +861,7 @@ public class SegmentStatusManager {
    * @param newList
    * @return
    */
-  public static List<LoadMetadataDetails> updateLoadMetadataFromOldToNew(
+  private static List<LoadMetadataDetails> updateLoadMetadataFromOldToNew(
       LoadMetadataDetails[] oldList, LoadMetadataDetails[] newList) {
 
     List<LoadMetadataDetails> newListMetadata =
@@ -1019,8 +1019,7 @@ public class SegmentStatusManager {
   /**
    * Get the number of invisible segment info from segment info list.
    */
-  public static int countInvisibleSegments(
-      LoadMetadataDetails[] segmentList, int maxSegmentId) {
+  private static int countInvisibleSegments(LoadMetadataDetails[] segmentList, int maxSegmentId) {
     int invisibleSegmentCnt = 0;
     if (segmentList.length != 0) {
       for (LoadMetadataDetails eachSeg : segmentList) {
@@ -1051,10 +1050,8 @@ public class SegmentStatusManager {
   /**
    * Separate visible and invisible segments into two array.
    */
-  public static TableStatusReturnTuple separateVisibleAndInvisibleSegments(
-      LoadMetadataDetails[] oldList,
-      LoadMetadataDetails[] newList,
-      int invisibleSegmentCnt,
+  private static TableStatusReturnTuple separateVisibleAndInvisibleSegments(
+      LoadMetadataDetails[] oldList, LoadMetadataDetails[] newList, int invisibleSegmentCnt,
       int maxSegmentId) {
     int newSegmentsLength = newList.length;
     int visibleSegmentCnt = newSegmentsLength - invisibleSegmentCnt;
@@ -1091,8 +1088,7 @@ public class SegmentStatusManager {
   /**
    * Return an array containing all invisible segment entries in appendList and historyList.
    */
-  public static LoadMetadataDetails[] appendLoadHistoryList(
-      LoadMetadataDetails[] historyList,
+  private static LoadMetadataDetails[] appendLoadHistoryList(LoadMetadataDetails[] historyList,
       LoadMetadataDetails[] appendList) {
     int historyListLen = historyList.length;
     int appendListLen = appendList.length;

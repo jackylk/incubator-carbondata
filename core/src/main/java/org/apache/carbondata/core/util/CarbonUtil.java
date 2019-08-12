@@ -2043,13 +2043,25 @@ public final class CarbonUtil {
    */
   public static org.apache.carbondata.format.TableInfo readSchemaFile(String schemaFilePath)
       throws IOException {
+    return readSchemaFile(schemaFilePath, FileFactory.getConfiguration());
+  }
+
+  /**
+   * This method will read the schema file from a given path
+   *
+   * @param schemaFilePath
+   * @return
+   */
+  public static org.apache.carbondata.format.TableInfo readSchemaFile(String schemaFilePath,
+      Configuration conf)
+      throws IOException {
     TBaseCreator createTBase = new ThriftReader.TBaseCreator() {
       public org.apache.thrift.TBase<org.apache.carbondata.format.TableInfo,
           org.apache.carbondata.format.TableInfo._Fields> create() {
         return new org.apache.carbondata.format.TableInfo();
       }
     };
-    ThriftReader thriftReader = new ThriftReader(schemaFilePath, createTBase);
+    ThriftReader thriftReader = new ThriftReader(schemaFilePath, createTBase, conf);
     thriftReader.open();
     org.apache.carbondata.format.TableInfo tableInfo =
         (org.apache.carbondata.format.TableInfo) thriftReader.read();
@@ -2600,7 +2612,7 @@ public final class CarbonUtil {
   }
 
   // Get the total size of carbon data and the total size of carbon index
-  private static HashMap<String, Long> getDataSizeAndIndexSize(SegmentFileStore fileStore)
+  public static HashMap<String, Long> getDataSizeAndIndexSize(SegmentFileStore fileStore)
       throws IOException {
     long carbonDataSize = 0L;
     long carbonIndexSize = 0L;
@@ -2638,15 +2650,25 @@ public final class CarbonUtil {
       Set<String> carbonindexFiles = folderDetails.getFiles();
       String mergeFileName = folderDetails.getMergeFileName();
       if (null != mergeFileName) {
-        String mergeIndexPath =
+        String mergeIndexPath;
+        if (entry.getValue().isRelative()) {
+          mergeIndexPath =
             fileStore.getTablePath() + entry.getKey() + CarbonCommonConstants.FILE_SEPARATOR
                 + mergeFileName;
+        } else {
+          mergeIndexPath =
+              entry.getKey() + CarbonCommonConstants.FILE_SEPARATOR + mergeFileName;
+        }
         carbonIndexSize += FileFactory.getCarbonFile(mergeIndexPath).getSize();
       }
       for (String indexFile : carbonindexFiles) {
-        String indexPath =
-            fileStore.getTablePath() + entry.getKey() + CarbonCommonConstants.FILE_SEPARATOR
-                + indexFile;
+        String indexPath;
+        if (entry.getValue().isRelative()) {
+          indexPath = fileStore.getTablePath() + entry.getKey() +
+              CarbonCommonConstants.FILE_SEPARATOR + indexFile;
+        } else {
+          indexPath = entry.getKey() + CarbonCommonConstants.FILE_SEPARATOR + indexFile;
+        }
         carbonIndexSize += FileFactory.getCarbonFile(indexPath).getSize();
       }
     }
@@ -2746,7 +2768,7 @@ public final class CarbonUtil {
       CarbonFile localCarbonFile =
           FileFactory.getCarbonFile(localFilePath, FileFactory.getFileType(localFilePath));
       String carbonFilePath = carbonDataDirectoryPath + localFilePath
-          .substring(localFilePath.lastIndexOf(File.separator));
+          .substring(localFilePath.lastIndexOf("/"));
       copyLocalFileToCarbonStore(carbonFilePath, localFilePath,
           CarbonCommonConstants.BYTEBUFFER_SIZE,
           getMaxOfBlockAndFileSize(fileSizeInBytes, localCarbonFile.getSize()));
@@ -3314,6 +3336,16 @@ public final class CarbonUtil {
       return tableName.substring(i + 1, tableName.length());
     }
     return null;
+  }
+
+  public static short[] getPrimaryKeyColumnIndexes(List<ColumnSchema> columnSchemas) {
+    List<Short> shorts = new ArrayList<>();
+    for (ColumnSchema schema : columnSchemas) {
+      if (schema.isPrimaryKeyColumn()) {
+        shorts.add((short) schema.getSchemaOrdinal());
+      }
+    }
+    return ArrayUtils.toPrimitive(shorts.toArray(new Short[0]));
   }
 
   public static String getIndexServerTempPath(String tablePath, String queryId) {

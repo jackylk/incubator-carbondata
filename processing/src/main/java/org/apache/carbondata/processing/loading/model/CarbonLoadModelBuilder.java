@@ -79,6 +79,8 @@ public class CarbonLoadModelBuilder {
         columns[i] = csvHeader.get(i).getColName();
       }
       optionsFinal.put("fileheader", Strings.mkString(columns, ","));
+    } else {
+      optionsFinal.put("fileheader", options.get("fileheader"));
     }
     optionsFinal.put("bad_record_path", CarbonBadRecordUtil.getBadRecordsPath(options, table));
     optionsFinal.put("sort_scope",
@@ -151,7 +153,7 @@ public class CarbonLoadModelBuilder {
       boolean isDataFrame) throws InvalidLoadOptionException, IOException {
     carbonLoadModel.setTableName(table.getTableName());
     carbonLoadModel.setDatabaseName(table.getDatabaseName());
-    carbonLoadModel.setTablePath(table.getTablePath());
+    carbonLoadModel.setTablePath(table.getTableInfo().getTablePath());
     carbonLoadModel.setTableName(table.getTableName());
     carbonLoadModel.setCarbonTransactionalTable(table.isTransactionalTable());
     CarbonDataLoadSchema dataLoadSchema = new CarbonDataLoadSchema(table);

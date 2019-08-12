@@ -22,13 +22,16 @@ import java.lang.reflect.Method
 import org.apache.hadoop.conf.Configuration
 import org.apache.spark.SparkContext
 import org.apache.spark.broadcast.Broadcast
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 import org.apache.spark.sql.catalyst.analysis.EmptyRule
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeMap, AttributeSeq, Cast, Expression, NamedExpression}
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical.{ColumnStat, LogicalPlan, Statistics}
 import org.apache.spark.sql.catalyst.rules.Rule
+import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.internal.{SessionState, SQLConf}
+import org.apache.spark.sql.types.{DataType, StructType}
 import org.apache.spark.util.{CarbonReflectionUtils, SerializableConfiguration, SparkUtil, Utils}
 
 object SparkSQLUtil {
@@ -36,6 +39,11 @@ object SparkSQLUtil {
 
   def execute(logicalPlan: LogicalPlan, sparkSession: SparkSession): DataFrame = {
     Dataset.ofRows(sparkSession, logicalPlan)
+  }
+
+  def internalCreateDataFrame(sparkSession: SparkSession, catalystRows: RDD[InternalRow],
+      schema: StructType): DataFrame = {
+    sparkSession.internalCreateDataFrame(catalystRows, schema)
   }
 
   def getSparkSession: SparkSession = {
@@ -219,6 +227,10 @@ object SparkSQLUtil {
 
   def getSerializableConfigurableInstance(hadoopConf: Configuration): SerializableConfiguration = {
     new SerializableConfiguration(hadoopConf)
+  }
+
+  def ofRows(spark: SparkSession, plan: LogicalPlan): DataFrame = {
+    Dataset.ofRows(spark, plan)
   }
 
   /**

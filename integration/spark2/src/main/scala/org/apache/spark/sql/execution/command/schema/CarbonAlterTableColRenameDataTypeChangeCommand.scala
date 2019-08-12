@@ -76,7 +76,7 @@ abstract class CarbonAlterTableColumnRenameCommand(oldColumnName: String, newCol
   }
 }
 
-private[sql] case class CarbonAlterTableColRenameDataTypeChangeCommand(
+case class CarbonAlterTableColRenameDataTypeChangeCommand(
     alterTableColRenameAndDataTypeChangeModel: AlterTableDataTypeChangeModel,
     childTableColumnRename: Boolean = false)
   extends CarbonAlterTableColumnRenameCommand(alterTableColRenameAndDataTypeChangeModel.columnName,

@@ -58,6 +58,7 @@ import org.apache.carbondata.processing.util.CarbonDataProcessorUtil;
 import org.apache.carbondata.streaming.segment.StreamSegment;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskID;
@@ -106,6 +107,8 @@ public class CarbonStreamRecordWriter extends RecordWriter<Void, Object> {
   private BlockletMinMaxIndex batchMinMaxIndex;
   private boolean isClosed = false;
 
+  private long runningFileLen;
+
   CarbonStreamRecordWriter(TaskAttemptContext job) throws IOException {
     initialize(job);
   }
@@ -129,8 +132,10 @@ public class CarbonStreamRecordWriter extends RecordWriter<Void, Object> {
     String segmentId = CarbonStreamOutputFormat.getSegmentId(hadoopConf);
     carbonLoadModel.setSegmentId(segmentId);
     carbonTable = carbonLoadModel.getCarbonDataLoadSchema().getCarbonTable();
-    long taskNo = TaskID.forName(hadoopConf.get("mapred.tip.id")).getId();
-    carbonLoadModel.setTaskNo("" + taskNo);
+    if (carbonLoadModel.getTaskNo() == null) {
+      long taskNo = TaskID.forName(hadoopConf.get("mapred.tip.id")).getId();
+      carbonLoadModel.setTaskNo(taskNo + "");
+    }
     configuration = DataLoadProcessBuilder.createConfiguration(carbonLoadModel);
     maxRowNums = hadoopConf.getInt(CarbonStreamOutputFormat.CARBON_STREAM_BLOCKLET_ROW_NUMS,
         CarbonStreamOutputFormat.CARBON_STREAM_BLOCKLET_ROW_NUMS_DEFAULT) - 1;
@@ -139,7 +144,10 @@ public class CarbonStreamRecordWriter extends RecordWriter<Void, Object> {
 
     segmentDir = CarbonTablePath.getSegmentPath(
         carbonTable.getAbsoluteTableIdentifier().getTablePath(), segmentId);
-    fileName = CarbonTablePath.getCarbonDataFileName(0, taskNo + "", 0, 0, "0", segmentId);
+    FileFactory.mkdirs(segmentDir, hadoopConf);
+    fileName = CarbonTablePath
+        .getCarbonDataFileName(0, Long.parseLong(carbonLoadModel.getTaskNo()), 0, 0,
+            carbonLoadModel.getFactTimeStamp() + "", segmentId);
 
     // initialize metadata
     isNoDictionaryDimensionColumn =
@@ -154,7 +162,7 @@ public class CarbonStreamRecordWriter extends RecordWriter<Void, Object> {
     }
   }
 
-  private void initializeAtFirstRow() throws IOException, InterruptedException {
+  private void initializeAtFirstRow() throws IOException {
     // initialize parser and converter
     rowParser = new RowParserImpl(dataFields, configuration);
     badRecordLogger = BadRecordsLoggerProvider.createBadRecordLogger(configuration);
@@ -164,12 +172,13 @@ public class CarbonStreamRecordWriter extends RecordWriter<Void, Object> {
     converter.initialize();
 
     // initialize data writer and compressor
-    String filePath = segmentDir + File.separator + fileName;
+    String filePath = segmentDir + "/" + fileName;
     FileFactory.FileType fileType = FileFactory.getFileType(filePath);
     CarbonFile carbonFile = FileFactory.getCarbonFile(filePath, fileType);
     if (carbonFile.exists()) {
+      runningFileLen = carbonFile.getLength();
       // if the file is existed, use the append api
-      outputStream = FileFactory.getDataOutputStreamUsingAppend(filePath, fileType);
+      outputStream = carbonFile.getDataOutputStreamUsingAppend(filePath, fileType);
       // get the compressor from the fileheader. In legacy store,
       // the compressor name is not set and it use snappy compressor
       FileHeader header = new CarbonHeaderReader(filePath).readHeader();
@@ -180,7 +189,7 @@ public class CarbonStreamRecordWriter extends RecordWriter<Void, Object> {
       }
     } else {
       // IF the file is not existed, use the create api
-      outputStream = FileFactory.getDataOutputStream(filePath, fileType);
+      outputStream = carbonFile.getDataOutputStream(filePath, fileType);
       compressorName = carbonTable.getTableInfo().getFactTable().getTableProperties().get(
           CarbonCommonConstants.COMPRESSOR);
       if (null == compressorName) {
@@ -200,7 +209,7 @@ public class CarbonStreamRecordWriter extends RecordWriter<Void, Object> {
     isFirstRow = false;
   }
 
-  @Override public void write(Void key, Object value) throws IOException, InterruptedException {
+  @Override public void write(Void key, Object value) throws IOException {
     if (isFirstRow) {
       initializeAtFirstRow();
     }
@@ -319,24 +328,30 @@ public class CarbonStreamRecordWriter extends RecordWriter<Void, Object> {
     fileHeader.setIs_splitable(true);
     fileHeader.setSync_marker(CarbonStreamOutputFormat.CARBON_SYNC_MARKER);
     fileHeader.setCompressor_name(compressorName);
-    outputStream.write(CarbonUtil.getByteArray(fileHeader));
+    byte[] byteArray = CarbonUtil.getByteArray(fileHeader);
+    outputStream.write(byteArray);
+    runningFileLen += byteArray.length;
   }
 
   /**
    * write a blocklet to file
    */
-  private void appendBlockletToDataFile() throws IOException {
-    if (output.getRowIndex() == -1) {
-      return;
+  public boolean appendBlockletToDataFile() throws IOException {
+    if (output == null || output.getRowIndex() == -1) {
+      return false;
     }
-    output.apppendBlocklet(outputStream);
+    runningFileLen += output.apppendBlocklet(outputStream);
     outputStream.flush();
+    if (outputStream instanceof FSDataOutputStream) {
+      ((FSDataOutputStream)outputStream).hflush();
+    }
     if (!isClosed) {
       batchMinMaxIndex = StreamSegment.mergeBlockletMinMax(
           batchMinMaxIndex, output.generateBlockletMinMax(), measureDataTypes);
     }
     // reset data
     output.reset();
+    return true;
   }
 
   public BlockletMinMaxIndex getBatchMinMaxIndex() {
@@ -348,12 +363,20 @@ public class CarbonStreamRecordWriter extends RecordWriter<Void, Object> {
         batchMinMaxIndex, output.generateBlockletMinMax(), measureDataTypes);
   }
 
+  public long getRunningFileLen() {
+    return runningFileLen;
+  }
+
+  public BlockletMinMaxIndex getBatchMinMaxIndexWithoutMerge() {
+    return batchMinMaxIndex;
+  }
+
   public DataType[] getMeasureDataTypes() {
     return measureDataTypes;
   }
 
   @Override
-  public void close(TaskAttemptContext context) throws IOException, InterruptedException {
+  public void close(TaskAttemptContext context) throws IOException {
     try {
       isClosed = true;
       // append remain buffer data

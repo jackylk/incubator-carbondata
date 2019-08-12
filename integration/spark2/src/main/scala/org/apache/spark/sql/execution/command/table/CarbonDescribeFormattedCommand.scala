@@ -32,7 +32,6 @@ import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.carbondata.common.Strings
 import org.apache.carbondata.core.constants.{CarbonCommonConstants, CarbonLoadOptionConstants}
 import org.apache.carbondata.core.metadata.datatype.DataTypes
-import org.apache.carbondata.core.metadata.schema.PartitionInfo
 import org.apache.carbondata.core.metadata.schema.partition.PartitionType
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
@@ -103,6 +102,8 @@ private[sql] case class CarbonDescribeFormattedCommand(
       ("External", carbonTable.isExternalTable.toString, ""),
       ("Transactional", carbonTable.isTransactionalTable.toString, ""),
       ("Streaming", streaming, ""),
+      ("Primary Key Columns",
+        tblProps.getOrElse(CarbonCommonConstants.PRIMARY_KEY_COLUMNS, ""), ""),
       ("Table Block Size ", carbonTable.getBlockSizeInMB + " MB", ""),
       ("Table Blocklet Size ", carbonTable.getBlockletSizeInMB + " MB", ""),
       ("Comment", tblProps.getOrElse(CarbonCommonConstants.TABLE_COMMENT, ""), ""),

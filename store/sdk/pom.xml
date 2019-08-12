@@ -21,21 +21,6 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.apache.carbondata</groupId>
-      <artifactId>carbondata-hadoop</artifactId>
-      <version>${project.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>com.squareup.okhttp3</groupId>
-          <artifactId>okhttp</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.squareup.okio</groupId>
-          <artifactId>*</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
       <groupId>com.squareup.okhttp3</groupId>
       <artifactId>okhttp</artifactId>
       <version>3.10.0</version>
@@ -44,6 +29,17 @@
       <groupId>com.squareup.okio</groupId>
       <artifactId>okio</artifactId>
       <version>1.14.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.carbondata</groupId>
+      <artifactId>carbondata-streaming</artifactId>
+      <version>${project.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.spark</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
@@ -58,7 +54,6 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-aws</artifactId>
-      <version>${hadoop.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.httpcomponents</groupId>
@@ -68,7 +63,6 @@
     <dependency>
       <groupId>org.apache.arrow</groupId>
       <artifactId>arrow-format</artifactId>
-      <version>0.12.0</version>
       <exclusions>
         <exclusion>
           <groupId>ch.qos.logback</groupId>
@@ -79,7 +73,6 @@
     <dependency>
       <groupId>org.apache.arrow</groupId>
       <artifactId>arrow-memory</artifactId>
-      <version>0.12.0</version>
       <exclusions>
         <exclusion>
           <groupId>ch.qos.logback</groupId>
@@ -98,7 +91,6 @@
     <dependency>
       <groupId>org.apache.arrow</groupId>
       <artifactId>arrow-vector</artifactId>
-      <version>0.12.0</version>
       <exclusions>
         <exclusion>
           <groupId>ch.qos.logback</groupId>
@@ -117,7 +109,6 @@
     <dependency>
       <groupId>org.apache.arrow</groupId>
       <artifactId>arrow-plasma</artifactId>
-      <version>0.12.0</version>
       <exclusions>
         <exclusion>
           <groupId>ch.qos.logback</groupId>
@@ -128,7 +119,6 @@
     <dependency>
       <groupId>org.apache.arrow</groupId>
       <artifactId>arrow-flight</artifactId>
-      <version>0.12.0</version>
       <exclusions>
         <exclusion>
           <groupId>ch.qos.logback</groupId>
@@ -143,7 +133,6 @@
     <dependency>
       <groupId>org.apache.arrow</groupId>
       <artifactId>arrow-tools</artifactId>
-      <version>0.12.0</version>
       <exclusions>
         <exclusion>
           <groupId>ch.qos.logback</groupId>
@@ -183,6 +172,11 @@
           <artifactId>logback-classic</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.htrace</groupId>
+      <artifactId>htrace-core4</artifactId>
+      <version>4.0.1-incubating</version>
     </dependency>
   </dependencies>
 
@@ -229,6 +223,14 @@
             </goals>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>8</source>
+          <target>8</target>
+        </configuration>
       </plugin>
     </plugins>
   </build>

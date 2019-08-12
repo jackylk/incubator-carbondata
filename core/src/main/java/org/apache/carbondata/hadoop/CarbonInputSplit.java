@@ -37,6 +37,7 @@ import org.apache.carbondata.core.datastore.block.BlockletInfos;
 import org.apache.carbondata.core.datastore.block.Distributable;
 import org.apache.carbondata.core.datastore.block.TableBlockInfo;
 import org.apache.carbondata.core.indexstore.BlockletDetailInfo;
+import org.apache.carbondata.core.indexstore.RangeColumnSplitMerger;
 import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMapRowIndexes;
 import org.apache.carbondata.core.indexstore.row.DataMapRow;
 import org.apache.carbondata.core.metadata.ColumnarFormatVersion;
@@ -88,6 +89,8 @@ public class CarbonInputSplit extends FileSplit
   private FileFormat fileFormat = FileFormat.COLUMNAR_V3;
 
   private String dataMapWritePath;
+
+  private transient RangeColumnSplitMerger splitMerger;
   /**
    * validBlockletIds will contain the valid blocklted ids for a given block that contains the data
    * after pruning from driver. These will be used in executor for further pruning of blocklets
@@ -221,7 +224,7 @@ public class CarbonInputSplit extends FileSplit
 
   private CarbonInputSplit(String segmentId, String blockletId, String filePath, long start,
       long length, ColumnarFormatVersion version, String[] deleteDeltaFiles,
-      String dataMapWritePath) {
+      String dataMapWritePath, RangeColumnSplitMerger merger) {
     this.filePath = filePath;
     this.start = start;
     this.length = length;
@@ -238,12 +241,13 @@ public class CarbonInputSplit extends FileSplit
     this.version = version;
     this.deleteDeltaFiles = deleteDeltaFiles;
     this.dataMapWritePath = dataMapWritePath;
+    this.splitMerger = merger;
   }
 
   public CarbonInputSplit(String segmentId, String blockletId, String filePath, long start,
       long length, String[] locations, int numberOfBlocklets, ColumnarFormatVersion version,
       String[] deleteDeltaFiles) {
-    this(segmentId, blockletId, filePath, start, length, version, deleteDeltaFiles, null);
+    this(segmentId, blockletId, filePath, start, length, version, deleteDeltaFiles, null, null);
     this.location = locations;
     this.numberOfBlocklets = numberOfBlocklets;
   }
@@ -263,7 +267,8 @@ public class CarbonInputSplit extends FileSplit
   }
 
   public CarbonInputSplit(String segmentId, String filePath, long start, long length,
-      String[] locations, String[] inMemoryHosts, FileFormat fileFormat) {
+      String[] locations, String[] inMemoryHosts, FileFormat fileFormat,
+      RangeColumnSplitMerger merger) {
     this.filePath = filePath;
     this.start = start;
     this.length = length;
@@ -287,12 +292,14 @@ public class CarbonInputSplit extends FileSplit
     blockletId = "0";
     numberOfBlocklets = 0;
     version = CarbonProperties.getInstance().getFormatVersion();
+    this.splitMerger = merger;
   }
 
   public static CarbonInputSplit from(String segmentId, String blockletId, String path, long start,
-      long length, ColumnarFormatVersion version, String dataMapWritePath) throws IOException {
+      long length, ColumnarFormatVersion version, String dataMapWritePath,
+      RangeColumnSplitMerger merger) throws IOException {
     return new CarbonInputSplit(segmentId, blockletId, path, start, length, version, null,
-        dataMapWritePath);
+        dataMapWritePath, merger);
   }
 
   public static List<TableBlockInfo> createBlocks(List<CarbonInputSplit> splitList) {
@@ -805,6 +812,10 @@ public class CarbonInputSplit extends FileSplit
 
   public void setLocation(String[] location) {
     this.location = location;
+  }
+
+  public RangeColumnSplitMerger getSplitMerger() {
+    return splitMerger;
   }
 
   /**

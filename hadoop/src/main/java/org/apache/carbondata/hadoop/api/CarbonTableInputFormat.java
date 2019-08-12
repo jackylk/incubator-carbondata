@@ -37,6 +37,7 @@ import org.apache.carbondata.core.datamap.TableDataMap;
 import org.apache.carbondata.core.datamap.dev.expr.DataMapExprWrapper;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.indexstore.PartitionSpec;
+import org.apache.carbondata.core.indexstore.RangeColumnSplitMerger;
 import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier;
 import org.apache.carbondata.core.metadata.schema.PartitionInfo;
 import org.apache.carbondata.core.metadata.schema.partition.PartitionType;
@@ -61,6 +62,7 @@ import org.apache.carbondata.core.stream.StreamPruner;
 import org.apache.carbondata.core.util.CarbonProperties;
 import org.apache.carbondata.core.util.CarbonUtil;
 import org.apache.carbondata.hadoop.CarbonInputSplit;
+import org.apache.carbondata.vector.VectorTableInputFormat;
 
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
@@ -97,6 +99,7 @@ public class CarbonTableInputFormat<T> extends CarbonInputFormat<T> {
   // a cache for carbon table, it will be used in task side
   private CarbonTable carbonTable;
   private ReadCommittedScope readCommittedScope;
+  private short[] primaryKeyColIndexes;
 
   /**
    * {@inheritDoc}
@@ -127,6 +130,11 @@ public class CarbonTableInputFormat<T> extends CarbonInputFormat<T> {
     SegmentStatusManager.ValidAndInvalidSegmentsInfo segments = segmentStatusManager
         .getValidAndInvalidSegments(carbonTable.isChildTable(), loadMetadataDetails,
             this.readCommittedScope);
+
+    // vector table
+    if (carbonTable.isVectorTable()) {
+      return VectorTableInputFormat.getSplit(segments.getValidSegments());
+    }
 
     // to check whether only streaming segments access is enabled or not,
     // if access streaming segment is true then data will be read from streaming segments
@@ -308,6 +316,10 @@ public class CarbonTableInputFormat<T> extends CarbonInputFormat<T> {
           }
         }
       }
+      if (primaryKeyColIndexes == null) {
+        primaryKeyColIndexes = CarbonUtil.getPrimaryKeyColumnIndexes(
+            carbonTable.getTableInfo().getFactTable().getListOfColumns());
+      }
       StreamPruner streamPruner = new StreamPruner(carbonTable);
       streamPruner.init(filterResolverIntf);
       List<StreamFile> streamFiles = streamPruner.prune(streamSegments);
@@ -329,16 +341,24 @@ public class CarbonTableInputFormat<T> extends CarbonInputFormat<T> {
           // there is 10% slop to avoid to generate very small split in the end
           while (((double) bytesRemaining) / splitSize > 1.1) {
             int blkIndex = getBlockIndex(blkLocations, length - bytesRemaining);
+            RangeColumnSplitMerger merger =
+                new RangeColumnSplitMerger(primaryKeyColIndexes,
+                    streamFile.getMinMaxIndex().getMinValues(),
+                    streamFile.getMinMaxIndex().getMaxValues());
             splits.add(makeSplit(streamFile.getSegmentNo(), streamFile.getFilePath(),
                 length - bytesRemaining, splitSize, blkLocations[blkIndex].getHosts(),
-                    blkLocations[blkIndex].getCachedHosts(), FileFormat.ROW_V1));
+                    blkLocations[blkIndex].getCachedHosts(), FileFormat.ROW_V1, merger));
             bytesRemaining -= splitSize;
           }
           if (bytesRemaining != 0) {
+            RangeColumnSplitMerger merger =
+                new RangeColumnSplitMerger(primaryKeyColIndexes,
+                    streamFile.getMinMaxIndex().getMinValues(),
+                    streamFile.getMinMaxIndex().getMaxValues());
             int blkIndex = getBlockIndex(blkLocations, length - bytesRemaining);
             splits.add(makeSplit(streamFile.getSegmentNo(), streamFile.getFilePath(),
                 length - bytesRemaining, bytesRemaining, blkLocations[blkIndex].getHosts(),
-                blkLocations[blkIndex].getCachedHosts(), FileFormat.ROW_V1));
+                blkLocations[blkIndex].getCachedHosts(), FileFormat.ROW_V1, merger));
           }
         }
       }
@@ -347,9 +367,10 @@ public class CarbonTableInputFormat<T> extends CarbonInputFormat<T> {
   }
 
   protected FileSplit makeSplit(String segmentId, String filePath, long start, long length,
-      String[] hosts, String[] inMemoryHosts, FileFormat fileFormat) {
+      String[] hosts, String[] inMemoryHosts, FileFormat fileFormat,
+      RangeColumnSplitMerger merger) {
     return new CarbonInputSplit(segmentId, filePath, start, length, hosts, inMemoryHosts,
-        fileFormat);
+        fileFormat, merger);
   }
 
   /**

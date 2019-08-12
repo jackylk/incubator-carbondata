@@ -17,8 +17,8 @@
 
 package org.apache.spark.sql.execution.command.table
 
-import org.apache.spark.sql.{Row, SparkSession}
-import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
+import org.apache.spark.sql.{AnalysisException, CarbonEnv, Row, SparkSession}
+import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, GenericRow}
 import org.apache.spark.sql.catalyst.plans.logical.{Command, LogicalPlan, Union}
 import org.apache.spark.sql.execution.command.{ExplainCommand, MetadataCommand}
 import org.apache.spark.sql.types.StringType

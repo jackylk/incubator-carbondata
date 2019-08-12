@@ -34,6 +34,10 @@ public class OBSCarbonFile extends S3CarbonFile {
     super(path, hadoopConf);
   }
 
+  public OBSCarbonFile(FileStatus fileStatus, Configuration hadoopConf) {
+    super(fileStatus, hadoopConf);
+  }
+
   @Override
   protected CarbonFile[] getFiles(FileStatus[] listStatus) {
     if (listStatus == null) {
@@ -41,7 +45,7 @@ public class OBSCarbonFile extends S3CarbonFile {
     }
     CarbonFile[] files = new CarbonFile[listStatus.length];
     for (int i = 0; i < files.length; i++) {
-      files[i] = new OBSCarbonFile(listStatus[i].getPath(), hadoopConf);
+      files[i] = new OBSCarbonFile(listStatus[i], hadoopConf);
     }
     return files;
   }

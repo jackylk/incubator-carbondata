@@ -30,11 +30,13 @@ import org.apache.carbondata.core.datastore.filesystem.CarbonFileFilter;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.metadata.converter.SchemaConverter;
 import org.apache.carbondata.core.metadata.converter.ThriftWrapperSchemaConverterImpl;
+import org.apache.carbondata.core.metadata.schema.table.TableSchema;
 import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema;
 import org.apache.carbondata.core.reader.CarbonFooterReaderV3;
 import org.apache.carbondata.core.reader.CarbonHeaderReader;
 import org.apache.carbondata.core.reader.CarbonIndexFileReader;
 import org.apache.carbondata.core.util.CarbonUtil;
+import org.apache.carbondata.core.util.path.CarbonTablePath;
 import org.apache.carbondata.format.FileFooter3;
 import org.apache.carbondata.processing.loading.exception.CarbonDataLoadingException;
 import org.apache.carbondata.sdk.file.arrow.ArrowConverter;
@@ -49,24 +51,6 @@ import org.apache.hadoop.conf.Configuration;
  * Schema reader for carbon files, including carbondata file, carbonindex file, and schema file
  */
 public class CarbonSchemaReader {
-
-  /**
-   * Read schema file and return the schema
-   *
-   * @param schemaFilePath complete path including schema file name
-   * @return schema object
-   * @throws IOException
-   */
-  @Deprecated
-  public static Schema readSchemaInSchemaFile(String schemaFilePath) throws IOException {
-    org.apache.carbondata.format.TableInfo tableInfo = CarbonUtil.readSchemaFile(schemaFilePath);
-    SchemaConverter schemaConverter = new ThriftWrapperSchemaConverterImpl();
-    List<ColumnSchema> schemaList = schemaConverter
-        .fromExternalToWrapperTableInfo(tableInfo, "", "", "")
-        .getFactTable()
-        .getListOfColumns();
-    return new Schema(schemaList);
-  }
 
   /**
    * get carbondata/carbonindex file in path
@@ -159,6 +143,11 @@ public class CarbonSchemaReader {
    */
   public static Schema readSchema(String path, boolean validateSchema, Configuration conf)
       throws IOException {
+    // Check whether it is transactional table and reads the schema.
+    String schemaFilePath = CarbonTablePath.getSchemaFilePath(path);
+    if (FileFactory.getCarbonFile(schemaFilePath, conf).exists()) {
+      return readSchemaInSchemaFile(schemaFilePath, conf);
+    }
     if (path.endsWith(INDEX_FILE_EXT)) {
       return readSchemaFromIndexFile(path, conf);
     } else if (path.endsWith(CARBON_DATA_EXT)) {
@@ -189,6 +178,23 @@ public class CarbonSchemaReader {
       String indexFilePath = getCarbonFile(path, INDEX_FILE_EXT, conf)[0].getAbsolutePath();
       return readSchemaFromIndexFile(indexFilePath, conf);
     }
+  }
+
+  private static Schema readSchemaInSchemaFile(String schemaFilePath, Configuration conf)
+      throws IOException {
+    org.apache.carbondata.format.TableInfo tableInfo =
+        CarbonUtil.readSchemaFile(schemaFilePath, conf);
+    SchemaConverter schemaConverter = new ThriftWrapperSchemaConverterImpl();
+    TableSchema factTable =
+        schemaConverter.fromExternalToWrapperTableInfo(tableInfo, "", "", "").getFactTable();
+    List<ColumnSchema> schemaList = new ArrayList<>();
+    for (ColumnSchema columnSchema : factTable.getListOfColumns()) {
+      if (!columnSchema.getColumnName()
+          .equalsIgnoreCase(CarbonCommonConstants.DEFAULT_INVISIBLE_DUMMY_MEASURE)) {
+        schemaList.add(columnSchema);
+      }
+    }
+    return new Schema(schemaList, factTable.getTableProperties());
   }
 
   /**

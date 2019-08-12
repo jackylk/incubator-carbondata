@@ -778,7 +778,7 @@ object CommonUtil {
       CarbonCommonConstants.CARBON_LOADING_USE_YARN_LOCAL_DIR,
       CarbonCommonConstants.CARBON_LOADING_USE_YARN_LOCAL_DIR_DEFAULT).equalsIgnoreCase("true")
     val tmpLocationSuffix =
-      s"${File.separator}carbon${System.nanoTime()}${CarbonCommonConstants.UNDERSCORE}$index"
+      s"${"/"}carbon${System.nanoTime()}${CarbonCommonConstants.UNDERSCORE}$index"
     if (isCarbonUseYarnLocalDir) {
       val yarnStoreLocations = Util.getConfiguredLocalDirs(SparkEnv.get.conf)
 

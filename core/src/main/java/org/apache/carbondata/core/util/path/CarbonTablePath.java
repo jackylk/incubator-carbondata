@@ -17,6 +17,7 @@
 package org.apache.carbondata.core.util.path;
 
 import java.io.File;
+import java.io.IOException;
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.filesystem.CarbonFile;
@@ -24,6 +25,8 @@ import org.apache.carbondata.core.datastore.filesystem.CarbonFileFilter;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.locks.LockUsage;
 import org.apache.carbondata.core.metadata.ColumnarFormatVersion;
+import org.apache.carbondata.core.metadata.SegmentFileStore;
+import org.apache.carbondata.core.statusmanager.LoadMetadataDetails;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -38,7 +41,7 @@ public class CarbonTablePath {
   private static final String SORT_INDEX_EXT = ".sortindex";
   public static final String SCHEMA_FILE = "schema";
   private static final String FACT_DIR = "Fact";
-  private static final String SEGMENT_PREFIX = "Segment_";
+  public static final String SEGMENT_PREFIX = "Segment_";
   private static final String PARTITION_PREFIX = "Part";
   private static final String DATA_PART_PREFIX = "part-";
   private static final String BATCH_PREFIX = "_batchno";
@@ -70,7 +73,7 @@ public class CarbonTablePath {
     int lastIndex = carbonFilePath.lastIndexOf('/');
     // below code for handling windows environment
     if (-1 == lastIndex) {
-      lastIndex = carbonFilePath.lastIndexOf(File.separator);
+      lastIndex = carbonFilePath.lastIndexOf("/");
     }
     return carbonFilePath.substring(0, lastIndex);
   }
@@ -125,42 +128,42 @@ public class CarbonTablePath {
    * Return absolute path of dictionary file
    */
   public static String getDictionaryFilePath(String tablePath, String columnId) {
-    return getMetadataPath(tablePath) + File.separator + getDictionaryFileName(columnId);
+    return getMetadataPath(tablePath) + "/" + getDictionaryFileName(columnId);
   }
 
   /**
    * Return absolute path of dictionary file
    */
   public static String getExternalDictionaryFilePath(String dictionaryPath, String columnId) {
-    return dictionaryPath + File.separator + getDictionaryFileName(columnId);
+    return dictionaryPath + "/" + getDictionaryFileName(columnId);
   }
 
   /**
    * Return metadata path
    */
   public static String getMetadataPath(String tablePath) {
-    return tablePath + File.separator + METADATA_DIR;
+    return tablePath + "/" + METADATA_DIR;
   }
 
   /**
    * Return absolute path of dictionary meta file
    */
   public static String getExternalDictionaryMetaFilePath(String dictionaryPath, String columnId) {
-    return dictionaryPath + File.separator + columnId + DICTIONARY_META_EXT;
+    return dictionaryPath + "/" + columnId + DICTIONARY_META_EXT;
   }
 
   /**
    * Return absolute path of dictionary meta file
    */
   public static String getDictionaryMetaFilePath(String tablePath, String columnId) {
-    return getMetadataPath(tablePath) + File.separator + columnId + DICTIONARY_META_EXT;
+    return getMetadataPath(tablePath) + "/" + columnId + DICTIONARY_META_EXT;
   }
 
   /**
    * Return sortindex file path based on specified dictionary path
    */
   public static String getExternalSortIndexFilePath(String dictionaryPath, String columnId) {
-    return dictionaryPath + File.separator + columnId + SORT_INDEX_EXT;
+    return dictionaryPath + "/" + columnId + SORT_INDEX_EXT;
   }
 
   /**
@@ -168,7 +171,7 @@ public class CarbonTablePath {
    */
   public static String getExternalSortIndexFilePath(String dictionaryPath, String columnId,
       long dictOffset) {
-    return dictionaryPath + File.separator + columnId + "_" + dictOffset + SORT_INDEX_EXT;
+    return dictionaryPath + "/" + columnId + "_" + dictOffset + SORT_INDEX_EXT;
   }
 
   /**
@@ -214,7 +217,7 @@ public class CarbonTablePath {
    * Return absolute path of table status file
    */
   public static String getTableStatusFilePath(String tablePath) {
-    return getMetadataPath(tablePath) + File.separator + TABLE_STATUS_FILE;
+    return getMetadataPath(tablePath) + "/" + TABLE_STATUS_FILE;
   }
 
   public static String getTableStatusFilePathWithUUID(String tablePath, String uuid) {
@@ -276,7 +279,7 @@ public class CarbonTablePath {
         return getCarbonIndexFilePath(tablePath, taskId, segmentId, bucketNumber);
       default:
         String segmentDir = getSegmentPath(tablePath, segmentId);
-        return segmentDir + File.separator + getCarbonIndexFileName(taskId,
+        return segmentDir + "/" + getCarbonIndexFileName(taskId,
             Integer.parseInt(bucketNumber), timeStamp, segmentId);
     }
   }
@@ -294,7 +297,31 @@ public class CarbonTablePath {
    * Return the segment path from table path and segmentId
    */
   public static String getSegmentPath(String tablePath, String segmentId) {
-    return getPartitionDir(tablePath) + File.separator + SEGMENT_PREFIX + segmentId;
+    return getPartitionDir(tablePath) + "/" + SEGMENT_PREFIX + segmentId;
+  }
+
+  /**
+   * Return the segment id from segmentPath
+   */
+  public static String getSegmentId(String segmentPath) {
+    return segmentPath.substring(segmentPath.lastIndexOf(CarbonCommonConstants.UNDERSCORE) + 1,
+        segmentPath.length());
+  }
+
+  public static String getSegmentPath(String tablePath, LoadMetadataDetails load)
+      throws IOException {
+    SegmentFileStore.SegmentFile segment = SegmentFileStore.readSegmentFile(
+        getSegmentFilePath(tablePath, load.getSegmentFile()));
+    if (segment != null) {
+      if (segment.getLocationMap().values().toArray(
+          new SegmentFileStore.FolderDetails[0])[0].isRelative()) {
+        return getSegmentPath(tablePath, load.getLoadName());
+      } else {
+        return segment.getOptions().get("path");
+      }
+    } else {
+      return "NA";
+    }
   }
 
   /**
@@ -305,13 +332,13 @@ public class CarbonTablePath {
    * @param factUpdateTimeStamp unique identifier to identify an update
    * @return gets data file name only with out path
    */
-  public static String getCarbonDataFileName(Integer filePartNo, String taskNo, int bucketNumber,
+  public static String getCarbonDataFileName(Integer filePartNo, Long taskNo, int bucketNumber,
       int batchNo, String factUpdateTimeStamp, String segmentNo) {
     return DATA_PART_PREFIX + filePartNo + "-" + taskNo + BATCH_PREFIX + batchNo + "-"
         + bucketNumber + "-" + segmentNo + "-" + factUpdateTimeStamp + CARBON_DATA_EXT;
   }
 
-  public static String getShardName(String taskNo, int bucketNumber, int batchNo,
+  public static String getShardName(Long taskNo, int bucketNumber, int batchNo,
       String factUpdateTimeStamp, String segmentNo) {
     return taskNo + BATCH_PREFIX + batchNo + "-" + bucketNumber + "-" + segmentNo + "-"
         + factUpdateTimeStamp;
@@ -324,38 +351,38 @@ public class CarbonTablePath {
    * @param factUpdatedTimeStamp time stamp
    * @return filename
    */
-  public static String getCarbonIndexFileName(String taskNo, int bucketNumber, int batchNo,
+  public static String getCarbonIndexFileName(long taskNo, int bucketNumber, int batchNo,
       String factUpdatedTimeStamp, String segmentNo) {
     return getShardName(taskNo, bucketNumber, batchNo, factUpdatedTimeStamp, segmentNo)
         + INDEX_FILE_EXT;
   }
 
   public static String getCarbonStreamIndexFileName() {
-    return getCarbonIndexFileName("0", 0, 0, "0", "0");
+    return getCarbonIndexFileName(0, 0, 0, "0", "0");
   }
 
   public static String getCarbonStreamIndexFilePath(String segmentDir) {
-    return segmentDir + File.separator + getCarbonStreamIndexFileName();
+    return segmentDir + "/" + getCarbonStreamIndexFileName();
   }
 
   // This partition is not used in any code logic, just keep backward compatibility
   public static final String DEPRECATED_PARTITION_ID = "0";
 
   public static String getPartitionDir(String tablePath) {
-    return getFactDir(tablePath) + File.separator + PARTITION_PREFIX +
+    return getFactDir(tablePath) + "/" + PARTITION_PREFIX +
         CarbonTablePath.DEPRECATED_PARTITION_ID;
   }
 
   public static String getFactDir(String tablePath) {
-    return tablePath + File.separator + FACT_DIR;
+    return tablePath + "/" + FACT_DIR;
   }
 
   public static String getStreamingLogDir(String tablePath) {
-    return tablePath + File.separator + STREAMING_DIR + File.separator + STREAMING_LOG_DIR;
+    return tablePath + "/" + STREAMING_DIR + "/" + STREAMING_LOG_DIR;
   }
 
   public static String getStreamingCheckpointDir(String tablePath) {
-    return tablePath + File.separator + STREAMING_DIR + File.separator + STREAMING_CHECKPOINT_DIR;
+    return tablePath + "/" + STREAMING_DIR + "/" + STREAMING_CHECKPOINT_DIR;
   }
 
   /**
@@ -369,7 +396,7 @@ public class CarbonTablePath {
       String dataMapName, String shardName) {
     return new StringBuilder()
         .append(getDataMapStorePath(tablePath, segmentId, dataMapName))
-        .append(File.separator)
+        .append("/")
         .append(shardName)
         .toString();
   }
@@ -383,9 +410,9 @@ public class CarbonTablePath {
       String dataMapName) {
     return new StringBuilder()
         .append(tablePath)
-        .append(File.separator)
+        .append("/")
         .append(dataMapName)
-        .append(File.separator)
+        .append("/")
         .append(segmentId)
         .toString();
   }
@@ -516,8 +543,8 @@ public class CarbonTablePath {
     /**
      * Return the taskId part from taskNo(include taskId + batchNo)
      */
-    public static String getTaskIdFromTaskNo(String taskNo) {
-      return taskNo.split(BATCH_PREFIX)[0];
+    public static long getTaskIdFromTaskNo(String taskNo) {
+      return Long.parseLong(taskNo.split(BATCH_PREFIX)[0]);
     }
 
     /**
@@ -750,10 +777,10 @@ public class CarbonTablePath {
   public static String generateBadRecordsPath(String badLogStoreLocation, String segmentId,
       String taskNo, boolean isTransactionalTable) {
     if (!isTransactionalTable) {
-      return badLogStoreLocation + File.separator + "SdkWriterBadRecords"
+      return badLogStoreLocation + "/" + "SdkWriterBadRecords"
           + CarbonCommonConstants.FILE_SEPARATOR + taskNo;
     } else {
-      return badLogStoreLocation + File.separator + segmentId + CarbonCommonConstants.FILE_SEPARATOR
+      return badLogStoreLocation + "/" + segmentId + CarbonCommonConstants.FILE_SEPARATOR
           + taskNo;
     }
   }

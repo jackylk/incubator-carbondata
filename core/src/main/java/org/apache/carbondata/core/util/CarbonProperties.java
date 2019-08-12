@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.text.SimpleDateFormat;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -1775,6 +1776,13 @@ public final class CarbonProperties {
     return CarbonCommonConstants.CARBON_INDEX_SERVER_WORKER_THREADS_DEFAULT;
   }
 
+  /**
+   * iterate each property
+   */
+  public Iterator<Map.Entry<Object, Object>> iterator() {
+    return carbonProperties.entrySet().iterator();
+  }
+
   public int getNumOfThreadsForExecutorPruning() {
     String configuredValue = CarbonProperties.getInstance()
         .getProperty(CarbonCommonConstants.CARBON_MAX_EXECUTOR_THREADS_FOR_BLOCK_PRUNING);
@@ -1811,5 +1819,22 @@ public final class CarbonProperties {
           .parseInt(CarbonCommonConstants.CARBON_MAX_DRIVER_THREADS_FOR_BLOCK_PRUNING_DEFAULT);
     }
     return numOfThreadsForPruning;
+  }
+
+  public int getAsyncQueryResLimit() {
+    int limit;
+    try {
+      limit = Integer.parseInt(CarbonProperties.getInstance()
+          .getProperty(CarbonCommonConstants.ASYNC_QUERY_RESULT_LIMIT,
+              CarbonCommonConstants.ASYNC_QUERY_RESULT_LIMIT_DEFAULT));
+    } catch (NumberFormatException exc) {
+      LOGGER.warn(
+          "The value of '" + CarbonCommonConstants.ASYNC_QUERY_RESULT_LIMIT
+              + "' is invalid. Using the default value "
+              + CarbonCommonConstants.ASYNC_QUERY_RESULT_LIMIT_DEFAULT);
+      limit = Integer.parseInt(
+          CarbonCommonConstants.ASYNC_QUERY_RESULT_LIMIT_DEFAULT);
+    }
+    return limit;
   }
 }

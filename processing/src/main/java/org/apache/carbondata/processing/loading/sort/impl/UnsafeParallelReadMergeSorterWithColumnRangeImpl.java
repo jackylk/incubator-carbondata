@@ -148,7 +148,7 @@ public class UnsafeParallelReadMergeSorterWithColumnRangeImpl extends AbstractMe
             false);
     // Set the data file location
     String[] dataFolderLocation = CarbonDataProcessorUtil.arrayAppend(storeLocation,
-        File.separator, CarbonCommonConstants.SORT_TEMP_FILE_LOCATION);
+        "/", CarbonCommonConstants.SORT_TEMP_FILE_LOCATION);
     return new UnsafeSingleThreadFinalSortFilesMerger(sortParameters, dataFolderLocation);
   }
 
@@ -184,7 +184,7 @@ public class UnsafeParallelReadMergeSorterWithColumnRangeImpl extends AbstractMe
     String[] carbonDataDirectoryPath = CarbonDataProcessorUtil
         .getLocalDataFolderLocation(parameters.getCarbonTable(), parameters.getTaskNo(),
             parameters.getSegmentId(), false, false);
-    String[] tmpLoc = CarbonDataProcessorUtil.arrayAppend(carbonDataDirectoryPath, File.separator,
+    String[] tmpLoc = CarbonDataProcessorUtil.arrayAppend(carbonDataDirectoryPath, "/",
         CarbonCommonConstants.SORT_TEMP_FILE_LOCATION);
     LOGGER.warn("set temp location: " + StringUtils.join(tmpLoc, ", "));
     parameters.setTempFileLocation(tmpLoc);

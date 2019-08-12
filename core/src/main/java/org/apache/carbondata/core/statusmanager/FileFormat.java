@@ -26,7 +26,9 @@ public enum FileFormat {
   COLUMNAR_V3,
 
   // carbondata row file format, optimized for write
-  ROW_V1;
+  ROW_V1,
+
+  VECTOR_V1;
 
   public static FileFormat getByOrdinal(int ordinal) {
     switch (ordinal) {
@@ -34,6 +36,8 @@ public enum FileFormat {
         return COLUMNAR_V3;
       case 1:
         return ROW_V1;
+      case 2:
+        return VECTOR_V1;
     }
 
     return COLUMNAR_V3;

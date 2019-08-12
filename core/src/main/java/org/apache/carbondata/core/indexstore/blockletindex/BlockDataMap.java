@@ -41,6 +41,7 @@ import org.apache.carbondata.core.indexstore.BlockMetaInfo;
 import org.apache.carbondata.core.indexstore.Blocklet;
 import org.apache.carbondata.core.indexstore.ExtendedBlocklet;
 import org.apache.carbondata.core.indexstore.PartitionSpec;
+import org.apache.carbondata.core.indexstore.RangeColumnSplitMerger;
 import org.apache.carbondata.core.indexstore.SafeMemoryDMStore;
 import org.apache.carbondata.core.indexstore.UnsafeMemoryDMStore;
 import org.apache.carbondata.core.indexstore.row.DataMapRow;
@@ -118,23 +119,19 @@ public class BlockDataMap extends CoarseGrainDataMap
     BlockletDataMapModel blockletDataMapInfo = (BlockletDataMapModel) dataMapModel;
     DataFileFooterConverter fileFooterConverter =
         new DataFileFooterConverter(dataMapModel.getConfiguration());
-    List<DataFileFooter> indexInfo = null;
-    if (blockletDataMapInfo.getIndexInfos() == null || blockletDataMapInfo.getIndexInfos()
-        .isEmpty()) {
-      indexInfo = fileFooterConverter
-          .getIndexInfo(blockletDataMapInfo.getFilePath(), blockletDataMapInfo.getFileData(),
-              blockletDataMapInfo.getCarbonTable().isTransactionalTable());
-    } else {
-      // when index info is already read and converted to data file footer object
-      indexInfo = blockletDataMapInfo.getIndexInfos();
-    }
+    List<DataFileFooter> indexInfo = fileFooterConverter
+        .getIndexInfo(blockletDataMapInfo.getFilePath(), blockletDataMapInfo.getFileData(),
+            blockletDataMapInfo.getCarbonTable().isTransactionalTable());
     Path path = new Path(blockletDataMapInfo.getFilePath());
     // store file path only in case of partition table, non transactional table and flat folder
     // structure
     byte[] filePath = null;
     boolean isPartitionTable = blockletDataMapInfo.getCarbonTable().isHivePartitionTable();
-    if (isPartitionTable || !blockletDataMapInfo.getCarbonTable().isTransactionalTable()
-        || blockletDataMapInfo.getCarbonTable().isSupportFlatFolder()) {
+    if (isPartitionTable || !blockletDataMapInfo.getCarbonTable().isTransactionalTable() ||
+        blockletDataMapInfo.getCarbonTable().isSupportFlatFolder() ||
+        // if the segment data is written in tablepath then no need to store whole path of file.
+        !blockletDataMapInfo.getFilePath().startsWith(
+            blockletDataMapInfo.getCarbonTable().getTablePath())) {
       filePath = path.getParent().toString().getBytes(CarbonCommonConstants.DEFAULT_CHARSET);
       isFilePathStored = true;
     }
@@ -154,9 +151,6 @@ public class BlockDataMap extends CoarseGrainDataMap
       DataMapRowImpl summaryRow =
           loadMetadata(taskSummarySchema, segmentProperties, blockletDataMapInfo, indexInfo);
       finishWriting(taskSummarySchema, filePath, fileName, segmentId, summaryRow);
-      if (((BlockletDataMapModel) dataMapModel).isSerializeDmStore()) {
-        serializeDmStore();
-      }
     }
     if (LOGGER.isDebugEnabled()) {
       LOGGER.debug(
@@ -174,15 +168,6 @@ public class BlockDataMap extends CoarseGrainDataMap
       addTaskSummaryRowToUnsafeMemoryStore(taskSummarySchema, summaryRow, filePath, fileName,
           segmentId);
       taskSummaryDMStore.finishWriting();
-    }
-  }
-
-  private void serializeDmStore() {
-    if (memoryDMStore != null) {
-      memoryDMStore.serializeMemoryBlock();
-    }
-    if (null != taskSummaryDMStore) {
-      taskSummaryDMStore.serializeMemoryBlock();
     }
   }
 
@@ -982,9 +967,16 @@ public class BlockDataMap extends CoarseGrainDataMap
 
   protected ExtendedBlocklet createBlocklet(DataMapRow row, String fileName, short blockletId,
       boolean useMinMaxForPruning) {
+    return createBlocklet(row, fileName, blockletId, useMinMaxForPruning,
+        getMinMaxValue(row, MAX_VALUES_INDEX), getMinMaxValue(row, MIN_VALUES_INDEX));
+  }
+
+  protected ExtendedBlocklet createBlocklet(DataMapRow row, String fileName, short blockletId,
+      boolean useMinMaxForPruning, byte[][] maxValues, byte[][] minValues) {
     short versionNumber = row.getShort(VERSION_INDEX);
     ExtendedBlocklet blocklet = new ExtendedBlocklet(fileName, blockletId + "", false,
-        ColumnarFormatVersion.valueOf(versionNumber));
+        ColumnarFormatVersion.valueOf(versionNumber),
+        new RangeColumnSplitMerger(getPrimaryKeyIndexes(), minValues, maxValues));
     blocklet.setDataMapRow(row);
     blocklet.setColumnCardinality(getColumnCardinality());
     blocklet.setLegacyStore(isLegacyStore);
@@ -1016,7 +1008,6 @@ public class BlockDataMap extends CoarseGrainDataMap
     if (null != taskSummaryDMStore) {
       taskSummaryDMStore.freeMemory();
     }
-    segmentPropertiesWrapper = null;
   }
 
   public long getMemorySize() {
@@ -1057,6 +1048,10 @@ public class BlockDataMap extends CoarseGrainDataMap
     return segmentPropertiesWrapper.getBlockFileFooterEntrySchema();
   }
 
+  protected short[] getPrimaryKeyIndexes() {
+    return segmentPropertiesWrapper.getPrimaryKeyColIndexes();
+  }
+
   protected CarbonRowSchema[] getTaskSummarySchema() {
     try {
       return segmentPropertiesWrapper.getTaskSummarySchemaForBlock(true, isFilePathStored);
@@ -1083,21 +1078,6 @@ public class BlockDataMap extends CoarseGrainDataMap
       taskSummaryDMStore.freeMemory();
       taskSummaryDMStore = unsafeSummaryMemoryDMStore;
     }
-
-    if (memoryDMStore instanceof UnsafeMemoryDMStore) {
-      if (memoryDMStore.isSerialized()) {
-        memoryDMStore.copyToMemoryBlock();
-      }
-    }
-    if (taskSummaryDMStore instanceof UnsafeMemoryDMStore) {
-      if (taskSummaryDMStore.isSerialized()) {
-        taskSummaryDMStore.copyToMemoryBlock();
-      }
-    }
-  }
-
-  public SegmentPropertiesAndSchemaHolder.SegmentPropertiesWrapper getSegmentPropertiesWrapper() {
-    return segmentPropertiesWrapper;
   }
 
   @Override public int getNumberOfEntries() {
@@ -1118,4 +1098,9 @@ public class BlockDataMap extends CoarseGrainDataMap
       SegmentPropertiesAndSchemaHolder.SegmentPropertiesWrapper segmentPropertiesWrapper) {
     this.segmentPropertiesWrapper = segmentPropertiesWrapper;
   }
+
+  public SegmentPropertiesAndSchemaHolder.SegmentPropertiesWrapper getSegmentPropertiesWrapper() {
+    return segmentPropertiesWrapper;
+  }
+
 }

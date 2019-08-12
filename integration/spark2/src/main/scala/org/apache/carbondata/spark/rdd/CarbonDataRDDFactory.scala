@@ -40,6 +40,7 @@ import org.apache.spark.rdd.{DataLoadCoalescedRDD, DataLoadPartitionCoalescer, N
 import org.apache.spark.sql.{CarbonEnv, DataFrame, Row, SQLContext}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.execution.command.{CompactionModel, ExecutionErrors, UpdateTableModel}
+import org.apache.spark.sql.execution.command.vector.VectorTableLoader
 import org.apache.spark.sql.hive.DistributionUtil
 import org.apache.spark.sql.optimizer.CarbonFilters
 import org.apache.spark.sql.util.{CarbonException, SparkSQLUtil}
@@ -377,7 +378,15 @@ object CarbonDataRDDFactory {
             DataLoadProcessBuilderOnSpark.loadDataUsingGlobalSort(sqlContext.sparkSession,
               dataFrame, carbonLoadModel, hadoopConf)
           } else if (dataFrame.isDefined) {
-            loadDataFrame(sqlContext, dataFrame, carbonLoadModel)
+            if (carbonTable.isVectorTable) {
+              VectorTableLoader.loadDataFrameForVector(
+                sqlContext,
+                dataFrame,
+                carbonLoadModel,
+                hadoopConf)
+            } else {
+              loadDataFrame(sqlContext, dataFrame, carbonLoadModel)
+            }
           } else {
             loadDataFile(sqlContext, carbonLoadModel, hadoopConf)
           }
@@ -517,6 +526,7 @@ object CarbonDataRDDFactory {
       // as no record loaded in new segment, new segment should be deleted
       val newEntryLoadStatus =
         if (carbonLoadModel.isCarbonTransactionalTable &&
+            !carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable.isVectorTable &&
             !carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable.isChildDataMap &&
             !carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable.isChildTable &&
             !CarbonLoaderUtil.isValidSegment(carbonLoadModel, carbonLoadModel.getSegmentId.toInt)) {
@@ -573,7 +583,7 @@ object CarbonDataRDDFactory {
           CarbonLoaderUtil.deleteSegment(carbonLoadModel, carbonLoadModel.getSegmentId.toInt)
           // delete corresponding segment file from metadata
           val segmentFile = CarbonTablePath.getSegmentFilesLocation(carbonLoadModel.getTablePath) +
-                            File.separator + segmentFileName
+                            "/" + segmentFileName
           FileFactory.deleteFile(segmentFile, FileFactory.getFileType(segmentFile))
           clearDataMapFiles(carbonTable, carbonLoadModel.getSegmentId)
         }

@@ -23,7 +23,7 @@ import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.hive.CarbonSessionCatalog
 import org.apache.spark.util.AlterTableUtil
 
-private[sql] case class CarbonAlterTableSetCommand(
+case class CarbonAlterTableSetCommand(
     tableIdentifier: TableIdentifier,
     properties: Map[String, String],
     isView: Boolean)

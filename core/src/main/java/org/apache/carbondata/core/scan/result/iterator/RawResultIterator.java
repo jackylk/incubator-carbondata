@@ -109,17 +109,22 @@ public class RawResultIterator extends CarbonIterator<Object[]> {
     @Override
     public Void call() throws Exception {
       if (isBackupFilling) {
-        backupBuffer = fetchRows();
+        backupBuffer = new ArrayList<>();
+        while (backupBuffer.size() == 0 && detailRawQueryResultIterator.hasNext()) {
+          fetchRows(backupBuffer);
+        }
         isBackupFilled = true;
       } else {
-        currentBuffer = fetchRows();
+        currentBuffer = new ArrayList<>();
+        while (currentBuffer.size() == 0 && detailRawQueryResultIterator.hasNext()) {
+          fetchRows(currentBuffer);
+        }
       }
       return null;
     }
   }
 
-  private List<Object[]> fetchRows() throws Exception {
-    List<Object[]> converted = new ArrayList<>();
+  private List<Object[]> fetchRows(List<Object[]> converted) throws Exception {
     while (detailRawQueryResultIterator.hasNext()) {
       for (Object[] r : detailRawQueryResultIterator.next().getRows()) {
         converted.add(convertRow(r));
@@ -168,7 +173,11 @@ public class RawResultIterator extends CarbonIterator<Object[]> {
    */
   private void pickRow() {
     fillDataFromPrefetch();
-    currentRawRow = currentBuffer.get(currentIdxInBuffer);
+    try {
+      currentRawRow = currentBuffer.get(currentIdxInBuffer);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Override

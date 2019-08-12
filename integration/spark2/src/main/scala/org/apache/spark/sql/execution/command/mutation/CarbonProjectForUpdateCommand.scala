@@ -43,7 +43,7 @@ import org.apache.carbondata.events.{OperationContext, OperationListenerBus, Upd
 import org.apache.carbondata.indexserver.IndexServer
 import org.apache.carbondata.processing.loading.FailureCauses
 
-private[sql] case class CarbonProjectForUpdateCommand(
+case class CarbonProjectForUpdateCommand(
     plan: LogicalPlan,
     databaseNameOp: Option[String],
     tableName: String,

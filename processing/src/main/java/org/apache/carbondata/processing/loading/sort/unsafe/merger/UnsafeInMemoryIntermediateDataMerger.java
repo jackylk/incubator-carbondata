@@ -246,7 +246,7 @@ public class UnsafeInMemoryIntermediateDataMerger implements Callable<Void> {
   private void initSortTempFile() throws IOException {
     String tmpDir = sortParameters.getTempFileLocation()[
         new Random().nextInt(sortParameters.getTempFileLocation().length)];
-    outputFile = new File(tmpDir + File.separator
+    outputFile = new File(tmpDir + "/"
         + sortParameters.getTableName() + '_'
         + sortParameters.getRangeId() + '_' + System.nanoTime()
         + CarbonCommonConstants.SORT_TEMP_FILE_EXT);

@@ -32,4 +32,12 @@
               files="org/apache/carbondata/processing/newflow/sort/unsafe/sort/TimSort.java"/>
     <suppress checks=".*"
               files="org/apache/carbondata/core/memory/HeapMemoryAllocator"/>
+    <suppress checks=".*"
+              files="com/huawei/cloud/orc/HWOcrClientAKSK.java"/>
+    <suppress checks=".*"
+              files="com/huawei/cloud/orc/ResponseProcessUtils.java"/>
+    <suppress checks=".*"
+              files="com/huawei/cloud/orc/HWOcrClientToken.java"/>
+    <suppress checks=".*"
+              files="com/huawei/cloud/modelarts/ModelArtsModelAPI.java"/>
 </suppressions>

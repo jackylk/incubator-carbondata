@@ -17,7 +17,7 @@
 
 package org.apache.spark.sql.execution.command.table
 
-import org.apache.spark.sql.{Row, SparkSession}
+import org.apache.spark.sql.{CarbonEnv, Row, SparkSession}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
 import org.apache.spark.sql.execution.command.MetadataCommand
@@ -58,7 +58,8 @@ private[sql] case class CarbonShowTablesCommand ( databaseName: Option[String],
     tables.collect {
       case tableIdent if isMainTable(tableIdent) =>
         val isTemp = catalog.isTemporaryTable(tableIdent)
-        Row(tableIdent.database.getOrElse("default"), tableIdent.table, isTemp)
+        val dbName = tableIdent.database.getOrElse("default")
+        Row(dbName, tableIdent.table, isTemp)
     }
 
   }

@@ -52,12 +52,12 @@
     </dependency>
     <dependency>
       <groupId>org.apache.carbondata</groupId>
-      <artifactId>carbondata-streaming</artifactId>
+      <artifactId>carbondata-spark-datasource</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.carbondata</groupId>
-      <artifactId>carbondata-spark-datasource</artifactId>
+      <artifactId>carbondata-cloud</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -71,10 +71,6 @@
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-hive-thriftserver_${scala.binary.version}</artifactId>
     </dependency>
     <dependency>
       <groupId>junit</groupId>

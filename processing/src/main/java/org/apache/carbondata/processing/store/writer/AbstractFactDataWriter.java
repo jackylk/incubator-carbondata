@@ -324,7 +324,7 @@ public abstract class AbstractFactDataWriter implements CarbonFactDataWriter {
         .getCarbonDataFileName(fileCount, model.getCarbonDataFileAttributes().getTaskId(),
             model.getBucketId(), model.getTaskExtension(),
             "" + model.getCarbonDataFileAttributes().getFactTimeStamp(), model.getSegmentId());
-    this.carbonDataFileStorePath = model.getCarbonDataDirectoryPath() + File.separator
+    this.carbonDataFileStorePath = model.getCarbonDataDirectoryPath() + "/"
         + carbonDataFileName;
     try {
       if (enableDirectlyWriteDataToStorePath) {
@@ -339,7 +339,7 @@ public abstract class AbstractFactDataWriter implements CarbonFactDataWriter {
         String chosenTempLocation =
             tempFileLocations[new Random().nextInt(tempFileLocations.length)];
         LOGGER.info("Randomly choose factdata temp location: " + chosenTempLocation);
-        carbonDataFileTempPath = chosenTempLocation + File.separator + carbonDataFileName;
+        carbonDataFileTempPath = chosenTempLocation + "/" + carbonDataFileName;
         fileOutputStream = FileFactory.getDataOutputStream(carbonDataFileTempPath,
             FileFactory.FileType.LOCAL, CarbonCommonConstants.BYTEBUFFER_SIZE, true);
       }
@@ -424,7 +424,7 @@ public abstract class AbstractFactDataWriter implements CarbonFactDataWriter {
       String[] tempLocations = model.getStoreLocation();
       String chosenTempLocation = tempLocations[new Random().nextInt(tempLocations.length)];
       LOGGER.info("Randomly choose index file location: " + chosenTempLocation);
-      indexFileName = chosenTempLocation + File.separator + CarbonTablePath
+      indexFileName = chosenTempLocation + "/" + CarbonTablePath
           .getCarbonIndexFileName(model.getCarbonDataFileAttributes().getTaskId(),
               model.getBucketId(), model.getTaskExtension(),
               "" + model.getCarbonDataFileAttributes().getFactTimeStamp(), model.getSegmentId());

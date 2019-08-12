@@ -309,7 +309,7 @@ m filterExpression
   public static void setQuerySegment(Configuration conf, AbsoluteTableIdentifier identifier) {
     String dbName = identifier.getCarbonTableIdentifier().getDatabaseName().toLowerCase();
     String tbName = identifier.getCarbonTableIdentifier().getTableName().toLowerCase();
-    getQuerySegmentToAccess(conf, dbName, tbName);
+    setQuerySegmentToAccess(conf, dbName, tbName);
   }
 
   /**
@@ -482,8 +482,8 @@ m filterExpression
       // partition info first and then read data.
       // For other normal query should use newest partitionIdList
       if (partitionInfo != null && partitionInfo.getPartitionType() != PartitionType.NATIVE_HIVE) {
-        long partitionId = Long.parseLong(CarbonTablePath.DataFileUtil
-            .getTaskIdFromTaskNo(CarbonTablePath.DataFileUtil.getTaskNo(blocklet.getPath())));
+        long partitionId = CarbonTablePath.DataFileUtil
+            .getTaskIdFromTaskNo(CarbonTablePath.DataFileUtil.getTaskNo(blocklet.getPath()));
         if (oldPartitionIdList != null) {
           partitionIndex = oldPartitionIdList.indexOf((int) partitionId);
         } else {
@@ -861,7 +861,7 @@ m filterExpression
     return projectColumns.toArray(new String[projectColumns.size()]);
   }
 
-  private static void getQuerySegmentToAccess(Configuration conf, String dbName, String tableName) {
+  private static void setQuerySegmentToAccess(Configuration conf, String dbName, String tableName) {
     String segmentNumbersFromProperty = CarbonProperties.getInstance()
         .getProperty(CarbonCommonConstants.CARBON_INPUT_SEGMENTS + dbName + "." + tableName, "*");
     if (!segmentNumbersFromProperty.trim().equals("*")) {
@@ -881,7 +881,7 @@ m filterExpression
     if (null != parentTableName && !parentTableName.isEmpty()) {
       tableName = parentTableName;
     }
-    getQuerySegmentToAccess(conf, carbonTable.getDatabaseName(), tableName);
+    setQuerySegmentToAccess(conf, carbonTable.getDatabaseName(), tableName);
   }
 
 }

@@ -34,7 +34,7 @@ import org.apache.carbondata.events.{AlterTableAddColumnPostEvent, AlterTableAdd
 import org.apache.carbondata.format.TableInfo
 import org.apache.carbondata.spark.rdd.{AlterTableAddColumnRDD, AlterTableDropColumnRDD}
 
-private[sql] case class CarbonAlterTableAddColumnCommand(
+case class CarbonAlterTableAddColumnCommand(
     alterTableAddColumnsModel: AlterTableAddColumnsModel)
   extends MetadataCommand {
 
@@ -76,34 +76,48 @@ private[sql] case class CarbonAlterTableAddColumnCommand(
           dbName,
           tableName,
           carbonTable.getTablePath)
-      newCols = new AlterTableColumnSchemaGenerator(alterTableAddColumnsModel,
-        dbName,
-        wrapperTableInfo,
-        carbonTable.getAbsoluteTableIdentifier,
-        sparkSession.sparkContext).process
+      newCols = if (alterTableAddColumnsModel.columnSchemas.isEmpty) {
+        new AlterTableColumnSchemaGenerator(alterTableAddColumnsModel,
+          dbName,
+          wrapperTableInfo,
+          carbonTable.getAbsoluteTableIdentifier,
+          sparkSession.sparkContext).process
+      } else {
+        // update schema ordinal
+        val columnSchemas = alterTableAddColumnsModel.columnSchemas
+        val columns = wrapperTableInfo.getFactTable.getListOfColumns.asScala
+        var allColumns = columns.filter(_.isDimensionColumn)
+        allColumns ++= columnSchemas.filter(_.isDimensionColumn)
+        allColumns ++= columns.filter(!_.isDimensionColumn)
+        allColumns ++= columnSchemas.filter(!_.isDimensionColumn)
+        wrapperTableInfo.getFactTable.setListOfColumns(allColumns.asJava)
+        wrapperTableInfo.setLastUpdatedTime(System.currentTimeMillis())
+        alterTableAddColumnsModel.columnSchemas
+      }
       setAuditInfo(Map(
         "newColumn" -> newCols.map(x => s"${x.getColumnName}:${x.getDataType}").mkString(",")))
-      // generate dictionary files for the newly added columns
-      new AlterTableAddColumnRDD(sparkSession,
-        newCols,
-        carbonTable.getAbsoluteTableIdentifier).collect()
+      if (!carbonTable.isVectorTable) {
+        // generate dictionary files for the newly added columns
+        new AlterTableAddColumnRDD(
+          sparkSession,
+          newCols,
+          carbonTable.getAbsoluteTableIdentifier
+        ).collect()
+      }
       timeStamp = System.currentTimeMillis
       val schemaEvolutionEntry = new org.apache.carbondata.core.metadata.schema.SchemaEvolutionEntry
       schemaEvolutionEntry.setTimeStamp(timeStamp)
       schemaEvolutionEntry.setAdded(newCols.toList.asJava)
       val thriftTable = schemaConverter
         .fromWrapperToExternalTableInfo(wrapperTableInfo, dbName, tableName)
-      // carbon columns based on schema order
-      val carbonColumns = carbonTable.getCreateOrderColumn(carbonTable.getTableName).asScala
-        .collect { case carbonColumn if !carbonColumn.isInvisible => carbonColumn.getColumnSchema }
-      // sort the new columns based on schema order
-      val sortedColsBasedActualSchemaOrder = newCols.sortBy(a => a.getSchemaOrdinal)
       val (tableIdentifier, schemaParts) = AlterTableUtil.updateSchemaInfo(
           carbonTable,
           schemaConverter.fromWrapperToExternalSchemaEvolutionEntry(schemaEvolutionEntry),
           thriftTable)(sparkSession)
       sparkSession.sessionState.catalog.asInstanceOf[CarbonSessionCatalog].alterAddColumns(
-        tableIdentifier, schemaParts, Some(carbonColumns ++ sortedColsBasedActualSchemaOrder))
+        tableIdentifier,
+        schemaParts,
+        Some(wrapperTableInfo.getFactTable.getListOfColumns.asScala))
       sparkSession.catalog.refreshTable(tableIdentifier.quotedString)
       val alterTablePostExecutionEvent: AlterTableAddColumnPostEvent =
         new AlterTableAddColumnPostEvent(sparkSession,
@@ -112,7 +126,7 @@ private[sql] case class CarbonAlterTableAddColumnCommand(
       LOGGER.info(s"Alter table for add columns is successful for table $dbName.$tableName")
     } catch {
       case e: Exception =>
-        if (newCols.nonEmpty) {
+        if (!carbonTable.isVectorTable && newCols.nonEmpty) {
           LOGGER.info("Cleaning up the dictionary files as alter table add operation failed")
           new AlterTableDropColumnRDD(sparkSession,
             newCols,

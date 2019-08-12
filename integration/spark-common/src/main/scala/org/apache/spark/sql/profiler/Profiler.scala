@@ -35,7 +35,7 @@ import org.apache.carbondata.core.util.CarbonProperties
 @InterfaceStability.Evolving
 object Profiler {
   // whether it is enable or not
-  private var isEnable = CarbonProperties.getInstance().isEnableQueryStatistics
+  private var isEnable = false
 
   private var notInitialized = true
 

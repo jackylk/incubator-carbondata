@@ -42,8 +42,8 @@ class TestLoadDataWithYarnLocalDirs extends QueryTest with BeforeAndAfterAll {
   }
 
   private def getMockedYarnLocalDirs = {
-    val multi_dir_root = System.getProperty("java.io.tmpdir") + File.separator +
-              "yarn_local_multiple_dir" + File.separator
+    val multi_dir_root = System.getProperty("java.io.tmpdir") + "/" +
+              "yarn_local_multiple_dir" + "/"
     (1 to 3).map(multi_dir_root + "multiple" + _).mkString(",")
   }
 

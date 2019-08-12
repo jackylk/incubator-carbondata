@@ -123,7 +123,6 @@ public class CarbonLocalInputSplit {
     this.segmentId = segmentId;
     this.locations = locations;
     this.numberOfBlocklets = numberOfBlocklets;
-    //this.tableBlockInfo = tableBlockInfo;
     this.version = version;
     this.deleteDeltaFiles = deleteDeltaFiles;
     this.blockletId = blockletId;
@@ -134,10 +133,11 @@ public class CarbonLocalInputSplit {
 
   public static CarbonInputSplit convertSplit(CarbonLocalInputSplit carbonLocalInputSplit) {
     CarbonInputSplit inputSplit = new CarbonInputSplit(carbonLocalInputSplit.getSegmentId(),
-        carbonLocalInputSplit.getBlockletId(), carbonLocalInputSplit.getPath(),
-        carbonLocalInputSplit.getStart(), carbonLocalInputSplit.getLength(),
-        carbonLocalInputSplit.getLocations()
-            .toArray(new String[carbonLocalInputSplit.getLocations().size()]),
+        carbonLocalInputSplit.getBlockletId(),
+        carbonLocalInputSplit.getPath(),
+        carbonLocalInputSplit.getStart(),
+        carbonLocalInputSplit.getLength(),
+        carbonLocalInputSplit.getLocations().toArray(new String[0]),
         carbonLocalInputSplit.getNumberOfBlocklets(),
         ColumnarFormatVersion.valueOf(carbonLocalInputSplit.getVersion()),
         carbonLocalInputSplit.getDeleteDeltaFiles());

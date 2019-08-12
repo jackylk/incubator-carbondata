@@ -355,6 +355,9 @@ public abstract class AbstractDataFileFooterConverter {
       if (properties.get(CarbonCommonConstants.SORT_COLUMNS) != null) {
         wrapperColumnSchema.setSortColumn(true);
       }
+      if (properties.get(CarbonCommonConstants.PRIMARY_KEY_COLUMNS) != null) {
+        wrapperColumnSchema.setPrimaryKeyColumn(true);
+      }
     }
     wrapperColumnSchema.setFunction(externalColumnSchema.getAggregate_function());
     List<org.apache.carbondata.format.ParentColumnTableRelation> parentColumnTableRelation =
@@ -450,8 +453,14 @@ public abstract class AbstractDataFileFooterConverter {
       Arrays.fill(minMaxFlag, true);
       isMinMaxSet = Arrays.asList(minMaxFlag);
     }
-    return new BlockletIndex(
-        new BlockletBTreeIndex(btreeIndex.getStart_key(), btreeIndex.getEnd_key()),
+    BlockletBTreeIndex btree;
+    if (btreeIndex != null) {
+      btree =
+          new BlockletBTreeIndex(btreeIndex.getStart_key(), btreeIndex.getEnd_key());
+    } else {
+      btree = new BlockletBTreeIndex();
+    }
+    return new BlockletIndex(btree,
         new BlockletMinMaxIndex(minMaxIndex.getMin_values(), minMaxIndex.getMax_values(),
             isMinMaxSet));
   }

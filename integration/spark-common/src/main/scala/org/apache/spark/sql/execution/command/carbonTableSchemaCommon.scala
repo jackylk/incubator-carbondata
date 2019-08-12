@@ -55,6 +55,7 @@ case class TableModel(
     dimCols: Seq[Field],
     msrCols: Seq[Field],
     sortKeyDims: Option[Seq[String]],
+    primaryKeyCols: Option[Seq[String]],
     varcharCols: Option[Seq[String]],
     highcardinalitydims: Option[Seq[String]],
     noInvertedIdxCols: Option[Seq[String]],
@@ -67,7 +68,7 @@ case class TableModel(
     var dataMapRelation: Option[scala.collection.mutable.LinkedHashMap[Field, DataMapField]] = None)
 
 case class Field(column: String, var dataType: Option[String], name: Option[String],
-    children: Option[List[Field]], parent: String = null,
+    var children: Option[List[Field]], parent: String = null,
     storeType: Option[String] = Some("columnar"),
     var schemaOrdinal: Int = -1,
     var precision: Int = 0, var scale: Int = 0, var rawSchema: String = "",
@@ -194,7 +195,8 @@ case class AlterTableAddColumnsModel(
     tableProperties: Map[String, String],
     dimCols: Seq[Field],
     msrCols: Seq[Field],
-    highCardinalityDims: Seq[String])
+    highCardinalityDims: Seq[String],
+    columnSchemas: Seq[ColumnSchema] = Seq.empty)
 
 case class AlterTableDropColumnModel(databaseName: Option[String],
     tableName: String,
@@ -224,7 +226,16 @@ class AlterTableColumnSchemaGenerator(
     if(sortColumns.isDefined) {
       sortColumns.get.contains(columnName)
     } else {
-      true
+      false
+    }
+  }
+
+  private def isPrimaryKeyColumn(columnName: String): Boolean = {
+    val sortColumns = alterTableModel.tableProperties.get(CarbonCommonConstants.PRIMARY_KEY_COLUMNS)
+    if(sortColumns.isDefined) {
+      sortColumns.get.contains(columnName)
+    } else {
+      false
     }
   }
 
@@ -256,12 +267,12 @@ class AlterTableColumnSchemaGenerator(
         field,
         encoders,
         isDimensionCol = true,
-        field.precision,
-        field.scale,
+        (field.precision, field.scale),
         field.schemaOrdinal + existingColsSize,
         alterTableModel.highCardinalityDims,
         alterTableModel.databaseName.getOrElse(dbName),
         isSortColumn(field.name.getOrElse(field.column)),
+        isPrimaryKeyColumn(field.name.getOrElse(field.column)),
         isVarcharColumn(field.name.getOrElse(field.column)))
       allColumns ++= Seq(columnSchema)
       newCols ++= Seq(columnSchema)
@@ -273,8 +284,7 @@ class AlterTableColumnSchemaGenerator(
         field,
         encoders,
         isDimensionCol = false,
-        field.precision,
-        field.scale,
+        (field.precision, field.scale),
         field.schemaOrdinal + existingColsSize,
         alterTableModel.highCardinalityDims,
         alterTableModel.databaseName.getOrElse(dbName)
@@ -524,12 +534,12 @@ object TableNewProcessor {
       field: Field,
       encoders: java.util.List[Encoding],
       isDimensionCol: Boolean,
-      precision: Int,
-      scale: Int,
+      precisionAndScale: Tuple2[Int, Int],
       schemaOrdinal: Int,
       highCardinalityDims: Seq[String],
       databaseName: String,
       isSortColumn: Boolean = false,
+      isPrimaryKeyCol: Boolean = false,
       isVarcharColumn: Boolean = false): ColumnSchema = {
     val dataType = DataTypeConverterUtil.convertToCarbonType(field.dataType.getOrElse(""))
     if (DataTypes.isDecimal(dataType)) {
@@ -559,10 +569,11 @@ object TableNewProcessor {
     columnSchema.setColumnUniqueId(columnUniqueId)
     columnSchema.setColumnReferenceId(columnUniqueId)
     columnSchema.setDimensionColumn(isDimensionCol)
-    columnSchema.setPrecision(precision)
-    columnSchema.setScale(scale)
+    columnSchema.setPrecision(precisionAndScale._1)
+    columnSchema.setScale(precisionAndScale._2)
     columnSchema.setSchemaOrdinal(schemaOrdinal)
     columnSchema.setSortColumn(isSortColumn)
+    columnSchema.setPrimaryKeyColumn(isPrimaryKeyCol)
     columnSchema
   }
 }
@@ -677,6 +688,7 @@ class TableNewProcessor(cm: TableModel) {
     var allColumns = Seq[ColumnSchema]()
     var index = 0
     var measureCount = 0
+    val primaryKeyStr = cm.tableProperties.get(CarbonCommonConstants.PRIMARY_KEY_COLUMNS)
 
     // Sort columns should be at the begin of all columns
     cm.sortKeyDims.get.foreach { keyDim =>
@@ -699,6 +711,9 @@ class TableNewProcessor(cm: TableModel) {
         field,
         cm.dataMapRelation)
       columnSchema.setSortColumn(true)
+      if (cm.primaryKeyCols.get.exists(_.equalsIgnoreCase(columnSchema.getColumnName))) {
+        columnSchema.setPrimaryKeyColumn(true)
+      }
       allColumns :+= columnSchema
       index = index + 1
     }

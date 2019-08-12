@@ -18,6 +18,7 @@
 package org.apache.spark.sql.catalyst
 
 import java.text.SimpleDateFormat
+import java.util
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.{ArrayBuffer, LinkedHashSet, Map}
@@ -102,6 +103,7 @@ abstract class CarbonDDLSqlParser extends AbstractCarbonSparkSQLParser {
   protected val IN = carbonKeyWord("IN")
   protected val INCLUDE = carbonKeyWord("INCLUDE")
   protected val INPATH = carbonKeyWord("INPATH")
+  protected val INSERT = carbonKeyWord("INSERT")
   protected val INTO = carbonKeyWord("INTO")
   protected val LEVELS = carbonKeyWord("LEVELS")
   protected val LIKE = carbonKeyWord("LIKE")
@@ -191,6 +193,9 @@ abstract class CarbonDDLSqlParser extends AbstractCarbonSparkSQLParser {
   protected val STREAMS = carbonKeyWord("STREAMS")
   protected val STMPROPERTIES = carbonKeyWord("STMPROPERTIES")
   protected val CARBONCLI = carbonKeyWord("CARBONCLI")
+  protected val MOVE = carbonKeyWord("MOVE")
+
+  protected val JSON = carbonKeyWord("JSON")
 
   protected val doubleQuotedString = "\"([^\"]+)\"".r
   protected val singleQuotedString = "'([^']+)'".r
@@ -308,8 +313,8 @@ abstract class CarbonDDLSqlParser extends AbstractCarbonSparkSQLParser {
           tableProperties(CarbonCommonConstants.SORT_SCOPE)
         } ")
     }
-    val (dims, msrs, noDictionaryDims, sortKeyDims, varcharColumns) = extractDimAndMsrFields(
-      fields, tableProperties)
+    val (dims, msrs, noDictionaryDims, sortKeyDims, primaryKeyCols, varcharColumns) =
+      extractDimAndMsrFields(fields, tableProperties)
 
     // column properties
     val colProps = extractColumnProperties(fields, tableProperties)
@@ -490,6 +495,7 @@ abstract class CarbonDDLSqlParser extends AbstractCarbonSparkSQLParser {
       reorderDimensions(dims.map(f => normalizeType(f)).map(f => addParent(f)), varcharColumns),
       msrs.map(f => normalizeType(f)),
       Option(sortKeyDims),
+      Option(primaryKeyCols),
       Option(varcharColumns),
       Option(noDictionaryDims),
       Option(noInvertedIdxCols),
@@ -748,7 +754,7 @@ abstract class CarbonDDLSqlParser extends AbstractCarbonSparkSQLParser {
    */
   protected def extractDimAndMsrFields(fields: Seq[Field],
       tableProperties: Map[String, String]):
-  (Seq[Field], Seq[Field], Seq[String], Seq[String], Seq[String]) = {
+  (Seq[Field], Seq[Field], Seq[String], Seq[String], Seq[String], Seq[String]) = {
     var dimFields: LinkedHashSet[Field] = LinkedHashSet[Field]()
     var msrFields: Seq[Field] = Seq[Field]()
     var dictExcludeCols: Array[String] = Array[String]()
@@ -788,6 +794,14 @@ abstract class CarbonDDLSqlParser extends AbstractCarbonSparkSQLParser {
         }
       }
     }
+
+    // All columns in sortkey should be there in create table cols
+    var primaryKeyOption = tableProperties.get(CarbonCommonConstants.PRIMARY_KEY_COLUMNS)
+    val primaryKeyDimsTmp =
+      extractSortColumns(primaryKeyOption, fields, varcharCols, "primary_key_columns")
+    val sortColSet = new java.util.TreeSet[String](primaryKeyDimsTmp.asJava)
+    sortColSet.addAll(sortKeyDimsTmp.asJava)
+    sortKeyDimsTmp = sortColSet.asScala.toSeq
 
     // range_column should be there in create table cols
     if (tableProperties.get(CarbonCommonConstants.RANGE_COLUMN).isDefined) {
@@ -910,24 +924,68 @@ abstract class CarbonDDLSqlParser extends AbstractCarbonSparkSQLParser {
       }
     }
 
-    var sortKeyDims = sortKeyDimsTmp
     if (sortKeyOption.isEmpty) {
-      // if SORT_COLUMNS was not defined,
-      // add all dimension(except long string columns) to SORT_COLUMNS.
-      dimFields.foreach { field =>
-        if (!isComplexDimDictionaryExclude(field.dataType.get) &&
-            !varcharCols.contains(field.column)) {
-          sortKeyDims :+= field.column
-        }
-      }
-    }
-    if (sortKeyDims.isEmpty) {
       // no SORT_COLUMNS
       tableProperties.put(CarbonCommonConstants.SORT_COLUMNS, "")
     } else {
-      tableProperties.put(CarbonCommonConstants.SORT_COLUMNS, sortKeyDims.mkString(","))
+      tableProperties.put(CarbonCommonConstants.SORT_COLUMNS, sortKeyDimsTmp.mkString(","))
     }
-    (dimFields.toSeq, msrFields, noDictionaryDims, sortKeyDims, varcharCols)
+    if (primaryKeyOption.isDefined && primaryKeyDimsTmp.nonEmpty) {
+      tableProperties.put(CarbonCommonConstants.PRIMARY_KEY_COLUMNS,
+        primaryKeyDimsTmp.mkString(","))
+    }
+    (dimFields.toSeq, msrFields, noDictionaryDims, sortKeyDimsTmp, primaryKeyDimsTmp, varcharCols)
+  }
+
+  def extractSortColumns(sortKey: Option[String],
+      fields: Seq[Field],
+      varcharCols: Seq[String], propType: String): Seq[String] = {
+    var sortKeyOption = sortKey
+    if (!sortKeyOption.isDefined) {
+      // default no columns are selected for sorting in no_sort scope
+      sortKeyOption = Some("")
+    }
+    val sortKeyString: String = CarbonUtil.unquoteChar(sortKeyOption.get) trim
+    var sortKeyDimsTmp: Seq[String] = Seq[String]()
+    if (!sortKeyString.isEmpty) {
+      val sortKey = sortKeyString.split(',').map(_.trim)
+      if (sortKey.diff(sortKey.distinct).length > 0 ||
+          (sortKey.length > 1 && sortKey.contains(""))) {
+        throw new MalformedCarbonCommandException(
+          propType + " Either having duplicate columns : " +
+          sortKey.diff(sortKey.distinct).mkString(",") + " or it contains illegal argumnet.")
+      }
+
+      sortKey.foreach { column =>
+        if (!fields.exists(x => x.column.equalsIgnoreCase(column))) {
+          val errorMsg = propType + ": " + column +
+                         " does not exist in table. Please check the create table statement."
+          throw new MalformedCarbonCommandException(errorMsg)
+        } else {
+          val dataType = fields.find(x =>
+            x.column.equalsIgnoreCase(column)).get.dataType.get
+          if (isDataTypeSupportedForSortColumn(dataType)) {
+            val errorMsg = s"$propType is unsupported for $dataType datatype column: " + column
+            throw new MalformedCarbonCommandException(errorMsg)
+          }
+          if (varcharCols.exists(x => x.equalsIgnoreCase(column))) {
+            throw new MalformedCarbonCommandException(
+              s"$propType is unsupported for long string datatype column: $column")
+          }
+        }
+      }
+
+      sortKey.foreach { dimension =>
+        if (!sortKeyDimsTmp.exists(dimension.equalsIgnoreCase)) {
+          fields.foreach { field =>
+            if (field.column.equalsIgnoreCase(dimension)) {
+              sortKeyDimsTmp :+= field.column
+            }
+          }
+        }
+      }
+    }
+    sortKeyDimsTmp
   }
 
   def isDefaultMeasure(dataType: Option[String]): Boolean = {

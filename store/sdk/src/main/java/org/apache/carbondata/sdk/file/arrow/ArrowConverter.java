@@ -25,6 +25,7 @@ import org.apache.carbondata.core.stream.ExtendedByteArrayOutputStream;
 import org.apache.carbondata.sdk.file.Schema;
 
 import org.apache.arrow.memory.BufferAllocator;
+import org.apache.arrow.vector.VectorLoader;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.VectorUnloader;
 import org.apache.arrow.vector.ipc.ArrowFileReader;
@@ -135,5 +136,29 @@ public class ArrowConverter {
     writer.writeBatch();
     writer.close();
     return root;
+  }
+
+  /**
+   * Utility API to convert back the arrow byte[] to arrow VectorSchemaRoot.
+   *
+   * @param batchBytes
+   * @return
+   * @throws IOException
+   */
+  public VectorSchemaRoot byteArrayToVector(byte[] batchBytes) throws IOException {
+    ByteArrayReadableSeekableByteChannel in = new ByteArrayReadableSeekableByteChannel(batchBytes);
+    ArrowFileReader reader = new ArrowFileReader(in, allocator);
+    try {
+      VectorSchemaRoot root = reader.getVectorSchemaRoot();
+      VectorUnloader unloader = new VectorUnloader(root);
+      reader.loadNextBatch();
+      VectorSchemaRoot arrowRoot = VectorSchemaRoot.create(arrowSchema, allocator);
+      VectorLoader vectorLoader = new VectorLoader(arrowRoot);
+      vectorLoader.load(unloader.getRecordBatch());
+      return arrowRoot;
+    } catch (IOException e) {
+      reader.close();
+      throw e;
+    }
   }
 }

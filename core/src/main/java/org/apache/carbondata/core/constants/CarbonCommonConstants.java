@@ -495,6 +495,12 @@ public final class CarbonCommonConstants {
    */
   public static final String COLUMN_DRIFT = "column_drift";
 
+  /**
+   * Primary key columns which will be acted as unique, duplicate insertion record will be
+   * overwritten instead of adding duplicate record.
+   */
+  public static final String PRIMARY_KEY_COLUMNS = "primary_key_columns";
+
   //////////////////////////////////////////////////////////////////////////////////////////
   // Data loading parameter start here
   //////////////////////////////////////////////////////////////////////////////////////////
@@ -2217,6 +2223,14 @@ public final class CarbonCommonConstants {
   public static final String CARBON_INDEX_SERVER_JOBNAME_LENGTH_DEFAULT =
           "50";
 
+  /**
+   * This property will be used to store queryObject used in create model
+   */
+  public static final String QUERY_OBJECT = "query_object";
+
+  // default segment size in MB
+  public static final long SEGMENT_SIZE_DEFAULT = 1024;
+
   @CarbonProperty
   /**
    * Max in memory serialization size after reaching threshold data will
@@ -2254,4 +2268,7 @@ public final class CarbonCommonConstants {
    * hive column-name maximum length
    */
   public static final int MAXIMUM_CHAR_LENGTH = 128;
+
+  public static final String ASYNC_QUERY_RESULT_LIMIT = "carbon.async.query.result.limit";
+  public static final String ASYNC_QUERY_RESULT_LIMIT_DEFAULT = "5000";
 }

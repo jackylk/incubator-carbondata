@@ -73,8 +73,8 @@ public class CarbonDictionarySortIndexReaderImplTest {
     CarbonDictionaryWriter dictionaryWriter =
         new CarbonDictionaryWriterImpl(dictionaryColumnUniqueIdentifier);
     String metaFolderPath =
-        storePath + File.separator + carbonTableIdentifier.getDatabaseName() + File.separator
-            + carbonTableIdentifier.getTableName() + File.separator + "Metadata";
+        storePath + "/" + carbonTableIdentifier.getDatabaseName() + "/"
+            + carbonTableIdentifier.getTableName() + "/" + "Metadata";
     CarbonUtil.checkAndCreateFolder(metaFolderPath);
     CarbonDictionarySortIndexWriter dictionarySortIndexWriter =
         new CarbonDictionarySortIndexWriterImpl(dictionaryColumnUniqueIdentifier);

@@ -24,12 +24,14 @@ import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.catalyst.catalog.SessionCatalog
 import org.apache.spark.sql.events.{MergeBloomIndexEventListener, MergeIndexEventListener}
 import org.apache.spark.sql.execution.command.cache._
+import org.apache.spark.sql.execution.command.images.ImageInfoFunction
 import org.apache.spark.sql.execution.command.mv._
 import org.apache.spark.sql.execution.command.preaaggregate._
 import org.apache.spark.sql.execution.command.timeseries.TimeSeriesFunction
 import org.apache.spark.sql.hive._
 import org.apache.spark.util.CarbonReflectionUtils
 
+import org.apache.carbondata.cloud.CloudUdfRegister
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datamap.DataMapStoreManager
@@ -86,6 +88,13 @@ class CarbonEnv {
 
     // added for handling timeseries function like hour, minute, day , month , year
     sparkSession.udf.register("timeseries", new TimeSeriesFunction)
+
+    // image info related udf
+    sparkSession.udf.register("imageinfo", new ImageInfoFunction)
+
+    // register for cloud udf
+    CloudUdfRegister.register(sparkSession)
+
     // acquiring global level lock so global configuration will be updated by only one thread
     CarbonEnv.carbonEnvMap.synchronized {
       if (!initialized) {
@@ -124,6 +133,7 @@ class CarbonEnv {
     }
     LOGGER.info("Initialize CarbonEnv completed...")
   }
+
 }
 
 object CarbonEnv {
@@ -344,6 +354,14 @@ object CarbonEnv {
     } else {
       defaultValue
     }
+  }
+  def isTableExists(tableIdentifier: TableIdentifier)(sparkSession: SparkSession): Boolean = {
+    getInstance(sparkSession).carbonMetaStore.tableExists(tableIdentifier)(sparkSession)
+  }
+
+  def isTableExists(dbNameOp: Option[String], tableName: String)
+    (sparkSession: SparkSession): Boolean = {
+    getInstance(sparkSession).carbonMetaStore.tableExists(tableName, dbNameOp)(sparkSession)
   }
 
 }

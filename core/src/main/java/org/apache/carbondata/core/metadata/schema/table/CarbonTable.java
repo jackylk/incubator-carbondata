@@ -30,6 +30,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.carbondata.api.SegmentManager;
 import org.apache.carbondata.common.exceptions.sql.MalformedDataMapCommandException;
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
@@ -1045,6 +1046,11 @@ public class CarbonTable implements Serializable, Writable {
     return streaming != null && streaming.equalsIgnoreCase("source");
   }
 
+  public boolean isVectorTable() {
+    String vector = getTableInfo().getFactTable().getTableProperties().get("vector");
+    return vector != null && vector.equalsIgnoreCase("true");
+  }
+
   /**
    * Return true if 'autoRefreshDataMap' is enabled, by default it is enabled
    */
@@ -1150,6 +1156,7 @@ public class CarbonTable implements Serializable, Writable {
 
   public void setTransactionalTable(boolean transactionalTable) {
     isTransactionalTable = transactionalTable;
+    getTableInfo().setTransactionalTable(transactionalTable);
   }
 
   /**
@@ -1360,6 +1367,10 @@ public class CarbonTable implements Serializable, Writable {
     } else {
       return SortScopeOptions.getSortScope(sortScope);
     }
+  }
+
+  public SegmentManager getSegmentManager() {
+    return new SegmentManagerImpl(this);
   }
 
   @Override public void write(DataOutput out) throws IOException {

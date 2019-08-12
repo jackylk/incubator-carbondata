@@ -88,7 +88,7 @@ class CarbonSession(@transient val sc: SparkContext,
     withProfiler(
       sqlText,
       (qe, sse) => {
-          new Dataset[Row](self, qe, RowEncoder(qe.analyzed.schema))
+        new Dataset[Row](self, qe, RowEncoder(qe.analyzed.schema))
       }
     )
   }
