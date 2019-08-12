@@ -319,8 +319,12 @@ object CarbonSource {
     val storageFormat = tableDesc.storage
     val properties = storageFormat.properties
     if (!properties.contains("carbonSchemaPartsNo")) {
-      val tablePath = CarbonEnv.getTablePath(
-        tableDesc.identifier.database, tableDesc.identifier.table)(sparkSession)
+      val tablePath = if (tableDesc.storage.locationUri.isDefined) {
+        tableDesc.storage.locationUri.get.toString
+      } else {
+        CarbonEnv.getTablePath(
+          tableDesc.identifier.database, tableDesc.identifier.table)(sparkSession)
+      }
       val dbName = CarbonEnv.getDatabaseName(tableDesc.identifier.database)(sparkSession)
       val identifier = AbsoluteTableIdentifier.from(tablePath, dbName, tableDesc.identifier.table)
       val map = updateAndCreateTable(
