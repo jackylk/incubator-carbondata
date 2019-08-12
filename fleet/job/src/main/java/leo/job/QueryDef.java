@@ -50,6 +50,7 @@ public class QueryDef {
     addDef(QueryType.ALTER_TABLE_UNSET, true, false, false);
     addDef(QueryType.ALTER_TABLE_SPLIT_PARTITION, true, false, false);
     addDef(QueryType.SHOW_LOADS, true, false, false);
+    addDef(QueryType.CREATE_VIEW, true, false, false);
 
     ///////////////////////////////////////////////////////////////
     //                            DML                            //
@@ -148,6 +149,7 @@ public class QueryDef {
     ALTER_TABLE_SET,
     ALTER_TABLE_UNSET,
     ALTER_TABLE_SPLIT_PARTITION,
+    CREATE_VIEW,
 
     ///////////////////////////////////////////////////////////////
     //                            DML                            //

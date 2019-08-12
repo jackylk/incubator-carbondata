@@ -19,12 +19,12 @@ package org.apache.spark.sql.leo.command
 
 import scala.io.Source
 
+import org.apache.spark.sql.{AnalysisException, Row, SparkSession}
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
 import org.apache.spark.sql.catalyst.parser.CatalystSqlParser
 import org.apache.spark.sql.execution.command.RunnableCommand
 import org.apache.spark.sql.pythonudf.PythonUDFRegister
 import org.apache.spark.sql.types.StringType
-import org.apache.spark.sql.{AnalysisException, Row, SparkSession}
 
 
 /**
@@ -71,20 +71,26 @@ case class LeoRunScriptCommand(
     if (output.length > 1) {
       throw new AnalysisException("output fields should be less than 2")
     }
-    // create a temporary UDF and use it in a temporary table
+    val tempDBName = "tempDB" + System.nanoTime()
+    val tempTableName = "tempTable" + System.nanoTime()
+    val tempFuncName = "tempFunc" + System.nanoTime()
+
+    // create a temporary UDF and use it in an temporary table with one record
+    // so the UDF will be executed once in one task only
     PythonUDFRegister.registerPythonUDF(
       spark,
-      "foo",
+      tempFuncName,
       "foo",
       script,
       Array[String](),
       output.head.dataType)
 
-    val tempTableName = "temp" + System.nanoTime()
-    spark.range(1).registerTempTable(tempTableName)
-    val rows = spark.sql(s"select foo(1) from $tempTableName").collect()
-    PythonUDFRegister.unregisterPythonUDF(spark, "foo")
-    spark.sql(s"drop table $tempTableName")
+    spark.sql(s"create database $tempDBName")
+    spark.sql(s"create view $tempDBName.$tempTableName as select 1")
+    val rows = spark.sql(s"select $tempFuncName(1) from $tempDBName.$tempTableName")
+      .collect()
+    PythonUDFRegister.unregisterPythonUDF(spark, tempFuncName)
+    spark.sql(s"drop view $tempDBName.$tempTableName")
     rows
   }
 }
