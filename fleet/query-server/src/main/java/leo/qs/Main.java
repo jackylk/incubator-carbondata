@@ -34,16 +34,11 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.leo.LeoEnv;
 import org.apache.spark.sql.leo.util.OBSUtil;
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.solr.SolrAutoConfiguration;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.context.annotation.ComponentScan;
 
 import static leo.job.JobConf.LEO_QUERY_RESULT_BUCKET_PREFIX;
 import static leo.job.JobConf.LEO_QUERY_RESULT_BUCKET_PREFIX_DEFAULT;
 
-@SpringBootApplication(exclude = SolrAutoConfiguration.class)
-@ComponentScan(basePackages = "leo.qs")
 public class Main {
 
   private static Logger LOGGER =
@@ -78,7 +73,7 @@ public class Main {
       createSession(args);
       // Start Spring
       String storeConfFile = System.getProperty(StoreConf.STORE_CONF_FILE);
-      start(Main.class, storeConfFile);
+      start(SpringbootApplication.class, storeConfFile);
       //create obs bucket and dir to store result, if exist, it will not create.
       String clusterName = args[0];
       String bucket =
