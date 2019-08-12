@@ -38,6 +38,7 @@ import org.apache.carbondata.core.metadata.schema.table.{CarbonTable, TableInfo,
 import org.apache.carbondata.core.metadata.schema.{SchemaEvolution, SchemaEvolutionEntry, SchemaReader}
 import org.apache.carbondata.core.service.impl.ColumnUniqueIdGenerator
 import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
+import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.events.{CreateTablePostExecutionEvent, CreateTablePreExecutionEvent, OperationContext, OperationListenerBus}
 import org.apache.carbondata.spark.core.metadata.IndexMetadata
 import org.apache.carbondata.spark.spark.indextable.{IndexTableInfo, IndexTableUtil}
@@ -266,12 +267,10 @@ class ErrorMessage(message: String) extends Exception(message) {
         val catalog = CarbonEnv.getInstance(sparkSession).carbonMetaStore
         //        val tablePath = tableIdentifier.getTablePath
         val carbonSchemaString = catalog.generateTableSchemaString(tableInfo, tableIdentifier)
-        val indexCarbonTable = CarbonInternalScalaUtil
-          .getIndexCarbonTable(tableInfo.getDatabaseName, indexTableName)(sparkSession)
         // set index information in index table
         val indexTableMeta = new IndexMetadata(indexTableName, true, carbonTable.getTablePath)
-        indexCarbonTable.getTableInfo.getFactTable.getTableProperties
-          .put(indexCarbonTable.getCarbonTableIdentifier.getTableId, indexTableMeta.serialize)
+        tableInfo.getFactTable.getTableProperties
+          .put(tableInfo.getFactTable.getTableId, indexTableMeta.serialize)
         // set index information in parent table
         val parentIndexMetadata = if (
           carbonTable.getTableInfo.getFactTable.getTableProperties
@@ -350,10 +349,10 @@ class ErrorMessage(message: String) extends Exception(message) {
       if (isCreateSIndex) {
         LoadDataForSecondaryIndex(indexModel).run(sparkSession)
       }
-
+      val indexTablePath = CarbonTablePath
+        .getMetadataPath(tableInfo.getOrCreateAbsoluteTableIdentifier.getTablePath)
       val isMaintableSegEqualToSISegs = CarbonInternalLoaderUtil
-        .checkMainTableSegEqualToSISeg(carbonTable.getMetadataPath,
-          indexCarbonTable.getMetadataPath)
+        .checkMainTableSegEqualToSISeg(carbonTable.getMetadataPath, indexTablePath)
       if (isMaintableSegEqualToSISegs) {
         // enable the SI table
         sparkSession.sql(
