@@ -71,9 +71,9 @@ case class LeoRunScriptCommand(
     if (output.length > 1) {
       throw new AnalysisException("output fields should be less than 2")
     }
-    val tempDBName = "tempDB" + System.nanoTime()
-    val tempTableName = "tempTable" + System.nanoTime()
-    val tempFuncName = "tempFunc" + System.nanoTime()
+    val tempDBName = "tempdb" + System.nanoTime()
+    val tempTableName = "temptable" + System.nanoTime()
+    val tempFuncName = "tempfunc" + System.nanoTime()
 
     // create a temporary UDF and use it in an temporary table with one record
     // so the UDF will be executed once in one task only
@@ -91,6 +91,7 @@ case class LeoRunScriptCommand(
       .collect()
     PythonUDFRegister.unregisterPythonUDF(spark, tempFuncName)
     spark.sql(s"drop view $tempDBName.$tempTableName")
+    spark.sql(s"drop database $tempDBName")
     rows
   }
 }
