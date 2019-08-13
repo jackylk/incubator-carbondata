@@ -317,7 +317,13 @@ object CarbonSource {
       query: Option[LogicalPlan] = None): CatalogTable = {
     val metaStore = CarbonEnv.getInstance(sparkSession).carbonMetaStore
     val storageFormat = tableDesc.storage
-    val properties = storageFormat.properties
+    val properties = if (storageFormat.properties.nonEmpty) {
+      // for carbon session, properties get from storage.
+      storageFormat.properties
+    } else {
+      // for leo session, properties can not get from storageFormat, should use tableDesc.
+      tableDesc.properties
+    }
     if (!properties.contains("carbonSchemaPartsNo")) {
       val tablePath = if (tableDesc.storage.locationUri.isDefined) {
         tableDesc.storage.locationUri.get.toString
