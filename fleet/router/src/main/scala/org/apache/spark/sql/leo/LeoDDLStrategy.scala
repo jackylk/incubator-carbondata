@@ -85,9 +85,13 @@ class LeoDDLStrategy(session: SparkSession) extends SparkStrategy {
         ExecutedCommandExec(leoCmd) :: Nil
 
       // DROP TABLE
-      case cmd@DropTableCommand(identifier, ifNotExists, _, _) =>
-        val leoCmd = LeoDropTableCommand(
-          cmd, ifNotExists, identifier.database, identifier.table.toLowerCase)
+      case cmd@DropTableCommand(identifier, ifNotExists, isView, _) =>
+        val leoCmd = if (isView) {
+          // if it is view, it is not carbon table, so drop it by using native command
+          cmd
+        } else {
+          LeoDropTableCommand(cmd, ifNotExists, identifier.database, identifier.table.toLowerCase)
+        }
         ExecutedCommandExec(leoCmd) :: Nil
 
       case ws@WebSearch(_, _) =>

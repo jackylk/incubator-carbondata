@@ -21,50 +21,36 @@ import java.util
 
 import leo.job.{Query, QueryDef}
 import leo.job.QueryDef.QueryType
-import org.apache.spark.sql.{
-  CarbonDatasourceHadoopRelation, CarbonEnv, DeleteRecords,
-  SparkSession, UpdateTable
-}
+import org.apache.spark.sql.{CarbonDatasourceHadoopRelation, CarbonEnv, DeleteRecords,
+  SparkSession, UpdateTable}
 import org.apache.spark.sql.catalyst.plans.logical._
-import org.apache.spark.sql.execution.command.datamap.{
-  CarbonCreateDataMapCommand,
-  CarbonDataMapRebuildCommand, CarbonDataMapShowCommand, CarbonDropDataMapCommand
-}
-import org.apache.spark.sql.execution.command.management.{
-  CarbonAlterTableCompactionCommand,
-  CarbonAlterTableFinishStreaming, CarbonCleanFilesCommand,
-  CarbonDeleteLoadByIdCommand, CarbonDeleteLoadByLoadDateCommand, CarbonInsertColumnsCommand,
-  CarbonLoadDataCommand, CarbonShowLoadsCommand
-}
-import org.apache.spark.sql.execution.command.mutation.{
-  CarbonProjectForDeleteCommand,
-  CarbonProjectForUpdateCommand
-}
-import org.apache.spark.sql.execution.command.partition.{
-  CarbonAlterTableAddHivePartitionCommand,
-  CarbonAlterTableDropHivePartitionCommand,
-  CarbonAlterTableSplitPartitionCommand
-}
-import org.apache.spark.sql.execution.command.schema.{
-  CarbonAlterTableAddColumnCommand,
+import org.apache.spark.sql.execution.command.datamap.{CarbonCreateDataMapCommand,
+  CarbonDataMapRebuildCommand, CarbonDataMapShowCommand, CarbonDropDataMapCommand}
+import org.apache.spark.sql.execution.command.management.{CarbonAlterTableCompactionCommand,
+  CarbonAlterTableFinishStreaming, CarbonCleanFilesCommand, CarbonDeleteLoadByIdCommand,
+  CarbonDeleteLoadByLoadDateCommand, CarbonInsertColumnsCommand, CarbonLoadDataCommand,
+  CarbonShowLoadsCommand}
+import org.apache.spark.sql.execution.command.mutation.{CarbonProjectForDeleteCommand,
+  CarbonProjectForUpdateCommand}
+import org.apache.spark.sql.execution.command.partition.{CarbonAlterTableAddHivePartitionCommand,
+  CarbonAlterTableDropHivePartitionCommand, CarbonAlterTableSplitPartitionCommand}
+import org.apache.spark.sql.execution.command.schema.{CarbonAlterTableAddColumnCommand,
   CarbonAlterTableColRenameDataTypeChangeCommand, CarbonAlterTableDropColumnCommand,
-  CarbonAlterTableRenameCommand, CarbonAlterTableSetCommand, CarbonAlterTableUnsetCommand
-}
-import org.apache.spark.sql.execution.command.{
-  CreateDatabaseCommand, DescribeColumnCommand,
-  DescribeTableCommand, DropDatabaseCommand, DropTableCommand, ExplainCommand, LoadDataCommand,
-  RunnableCommand, SetCommand, SetDatabaseCommand, ShowDatabasesCommand, ShowTablesCommand
-}
-import org.apache.spark.sql.execution.command.stream.{
-  CarbonCreateStreamCommand,
-  CarbonDropStreamCommand, CarbonShowStreamsCommand
-}
+  CarbonAlterTableRenameCommand, CarbonAlterTableSetCommand, CarbonAlterTableUnsetCommand}
+import org.apache.spark.sql.execution.command.{CreateDatabaseCommand, CreateViewCommand,
+  DescribeColumnCommand, DescribeTableCommand, DropDatabaseCommand, DropTableCommand,
+  ExplainCommand, LoadDataCommand, RunnableCommand, SetCommand, SetDatabaseCommand,
+  ShowDatabasesCommand, ShowTablesCommand}
+import org.apache.spark.sql.execution.command.stream.{CarbonCreateStreamCommand,
+  CarbonDropStreamCommand, CarbonShowStreamsCommand}
 import org.apache.spark.sql.execution.command.table.CarbonExplainCommand
 import org.apache.spark.sql.execution.datasources.{CreateTable, LogicalRelation}
-import org.apache.spark.sql.leo.command.{LeoCreateConsumerCommand, LeoCreateExperimentCommand,
+import org.apache.spark.sql.leo.command.{
+  LeoCreateConsumerCommand, LeoCreateExperimentCommand,
   LeoCreateModelCommand, LeoDescConsumerCommand, LeoDropConsumerCommand,
   LeoDropExperimentCommand, LeoDropModelCommand, LeoRegisterModelCommand, LeoRunScriptCommand,
-  LeoShowConsumersCommand, LeoShowModelsCommand, LeoUnregisterModelCommand}
+  LeoShowConsumersCommand, LeoShowModelsCommand, LeoUnregisterModelCommand
+}
 import org.apache.spark.sql.util.SparkSQLUtil
 
 object Router {
@@ -170,6 +156,9 @@ object Router {
               QueryType.ALTER_TABLE_SPLIT_PARTITION.name())
         case cmd@CarbonShowLoadsCommand(databaseNameOp, _, _, _, _) =>
           Query.makeQueryWithTypeName(originSql, cmd, originSql, QueryType.SHOW_LOADS.name())
+        case cmd@CreateViewCommand(_, _, _, _, _, _, _, _, _) =>
+          Query.makeQueryWithTypeName(originSql, cmd, originSql, QueryType.CREATE_VIEW.name())
+
 
         ///////////////////////////////////////////////////////////////
         //                          Consumer                         //

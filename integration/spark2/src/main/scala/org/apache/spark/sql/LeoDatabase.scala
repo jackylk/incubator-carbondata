@@ -149,6 +149,16 @@ object LeoDatabase {
           Some(LeoDatabase.convertUserDBNameToLeo(table.database.get)))
         DropTableCommand(newTable, ifExists, isView, purge)
 
+      case cmd@CreateViewCommand(tableIdentifier, userSpecifiedColumns, comment, properties, originalText, child, allowExisting, replace, viewType) =>
+        requireDBNameNonEmpty(tableIdentifier) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        val newTable = new TableIdentifier(
+          tableIdentifier.table,
+          Some(LeoDatabase.convertUserDBNameToLeo(tableIdentifier.database.get)))
+        CreateViewCommand(newTable, userSpecifiedColumns, comment, properties, originalText, child, allowExisting, replace, viewType)
+
       case cmd@UpdateTable(table, columns, selectStmt, alias, filer) =>
         requireDBNameNonEmpty(table.tableIdentifier.database) match {
           case Some(msg) => return (None, msg)
