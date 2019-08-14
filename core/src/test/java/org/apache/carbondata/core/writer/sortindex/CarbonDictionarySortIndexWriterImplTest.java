@@ -80,8 +80,8 @@ public class CarbonDictionarySortIndexWriterImplTest {
   @Test public void write() throws Exception {
 
     String metaFolderPath =
-        storePath + "/" + carbonTableIdentifier.getDatabaseName() + "/"
-            + carbonTableIdentifier.getTableName() + "/" + "Metadata";
+        storePath + File.separator + carbonTableIdentifier.getDatabaseName() + File.separator
+            + carbonTableIdentifier.getTableName() + File.separator + "Metadata";
     CarbonUtil.checkAndCreateFolder(metaFolderPath);
 
     List<int[]> indexList = prepareExpectedData();

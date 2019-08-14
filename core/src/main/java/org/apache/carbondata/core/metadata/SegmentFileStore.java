@@ -209,7 +209,7 @@ public class SegmentFileStore {
       }
       // write segment info to new file.
       writeSegmentFile(segmentFile,
-          segmentFileFolder + "/" + segment.getSegmentFileName());
+          segmentFileFolder + File.separator + segment.getSegmentFileName());
 
       return true;
     }
@@ -267,7 +267,7 @@ public class SegmentFileStore {
       }
       String segmentFileName = genSegmentFileName(segmentId, UUID) + CarbonTablePath.SEGMENT_EXT;
       // write segment info to new file.
-      writeSegmentFile(segmentFile, segmentFileFolder + "/" + segmentFileName);
+      writeSegmentFile(segmentFile, segmentFileFolder + File.separator + segmentFileName);
 
       // Move all files to table path from segment folder.
       if (supportFlatFolder) {

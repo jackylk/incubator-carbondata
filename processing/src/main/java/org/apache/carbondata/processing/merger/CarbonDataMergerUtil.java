@@ -215,7 +215,7 @@ public final class CarbonDataMergerUtil {
 
         for (String compactedBlocks : updatedDeltaFilesList) {
           // Try to BlockName
-          int endIndex = compactedBlocks.lastIndexOf("/");
+          int endIndex = compactedBlocks.lastIndexOf(File.separator);
           String blkNoExt =
               compactedBlocks.substring(endIndex + 1, compactedBlocks.lastIndexOf("-"));
           blockNames.add(blkNoExt);

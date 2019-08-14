@@ -52,7 +52,7 @@ public class VectorTablePath {
    * @return
    */
   public static String getColumnFilePath(String folderPath, CarbonColumn column) {
-    return folderPath + "/" + getColumnFileName(column);
+    return folderPath + File.separator + getColumnFileName(column);
   }
 
   /**
@@ -62,7 +62,7 @@ public class VectorTablePath {
    * @return
    */
   public static String getOffsetFilePath(String folderPath, CarbonColumn column) {
-    return folderPath + "/" + getOffsetFileName(column);
+    return folderPath + File.separator + getOffsetFileName(column);
   }
 
 
@@ -77,7 +77,7 @@ public class VectorTablePath {
   }
 
   public static String getComplexFolderPath(String folderPath, CarbonColumn column) {
-    return folderPath + "/" + getColumnFolderName(column);
+    return folderPath + File.separator + getColumnFolderName(column);
   }
 
 }

@@ -73,8 +73,8 @@ public class BloomIndexFileStore {
       }
     });
 
-    String mergeShardPath = dmSegmentPathString + "/" + MERGE_BLOOM_INDEX_SHARD_NAME;
-    String mergeInprogressFile = dmSegmentPathString + "/" + MERGE_INPROGRESS_FILE;
+    String mergeShardPath = dmSegmentPathString + File.separator + MERGE_BLOOM_INDEX_SHARD_NAME;
+    String mergeInprogressFile = dmSegmentPathString + File.separator + MERGE_INPROGRESS_FILE;
 
     // Step 2. prepare for fail-safe merging
 
@@ -232,13 +232,13 @@ public class BloomIndexFileStore {
    * get bloom index file
    */
   public static String getBloomIndexFile(String shardPath, String colName) {
-    return shardPath.concat("/").concat(colName).concat(BLOOM_INDEX_SUFFIX);
+    return shardPath.concat(File.separator).concat(colName).concat(BLOOM_INDEX_SUFFIX);
   }
 
   /**
    * get merge bloom index file
    */
   public static String getMergeBloomIndexFile(String mergeShardPath, String colName) {
-    return mergeShardPath.concat("/").concat(colName).concat(MERGE_BLOOM_INDEX_SUFFIX);
+    return mergeShardPath.concat(File.separator).concat(colName).concat(MERGE_BLOOM_INDEX_SUFFIX);
   }
 }

@@ -134,7 +134,7 @@ public class LuceneDataMapBuilder implements DataMapBuilder {
     if (storeBlockletWise) {
       if (currentBlockletId != blockletId) {
         close();
-        indexWriter = createIndexWriter(dataMapPath + "/" + blockletId);
+        indexWriter = createIndexWriter(dataMapPath + File.separator + blockletId);
         currentBlockletId = blockletId;
       }
     }

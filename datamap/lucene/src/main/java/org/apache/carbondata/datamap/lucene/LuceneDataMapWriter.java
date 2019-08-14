@@ -149,7 +149,7 @@ public class LuceneDataMapWriter extends DataMapWriter {
     // get index path, put index data into segment's path
     String dataMapPath;
     if (storeBlockletWise) {
-      dataMapPath = this.dataMapPath + "/" + blockletId;
+      dataMapPath = this.dataMapPath + File.separator + blockletId;
     } else {
       dataMapPath = this.dataMapPath;
     }

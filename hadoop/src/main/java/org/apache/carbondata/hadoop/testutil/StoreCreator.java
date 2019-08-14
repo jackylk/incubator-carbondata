@@ -462,8 +462,8 @@ public class StoreCreator {
     CarbonProperties.getInstance().addProperty("is.compressed.keyblock", "false");
 
     String graphPath =
-        outPutLoc + "/" + loadModel.getDatabaseName() + "/" + tableName
-            + "/" + 0 + "/" + 1 + "/" + tableName + ".ktr";
+        outPutLoc + File.separator + loadModel.getDatabaseName() + File.separator + tableName
+            + File.separator + 0 + File.separator + 1 + File.separator + tableName + ".ktr";
     File path = new File(graphPath);
     if (path.exists()) {
       if (!path.delete()) {
@@ -515,7 +515,7 @@ public class StoreCreator {
     loadMetadataDetails.setLoadStartTime(loadMetadataDetails.getTimeStamp(readCurrentTime()));
     listOfLoadFolderDetails.add(loadMetadataDetails);
 
-    String dataLoadLocation = schema.getCarbonTable().getMetadataPath() + "/"
+    String dataLoadLocation = schema.getCarbonTable().getMetadataPath() + File.separator
         + CarbonTablePath.TABLE_STATUS_FILE;
 
     DataOutputStream dataOutputStream;

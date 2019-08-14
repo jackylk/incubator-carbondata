@@ -334,7 +334,7 @@ public class StreamSegment {
     FileFactory.FileType fileType = FileFactory.getFileType(segmentDir);
     if (FileFactory.isFileExist(segmentDir, fileType)) {
       String indexName = CarbonTablePath.getCarbonStreamIndexFileName();
-      String indexPath = segmentDir + "/" + indexName;
+      String indexPath = segmentDir + File.separator + indexName;
       CarbonFile index = FileFactory.getCarbonFile(indexPath, fileType);
       CarbonFile[] files = listDataFiles(segmentDir, fileType);
       // TODO better to check backup index at first
@@ -385,9 +385,9 @@ public class StreamSegment {
       String indexName) throws IOException {
 
     FileFactory.FileType fileType = FileFactory.getFileType(segmentDir);
-    String filePath = segmentDir + "/" + fileName;
+    String filePath = segmentDir + File.separator + fileName;
     CarbonFile file = FileFactory.getCarbonFile(filePath, fileType);
-    String indexPath = segmentDir + "/" + indexName;
+    String indexPath = segmentDir + File.separator + indexName;
     CarbonFile index = FileFactory.getCarbonFile(indexPath, fileType);
     if (file.exists() && index.exists()) {
       CarbonIndexFileReader indexReader = new CarbonIndexFileReader();
