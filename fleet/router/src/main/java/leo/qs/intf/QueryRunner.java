@@ -17,6 +17,7 @@
 
 package leo.qs.intf;
 
+import java.io.IOException;
 import java.util.List;
 
 import leo.job.AsyncJob;
