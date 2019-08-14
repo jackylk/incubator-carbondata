@@ -465,14 +465,14 @@ object CarbonDataStoreCreator {
     CarbonProperties.getInstance.addProperty("is.compressed.keyblock", "false")
     CarbonProperties.getInstance
       .addProperty("carbon.direct.dictionary", "true")
-    val graphPath: String = outPutLoc + "/" + loadModel.getDatabaseName +
-                            "/" +
+    val graphPath: String = outPutLoc + File.separator + loadModel.getDatabaseName +
+                            File.separator +
                             tableName +
-                            "/" +
+                            File.separator +
                             0 +
-                            "/" +
+                            File.separator +
                             1 +
-                            "/" +
+                            File.separator +
                             tableName +
                             ".ktr"
     val path: File = new File(graphPath)
@@ -530,7 +530,7 @@ object CarbonDataStoreCreator {
       loadMetadataDetails.setLoadStartTime(
         loadMetadataDetails.getTimeStamp(readCurrentTime()))
       listOfLoadFolderDetails.add(loadMetadataDetails)
-      val dataLoadLocation: String = schema.getCarbonTable.getMetadataPath + "/" +
+      val dataLoadLocation: String = schema.getCarbonTable.getMetadataPath + File.separator +
                                      CarbonTablePath.TABLE_STATUS_FILE
       val gsonObjectToWrite: Gson = new Gson()
       val writeOperation: AtomicFileOperations = AtomicFileOperationFactory

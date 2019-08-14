@@ -450,7 +450,7 @@ public class SortParameters implements Serializable {
         .getLocalDataFolderLocation(parameters.getCarbonTable(),
             configuration.getTaskNo(), configuration.getSegmentId(), false, false);
     String[] sortTempDirs = CarbonDataProcessorUtil.arrayAppend(carbonDataDirectoryPath,
-        "/", CarbonCommonConstants.SORT_TEMP_FILE_LOCATION);
+        File.separator, CarbonCommonConstants.SORT_TEMP_FILE_LOCATION);
 
     parameters.setTempFileLocation(sortTempDirs);
     LOGGER.info("temp file location: " + StringUtils.join(parameters.getTempFileLocation(), ","));
@@ -541,7 +541,7 @@ public class SortParameters implements Serializable {
         .getLocalDataFolderLocation(carbonTable, taskNo, segmentId,
             isCompactionFlow, false);
     String[] sortTempDirs = CarbonDataProcessorUtil.arrayAppend(carbonDataDirectoryPath,
-        "/", CarbonCommonConstants.SORT_TEMP_FILE_LOCATION);
+        File.separator, CarbonCommonConstants.SORT_TEMP_FILE_LOCATION);
     parameters.setTempFileLocation(sortTempDirs);
     LOGGER.info("temp file location: " + StringUtils.join(parameters.getTempFileLocation(), ","));
 

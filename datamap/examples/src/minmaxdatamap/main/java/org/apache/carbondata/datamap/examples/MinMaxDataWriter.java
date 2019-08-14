@@ -236,7 +236,7 @@ public class MinMaxDataWriter extends DataMapWriter {
    */
   public void writeMinMaxIndexFile(List<MinMaxIndexBlockDetails> minMaxIndexBlockDetails,
       String blockId) throws IOException {
-    String filePath = dataMapPath + "/" + blockId + ".minmaxindex";
+    String filePath = dataMapPath + File.separator + blockId + ".minmaxindex";
     BufferedWriter brWriter = null;
     DataOutputStream dataOutStream = null;
     try {
@@ -275,7 +275,7 @@ public class MinMaxDataWriter extends DataMapWriter {
    */
   public static String genDataMapStorePath(String dataPath, String dataMapName)
       throws IOException {
-    String dmDir = dataPath + "/" + dataMapName;
+    String dmDir = dataPath + File.separator + dataMapName;
     Path dmPath = FileFactory.getPath(dmDir);
     FileSystem fs = FileFactory.getFileSystem(dmPath);
     if (!fs.exists(dmPath)) {

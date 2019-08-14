@@ -236,7 +236,7 @@ public class UnsafeBatchParallelReadMergeSorterImpl extends AbstractMergeSorter 
           .getLocalDataFolderLocation(parameters.getCarbonTable(), parameters.getTaskNo(),
               parameters.getSegmentId(), false, false);
       String[] tempDirs = CarbonDataProcessorUtil.arrayAppend(carbonDataDirectoryPath,
-          "/", CarbonCommonConstants.SORT_TEMP_FILE_LOCATION);
+          File.separator, CarbonCommonConstants.SORT_TEMP_FILE_LOCATION);
       parameters.setTempFileLocation(tempDirs);
     }
 

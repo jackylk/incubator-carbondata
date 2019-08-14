@@ -405,7 +405,7 @@ public class UnsafeSortDataRows {
           // create a new file and pick a temp directory randomly every time
           String tmpDir = parameters.getTempFileLocation()[
               new Random().nextInt(parameters.getTempFileLocation().length)];
-          File sortTempFile = new File(tmpDir + "/" + parameters.getTableName()
+          File sortTempFile = new File(tmpDir + File.separator + parameters.getTableName()
               + '_' + parameters.getRangeId() + '_' + System.nanoTime()
               + CarbonCommonConstants.SORT_TEMP_FILE_EXT);
           writeDataToFile(page, sortTempFile);

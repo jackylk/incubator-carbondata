@@ -216,7 +216,7 @@ public class SortDataRows {
       // create new file and choose folder randomly
       String[] tmpLocation = parameters.getTempFileLocation();
       String locationChosen = tmpLocation[new Random().nextInt(tmpLocation.length)];
-      File file = new File(locationChosen + "/" + parameters.getTableName()
+      File file = new File(locationChosen + File.separator + parameters.getTableName()
           + '_' + parameters.getRangeId() + '_' + System.nanoTime()
           + CarbonCommonConstants.SORT_TEMP_FILE_EXT);
       writeDataToFile(recordHolderList, this.entryCount, file);
@@ -330,7 +330,7 @@ public class SortDataRows {
         String[] tmpFileLocation = parameters.getTempFileLocation();
         String locationChosen = tmpFileLocation[new Random().nextInt(tmpFileLocation.length)];
         File sortTempFile = new File(
-            locationChosen + "/" + parameters.getTableName()
+            locationChosen + File.separator + parameters.getTableName()
                 + '_' + parameters.getRangeId() + '_' + System.nanoTime()
                 + CarbonCommonConstants.SORT_TEMP_FILE_EXT);
         writeDataToFile(recordHolderArray, recordHolderArray.length, sortTempFile);

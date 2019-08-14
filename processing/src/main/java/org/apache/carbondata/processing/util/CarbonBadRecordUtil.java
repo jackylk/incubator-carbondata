@@ -75,7 +75,7 @@ public class CarbonBadRecordUtil {
       badLogStoreLocation =
           CarbonProperties.getInstance().getProperty(CarbonCommonConstants.CARBON_BADRECORDS_LOC);
     }
-    badLogStoreLocation = badLogStoreLocation + "/" + storeLocation;
+    badLogStoreLocation = badLogStoreLocation + File.separator + storeLocation;
 
     FileFactory.FileType fileType = FileFactory.getFileType(badLogStoreLocation);
     try {
@@ -101,7 +101,7 @@ public class CarbonBadRecordUtil {
     for (CarbonFile badFiles : listFiles) {
       badRecordsInProgressFileName = badFiles.getName();
 
-      changedFileName = badLogStoreLocation + "/" + badRecordsInProgressFileName
+      changedFileName = badLogStoreLocation + File.separator + badRecordsInProgressFileName
           .substring(0, badRecordsInProgressFileName.lastIndexOf('.'));
 
       badFiles.renameTo(changedFileName);
