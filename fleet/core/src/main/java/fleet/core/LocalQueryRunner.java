@@ -121,7 +121,7 @@ public class LocalQueryRunner implements QueryRunner {
 
   @Override
   public List<String[]> fetchResultPage(String path, int startLineNum, int limit)
-      throws Exception {
+      throws IOException {
     return OBSUtil.readObsFileByPagesCsvFormat(path, sparkSession, startLineNum, limit);
   }
 

@@ -214,7 +214,6 @@ public class Controller {
           if (dataList.size() < limit) {
             response.setRowsMore(false);
           }
-          String schemaJsonStr = jobMeta.getJobSchema();
         } else if (jobMeta.getStatus() == AsyncJobStatus.FAILED.getStatus()) {
           throw new JobStatusException(ErrorCode.JOB_FAILED_ERROR);
         } else if (jobMeta.getStatus() == AsyncJobStatus.STARTED.getStatus()) {
@@ -224,12 +223,16 @@ public class Controller {
         throw new JobStatusException(ErrorCode.JOB_NOT_FOUND_ERROR);
       }
     } catch (Exception e) {
-      if (!(e instanceof JobStatusException)) {
+      if (e instanceof IOException) {
+        throw new JobStatusException(ErrorCode.JOB_NO_RESULT_SHOW_ERROR);
+      } else if (e instanceof JobStatusException) {
+        response.setRowsMore(false);
+        throw e;
+      } else {
+        response.setRowsMore(false);
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
       }
-      throw e;
     }
-
     return new ResponseEntity<>(response, HttpStatus.OK);
   }
 

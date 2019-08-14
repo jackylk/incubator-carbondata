@@ -60,6 +60,6 @@ public interface QueryRunner {
    * @return result
    */
   List<String[]> fetchResultPage(String path, int startLineNum, int limit)
-      throws Exception;
+      throws IOException;
 
 }

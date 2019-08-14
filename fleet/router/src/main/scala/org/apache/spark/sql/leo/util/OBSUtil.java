@@ -96,7 +96,7 @@ public class OBSUtil {
   }
 
   public static List<String[]> readObsFileByPagesCsvFormat(String path, SparkSession session,
-      int startLineNum, int limit) throws Exception {
+      int startLineNum, int limit) throws IOException {
     ObsObject obsObject = null;
     InputStream is = null;
     InputStreamReader ir = null;
@@ -159,8 +159,8 @@ public class OBSUtil {
         }
       }
     } catch (Exception e) {
-      LOGGER.error(e.getMessage());
-      throw e;
+      LOGGER.error("Failed to read csv result page:", e);
+      throw new IOException("Failed to read csv result page");
     } finally {
       try {
         if (null != is) is.close();

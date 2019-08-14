@@ -31,6 +31,8 @@ public enum ErrorCode {
   JOB_STILL_RUNNING_ERROR(1003, "The job is still running, can not get result"),
   JOB_FAILED_ERROR(1004, "The job is failed, can not get result"),
   JOB_NOT_FOUND_ERROR(1005, "The job does not exist, can not get status or result"),
+  JOB_NO_RESULT_SHOW_ERROR(1006, "The job does not have result to show."),
+
 
   LEO_ANALYSIS_ERROR(2001, "AnalysisException"),
 
