@@ -31,11 +31,12 @@ public class FetchSqlResultResponse extends Response {
   private List<String[]> rows;
 
   public FetchSqlResultResponse(Request request, String message, String jobId, Schema schema,
-      List<String[]> rows) {
+      List<String[]> rows, boolean rowsMore) {
     super(request, message);
     this.jobId = jobId;
     this.schema = schema;
     this.rows = rows;
+    this.rowsMore = rowsMore;
   }
 
   public String getJobId() {

@@ -17,12 +17,13 @@
 
 package fleet.core;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import leo.job.QueryDef;
+import leo.job.QueryDef.QueryType;
 import leo.model.view.SqlResult;
 import leo.util.SqlResultUtil;
 import org.apache.carbondata.common.logging.LogServiceFactory;
@@ -121,7 +122,7 @@ public class LocalQueryRunner implements QueryRunner {
 
   @Override
   public List<String[]> fetchResultPage(String path, int startLineNum, int limit)
-      throws Exception {
+      throws IOException {
     return OBSUtil.readObsFileByPagesCsvFormat(path, sparkSession, startLineNum, limit);
   }
 
@@ -142,8 +143,8 @@ public class LocalQueryRunner implements QueryRunner {
             jobID = carbonQuery.getJobId();
             projectId = carbonQuery.getProjectId();
             LOGGER.info(Thread.currentThread().getName() + " job started: " + jobID);
-            if (carbonQuery.getQuery().getTypeDef().getType().equals(
-                QueryDef.QueryType.CARBON_SELECT)) {
+            QueryType type = carbonQuery.getQuery().getTypeDef().getType();
+            if (type.equals(QueryType.CARBON_SELECT) || type.equals(QueryType.RUN_SCRIPT)) {
               // if carbon select, we should execute it and save the query result.
               String timestampFormat = CarbonCommonConstants.CARBON_TIMESTAMP_DEFAULT_FORMAT;
               String dateFormat = CarbonCommonConstants.CARBON_DATE_DEFAULT_FORMAT;
@@ -168,7 +169,7 @@ public class LocalQueryRunner implements QueryRunner {
                   .option("dateFormat", dateFormat)
                   .save(carbonQuery.getObsPath());
               LOGGER.info(
-                  "Carbon select job " + jobID + " executed successfully," + " store path: "
+                  "Carbon query job " + jobID + " executed successfully," + " store path: "
                       + carbonQuery.getObsPath());
             } else {
               // if runnable cmd, we only execute it, do not save result.

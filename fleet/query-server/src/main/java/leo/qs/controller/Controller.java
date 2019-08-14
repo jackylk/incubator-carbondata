@@ -18,6 +18,7 @@
 package leo.qs.controller;
 
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -199,22 +200,23 @@ public class Controller {
       @RequestParam(name = "limit", required = false, defaultValue = "1000") int limit)
       throws Exception {
     RequestValidator.validateOffsetLimit(offset, limit);
-    //dataframe can not get data pages.
-    FetchSqlResultResponse response =  new FetchSqlResultResponse(new SqlRequest(), "Success",
-        jobId, null, null);
+    // init response
+    FetchSqlResultResponse response =  new FetchSqlResultResponse(new SqlRequest(),
+        "FAILED", jobId, null, null, false);
     try {
       QueryRunner queryRunner = locator.getRunner(null);
       JobMeta jobMeta = queryRunner.getJobMeta(jobId, projectId);
       if (jobMeta != null) {
         if (jobMeta.getStatus() == AsyncJobStatus.FINISHED.getStatus()) {
-          List<String[]> dataList = null;
-          dataList = queryRunner.fetchResultPage(jobMeta.getPath(), offset, limit);
+          List<String[]> dataList = queryRunner.fetchResultPage(jobMeta.getPath(), offset, limit);
           //set response
           response.setRows(dataList);
+          response.setMessage("SUCCESS");
           if (dataList.size() < limit) {
             response.setRowsMore(false);
+          } else {
+            response.setRowsMore(true);
           }
-          String schemaJsonStr = jobMeta.getJobSchema();
         } else if (jobMeta.getStatus() == AsyncJobStatus.FAILED.getStatus()) {
           throw new JobStatusException(ErrorCode.JOB_FAILED_ERROR);
         } else if (jobMeta.getStatus() == AsyncJobStatus.STARTED.getStatus()) {
@@ -224,12 +226,14 @@ public class Controller {
         throw new JobStatusException(ErrorCode.JOB_NOT_FOUND_ERROR);
       }
     } catch (Exception e) {
-      if (!(e instanceof JobStatusException)) {
+      if (e instanceof IOException) {
+        throw new JobStatusException(ErrorCode.JOB_NO_RESULT_SHOW_ERROR);
+      } else if (e instanceof JobStatusException) {
+        throw e;
+      } else {
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
       }
-      throw e;
     }
-
     return new ResponseEntity<>(response, HttpStatus.OK);
   }
 
