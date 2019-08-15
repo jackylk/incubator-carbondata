@@ -1,0 +1,22 @@
+version: 1.0
+
+name: dplatform-carbon
+
+language: java
+
+dependencies:
+  base:
+    jdk: hwjdk8
+    maven: 3.3.3
+
+machine:
+  container:
+    euler:
+      - registry-cbu.huawei.com/cloudtable-leo/dplatform:1.0.0
+
+scripts:
+  - sh .build_config/build_carbon.sh
+
+artifacts:
+  package:
+    - package/EI_${COMPONENT_NAME}_${COMPONENT_VERSION}-${DP_VERSION}_release.tar.gz
