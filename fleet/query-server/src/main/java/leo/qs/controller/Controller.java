@@ -242,13 +242,14 @@ public class Controller {
   public ResponseEntity<GetSqlStatusResponse> getSqlStatus(
       @PathVariable(name = "project_id") String projectId,
       @PathVariable(name = "jobId") String jobId) throws Exception {
-    GetSqlStatusResponse response =  new GetSqlStatusResponse(new SqlRequest(), "Success",
+    GetSqlStatusResponse response =  new GetSqlStatusResponse(new SqlRequest(), "SUCCESS",
         -1);
     QueryRunner queryRunner = locator.getRunner(null);
     JobMeta jobMeta = queryRunner.getJobMeta(jobId, projectId);
     if (jobMeta != null) {
       response.setStatus(jobMeta.getStatus());
       if (jobMeta.getStatus() == 3 && jobMeta.getFailedReason() != null) {
+        response.setMessage("FAILED");
         response.setFailedReason(jobMeta.getFailedReason());
       }
     } else {
