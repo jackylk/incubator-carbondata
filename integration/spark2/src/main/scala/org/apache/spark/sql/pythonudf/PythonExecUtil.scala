@@ -62,8 +62,11 @@ object PythonExecUtil {
     val inBinary = getBinary(stream)
     val errBinary = getBinary(errorStream)
 
-    if (errBinary.length  > 0) {
-      throw new Exception(new String(errBinary))
+    if (worker.exitValue() != 0) {
+      if (errBinary.length  > 0) {
+        throw new Exception(new String(errBinary))
+      }
+      throw new Exception("invalid python script." + scriptPath + scriptArgs)
     }
     worker.destroy()
     inBinary
