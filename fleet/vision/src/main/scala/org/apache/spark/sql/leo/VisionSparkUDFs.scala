@@ -17,9 +17,12 @@
 
 package org.apache.spark.sql.leo
 
+import org.apache.carbondata.SparkS3Constants
+import org.apache.carbondata.core.util.CarbonUtil
 import org.apache.spark.sql.{SQLContext, SparkSession}
 import org.apache.spark.sql.leo.image.Utils.{fromBytes, toBytes}
 import org.apache.spark.sql.leo.image.{BasicTransformations, DataAugmentor, GeometricTransformations}
+import org.apache.spark.sql.leo.util.obs.OBSUtil
 import org.apache.spark.sql.pythonudf.PythonUDFRegister
 import org.apache.spark.sql.types.{BooleanType, IntegerType, StructField, StructType}
 import org.opencv.core.Core
@@ -122,32 +125,76 @@ object VisionSparkUDFs {
   }
 
   def registerExtractFramesFromVideo(sparkSession: SparkSession, scriptsDirPath: String): Unit = {
+    val localScriptsDirPath = if (scriptsDirPath.startsWith("obs")) {
+      val tempDir = "/tmp/" + CarbonUtil.generateUUID()
+      OBSUtil.copyToLocal(scriptsDirPath, tempDir, sparkSession, true)
+      tempDir
+    } else {
+      scriptsDirPath
+    }
+
     val script =
       s"""
+         |import obs
          |import os
          |import sys
          |import time
          |
          |def generate_x_frames_per_sec(video_file, x, images_dir):
          |    import cv2
-         |    sys.path.insert(0, '${ scriptsDirPath }')
+         |    sys.path.insert(0, '${ localScriptsDirPath }')
          |    from video_frames import Video
          |
-         |    images_dir = os.path.join(images_dir, os.path.basename(video_file))
-         |    if not os.path.isdir(images_dir):
-         |        os.mkdir(images_dir)
+         |    scratch_dir = '/tmp/naman/'
+         |
+         |    AK = '${ sparkSession.conf.get(SparkS3Constants.AK) }'
+         |    SK = '${ sparkSession.conf.get(SparkS3Constants.SK) }'
+         |    SERVER = '${ sparkSession.conf.get(SparkS3Constants.END_POINT) }'
+         |    obsClient = obs.ObsClient(access_key_id=AK, secret_access_key=SK, server=SERVER)
          |
          |    start_time = time.time()
          |
+         |    # Download file from OBS to local
+         |    if not video_file.startswith('obs://'):
+         |        raise ValueError('Video is not OBS path. Please upload video to OBS and rerun.')
+         |    video_file = video_file[6:]
+         |    bucket_name = video_file[:video_file.find('/')]
+         |    video_file = video_file[len(bucket_name)+1:]
+         |    local_video_dir = os.path.join(scratch_dir, 'videos')
+         |    local_video_file = os.path.join(local_video_dir, os.path.basename(video_file))
+         |    if not os.path.isdir(local_video_dir):
+         |        os.mkdir(local_video_dir)
+         |    scratch_dir = os.path.join(scratch_dir, os.path.basename(video_file))
+         |    if not os.path.isdir(scratch_dir):
+         |         os.mkdir(scratch_dir)
+         |    obsClient.getObject(bucket_name, video_file, downloadPath=local_video_file)
+         |
+         |    # Process file
          |    try:
-         |        with Video(video_file[5:]) as video:
-         |            count = 0
+         |        count = 0
+         |        with Video(local_video_file) as video:
          |            for i, img in video.get_x_frames_per_sec(x):
-         |                cv2.imwrite(images_dir + '/{}.jpg'.format(i), img)
+         |                cv2.imwrite(scratch_dir + '/{}.jpg'.format(i), img)
          |                count += 1
-         |            return True, count, int(time.time() - start_time)
-         |    except Exception as e:
+         |        success = True
+         |        elapsed_time = int(time.time() - start_time)
+         |
+         |    except Exception as ex:
+         |        print(ex)
          |        return False, 0, int(time.time() - start_time)
+         |
+         |    # Upload data to OBS (from local scratch_dir to OBS image_dir)
+         |    if not images_dir.startswith('obs://'):
+         |        raise ValueError('Output directory is not OBS path.')
+         |    images_dir = images_dir[6:]
+         |    bucket_name = images_dir[:images_dir.find('/')]
+         |    images_dir = images_dir[len(bucket_name)+1:]
+         |    images_dir = os.path.join(images_dir, os.path.basename(video_file))
+         |    for file_name in os.listdir(scratch_dir):
+         |        with open(os.path.join(scratch_dir, file_name), 'rb') as file:
+         |            obsClient.putFile(bucket_name, os.path.join(images_dir, file_name), os.path.join(scratch_dir, file_name))
+         |
+         |    return success, count, elapsed_time
        """.stripMargin
 
     PythonUDFRegister.registerPythonUDF(
