@@ -17,12 +17,13 @@
 
 package org.apache.spark.sql.leo.command
 
+import com.huawei.cloud.obs.OBSUtil
 import org.apache.spark.sql.{AnalysisException, Row, SparkSession}
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.execution.command.{CreateDatabaseCommand, DropDatabaseCommand, RunnableCommand}
 import org.apache.spark.sql.leo.LeoEnv
-import org.apache.spark.sql.leo.util.OBSUtil
 import org.apache.spark.util.FileUtils
+
 import org.apache.carbondata.core.datastore.impl.FileFactory
 
 // create database should create OBS bucket

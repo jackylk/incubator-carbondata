@@ -23,6 +23,9 @@ public class SqlRequest extends Request {
   @JsonProperty("sql")
   private String sqlStatement;
 
+  @JsonProperty("encoded")
+  private boolean encoded;
+
   public SqlRequest() {
   }
 
@@ -32,5 +35,13 @@ public class SqlRequest extends Request {
 
   public String getSqlStatement() {
     return sqlStatement;
+  }
+
+  public boolean getEncoded() {
+    return encoded;
+  }
+
+  public void setEncoded(boolean encoded) {
+    this.encoded = encoded;
   }
 }

@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.leo
+package org.apache.spark.sql.leo.image
 
 import java.util
 
-import org.opencv.core.{Core, CvType, Mat, Scalar, Size}
+import org.opencv.core._
 import org.opencv.imgproc.{CLAHE, Imgproc}
 
 

@@ -17,8 +17,12 @@
 
 package org.apache.spark.sql.leo
 
-import org.apache.spark.sql.SQLContext
-import Utils.{fromBytes, toBytes}
+import org.apache.spark.sql.{SQLContext, SparkSession}
+import org.apache.spark.sql.leo.image.Utils.{fromBytes, toBytes}
+import org.apache.spark.sql.leo.image.{BasicTransformations, DataAugmentor, GeometricTransformations}
+import org.apache.spark.sql.pythonudf.PythonUDFRegister
+import org.apache.spark.sql.types.{BooleanType, IntegerType, StructField, StructType}
+import org.opencv.core.Core
 
 
 object VisionSparkUDFs {
@@ -32,6 +36,9 @@ object VisionSparkUDFs {
    * @param sqlContext
    */
   def registerAll(sqlContext: SQLContext): Unit = {
+    nu.pattern.OpenCV.loadShared()
+    System.loadLibrary(Core.NATIVE_LIBRARY_NAME)
+
     registerCrop(sqlContext)
     registerResize(sqlContext)
     registerRotate(sqlContext)
@@ -112,6 +119,50 @@ object VisionSparkUDFs {
         val noisyImg = DataAugmentor.addRandomNoise(img, 1, 0.5)
         toBytes(noisyImg)
       })
+  }
+
+  def registerExtractFramesFromVideo(sparkSession: SparkSession, scriptsDirPath: String): Unit = {
+    val script =
+      s"""
+         |import os
+         |import sys
+         |import time
+         |
+         |def generate_x_frames_per_sec(video_file, x, images_dir):
+         |    import cv2
+         |    sys.path.insert(0, '${ scriptsDirPath }')
+         |    from video_frames import Video
+         |
+         |    images_dir = os.path.join(images_dir, os.path.basename(video_file))
+         |    if not os.path.isdir(images_dir):
+         |        os.mkdir(images_dir)
+         |
+         |    start_time = time.time()
+         |
+         |    try:
+         |        with Video(video_file[5:]) as video:
+         |            count = 0
+         |            for i, img in video.get_x_frames_per_sec(x):
+         |                cv2.imwrite(images_dir + '/{}.jpg'.format(i), img)
+         |                count += 1
+         |            return True, count, int(time.time() - start_time)
+         |    except Exception as e:
+         |        return False, 0, int(time.time() - start_time)
+       """.stripMargin
+
+    PythonUDFRegister.registerPythonUDF(
+      sparkSession,
+      "generate_x_frames_per_sec",
+      "generate_x_frames_per_sec",
+      script,
+      Array[String](),
+      new StructType(Array(
+        StructField(name = "success", dataType = BooleanType, nullable = false),
+        StructField(name = "num-files", dataType = IntegerType, nullable = false),
+        StructField(name = "time", dataType = IntegerType, nullable = false)
+      )),
+      true
+    )
   }
 
 }

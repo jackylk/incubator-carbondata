@@ -20,9 +20,10 @@ package leo.qs;
 import java.io.IOException;
 import java.net.InetAddress;
 
+import com.huawei.cloud.obs.OBSUtil;
 import leo.job.JobConf;
 
-import org.apache.carbondata.SparkS3Constants;
+import org.apache.carbondata.cloud.SparkS3Constants;
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.util.CarbonProperties;
@@ -32,7 +33,6 @@ import leo.qs.util.StoreConf;
 import org.apache.log4j.Logger;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.leo.LeoEnv;
-import org.apache.spark.sql.leo.util.OBSUtil;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 

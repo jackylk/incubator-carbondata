@@ -17,21 +17,22 @@
 
 package org.apache.spark.sql.leo
 
-import com.huawei.cloud.modelarts.ModelArtsModelAPI
-import org.apache.spark.sql.{CarbonSession, SparkSession}
-import org.apache.spark.sql.leo.builtin.LeoUDF
-import org.apache.spark.sql.leo.builtin.LeoUDF
+import java.nio.file.Paths
 
+import com.huawei.cloud.modelarts.ModelArtsModelAPI
+import org.apache.spark.sql.{CarbonEnv, CarbonSession, SQLContext, SparkSession}
+import org.apache.spark.sql.leo.builtin.LeoUDF
+import org.apache.spark.sql.leo.builtin.LeoUDF
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.datastore.impl.FileFactory.FileType
 import org.apache.carbondata.core.util.CarbonProperties
-import org.apache.spark.sql.{CarbonEnv, CarbonSession, SparkSession}
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
 import org.apache.spark.sql.catalyst.catalog.CatalogTable
-
 import org.apache.carbondata.cloud.CloudUdfRegister
 import org.apache.carbondata.ai.ModelAPI
 import org.apache.carbondata.core.constants.CarbonCommonConstants
+
+import scala.reflect.io.File
 
 object LeoEnv {
   val fileSystemType = FileType.OBS
@@ -44,8 +45,8 @@ object LeoEnv {
       .enableHiveSupport()
 
     val session = new CarbonSession.CarbonBuilder(builder).getOrCreateCarbonSession()
-    CloudUdfRegister.register(session)
-    registerLeoBuiltinUDF(session)
+    registerUDFs(session)
+    session
   }
 
   def bucketName(dbName: String): String = {
@@ -72,6 +73,19 @@ object LeoEnv {
     sesssion.udf.register("download", download)
     sesssion
   }
+
+  private def registerVideoUDFs(session: SparkSession): Unit = {
+    val scriptsDirPath = System.getProperty("user.dir") + "/fleet/vision/src/main/scala/org/apache/spark/sql/leo/video/"
+    VisionSparkUDFs.registerExtractFramesFromVideo(session, scriptsDirPath)
+  }
+
+  def registerUDFs(session: SparkSession): Unit = {
+    CloudUdfRegister.register(session)
+    registerLeoBuiltinUDF(session)
+    VisionSparkUDFs.registerAll(session.sqlContext)
+    registerVideoUDFs(session)
+  }
+
 
   private lazy val modelTrainingAPIInstance = new ModelArtsModelAPI
 

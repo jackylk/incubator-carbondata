@@ -17,7 +17,7 @@
 
 package org.apache.spark.sql.pythonudf
 
-import java.io.{File, FileWriter}
+import java.io.{File, FileWriter, IOException}
 
 import org.apache.spark.api.python.{PythonBroadcast, PythonFunction}
 import org.apache.spark.broadcast.Broadcast
@@ -25,7 +25,6 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.FunctionIdentifier
 import org.apache.spark.sql.execution.python.UserDefinedPythonFunction
 import org.apache.spark.sql.types.{DataType, StringType}
-
 import org.apache.carbondata.core.datastore.impl.FileFactory
 
 object PythonUDFRegister {
@@ -42,24 +41,34 @@ object PythonUDFRegister {
     // Register the executable object to spark
 
     val fileName = generateScriptFile(funcName, script, returnType)
-    val inBinary = PythonExecUtil.runPythonScript(spark, libraryIncludes, fileName, Seq.empty, usePython3AsDefault)
-    FileFactory.deleteFile(fileName, FileFactory.getFileType(fileName))
 
-    val default_python_version = if (usePython3AsDefault) "3.5" else "2.7"
-    val default_python_exec = if (usePython3AsDefault) "python3" else "python2"
+    try {
+      val inBinary = PythonExecUtil.runPythonScript(spark, libraryIncludes, fileName, Seq.empty, usePython3AsDefault)
+      FileFactory.deleteFile(fileName, FileFactory.getFileType(fileName))
 
-    // TODO handle big udf bigger than 1 MB, they supposed to be broadcasted.
-    val function = PythonFunction(
-      inBinary,
-      new java.util.HashMap[String, String](),
-      new java.util.ArrayList[String](),
-      spark.sparkContext.getConf.get("spark.python.exec", default_python_exec),
-      spark.sparkContext.getConf.get("spark.python.version", default_python_version),
-      new java.util.ArrayList[Broadcast[PythonBroadcast]](),
-      null)
-    spark.udf.registerPython(
-      udfName,
-      UserDefinedPythonFunction(udfName, function, returnType, 100, true))
+      val default_python_version = if (usePython3AsDefault) "3.5" else "2.7"
+      val default_python_exec = if (usePython3AsDefault) "python3" else "python2"
+
+      // TODO handle big udf bigger than 1 MB, they supposed to be broadcasted.
+      val function = PythonFunction(
+        inBinary,
+        new java.util.HashMap[String, String](),
+        new java.util.ArrayList[String](),
+        spark.sparkContext.getConf.get("spark.python.exec", default_python_exec),
+        spark.sparkContext.getConf.get("spark.python.version", default_python_version),
+        new java.util.ArrayList[Broadcast[PythonBroadcast]](),
+        null)
+      spark.udf.registerPython(
+        udfName,
+        UserDefinedPythonFunction(udfName, function, returnType, 100, true))
+    } catch {
+      case ex: IOException if ex.getMessage.contains("Cannot run program") =>
+        val ignore = spark.sparkContext.getConf.get("spark.pythonUDF.ignoreIfPythonNotFound", "false")
+          .equalsIgnoreCase("true")
+        if (!ignore) {
+          throw ex
+        }
+    }
   }
 
   def unregisterPythonUDF(
