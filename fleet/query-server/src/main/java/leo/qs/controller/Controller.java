@@ -19,7 +19,9 @@ package leo.qs.controller;
 
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -85,7 +87,10 @@ public class Controller {
       @PathVariable(name = "project_id") String projectId) throws LeoServiceException {
     //Note: all LeoServiceException will handle by @ControllerAdvice together.
     RequestValidator.validateSql(request);
-    String originSql = request.getSqlStatement();
+    //  the encode sql by Base64.getEncoder().encodeToString(sql.getBytes(StandardCharsets.UTF_8))
+    String originSql = request.getEncoded() ?
+        new String(Base64.getDecoder().decode(request.getSqlStatement()), StandardCharsets.UTF_8) :
+        request.getSqlStatement();
     SparkSession session = Main.getSession();
     LogicalPlan unsolvedPlan;
     try {
