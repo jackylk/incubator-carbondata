@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.carbondata;
+package org.apache.carbondata.cloud;
 
 public class SparkS3Constants {
   public static final String AK = "spark.hadoop.fs.s3a.access.key";

@@ -23,6 +23,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import com.huawei.cloud.obs.OBSUtil;
 import leo.job.QueryDef.QueryType;
 import leo.model.view.SqlResult;
 import leo.util.SqlResultUtil;
@@ -47,7 +48,6 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.execution.command.RunnableCommand;
-import org.apache.spark.sql.leo.util.OBSUtil;
 import org.apache.spark.sql.util.SparkSQLUtil;
 
 public class LocalQueryRunner implements QueryRunner {
