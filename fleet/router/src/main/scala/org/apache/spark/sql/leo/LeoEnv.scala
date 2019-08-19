@@ -74,16 +74,10 @@ object LeoEnv {
     sesssion
   }
 
-  private def registerVideoUDFs(session: SparkSession): Unit = {
-    val scriptsDirPath = System.getProperty("user.dir") + "/fleet/vision/src/main/scala/org/apache/spark/sql/leo/video/"
-    VisionSparkUDFs.registerExtractFramesFromVideo(session, scriptsDirPath)
-  }
-
   def registerUDFs(session: SparkSession): Unit = {
     CloudUdfRegister.register(session)
     registerLeoBuiltinUDF(session)
-    VisionSparkUDFs.registerAll(session.sqlContext)
-    registerVideoUDFs(session)
+    VisionSparkUDFs.registerAll(session)
   }
 
 
