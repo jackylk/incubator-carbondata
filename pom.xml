@@ -103,16 +103,6 @@
     <module>integration/spark-datasource</module>
     <module>integration/hive</module>
     <module>assembly</module>
-    <module>tools/cli</module>
-    <module>fleet/query-server</module>
-    <module>fleet/job</module>
-    <module>fleet/ai-intf</module>
-    <module>fleet/router</module>
-    <module>fleet/core</module>
-    <module>fleet/vision</module>
-    <module>fleet/vector</module>
-    <module>fleet/cloud</module>
-    <module>fleet/project</module>
   </modules>
 
   <properties>
@@ -793,6 +783,7 @@
         <scala.version>2.11.8</scala.version>
       </properties>
       <modules>
+        <module>vector</module>
         <module>integration/spark2</module>
         <module>integration/spark-datasource</module>
         <module>integration/spark-common-test</module>
@@ -813,7 +804,6 @@
         <module>fleet/router</module>
         <module>fleet/core</module>
         <module>fleet/vision</module>
-        <module>fleet/vector</module>
         <module>fleet/cloud</module>
         <module>fleet/project</module>
       </modules>
