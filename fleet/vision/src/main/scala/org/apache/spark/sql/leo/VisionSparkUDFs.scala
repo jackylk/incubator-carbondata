@@ -17,13 +17,12 @@
 
 package org.apache.spark.sql.leo
 
-import com.huawei.cloud.obs.OBSSparkConstants
+import com.huawei.cloud.obs.{OBSSparkConstants, OBSUtil}
 
 import org.apache.carbondata.core.util.CarbonUtil
 import org.apache.spark.sql.{SQLContext, SparkSession}
 import org.apache.spark.sql.leo.image.Utils.{fromBytes, toBytes}
 import org.apache.spark.sql.leo.image.{BasicTransformations, DataAugmentor, GeometricTransformations}
-import org.apache.spark.sql.leo.util.obs.OBSUtil
 import org.apache.spark.sql.pythonudf.PythonUDFRegister
 import org.apache.spark.sql.types.{BooleanType, IntegerType, StructField, StructType}
 import org.opencv.core.Core
