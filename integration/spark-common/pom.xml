@@ -57,7 +57,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.carbondata</groupId>
-      <artifactId>fleet-cloud</artifactId>
+      <artifactId>carbondata-cloud</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>

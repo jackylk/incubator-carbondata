@@ -11,8 +11,8 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>fleet-cloud</artifactId>
-  <name> Fleet :: Cloud </name>
+  <artifactId>carbondata-cloud</artifactId>
+  <name> Apache CarbonData :: Cloud </name>
 
   <properties>
     <dev.path>${basedir}/../../dev</dev.path>
