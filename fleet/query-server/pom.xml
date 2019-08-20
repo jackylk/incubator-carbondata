@@ -11,8 +11,8 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>leo-query-server</artifactId>
-  <name> Apache Carbondata :: Leo Query Server </name>
+  <artifactId>fleet-query-server</artifactId>
+  <name> Fleet :: Query Server</name>
 
   <properties>
     <dev.path>${basedir}/../../dev</dev.path>

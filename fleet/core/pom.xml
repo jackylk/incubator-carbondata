@@ -12,7 +12,7 @@
   </parent>
 
   <artifactId>fleet-core</artifactId>
-  <name> Apache Carbondata :: Leo Core </name>
+  <name> Fleet :: Core </name>
 
   <properties>
     <dev.path>${basedir}/../../dev</dev.path>

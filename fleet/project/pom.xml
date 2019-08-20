@@ -11,8 +11,8 @@
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>carbondata-project</artifactId>
-  <name> Apache Carbondata :: Leo Project </name>
+  <artifactId>fleet-project</artifactId>
+  <name> Fleet :: Project </name>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -29,7 +29,7 @@
   <dependencies>
     <dependency>
       <groupId>org.apache.carbondata</groupId>
-      <artifactId>leo-query-server</artifactId>
+      <artifactId>fleet-query-server</artifactId>
       <version>${project.version}</version>
       <exclusions>
         <exclusion>
