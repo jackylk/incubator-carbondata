@@ -800,9 +800,7 @@
         <module>tools/cli</module>
         <module>fleet/query-server</module>
         <module>fleet/job</module>
-        <module>fleet/ai-intf</module>
         <module>fleet/router</module>
-        <module>fleet/core</module>
         <module>fleet/vision</module>
         <module>fleet/cloud</module>
         <module>fleet/project</module>
@@ -845,10 +843,8 @@
                 <sourceDirectory>${basedir}/fleet/query-server/src/main/java</sourceDirectory>
                 <sourceDirectory>${basedir}/fleet/job/src/main/java</sourceDirectory>
                 <sourceDirectory>${basedir}/fleet/job/src/main/scala</sourceDirectory>
-                <sourceDirectory>${basedir}/fleet/ai-intf/src/main/java</sourceDirectory>
                 <sourceDirectory>${basedir}/fleet/router/src/main/java</sourceDirectory>
                 <sourceDirectory>${basedir}/fleet/router/src/main/scala</sourceDirectory>
-                <sourceDirectory>${basedir}/fleet/core/src/main/java</sourceDirectory>
                 <sourceDirectory>${basedir}/fleet/vision/src/main/scala</sourceDirectory>
                 <sourceDirectory>${basedir}/fleet/vector/src/main/java</sourceDirectory>
                 <sourceDirectory>${basedir}/fleet/cloud/src/main/java</sourceDirectory>

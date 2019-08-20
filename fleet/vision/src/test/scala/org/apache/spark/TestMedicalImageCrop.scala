@@ -17,9 +17,8 @@
 
 package org.apache.spark
 
-import org.apache.spark.sql.pythonudf.PythonUDFRegister
+import org.apache.spark.sql.leo.VisionSparkUDFs
 import org.apache.spark.sql.test.util.QueryTest
-import org.apache.spark.sql.types.{BooleanType, IntegerType, StringType, StructField, StructType}
 import org.scalatest.BeforeAndAfterAll
 
 class TestMedicalImageCrop extends QueryTest with BeforeAndAfterAll {
@@ -33,43 +32,13 @@ class TestMedicalImageCrop extends QueryTest with BeforeAndAfterAll {
     // Path to data folder containing ndpi/svs/kfb images
     val dataDirPath = "/huawei/naman/code/ocr/data/"
 
-    // Path to scripts folder, containing the extra scripts. It will be added to sys.path
+    // Path to scripts folder, containing the extra scripts. It will be added to sys.path in python
     val scriptsDirPath = "../../fleet/vision/src/main/scala/org/apache/spark/sql/leo/medical/"
 
     sql("DROP TABLE IF EXISTS sourcetable")
     sql("CREATE TEMPORARY TABLE sourcetable USING binaryfile OPTIONS(path='" + dataDirPath + "')")
 
-    val script =
-      s"""
-         |import sys
-         |import time
-         |
-         |def crop_file(file_path, out_path):
-         |    sys.path.insert(0, '${ scriptsDirPath }')
-         |    import wsi_crop
-         |
-         |    start_time = time.time()
-         |
-         |    try:
-         |        crop_processor = wsi_crop.CropProcess(10)
-         |        crop_processor.crop(file_path[5:], out_path)
-         |        return True, int(time.time() - start_time)
-         |    except Exception as e:
-         |        print(e)
-         |        return False, int(time.time() - start_time)
-       """.stripMargin
-
-    PythonUDFRegister.registerPythonUDF(
-      sqlContext.sparkSession,
-      "crop_file",
-      "crop_file",
-      script,
-      Array[String](),
-      new StructType(Array(
-        StructField(name = "success", dataType = BooleanType, nullable = false),
-        StructField(name = "time", dataType = IntegerType, nullable = false)
-      ))
-    )
+    VisionSparkUDFs.registerMedicalImageCrop(sqlContext.sparkSession, scriptsDirPath)
 
     sql(
       s"""

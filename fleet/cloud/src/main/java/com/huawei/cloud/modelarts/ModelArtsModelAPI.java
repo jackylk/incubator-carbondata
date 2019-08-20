@@ -24,10 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.carbondata.ai.DataScan;
-import org.apache.carbondata.ai.ModelAPI;
-import org.apache.carbondata.ai.ModelAPIException;
-import org.apache.carbondata.ai.ModelInputParams;
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.metadata.datatype.DataTypes;

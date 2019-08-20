@@ -31,7 +31,7 @@ class TestImageTransformations extends QueryTest with BeforeAndAfterAll {
   val imageTransTable: String = "imageTransTable"
 
   override protected def beforeAll(): Unit = {
-    VisionSparkUDFs.registerAll(sqlContext)
+    VisionSparkUDFs.registerAll(sqlContext.sparkSession)
 
     sql(s"DROP TABLE IF EXISTS $imageSourceTable")
     sql(s"DROP TABLE IF EXISTS $imageTransTable")

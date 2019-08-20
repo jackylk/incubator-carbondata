@@ -223,10 +223,6 @@ public class TestModelTraining {
     carbon.sql("LOAD DATA LOCAL INPATH '/home/root1/carbon/carbondata/fleet/router/src/test/resources/img.csv' INTO TABLE a1.testIMG OPTIONS('header'='false','DELIMITER'=',','binary_decoder'='baSe64')").show();
     carbon.sql("select flower_mod(c2) from a1.testIMG").show(false);
     carbon.sql("drop table if exists a1.testIMG");
-
-    // delete model and service from modelArts
-    carbon.sql("UNREGISTER MODEL flower_exp.job1");
-
     carbon.sql("drop model if exists job1 on experiment flower_exp");
     carbon.sql("drop experiment if exists flower_exp");
     carbon.sql("drop table if exists a1.test");

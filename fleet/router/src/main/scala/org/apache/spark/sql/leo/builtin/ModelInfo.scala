@@ -20,7 +20,6 @@ package org.apache.spark.sql.leo.builtin
 import scala.collection.JavaConverters._
 import scala.util.control.Breaks._
 
-import org.apache.leo.model.job.{TrainModelDetail, TrainModelManager}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{AnalysisException, SparkSession}
 import org.apache.spark.sql.catalyst.InternalRow
@@ -30,6 +29,8 @@ import org.apache.spark.sql.catalyst.plans.logical.LeafNode
 import org.apache.spark.sql.execution.LeafExecNode
 import org.apache.spark.sql.leo.{ExperimentStoreManager, LeoEnv}
 import org.apache.spark.unsafe.types.UTF8String
+
+import org.apache.carbondata.leo.job.modelarts.{TrainModelDetail, TrainModelManager}
 
 /**
  * Logical plan for ModelInfo TVF

@@ -1,7 +1,7 @@
 package org.apache.carbondata;
 
-import org.apache.carbondata.cloud.SparkS3Constants;
-
+import com.huawei.cloud.obs.OBSSparkConstants;
+import org.apache.spark.sql.CarbonSession;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.leo.LeoEnv;
 import org.junit.Test;
@@ -24,9 +24,9 @@ public class TestLeoPKTableDDL {
     SparkSession.Builder builder =
         SparkSession.builder().master("local").appName("JavaCarbonSessionExample")
             .config("spark.driver.host", "localhost")
-            .config(SparkS3Constants.END_POINT, "obs.cn-north-7.ulanqab.huawei.com:5443")
-            .config(SparkS3Constants.AK, "Q0T7MOHUY0KVLKMEEM3M")
-            .config(SparkS3Constants.SK, "HWmgXbcIWu2333e2HVdjq19oD9AfJULAuEdRgyDO")
+            .config(OBSSparkConstants.END_POINT, "obs.cn-north-7.ulanqab.huawei.com:5443")
+            .config(OBSSparkConstants.AK, "Q0T7MOHUY0KVLKMEEM3M")
+            .config(OBSSparkConstants.SK, "HWmgXbcIWu2333e2HVdjq19oD9AfJULAuEdRgyDO")
             //https://issues.apache.org/jira/browse/HIVE-16346
         .config("hive.warehouse.subdir.inherit.perms", false)
         .config("spark.sql.warehouse.dir", "s3a://leo/")

@@ -19,15 +19,15 @@ package org.apache.spark.sql.leo.command
 
 import scala.collection.JavaConverters._
 
-import org.apache.leo.model.job.{TrainModelDetail, TrainModelManager}
+import com.huawei.cloud.modelarts.DataScan
 import org.apache.spark.sql.{AnalysisException, LeoDatabase, Row, SparkSession}
 import org.apache.spark.sql.execution.command.RunnableCommand
 import org.apache.spark.sql.leo.{ExperimentStoreManager, LeoEnv}
 
-import org.apache.carbondata.ai.DataScan
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.util.ObjectSerializationUtil
+import org.apache.carbondata.leo.job.modelarts.{TrainModelDetail, TrainModelManager}
 
 case class LeoCreateModelCommand(
     modelName: String,

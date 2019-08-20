@@ -22,6 +22,7 @@ import scala.collection.mutable.ArrayBuffer
 import com.google.gson.{JsonObject, JsonParser}
 import com.huawei.ais.common.AuthInfo
 import com.huawei.ais.sdk.AisAccess
+import com.huawei.cloud.CloudConstants
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.io.IOUtils
 import org.apache.http.entity.StringEntity
