@@ -20,11 +20,12 @@ package org.apache.spark.sql.leo.command
 import scala.collection.JavaConverters._
 import scala.util.control.Breaks
 
-import org.apache.leo.model.job.TrainModelManager
 import org.apache.spark.sql.{AnalysisException, Row, SparkSession}
 import org.apache.spark.sql.execution.command.RunnableCommand
 import org.apache.spark.sql.leo.builtin.MoldelArtsUdf
 import org.apache.spark.sql.leo.{ExperimentStoreManager, LeoEnv}
+
+import org.apache.carbondata.leo.job.modelarts.TrainModelManager
 
 case class LeoRegisterModelCommand(
     experimentName: String,

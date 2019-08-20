@@ -22,7 +22,7 @@
   <dependencies>
     <dependency>
       <groupId>org.apache.carbondata</groupId>
-      <artifactId>fleet-core</artifactId>
+      <artifactId>fleet-router</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>

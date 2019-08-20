@@ -21,7 +21,6 @@ import java.util
 
 import scala.collection.JavaConverters._
 
-import org.apache.leo.model.job.TrainModelManager
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{LeoDatabase, SparkSession}
 import org.apache.spark.sql.catalyst.InternalRow
@@ -34,6 +33,7 @@ import org.apache.spark.sql.leo.exceptions.NoSuchExperimentException
 import org.apache.spark.unsafe.types.UTF8String
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
+import org.apache.carbondata.leo.job.modelarts.TrainModelManager
 
 /**
  * Logical plan for ExperimentInfo TVF

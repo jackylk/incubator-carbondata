@@ -21,6 +21,7 @@ import java.util
 
 import scala.collection.JavaConverters._
 
+import com.huawei.cloud.modelarts.DataScan
 import org.apache.spark.sql.{AnalysisException, LeoDatabase, Row, SparkSession}
 import org.apache.spark.sql.carbondata.execution.datasources.CarbonSparkDataSourceUtil
 import org.apache.spark.sql.catalyst.catalog.HiveTableRelation
@@ -31,7 +32,6 @@ import org.apache.spark.sql.execution.datasources.{DataSourceStrategy, LogicalRe
 import org.apache.spark.sql.leo.ExperimentStoreManager
 import org.apache.spark.sql.types.AtomicType
 
-import org.apache.carbondata.ai.DataScan
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.metadata.schema.table.{DataMapSchema, RelationIdentifier}

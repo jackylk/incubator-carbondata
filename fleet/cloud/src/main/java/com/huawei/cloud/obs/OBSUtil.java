@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.carbondata.cloud.SparkS3Constants;
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.processing.loading.csvinput.CSVInputFormat;
 
@@ -72,9 +71,9 @@ public class OBSUtil {
 
   public static ObsClient createObsClient(SparkSession session) {
 
-    String endpoint = session.conf().get(SparkS3Constants.END_POINT);
-    String ak = session.conf().get(SparkS3Constants.AK);
-    String sk = session.conf().get(SparkS3Constants.SK);
+    String endpoint = session.conf().get(OBSSparkConstants.END_POINT);
+    String ak = session.conf().get(OBSSparkConstants.AK);
+    String sk = session.conf().get(OBSSparkConstants.SK);
     ObsConfiguration config = new ObsConfiguration();
     config.setEndPoint(endpoint);
 

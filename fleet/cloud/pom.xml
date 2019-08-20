@@ -25,11 +25,6 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.carbondata</groupId>
-      <artifactId>fleet-ai-intf</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
       <groupId>com.huawei</groupId>
       <artifactId>ais-client-sdk</artifactId>
       <version>1.0</version>

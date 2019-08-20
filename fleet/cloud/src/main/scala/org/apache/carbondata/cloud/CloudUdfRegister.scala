@@ -17,6 +17,7 @@
 
 package org.apache.carbondata.cloud
 
+import com.huawei.cloud.CloudConstants
 import org.apache.spark.sql.{CloudUtils, SparkSession}
 
 import org.apache.carbondata.common.logging.LogServiceFactory
