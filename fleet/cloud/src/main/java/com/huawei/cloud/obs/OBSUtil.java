@@ -17,6 +17,8 @@
 package com.huawei.cloud.obs;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -39,6 +41,7 @@ import com.obs.services.model.PutObjectRequest;
 import com.obs.services.model.fs.NewBucketRequest;
 import com.univocity.parsers.csv.CsvParser;
 import com.univocity.parsers.csv.CsvParserSettings;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Logger;
@@ -251,6 +254,76 @@ public class OBSUtil {
       builder.append(line).append("\n");
     }
     return builder.toString();
+  }
+
+  /**
+   * Copy file(s) from OBS to local recursively
+   * <p>
+   * If path ends with "/", it will be treated as a directory and the files (only) from that directory will be copied.
+   * Else, only one file represented by path will be copied.
+   * <p>
+   * Usage: OBSUtil.copyToLocal("obs://leo-query-data-user-cn-north-7/data/images/", "/tmp/mydir", session, true);
+   *
+   * @param path      like s3n://docker-test3/input
+   * @param destDir   local directory
+   * @param session
+   * @param recursive
+   */
+  public static void copyToLocal(String path, String destDir, SparkSession session, boolean recursive)
+      throws IOException {
+    String bucket = getBucketName(path);
+    String obsPath = path.substring(path.indexOf(bucket) + bucket.length());
+    while (obsPath.startsWith("/")) {
+      obsPath = obsPath.substring(1);
+    }
+
+    destDir = (destDir.endsWith("/")) ? destDir : destDir + "/";
+    File localDir = new File(destDir);
+    if (!localDir.exists() && !localDir.mkdirs()) {
+      throw new RuntimeException("Error creating directory " + localDir.getParentFile().toString());
+    }
+
+    try (ObsClient obsClient = createObsClient(session)) {
+      if (!path.endsWith("/")) {
+        // Only one file to copy
+        ObsObject obsObject = obsClient.getObject(bucket, obsPath);
+
+        String fileName = obsPath.substring(obsPath.lastIndexOf("/") + 1);
+        File localFile = new File(destDir + fileName);
+        IOUtils.copy(obsObject.getObjectContent(), new FileOutputStream(localFile));
+      } else {
+        // Copy all files and directories in path
+        ListObjectsRequest listObjectsRequest = new ListObjectsRequest();
+        listObjectsRequest.setBucketName(bucket);
+        listObjectsRequest.setPrefix(obsPath);
+        listObjectsRequest.setDelimiter("/");
+        ObjectListing objListing = obsClient.listObjects(listObjectsRequest);
+
+        // Copy all files from OBS path
+        for (ObsObject obsObject : objListing.getObjects()) {
+          if (obsObject.getObjectKey().endsWith("/")) {
+            // objListing.getObjects() also returns an `ObsObject` instance with parent directory path.
+            // Just ignore that
+            continue;
+          }
+          String fileName = obsObject.getObjectKey().substring(obsObject.getObjectKey().lastIndexOf("/") + 1);
+          File localFile = new File(destDir + fileName);
+          IOUtils.copy(obsClient.getObject(bucket, obsObject.getObjectKey()).getObjectContent(), new FileOutputStream(localFile));
+        }
+
+        // Recursively copy all the directories from path
+        if (recursive) {
+          for (String dir : objListing.getCommonPrefixes()) {
+            String dirName = dir.substring(0, dir.length() - 1);
+            dirName = dirName.substring(dirName.lastIndexOf("/") + 1);
+            if (!new File(destDir + dirName).mkdirs()) {
+              throw new RuntimeException("Error creating directory " + localDir.getParentFile().toString());
+            }
+            copyToLocal(path + dirName + "/", destDir + dirName + "/", session, true);
+          }
+        }
+      }
+    }
   }
 
 }

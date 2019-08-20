@@ -1,7 +1,6 @@
 package org.apache.carbondata;
 
 import com.huawei.cloud.obs.OBSSparkConstants;
-import org.apache.spark.sql.CarbonSession;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.leo.LeoEnv;
 import org.junit.Test;
