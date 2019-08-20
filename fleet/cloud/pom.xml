@@ -11,8 +11,8 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>carbondata-cloud</artifactId>
-  <name> Apache Carbondata :: Cloud </name>
+  <artifactId>fleet-cloud</artifactId>
+  <name> Fleet :: Cloud </name>
 
   <properties>
     <dev.path>${basedir}/../../dev</dev.path>
@@ -26,7 +26,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.carbondata</groupId>
-      <artifactId>carbondata-ai-intf</artifactId>
+      <artifactId>fleet-ai-intf</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>

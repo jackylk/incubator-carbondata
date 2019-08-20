@@ -11,8 +11,8 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>carbondata-ai-intf</artifactId>
-  <name> Apache Carbondata :: AI Interface </name>
+  <artifactId>fleet-ai-intf</artifactId>
+  <name> Fleet :: AI Interface </name>
 
   <properties>
     <dev.path>${basedir}/../../dev</dev.path>
