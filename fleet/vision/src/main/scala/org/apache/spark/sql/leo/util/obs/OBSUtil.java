@@ -1,11 +1,11 @@
 package org.apache.spark.sql.leo.util.obs;
 
+import com.huawei.cloud.obs.OBSSparkConstants;
 import com.obs.services.ObsClient;
 import com.obs.services.ObsConfiguration;
 import com.obs.services.model.ListObjectsRequest;
 import com.obs.services.model.ObjectListing;
 import com.obs.services.model.ObsObject;
-import org.apache.carbondata.SparkS3Constants;
 import org.apache.commons.io.IOUtils;
 import org.apache.spark.sql.SparkSession;
 
@@ -39,9 +39,9 @@ public class OBSUtil {
 
 
   public static ObsClient createObsClient(SparkSession session) {
-    String endpoint = session.conf().get(SparkS3Constants.END_POINT);
-    String ak = session.conf().get(SparkS3Constants.AK);
-    String sk = session.conf().get(SparkS3Constants.SK);
+    String endpoint = session.conf().get(OBSSparkConstants.END_POINT);
+    String ak = session.conf().get(OBSSparkConstants.AK);
+    String sk = session.conf().get(OBSSparkConstants.SK);
 
     ObsConfiguration config = new ObsConfiguration();
     config.setEndPoint(endpoint);

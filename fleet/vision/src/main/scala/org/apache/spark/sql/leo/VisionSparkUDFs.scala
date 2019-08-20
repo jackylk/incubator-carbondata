@@ -17,7 +17,8 @@
 
 package org.apache.spark.sql.leo
 
-import org.apache.carbondata.SparkS3Constants
+import com.huawei.cloud.obs.OBSSparkConstants
+
 import org.apache.carbondata.core.util.CarbonUtil
 import org.apache.spark.sql.{SQLContext, SparkSession}
 import org.apache.spark.sql.leo.image.Utils.{fromBytes, toBytes}
@@ -156,9 +157,9 @@ object VisionSparkUDFs {
          |
          |    scratch_dir = '/tmp/naman/'
          |
-         |    AK = '${ sparkSession.conf.get(SparkS3Constants.AK) }'
-         |    SK = '${ sparkSession.conf.get(SparkS3Constants.SK) }'
-         |    SERVER = '${ sparkSession.conf.get(SparkS3Constants.END_POINT) }'
+         |    AK = '${ sparkSession.conf.get(OBSSparkConstants.AK) }'
+         |    SK = '${ sparkSession.conf.get(OBSSparkConstants.SK) }'
+         |    SERVER = '${ sparkSession.conf.get(OBSSparkConstants.END_POINT) }'
          |    obsClient = obs.ObsClient(access_key_id=AK, secret_access_key=SK, server=SERVER)
          |
          |    start_time = time.time()
@@ -240,9 +241,9 @@ object VisionSparkUDFs {
          |
          |    scratch_dir = '/tmp/naman/'
          |
-         |    AK = '${ sparkSession.conf.get(SparkS3Constants.AK) }'
-         |    SK = '${ sparkSession.conf.get(SparkS3Constants.SK) }'
-         |    SERVER = '${ sparkSession.conf.get(SparkS3Constants.END_POINT) }'
+         |    AK = '${ sparkSession.conf.get(OBSSparkConstants.AK) }'
+         |    SK = '${ sparkSession.conf.get(OBSSparkConstants.SK) }'
+         |    SERVER = '${ sparkSession.conf.get(OBSSparkConstants.END_POINT) }'
          |    obsClient = obs.ObsClient(access_key_id=AK, secret_access_key=SK, server=SERVER)
          |
          |    start_time = time.time()

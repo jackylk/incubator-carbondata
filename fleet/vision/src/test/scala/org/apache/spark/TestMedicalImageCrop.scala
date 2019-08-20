@@ -37,7 +37,7 @@ class TestMedicalImageCrop extends QueryTest with BeforeAndAfterAll {
 
     sql("DROP TABLE IF EXISTS sourcetable")
     sql("CREATE TEMPORARY TABLE sourcetable USING binaryfile OPTIONS(path='" + dataDirPath + "')")
-    
+
     VisionSparkUDFs.registerMedicalImageCrop(sqlContext.sparkSession, scriptsDirPath)
 
     sql(
