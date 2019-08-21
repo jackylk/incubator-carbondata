@@ -34,12 +34,15 @@ import org.apache.carbondata.leo.job.query.AsyncJobStatus;
 import org.apache.carbondata.leo.job.query.JobMeta;
 import org.apache.carbondata.leo.job.define.QueryDef;
 import org.apache.carbondata.leo.queryserver.model.view.Column;
+import org.apache.carbondata.leo.queryserver.model.view.Response;
 import org.apache.carbondata.leo.queryserver.model.view.Schema;
 import org.apache.carbondata.leo.queryserver.model.view.SqlResult;
 import org.apache.carbondata.leo.queryserver.Main;
 import org.apache.carbondata.leo.queryserver.exception.ErrorCode;
 import org.apache.carbondata.leo.queryserver.exception.JobStatusException;
 import org.apache.carbondata.leo.queryserver.exception.LeoServiceException;
+import org.apache.carbondata.leo.queryserver.model.view.TempDBRequest;
+import org.apache.carbondata.leo.queryserver.model.view.TempDBResponse;
 import org.apache.carbondata.leo.queryserver.runner.locator.RunnerLocator;
 import org.apache.carbondata.leo.queryserver.model.validate.RequestValidator;
 import org.apache.carbondata.leo.queryserver.model.view.FetchSqlResultResponse;
@@ -52,6 +55,7 @@ import org.apache.carbondata.leo.router.Router;
 import org.apache.log4j.Logger;
 import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException;
 import org.apache.spark.sql.catalyst.parser.ParserInterface;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.types.StructField;
@@ -107,7 +111,7 @@ public class Controller {
     // decide whether the type
     Query query = Router.route(session, originSql, unsolvedPlan);
     Schema schema = null;
-    JobID jobID = JobID.newRandomID();;
+    JobID jobID = JobID.newRandomID();
     if (query.getOriginPlan().schema() != null) {
       schema = convertSchemaFromStructType(query);
     }
@@ -142,6 +146,45 @@ public class Controller {
           throw new LeoServiceException(ErrorCode.INTERNAL_ERROR.getCode(), ex.getMessage());
         }
     }
+  }
+
+  @RequestMapping(value = "/v1/{project_id}/tempdb", method = RequestMethod.POST,
+      consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<TempDBResponse> tempDBManage(
+      @RequestBody TempDBRequest request,
+      @PathVariable(name = "project_id") String projectId) throws LeoServiceException {
+    RequestValidator.validateDBMgtReq(request);
+    String tempDBName = request.getTempDBName().trim();
+    String action = request.getAction().trim().toLowerCase();
+    SparkSession session = Main.getSession();
+    try {
+      switch (action) {
+        case "create":
+          session.sql("CREATE DATABASE IF NOT EXISTS " + tempDBName);
+          session.conf().set("leo.temp.db", tempDBName);
+          LOGGER.info("temp db is created: " + tempDBName);
+          break;
+        case "drop":
+          session.sql("DROP DATABASE " + tempDBName + " CASCADE");
+          session.conf().unset("leo.temp.db");
+          LOGGER.info("temp db is deleted: " + tempDBName);
+          break;
+        default:
+          throw new LeoServiceException(ErrorCode.INVALID_PARAMETER.getCode(), "action should be"
+              + "create or drop");
+      }
+    } catch (Exception e) {
+      LOGGER.error("Failed to manage temp db: ", e);
+      if (e instanceof NoSuchDatabaseException) {
+        throw new LeoServiceException(ErrorCode.LEO_ANALYSIS_ERROR.getCode(),
+            "no such data base");
+      }
+      throw new LeoServiceException(HttpStatus.INTERNAL_SERVER_ERROR.value(),
+          HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase());
+    }
+    TempDBResponse tempDBResponse = new TempDBResponse(request);
+    tempDBResponse.setMessage("SUCCESS");
+    return new ResponseEntity<>(tempDBResponse, HttpStatus.OK);
   }
 
   private static Schema convertSchemaFromStructType(Query query) throws LeoServiceException {

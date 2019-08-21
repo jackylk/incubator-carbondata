@@ -21,6 +21,8 @@ import org.apache.carbondata.core.util.CarbonProperties;
 import org.apache.carbondata.leo.queryserver.exception.InvalidArgumentsException;
 
 import org.apache.carbondata.leo.queryserver.model.view.SqlRequest;
+import org.apache.carbondata.leo.queryserver.model.view.TempDBRequest;
+
 import org.apache.commons.lang.StringUtils;
 
 public class RequestValidator {
@@ -31,6 +33,19 @@ public class RequestValidator {
     }
     if (StringUtils.isEmpty(request.getSqlStatement())) {
       throw new InvalidArgumentsException("sql statement is invalid");
+    }
+  }
+
+  public static void validateDBMgtReq(TempDBRequest request) throws InvalidArgumentsException {
+    if (request == null) {
+      throw new InvalidArgumentsException("TempDBRequest should not be null");
+    }
+    if (StringUtils.isEmpty(request.getTempDBName()) || StringUtils.isEmpty(request.getAction())) {
+      throw new InvalidArgumentsException("dbname or action should not be empty");
+    }
+    if (!request.getAction().trim().toLowerCase().equals("create") &&
+        !request.getAction().trim().toLowerCase().equals("drop")) {
+      throw new InvalidArgumentsException("action should be 'create' or 'drop' ");
     }
   }
 

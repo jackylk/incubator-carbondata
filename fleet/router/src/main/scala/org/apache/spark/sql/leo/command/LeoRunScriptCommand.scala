@@ -17,6 +17,8 @@
 
 package org.apache.spark.sql.leo.command
 
+import java.util.NoSuchElementException
+
 import scala.io.Source
 
 import org.apache.spark.sql.{AnalysisException, Row, SparkSession}
@@ -71,7 +73,13 @@ case class LeoRunScriptCommand(
     if (output.length > 1) {
       throw new AnalysisException("output fields should be less than 2")
     }
-    val tempDBName = "tempdb" + System.nanoTime()
+    val tempDBNameInConf = spark.conf.get("leo.temp.db", "")
+    val needCreateTempDB = tempDBNameInConf.equalsIgnoreCase("")
+    // if has temp db name in conf, we use it and don't drop it, otherwise we should create a
+    // temp one finally clean it.
+    val tempDBName =
+      if(needCreateTempDB) "tempdb" + System.nanoTime() else tempDBNameInConf
+
     val tempTableName = "temptable" + System.nanoTime()
     val tempFuncName = "tempfunc" + System.nanoTime()
 
@@ -86,12 +94,16 @@ case class LeoRunScriptCommand(
       output.head.dataType)
 
     val rows = try {
-      spark.sql(s"create database $tempDBName")
+      if (needCreateTempDB) {
+        spark.sql(s"create database if not exists $tempDBName")
+      }
       spark.sql(s"create view $tempDBName.$tempTableName as select 1")
       spark.sql(s"select $tempFuncName(1) from $tempDBName.$tempTableName").collect()
     } finally {
       spark.sql(s"drop view if exists $tempDBName.$tempTableName")
-      spark.sql(s"drop database if exists $tempDBName")
+      if (needCreateTempDB) {
+        spark.sql(s"drop database if exists $tempDBName")
+      }
       PythonUDFRegister.unregisterPythonUDF(spark, tempFuncName)
     }
     rows
