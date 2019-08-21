@@ -46,7 +46,7 @@ object PythonUDFRegister {
       val inBinary = PythonExecUtil.runPythonScript(spark, libraryIncludes, fileName, Seq.empty, usePython3AsDefault)
       FileFactory.deleteFile(fileName, FileFactory.getFileType(fileName))
 
-      val default_python_version = if (usePython3AsDefault) "3.5" else "2.7"
+      val default_python_version = if (usePython3AsDefault) "3.6" else "2.7"
       val default_python_exec = if (usePython3AsDefault) "python3" else "python2"
 
       // TODO handle big udf bigger than 1 MB, they supposed to be broadcasted.
