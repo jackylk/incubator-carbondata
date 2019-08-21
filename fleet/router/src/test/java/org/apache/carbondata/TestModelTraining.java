@@ -21,7 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 
-import org.apache.carbondata.ai.DataScan;
+import com.huawei.cloud.modelarts.DataScan;
 import org.apache.carbondata.common.exceptions.sql.NoSuchDataMapException;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
@@ -33,7 +33,6 @@ import org.apache.carbondata.core.scan.expression.conditional.EqualToExpression;
 import org.apache.carbondata.core.util.CarbonProperties;
 import org.apache.carbondata.core.util.ObjectSerializationUtil;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.spark.sql.LeoDatabase;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.leo.LeoEnv;
