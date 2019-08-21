@@ -85,13 +85,15 @@ case class LeoRunScriptCommand(
       Array[String](),
       output.head.dataType)
 
-    spark.sql(s"create database $tempDBName")
-    spark.sql(s"create view $tempDBName.$tempTableName as select 1")
-    val rows = spark.sql(s"select $tempFuncName(1) from $tempDBName.$tempTableName")
-      .collect()
-    PythonUDFRegister.unregisterPythonUDF(spark, tempFuncName)
-    spark.sql(s"drop view $tempDBName.$tempTableName")
-    spark.sql(s"drop database $tempDBName")
+    val rows = try {
+      spark.sql(s"create database $tempDBName")
+      spark.sql(s"create view $tempDBName.$tempTableName as select 1")
+      spark.sql(s"select $tempFuncName(1) from $tempDBName.$tempTableName").collect()
+    } finally {
+      spark.sql(s"drop view if exists $tempDBName.$tempTableName")
+      spark.sql(s"drop database if exists $tempDBName")
+      PythonUDFRegister.unregisterPythonUDF(spark, tempFuncName)
+    }
     rows
   }
 }
