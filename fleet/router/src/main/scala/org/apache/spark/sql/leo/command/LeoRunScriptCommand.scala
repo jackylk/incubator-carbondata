@@ -28,6 +28,8 @@ import org.apache.spark.sql.execution.command.RunnableCommand
 import org.apache.spark.sql.pythonudf.PythonUDFRegister
 import org.apache.spark.sql.types.StringType
 
+import org.apache.carbondata.leo.job.query.JobConf
+
 
 /**
  * Run the given script by sending one task to executor and run the script.
@@ -73,7 +75,7 @@ case class LeoRunScriptCommand(
     if (output.length > 1) {
       throw new AnalysisException("output fields should be less than 2")
     }
-    val tempDBNameInConf = spark.conf.get("leo.temp.db", "")
+    val tempDBNameInConf = spark.conf.get(JobConf.LEO_TEMP_DB, "")
     val needCreateTempDB = tempDBNameInConf.equalsIgnoreCase("")
     // if has temp db name in conf, we use it and don't drop it, otherwise we should create a
     // temp one finally clean it.
