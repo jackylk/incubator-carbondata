@@ -27,6 +27,7 @@ import java.util.Set;
 
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.leo.job.query.AsyncJob;
+import org.apache.carbondata.leo.job.query.JobConf;
 import org.apache.carbondata.leo.job.query.JobID;
 import org.apache.carbondata.leo.queryserver.client.JobMetaStoreClient;
 import org.apache.carbondata.leo.job.define.Query;
@@ -161,12 +162,12 @@ public class Controller {
       switch (action) {
         case "create":
           session.sql("CREATE DATABASE IF NOT EXISTS " + tempDBName);
-          session.conf().set("leo.temp.db", tempDBName);
+          session.conf().set(JobConf.LEO_TEMP_DB, tempDBName);
           LOGGER.info("temp db is created: " + tempDBName);
           break;
         case "drop":
           session.sql("DROP DATABASE " + tempDBName + " CASCADE");
-          session.conf().unset("leo.temp.db");
+          session.conf().unset(JobConf.LEO_TEMP_DB);
           LOGGER.info("temp db is deleted: " + tempDBName);
           break;
         default:

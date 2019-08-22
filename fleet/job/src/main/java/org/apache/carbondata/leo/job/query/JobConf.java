@@ -23,5 +23,5 @@ public class JobConf {
   public static final String QUERY_RESULT_DIR_PREFIX = "query-result-";
   public static final String LEO_CLUSTER_NAME = "leo.cluster.name";
   public static final String LEO_QUERY_BUCKET_NAME = "leo.query.bucket.name";
-
+  public static final String LEO_TEMP_DB = "leo.temp.db";
 }
