@@ -154,10 +154,11 @@ object CarbonSetCommand {
 
 case class CarbonResetCommand()
   extends RunnableCommand {
-  override val output = ResetCommand.output
+  override val output = Seq.empty
 
   override def run(sparkSession: SparkSession): Seq[Row] = {
     CarbonEnv.getInstance(sparkSession).carbonSessionInfo.getSessionParams.clear()
-    ResetCommand.run(sparkSession)
+    sparkSession.sessionState.conf.clear()
+    Seq.empty[Row]
   }
 }
