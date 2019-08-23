@@ -140,7 +140,7 @@ object CarbonInternalMetastore {
   }
 
   def refreshIndexInfo(dbName: String, tableName: String,
-      carbonTable: CarbonTable)(sparkSession: SparkSession): Unit = {
+      carbonTable: CarbonTable, needLock: Boolean = true)(sparkSession: SparkSession): Unit = {
     val indexTableExists = CarbonInternalScalaUtil.isIndexTableExists(carbonTable)
     // tables created without property "indexTableExists", will return null, for those tables enter
     // into below block, gather the actual data from hive and then set this property to true/false
@@ -183,14 +183,14 @@ object CarbonInternalMetastore {
             // to false as there is no index table for this table
             CarbonInternalScalaUtil
               .addOrModifyTableProperty(carbonTable,
-                Map("indexTableExists" -> "false"), schema)(sparkSession,
+                Map("indexTableExists" -> "false"), schema, needLock)(sparkSession,
                 sparkSession.sessionState.catalog.asInstanceOf[CarbonSessionCatalog])
           } else {
             // modify the tableProperties of mainTable by adding "indexTableExists" property
             // to true as there are some index table for this table
             CarbonInternalScalaUtil
               .addOrModifyTableProperty(carbonTable,
-                Map("indexTableExists" -> "true"), schema)(sparkSession,
+                Map("indexTableExists" -> "true"), schema, needLock)(sparkSession,
                 sparkSession.sessionState.catalog.asInstanceOf[CarbonSessionCatalog])
           }
         }

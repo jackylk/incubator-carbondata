@@ -152,7 +152,7 @@ class CarbonFileMetastore extends CarbonMetaStore {
     tables match {
       case Some(t) =>
         if (isSchemaRefreshed(absIdentifier, sparkSession)) {
-          readCarbonSchema(absIdentifier, parameters, sparkSession)
+          readCarbonSchema(absIdentifier, parameters, sparkSession, false)
         } else {
           CarbonRelation(database, tableName, CarbonSparkUtil.createSparkMeta(t), t)
         }
@@ -162,7 +162,9 @@ class CarbonFileMetastore extends CarbonMetaStore {
   }
 
   private def readCarbonSchema(absIdentifier: AbsoluteTableIdentifier,
-      parameters: Map[String, String], sparkSession: SparkSession): CarbonRelation = {
+    parameters: Map[String, String],
+    sparkSession: SparkSession,
+    needLock: Boolean = true): CarbonRelation = {
     val relation = readCarbonSchema(absIdentifier,
       !parameters.getOrElse("isTransactional", "true").toBoolean) match {
       case Some(meta) =>
@@ -171,6 +173,13 @@ class CarbonFileMetastore extends CarbonMetaStore {
       case None =>
         throw new NoSuchTableException(absIdentifier.getDatabaseName, absIdentifier.getTableName)
     }
+    // fire post event after lookup relation
+    val operationContext = new OperationContext
+    val createCarbonRelationPostEvent: CreateCarbonRelationPostEvent =
+      CreateCarbonRelationPostEvent(
+        sparkSession, relation.metaData.carbonTable, needLock)
+    OperationListenerBus.getInstance.fireEvent(createCarbonRelationPostEvent, operationContext)
+    relation
   }
 
   /**
