@@ -427,8 +427,6 @@ object CarbonFilters {
         new AndExpression(l, r)
       case strTrim: StringTrim if isStringTrimCompatibleWithCarbon(strTrim) =>
         transformExpression(strTrim)
-      case s: ScalaUDF =>
-        new MatchExpression(s.children.head.toString())
       case _ =>
         new SparkUnknownExpression(expr.transform {
           case AttributeReference(name, dataType, _, _) =>
