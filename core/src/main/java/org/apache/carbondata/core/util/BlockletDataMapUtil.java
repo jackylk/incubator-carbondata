@@ -184,6 +184,7 @@ public class BlockletDataMapUtil {
     FileFactory.FileType fileType = FileFactory.getFileType(carbonDataFile);
     switch (fileType) {
       case S3:
+      case OBS:
       case LOCAL:
         // consider backward compatibility
         // when the file size in blockInfo is not zero, use this file size in blockInfo.
