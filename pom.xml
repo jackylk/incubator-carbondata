@@ -102,6 +102,7 @@
     <module>store/sdk</module>
     <module>integration/spark-datasource</module>
     <module>integration/hive</module>
+    <module>integration/flink</module>
     <module>assembly</module>
   </modules>
 
