@@ -19,4 +19,4 @@ scripts:
 
 artifacts:
   package:
-    - package/EI_${COMPONENT_NAME}_${COMPONENT_VERSION}-${DP_VERSION}_release.tar.gz
+    - package/${COMPONENT_NAME}_${COMPONENT_VERSION}-${DP_VERSION}_release.tar.gz

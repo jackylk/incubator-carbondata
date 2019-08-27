@@ -22,14 +22,26 @@ whoami
 Carbon_FOLDER="${PWD}"
 git log -3
 
-export COMPONENT_NAME=${COMPONENT_NAME:-CarbonData}
+# get carbon branch from 'CID_REPO_BRANCH' or 'CID_TAG_INFO'
+if  [ ! -n "${CID_REPO_BRANCH}" ] ;then
+    CARBON_BRANCH=${CID_TAG_INFO}
+else
+    CARBON_BRANCH=${CID_REPO_BRANCH}
+fi
+echo "Carbon branch: ${CARBON_BRANCH}"
+
+# eg. EI_CarbonData_Kernel_Component
+export COMPONENT_NAME=${COMPONENT_NAME:-EI_CarbonData_Kernel_Component}
+# origin version
 export COMPONENT_VERSION=${COMPONENT_VERSION:-1.6.1.0100}
 export DP_VERSION=${DP_VERSION:-dplatform-1.0.0}
-export DISPLAY_VERSION=${DISPLAY_VERSION:-1.6.0.0100}
-export VERSION=${CARBON_BRANCH:-1.6.0.0100.B001}
+# HW_internal_version, tag name, eg. EI_CarbonData_Kernel_Component_1.6.0.0100.B001
+export INTERNAL_VERSION=${CARBON_BRANCH:-1.6.0.0100.B001}
 export HADOOP_VERSION=${HADOOP_VERSION:-3.1.1.0100}
 export SPARK_VERSION=${SPARK_VERSION:-2.3.2.0101}
-export BUILD_VERSION=${COMPONENT_VERSION}-${DP_VERSION}
+# HW_display_version
+export DISPLAY_VERSION=${COMPONENT_VERSION}-${DP_VERSION}
+export BUILD_VERSION=${DISPLAY_VERSION}
 export CI_LOCAL_REPOSITORY="carbon_local_repository"
 #mvn -s /home/tool/apache-maven-3.3.3/conf/carbon_settings.xml clean install -U -Pbuild-with-format -Pspark-2.3 -Pmv -DskipTests -Dfindbugs.skip=true -Dcheckstyle.skip=true
 #-Dspark.version=${SPARK_VERSION} -Dhadoop.version=${HADOOP_VERSION} -Dbuild.version=${BUILD_VERSION}
@@ -55,6 +67,8 @@ yunlongRepo="http://wlg1.artifactory.cd-cloud-artifact.tools.huawei.com/artifact
 wget ${yunlongRepo}/it/unimi/dsi/fastutil/8.2.3/fastutil-8.2.3.jar
 wget ${yunlongRepo}/com/google/code/gson/gson/2.4/gson-2.4.jar
 wget ${yunlongRepo}/com/github/luben/zstd-jni/1.3.2-2/zstd-jni-1.3.2-2.jar
+cp ${Carbon_FOLDER}/fleet/cloud/lib/huawei/ais-client-sdk-1.0.1.jar ./
+cp ${Carbon_FOLDER}/fleet/cloud/lib/huawei/java-sdk-core-2.0.1.jar ./
 
 cd ${Carbon_FOLDER}
 if [  -d ${Carbon_FOLDER}/CI ]; then
@@ -66,7 +80,7 @@ cp -r .build_config/CI/* CI/
 
 cd ${Carbon_FOLDER}/CI
 
-ant -DVERSION=${VERSION} -DDISPLAY_VERSION=${DISPLAY_VERSION} -DHADOOP_VERSION=${HADOOP_VERSION} -DSPARK_VERSION=${SPARK_VERSION} -DBUILD_VERSION=${BUILD_VERSION} -DPOM_VERSION=${POM_VERSION} -f 1.6.1_KernelCarbon_2.3_MRS.xml package
+ant -DVERSION=${COMPONENT_VERSION} -DDISPLAY_VERSION=${DISPLAY_VERSION} -DINTERNAL_VERSION=${INTERNAL_VERSION} -DHADOOP_VERSION=${HADOOP_VERSION} -DSPARK_VERSION=${SPARK_VERSION} -DBUILD_VERSION=${BUILD_VERSION} -DCOMPONENT_NAME=${COMPONENT_NAME} -f 1.6.1_KernelCarbon_2.3_MRS.xml package
 
 cd ${Carbon_FOLDER}
 if [  -d ${Carbon_FOLDER}/package ]; then
@@ -93,10 +107,20 @@ if [ -e carbondata_jars.tar.gz ];then
   mv carbondata_jars.tar.gz ${Carbon_FOLDER}/package
 fi
 
-cp fleet/project/target/fleet-2.11-*.zip  package
+cp fleet/project/target/fleet-2.11-${COMPONENT_VERSION}-${DP_VERSION}.zip  package
 
 cd ${Carbon_FOLDER}
 cd package/
-tar -czf EI_${COMPONENT_NAME}_${COMPONENT_VERSION}-${DP_VERSION}_release.tar.gz *
+# EI_CarbonData_Kernel_Component_MRS_ same as EI_CarbonData_Kernel_Component_
+rm -rf EI_CarbonData_Kernel_Component_MRS_*
+# set version.properties for fleet zip
+tar -xzf ${COMPONENT_NAME}_${COMPONENT_VERSION}-${DP_VERSION}.tar.gz
+unzip -o fleet-2.11-${COMPONENT_VERSION}-${DP_VERSION}.zip
+cp carbonlib/version.properties fleet/
+zip -r fleet-2.11-${COMPONENT_VERSION}-${DP_VERSION}.zip fleet/
+rm -rf carbonlib/
+rm -rf fleet/
+
+tar -czf ${COMPONENT_NAME}_${COMPONENT_VERSION}-${DP_VERSION}_release.tar.gz *
 
 echo "Finished."

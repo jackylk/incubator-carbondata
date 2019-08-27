@@ -2,43 +2,43 @@
 <!--there are 3 target: 'exec', 'package', 'sdk'. and 'package' depends on 'exec', so 'exec' and 'package' will be executed -->
 <project default="package">
    <!--  <property file="build.properties"/> -->
-<property name="versionPrefix" value="EI_CarbonData_"/>
-<property name="versionPrefixSDK" value="EI_CarbonDataSDK_"/>
-<property name="versionSuffix" value="Kernel_Component_"/>
-<property name="versionSuffixMRS" value="Kernel_Component_MRS_"/>
+	<property name="versionPrefix" value="EI_CarbonData_"/>
+	<property name="versionPrefixSDK" value="EI_CarbonDataSDK_"/>
+	<property name="versionSuffix" value="Kernel_Component_"/>
+	<property name="versionSuffixMRS" value="Kernel_Component_MRS_"/>
 
-
-	<property name="versionFolder" value="../CI/release/${versionPrefix}${versionSuffix}${DISPLAY_VERSION}"/>
+	<property name="versionFolder" value="../CI/release/${COMPONENT_NAME}_${DISPLAY_VERSION}"/>
+	<!--<property name="versionFolder" value="../CI/release/${versionPrefix}${versionSuffix}${DISPLAY_VERSION}"/>-->
 	<property name="versionFolderMRS" value="../CI/release/${versionPrefix}${versionSuffixMRS}${DISPLAY_VERSION}"/>
 	
 	<property name="versionFolderSDK" value="../CI/release/${versionPrefixSDK}${versionSuffix}${DISPLAY_VERSION}"/>
 		
-	<property name="libDir" value="../CI/release/${versionPrefix}${versionSuffix}${DISPLAY_VERSION}/carbonlib"/>
-	<property name="libDirMRS" value="../CI/release/${versionPrefix}${versionSuffixMRS}${DISPLAY_VERSION}/carbonlib"/>
-	<property name="libDirSDK" value="../CI/release/${versionPrefixSDK}${versionSuffix}${DISPLAY_VERSION}/carbonlib"/>
+	<property name="libDir" value="${versionFolder}/carbonlib"/>
+	<property name="libDirMRS" value="${versionFolderMRS}/carbonlib"/>
+	<property name="libDirSDK" value="${versionFolderSDK}/carbonlib"/>
 
 
-	<property name="libConf" value="../CI/release/${versionPrefix}${versionSuffix}${DISPLAY_VERSION}/conf"/>
-	<property name="libConfSDK" value="../CI/release/${versionPrefix}${versionSuffix}${DISPLAY_VERSION}/conf"/>
+	<property name="libConf" value="${versionFolder}/conf"/>
+	<property name="libConfSDK" value="${versionFolderSDK}/conf"/>
 
 	<property name="hadoop.version" value="${HADOOP_VERSION}" />
 	<property name="spark.version" value="${SPARK_VERSION}" />
-	<property name="pom.version" value="${POM_VERSION}" />
+	<property name="build.version" value="${BUILD_VERSION}" />
 	<echo message="${HADOOP_VERSION}" />
-		<target name="exec">
+	<target name="exec">
 
 		<delete dir="release"/>
-			<exec dir = "./../" executable = "sh"  failifexecutionfails="true" failonerror="true">
-				
-  	  			<arg line="-c 'mvn -s ./.build_config/carbon_settings.xml clean install -U -Pbuild-with-format -Pspark-2.3 -Pmv -DskipTests -Dfindbugs.skip=true -Dcheckstyle.skip=true -Dscalastyle.skip=true -Dspark.version=${SPARK_VERSION} -Dhadoop.version=${HADOOP_VERSION} -Dbuild.version=${BUILD_VERSION}'"/>
+		<exec dir = "./../" executable = "sh"  failifexecutionfails="true" failonerror="true">
 
-				</exec>
-				
-			<echo message="MVN command=mvn -s ./.build_config/carbon_settings.xml clean install -U -Pbuild-with-format -Pspark-2.3 -Pmv -DskipTests -Dfindbugs.skip=true -Dcheckstyle.skip=true -Dscalastyle.skip=true -Dspark.version=${SPARK_VERSION} -Dhadoop.version=${HADOOP_VERSION} -Dbuild.version=${BUILD_VERSION}"/>
-		</target>
+			<arg line="-c 'mvn -s ./.build_config/carbon_settings.xml clean install -U -Pbuild-with-format -Pspark-2.3 -Pmv -DskipTests -Dfindbugs.skip=true -Dcheckstyle.skip=true -Dscalastyle.skip=true -Dspark.version=${SPARK_VERSION} -Dhadoop.version=${HADOOP_VERSION} -Dbuild.version=${BUILD_VERSION}'"/>
 
-		<target name="package" depends = "exec" description="Creates the package.">
-	       <mkdir dir="${versionFolder}"/>	
+		</exec>
+
+		<echo message="MVN command=mvn -s ./.build_config/carbon_settings.xml clean install -U -Pbuild-with-format -Pspark-2.3 -Pmv -DskipTests -Dfindbugs.skip=true -Dcheckstyle.skip=true -Dscalastyle.skip=true -Dspark.version=${SPARK_VERSION} -Dhadoop.version=${HADOOP_VERSION} -Dbuild.version=${BUILD_VERSION}"/>
+	</target>
+
+	<target name="package" depends = "exec" description="Creates the package.">
+	   	<mkdir dir="${versionFolder}"/>
 		<mkdir dir="${libDir}"/>
 		<copy file="../common/target/carbondata-common-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
 		<copy file="../common-plugin/target/carbondata-common-plugin-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
@@ -70,19 +70,24 @@
 
 		<copy file="../integration/spark-datasource/target/carbondata-spark-datasource-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
 		<copy file="../tools/cli/target/carbondata-cli-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
-
+		<copy file="../vector/target/carbondata-vector-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../fleet/cloud/target/carbondata-cloud-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../CI/dependency_jars/ais-client-sdk-1.0.1.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../CI/dependency_jars/java-sdk-core-2.0.1.jar" toDir="${libDir}" overwrite="true"/>
 		<!--<copy file="../datamap/lucene/target/carbondata-lucene-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
 		<copy file="../libraries/TPJars/commons-vfs-1.0.jar" toDir="${libDir}" overwrite="true"/> -->
 
 		<copy file="../conf/carbon.properties.template" toDir="${libDir}/" overwrite="true"/>
 		<tstamp>
-			<format property="India_Time" pattern="yyyy-MM-dd_HH:mm:ss" />
+			<format property="BuildTime" pattern="yyyy-MM-dd_HH:mm:ss" />
 		</tstamp>
-		<echo message="name=CarbonData_Kernel_Component${line.separator}" file="${libDir}/version.properties"/>
+		<echo message="name=${COMPONENT_NAME}${line.separator}" file="${libDir}/version.properties" append="true"/>
+		<echo message="title=CarbonData${line.separator}" file="${libDir}/version.properties" append="true"/>
+		<echo message="version=${VERSION}${line.separator}" file="${libDir}/version.properties" append="true"/>
 		<echo message="HW_display_version=${DISPLAY_VERSION}${line.separator}" file="${libDir}/version.properties" append="true"/>
-		<echo message="HW_internal_version=${VERSION}${line.separator}" file="${libDir}/version.properties" append="true"/>
+		<echo message="HW_internal_version=${INTERNAL_VERSION}${line.separator}" file="${libDir}/version.properties" append="true"/>
 		<echo message="vendor=Huawei${line.separator}" file="${libDir}/version.properties" append="true"/>
-		<echo message="BUILDTIME=${India_Time}${line.separator}" file="${libDir}/version.properties" append="true"/>
+		<echo message="buildtime=${BuildTime}${line.separator}" file="${libDir}/version.properties" append="true"/>
 		<echo message="Hadoop=${HADOOP_VERSION}${line.separator}" file="${libDir}/version.properties" append="true" />
 		<echo message="Spark=${SPARK_VERSION}${line.separator}" file="${libDir}/version.properties" append="true" />		
 
@@ -138,21 +143,27 @@
 
 		<copy file="../integration/spark-datasource/target/carbondata-spark-datasource-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
 		<copy file="../tools/cli/target/carbondata-cli-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
+		<copy file="../vector/target/carbondata-vector-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
+		<copy file="../fleet/cloud/target/carbondata-cloud-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
+		<copy file="../CI/dependency_jars/ais-client-sdk-1.0.1.jar" toDir="${libDirMRS}" overwrite="true"/>
+		<copy file="../CI/dependency_jars/java-sdk-core-2.0.1.jar" toDir="${libDirMRS}" overwrite="true"/>
 
 		<!--<copy file="../datamap/lucene/target/carbondata-lucene-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
 		<copy file="../libraries/TPJars/commons-vfs-1.0.jar" toDir="${libDirMRS}" overwrite="true"/> -->
 
 		<copy file="../conf/carbon.properties.template" toDir="${libDirMRS}/" overwrite="true"/>
 		<tstamp>
-			<format property="India_Time" pattern="yyyy-MM-dd_HH:mm:ss" />
+			<format property="BuildTime" pattern="yyyy-MM-dd_HH:mm:ss" />
 		</tstamp>
-		<echo message="name=CarbonData_Kernel_Component${line.separator}" file="${libDirMRS}/version.properties"/>
+		<echo message="name=CarbonData_Kernel_Component_MRS${line.separator}" file="${libDirMRS}/version.properties"/>
+		<echo message="title=CarbonData${line.separator}" file="${libDirMRS}/version.properties" append="true"/>
+		<echo message="version=${VERSION}${line.separator}" file="${libDirMRS}/version.properties" append="true"/>
 		<echo message="HW_display_version=${DISPLAY_VERSION}${line.separator}" file="${libDirMRS}/version.properties" append="true"/>
-		<echo message="HW_internal_version=${VERSION}${line.separator}" file="${libDirMRS}/version.properties" append="true"/>
+		<echo message="HW_internal_version=${INTERNAL_VERSION}${line.separator}" file="${libDirMRS}/version.properties" append="true"/>
 		<echo message="vendor=Huawei${line.separator}" file="${libDirMRS}/version.properties" append="true"/>
-		<echo message="BUILDTIME=${India_Time}" file="${libDirMRS}/version.properties" append="true"/>
-		<echo message="Hadoop=${HADOOP_VERSION}" file="${libDirMRS}/version.properties" append="true" />
-		<echo message="Spark=${SPARK_VERSION}" file="${libDirMRS}/version.properties" append="true" />
+		<echo message="buildtime=${BuildTime}${line.separator}" file="${libDirMRS}/version.properties" append="true"/>
+		<echo message="Hadoop=${HADOOP_VERSION}${line.separator}" file="${libDirMRS}/version.properties" append="true" />
+		<echo message="Spark=${SPARK_VERSION}${line.separator}" file="${libDirMRS}/version.properties" append="true" />
 
 		<tar destfile="${versionFolderMRS}.tar.gz" longfile="gnu"  compression="gzip">
 			<tarfileset dir="${versionFolderMRS}" filemode="500"  dirmode="700" >
@@ -201,15 +212,17 @@
 
 		<copy file="../conf/carbon.properties.template" toDir="${libDirSDK}/" overwrite="true"/>
 		<tstamp>
-			<format property="India_Time" pattern="yyyy-MM-dd_HH:mm:ss" />
+			<format property="BuildTime" pattern="yyyy-MM-dd_HH:mm:ss" />
 		</tstamp>
 		<echo message="name=CarbonData_KernelSDK_Component${line.separator}" file="${libDirSDK}/version.properties"/>
+		<echo message="title=CarbonData${line.separator}" file="${libDirSDK}/version.properties" append="true"/>
+		<echo message="version=${VERSION}${line.separator}" file="${libDirSDK}/version.properties" append="true"/>
 		<echo message="HW_display_version=${DISPLAY_VERSION}${line.separator}" file="${libDirSDK}/version.properties" append="true"/>
-		<echo message="HW_internal_version=${VERSION}${line.separator}" file="${libDirSDK}/version.properties" append="true"/>
+		<echo message="HW_internal_version=${INTERNAL_VERSION}${line.separator}" file="${libDirSDK}/version.properties" append="true"/>
 		<echo message="vendor=Huawei${line.separator}" file="${libDirSDK}/version.properties" append="true"/>
-		<echo message="BUILDTIME=${India_Time}" file="${libDirSDK}/version.properties" append="true"/>
-		<echo message="Hadoop=${HADOOP_VERSION}" file="${libDirSDK}/version.properties" append="true" />
-		<echo message="Spark=${SPARK_VERSION}" file="${libDirSDK}/version.properties" append="true" />
+		<echo message="buildtime=${BuildTime}${line.separator}" file="${libDirSDK}/version.properties" append="true"/>
+		<echo message="Hadoop=${HADOOP_VERSION}${line.separator}" file="${libDirSDK}/version.properties" append="true" />
+		<echo message="Spark=${SPARK_VERSION}${line.separator}" file="${libDirSDK}/version.properties" append="true" />
 		
 		<tar destfile="${versionFolderSDK}.tar.gz" longfile="gnu"  compression="gzip">
 			<tarfileset dir="${versionFolderSDK}" filemode="500"  dirmode="700" >
