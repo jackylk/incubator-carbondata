@@ -17,6 +17,7 @@
 
 package org.apache.spark.sql.execution.command.management
 
+import java.io.IOException
 import java.util
 
 import scala.collection.JavaConverters._
@@ -25,9 +26,12 @@ import org.apache.spark.sql.{AnalysisException, CarbonEnv, Row, SparkSession}
 import org.apache.spark.sql.execution.command.{Checker, MetadataCommand}
 
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
+import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datamap.Segment
 import org.apache.carbondata.core.exception.ConcurrentOperationException
+import org.apache.carbondata.core.locks.{CarbonLockFactory, CarbonLockUtil, ICarbonLock}
 import org.apache.carbondata.core.metadata.SegmentFileStore
+import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.statusmanager.{SegmentStatus, SegmentStatusManager}
 import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.processing.loading.model.{CarbonDataLoadSchema, CarbonLoadModel}
@@ -58,37 +62,59 @@ case class CarbonAddLoadCommand(
       throw new ConcurrentOperationException(carbonTable, "insert overwrite", "add segment")
     }
 
-    val model = new CarbonLoadModel
-    model.setCarbonTransactionalTable(true)
-    model.setCarbonDataLoadSchema(new CarbonDataLoadSchema(carbonTable))
-    model.setDatabaseName(carbonTable.getDatabaseName)
-    model.setTableName(carbonTable.getTableName)
+    val lock = acquiredTableLock(carbonTable)
+    try {
+      val model = new CarbonLoadModel
+      model.setCarbonTransactionalTable(true)
+      model.setCarbonDataLoadSchema(new CarbonDataLoadSchema(carbonTable))
+      model.setDatabaseName(carbonTable.getDatabaseName)
+      model.setTableName(carbonTable.getTableName)
 
-    CarbonLoaderUtil.readAndUpdateLoadProgressInTableMeta(model, false)
-    val segmentPath = options
-      .getOrElse(throw new UnsupportedOperationException("options are manadatory"))
-      .getOrElse("path", throw new UnsupportedOperationException("PATH is manadatory"))
-    val segment = new Segment(model.getSegmentId,
-      SegmentFileStore.genSegmentFileName(
-        model.getSegmentId,
-        System.nanoTime().toString) + CarbonTablePath.SEGMENT_EXT,
-      segmentPath,
-      options.map(o => new util.HashMap[String, String](o.asJava)).getOrElse(new util.HashMap()))
-    val isSuccess =
-      SegmentFileStore.writeSegmentFile(carbonTable, segment)
+      CarbonLoaderUtil.readAndUpdateLoadProgressInTableMeta(model, false)
+      val segmentPath = options
+        .getOrElse(throw new UnsupportedOperationException("options are manadatory"))
+        .getOrElse("path", throw new UnsupportedOperationException("PATH is manadatory"))
+      val segment = new Segment(model.getSegmentId,
+        SegmentFileStore.genSegmentFileName(
+          model.getSegmentId,
+          System.nanoTime().toString) + CarbonTablePath.SEGMENT_EXT,
+        segmentPath,
+        options.map(o => new util.HashMap[String, String](o.asJava)).getOrElse(new util.HashMap()))
+      val isSuccess =
+        SegmentFileStore.writeSegmentFile(carbonTable, segment)
 
-    if (isSuccess) {
-      SegmentFileStore.updateSegmentFile(
-        carbonTable,
-        model.getSegmentId,
-        segment.getSegmentFileName,
-        carbonTable.getCarbonTableIdentifier.getTableId,
-        new SegmentFileStore(carbonTable.getTablePath, segment.getSegmentFileName),
-        SegmentStatus.SUCCESS)
-    } else {
-      throw new AnalysisException("Adding segment with path failed.")
+      if (isSuccess) {
+        SegmentFileStore.updateSegmentFile(
+          carbonTable,
+          model.getSegmentId,
+          segment.getSegmentFileName,
+          carbonTable.getCarbonTableIdentifier.getTableId,
+          new SegmentFileStore(carbonTable.getTablePath, segment.getSegmentFileName),
+          SegmentStatus.SUCCESS)
+      } else {
+        throw new AnalysisException("Adding segment with path failed.")
+      }
+      Seq.empty
+    } finally {
+      lock.unlock()
     }
-    Seq.empty
+  }
+
+  private def acquiredTableLock(table: CarbonTable): ICarbonLock = {
+    val tableIdentifier = table.getAbsoluteTableIdentifier
+    val lock = CarbonLockFactory.getCarbonLockObj(tableIdentifier, "table_add_segments.lock")
+    val retryCount = CarbonLockUtil.getLockProperty(
+      CarbonCommonConstants.NUMBER_OF_TRIES_FOR_CONCURRENT_LOCK,
+      CarbonCommonConstants.NUMBER_OF_TRIES_FOR_CONCURRENT_LOCK_DEFAULT
+    )
+    val maxTimeout = CarbonLockUtil.getLockProperty(
+      CarbonCommonConstants.MAX_TIMEOUT_FOR_CONCURRENT_LOCK,
+      CarbonCommonConstants.MAX_TIMEOUT_FOR_CONCURRENT_LOCK_DEFAULT)
+    if (lock.lockWithRetries(retryCount, maxTimeout)) {
+      lock
+    } else {
+      throw new IOException(s"Not able to acquire the lock for Table status updation for table $tableIdentifier")
+    }
   }
 
   override protected def opName: String = "ADD SEGMENT WITH PATH"
