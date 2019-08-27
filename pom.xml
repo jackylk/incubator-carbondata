@@ -119,6 +119,7 @@
     <aws.sdk.version>1.11.271</aws.sdk.version>
     <hadoop.aws.version>2.8.3</hadoop.aws.version>
     <hadoop.huaweicloud.version>2.8.3.20</hadoop.huaweicloud.version>
+    <hbase.version>2.1.1</hbase.version>
     <arrow.version>0.12.0</arrow.version>
     <avro.version>1.8.1</avro.version>
     <hadoop.deps.scope>compile</hadoop.deps.scope>
@@ -972,6 +973,12 @@
       <id>sdvtest</id>
       <modules>
         <module>integration/spark-common-cluster-test</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>hbase</id>
+      <modules>
+        <module>integration/hbase</module>
       </modules>
     </profile>
     <profile>
