@@ -778,7 +778,7 @@
         <activeByDefault>true</activeByDefault>
       </activation>
       <properties>
-        <spark.version>2.3.2.0101</spark.version>
+        <spark.version>2.3.2.0100</spark.version>
         <hadoop.version>3.1.1.0100</hadoop.version>
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11.8</scala.version>
@@ -862,7 +862,7 @@
         <activeByDefault>true</activeByDefault>
       </activation>
       <properties>
-        <spark.version>2.3.2.0101</spark.version>
+        <spark.version>2.3.2.0100</spark.version>
         <hadoop.version>2.7.2.0100</hadoop.version>
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11.8</scala.version>
