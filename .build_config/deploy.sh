@@ -1,10 +1,10 @@
 #!/bin/bash
 set -xe
 
-export COMPONENT_NAME=${COMPONENT_NAME:-CarbonData}
+export COMPONENT_NAME=${COMPONENT_NAME:-EI_CarbonData_Kernel_Component}
 export COMPONENT_VERSION=${COMPONENT_VERSION:-1.6.1.0100}
-export DP_VERSION=${DP_VERSION:-dplatform-1.0.0}
-CARBON_RELEASE_PACKAGE=EI_${COMPONENT_NAME}_${COMPONENT_VERSION}-${DP_VERSION}_release.tar.gz
+export DP_VERSION=${DP_VERSION:-dplatform}
+CARBON_RELEASE_PACKAGE=${COMPONENT_NAME}_${COMPONENT_VERSION}-${DP_VERSION}_release.tar.gz
 JAR_VERSION=${COMPONENT_VERSION}-${DP_VERSION}
 GROUP_ID="org.apache.carbondata"
 JAR_PACKAGE="carbondata_jars.tar.gz"
@@ -136,6 +136,6 @@ do
 
     if [[ -f "${jarPath}/${testJarFile}" ]]; then
         echo "deploy ${pomFile} ${testJarFile}"
-        mvn deploy:deploy-file   -Dclassifier=tests -DgroupId=${GROUP_ID} -DartifactId=${artifact} -Dversion=${JAR_VERSION} -Dpackaging=jar -Dfile=${jarPath}/${testJarFile} -DpomFile=${jarPath}/${pomFile} -Durl=http://wlg1.artifactory.cd-cloud-artifact.tools.huawei.com/artifactory/${repositoryId} -DrepositoryId=${repositoryId} -s ${SETTINGS_FILE}
+        mvn deploy:deploy-file   -Dclassifier=test -DgroupId=${GROUP_ID} -DartifactId=${artifact} -Dversion=${JAR_VERSION} -Dpackaging=jar -Dfile=${jarPath}/${testJarFile} -DpomFile=${jarPath}/${pomFile} -Durl=http://wlg1.artifactory.cd-cloud-artifact.tools.huawei.com/artifactory/${repositoryId} -DrepositoryId=${repositoryId} -s ${SETTINGS_FILE}
     fi
 done
