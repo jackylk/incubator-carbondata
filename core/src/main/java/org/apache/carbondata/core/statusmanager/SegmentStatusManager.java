@@ -289,7 +289,7 @@ public class SegmentStatusManager {
    * @param loadMetadataDetails
    * @return
    */
-  private static int getMaxSegmentId(LoadMetadataDetails[] loadMetadataDetails) {
+  public static int getMaxSegmentId(LoadMetadataDetails[] loadMetadataDetails) {
     int newSegmentId = -1;
     for (int i = 0; i < loadMetadataDetails.length; i++) {
       try {

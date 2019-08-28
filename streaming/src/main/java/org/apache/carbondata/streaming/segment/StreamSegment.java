@@ -157,36 +157,42 @@ public class StreamSegment {
         LOGGER.info(
             "Acquired lock for table" + table.getDatabaseName() + "." + table.getTableName()
                 + " for stream table finish segment");
-
         LoadMetadataDetails[] details =
             SegmentStatusManager.readLoadMetadata(
                 CarbonTablePath.getMetadataPath(table.getTablePath()));
-        for (LoadMetadataDetails detail : details) {
-          if (segmentId.equals(detail.getLoadName())) {
-            detail.setLoadEndTime(System.currentTimeMillis());
-            detail.setSegmentStatus(SegmentStatus.STREAMING_FINISH);
-            break;
+        // only the segmentId is just the MAX one who need to create another
+        if (Integer.parseInt(segmentId) == SegmentStatusManager.getMaxSegmentId(details)) {
+          for (LoadMetadataDetails detail : details) {
+            if (segmentId.equals(detail.getLoadName())) {
+              detail.setLoadEndTime(System.currentTimeMillis());
+              detail.setSegmentStatus(SegmentStatus.STREAMING_FINISH);
+              break;
+            }
           }
+
+          int newSegmentId = SegmentStatusManager.createNewSegmentId(details);
+          LoadMetadataDetails newDetail = new LoadMetadataDetails();
+          newDetail.setPartitionCount("0");
+          newDetail.setLoadName("" + newSegmentId);
+          newDetail.setFileFormat(FileFormat.ROW_V1);
+          newDetail.setLoadStartTime(System.currentTimeMillis());
+          newDetail.setSegmentStatus(SegmentStatus.STREAMING);
+
+          LoadMetadataDetails[] newDetails = new LoadMetadataDetails[details.length + 1];
+          int i = 0;
+          for (; i < details.length; i++) {
+            newDetails[i] = details[i];
+          }
+          newDetails[i] = newDetail;
+          SegmentStatusManager
+              .writeLoadDetailsIntoFile(CarbonTablePath.getTableStatusFilePath(
+                  table.getTablePath()), newDetails);
+          return newDetail.getLoadName();
+        } else {
+          // just return the MAX id, the new id is created by other threads.
+          return SegmentStatusManager.getMaxSegmentId(details) + "";
         }
 
-        int newSegmentId = SegmentStatusManager.createNewSegmentId(details);
-        LoadMetadataDetails newDetail = new LoadMetadataDetails();
-        newDetail.setPartitionCount("0");
-        newDetail.setLoadName("" + newSegmentId);
-        newDetail.setFileFormat(FileFormat.ROW_V1);
-        newDetail.setLoadStartTime(System.currentTimeMillis());
-        newDetail.setSegmentStatus(SegmentStatus.STREAMING);
-
-        LoadMetadataDetails[] newDetails = new LoadMetadataDetails[details.length + 1];
-        int i = 0;
-        for (; i < details.length; i++) {
-          newDetails[i] = details[i];
-        }
-        newDetails[i] = newDetail;
-        SegmentStatusManager
-            .writeLoadDetailsIntoFile(CarbonTablePath.getTableStatusFilePath(
-                table.getTablePath()), newDetails);
-        return newDetail.getLoadName();
       } else {
         LOGGER.error(
             "Not able to acquire the lock for stream table status updation for table " + table
