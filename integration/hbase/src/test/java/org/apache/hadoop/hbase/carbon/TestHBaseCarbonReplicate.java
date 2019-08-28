@@ -179,7 +179,7 @@ public class TestHBaseCarbonReplicate extends TestCase {
         "{\"ID\":\"long\",\"name\":\"string\",\"dept\":\"string\",\"city\":\"string\","
             + "\"age\":\"short\",\"salary\":\"double\",\"timestamp\":\"long\","
             + "\"deletestatus\":\"long\",\"tblproperties\":{\"sort_columns\":\"ID\","
-            + "\"table_blocksize\":\"256\",\"table_blocklet_size\":\"32\"," + "\"primary_key\":\"ID,name\","
+            + "\"table_blocksize\":\"256\",\"table_blocklet_size\":\"32\"," + "\"primary_key_columns\":\"ID,name\","
             + "\"hbase_mapping\":\"key=ID,key=name,cf:dept=dept,cf:city=city,"
             + "cf:age=age,timestamp=timestamp,deletestatus=deletestatus,cf:salary=salary\","
             + "\"path\":\"" + tablePath + "\"  " + ",\"fs.obs.access.key\":\"" +
@@ -215,7 +215,7 @@ public class TestHBaseCarbonReplicate extends TestCase {
         "{\"ID\":\"long\",\"name\":\"string\",\"dept\":\"string\",\"city\":\"string\","
             + "\"age\":\"short\",\"salary\":\"double\",\"timestamp\":\"long\","
             + "\"deletestatus\":\"long\",\"tblproperties\":{\"sort_columns\":\"ID\","
-            + "\"table_blocksize\":\"256\",\"table_blocklet_size\":\"32\"," + "\"primary_key\":\"ID,name\","
+            + "\"table_blocksize\":\"256\",\"table_blocklet_size\":\"32\"," + "\"primary_key_columns\":\"ID,name\","
             + "\"hbase_mapping\":\"key=ID,key=name,cf:dept=dept,cf:city=city,"
             + "cf:age=age,timestamp=timestamp,deletestatus=deletestatus,cf:salary=salary\","
             + "\"path\":\"" + tablePath + "\"  " + ",\"fs.s3a.access.key\":\"" +
@@ -253,7 +253,7 @@ public class TestHBaseCarbonReplicate extends TestCase {
         "{\"ID\":\"long\",\"name\":\"string\",\"dept\":\"string\",\"city\":\"string\","
             + "\"age\":\"short\",\"salary\":\"double\",\"timestamp\":\"long\","
             + "\"deletestatus\":\"long\",\"tblproperties\":{\"sort_columns\":\"ID\","
-            + "\"table_blocksize\":\"256\",\"table_blocklet_size\":\"32\"," + "\"primary_key\":\"ID,name\","
+            + "\"table_blocksize\":\"256\",\"table_blocklet_size\":\"32\"," + "\"primary_key_columns\":\"ID,name\","
             + "\"hbase_mapping\":\"key=ID,key=name,cf:dept=dept,cf:city=city,"
             + "cf:age=age,timestamp=timestamp,deletestatus=deletestatus,cf:salary=salary\","
             + "\"path\":\"" + tablePath + "\"  " + ",\"fs.obs.access.key\":\"" +

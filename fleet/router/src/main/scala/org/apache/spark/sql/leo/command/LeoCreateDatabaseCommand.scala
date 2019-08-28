@@ -22,6 +22,7 @@ import org.apache.spark.sql.{AnalysisException, Row, SparkSession}
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.execution.command.{CreateDatabaseCommand, DropDatabaseCommand, RunnableCommand}
 import org.apache.spark.sql.leo.LeoEnv
+import org.apache.spark.sql.leo.hbase.HBaseUtil
 import org.apache.spark.util.FileUtils
 
 import org.apache.carbondata.core.datastore.impl.FileFactory
@@ -64,6 +65,24 @@ case class LeoCreateDatabaseCommand(sparkCommand: CreateDatabaseCommand)
         OBSUtil.deleteBucket(bucket, true, sparkSession)
         throw e
     }
+
+    //TODO make hbase configurable in leo, if hbase enable, them create ns.
+    // step 3. create namespace in hbase
+//    try {
+//      HBaseUtil.createNameSpace(dbName, ifNotExists, sparkSession)
+//    } catch {
+//      case e: Throwable =>
+//        // drop in hive metastore
+//        DropDatabaseCommand(
+//          sparkCommand.databaseName,
+//          sparkCommand.ifNotExists,
+//          cascade = true
+//        ).run(sparkSession)
+//
+//        //  clean up bucket
+//        OBSUtil.deleteBucket(bucket, true, sparkSession)
+//        throw e
+//    }
 
     Seq.empty
   }

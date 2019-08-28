@@ -59,6 +59,7 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException;
 import org.apache.spark.sql.catalyst.parser.ParserInterface;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
+import org.apache.spark.sql.leo.hbase.HBaseUtil;
 import org.apache.spark.sql.types.StructField;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -135,6 +136,31 @@ public class Controller {
       return createAsyncSqlResponse(query.getTypeDef().getType().name(), request,
           asyncJob.getJobId(), schema, null);
     } else {
+      switch (query.getTypeDef().getType()) {
+        case HBASE_SELECT:
+          LOGGER.info("Execute HBASE_SELECT job: " + query.getOriginSql());
+          // for primary key query, execute it synchronously
+          List<String[]> result = queryRunner.doPKQuery(query);
+          return createSyncSqlResponse(query.getTypeDef().getType().name(),
+              request, null, schema, result, false);
+        case HBASE_INSERT:
+          int rowCount = queryRunner.doPKInsert(query);
+          return createSyncSqlResponse(query.getTypeDef().getType().name(), request, null,
+              rowCount);
+        case CREATE_CONSUMER:
+        case DROP_CONSUMER:
+        case DESC_CONSUMER:
+        case SHOW_CONSUMERS:
+          LOGGER.info("Execute consumer job: " + query.getOriginSql());
+          try {
+            SqlResult consumerResult = queryRunner.doContinuousJob(query, projectId);
+            return  createSyncSqlResponse(query.getTypeDef().getType().name(),
+                request, jobID.getId(), consumerResult.getSchema(), consumerResult.getRows(),
+                false);
+          } catch (IOException ex) {
+            throw new LeoServiceException(ErrorCode.INTERNAL_ERROR.getCode(), ex.getMessage());
+          }
+        default:
         // others including ddl should execute sync
         try {
           SqlResult jobResult = queryRunner.doSyncJob(query);
@@ -146,6 +172,7 @@ public class Controller {
         } catch (Exception ex) {
           throw new LeoServiceException(ErrorCode.INTERNAL_ERROR.getCode(), ex.getMessage());
         }
+      }
     }
   }
 
@@ -195,6 +222,10 @@ public class Controller {
     List<Column> columns = new ArrayList<>();
     Set<String> distinctNameSchema = new HashSet<String>();
     for (StructField field: fields) {
+      if (isHBaseQuery && (field.name().equals(HBaseUtil.CARBON_TIMESTAMP) ||
+          field.name().equals(HBaseUtil.CARBON_DELETE_STATUS))) {
+        continue;
+      }
       Column column = new Column();
       column.setDataType(field.dataType().typeName());
       column.setName(field.name());

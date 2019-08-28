@@ -20,6 +20,9 @@ package org.apache.spark.sql.leo.command
 import org.apache.spark.sql.{AnalysisException, CarbonEnv, CarbonSource, Row, SparkSession}
 import org.apache.spark.sql.catalyst.catalog.CatalogTable
 import org.apache.spark.sql.execution.command.{CreateDataSourceTableCommand, RunnableCommand}
+import org.apache.spark.sql.leo.LeoEnv
+import org.apache.spark.sql.leo.hbase.HBaseUtil
+import org.apache.spark.sql.types.StructType
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.datastore.impl.FileFactory
@@ -43,8 +46,65 @@ case class LeoCreateTableCommand(
       if (ignoreIfExists) return Seq.empty
       else throw new AnalysisException("table " + table.identifier + " already exists")
     }
-    createNPKTable(sparkSession)
 
+    if (LeoEnv.isPKTable(table)) {
+      createPKTable(sparkSession)
+    } else {
+      createNPKTable(sparkSession)
+    }
+  }
+
+  private def createPKTable(sparkSession: SparkSession): Seq[Row] = {
+    if (existKeyWordColumnsPKTable(table.schema)) {
+      throw new IllegalArgumentException("It is not allowed to create a primary key table using" +
+        " column name: " + HBaseUtil.CARBON_TIMESTAMP + " or " + HBaseUtil.CARBON_DELETE_STATUS)
+    }
+    val updatedCatalog = try {
+      // step 1: create table in carbon (persist schema file)
+      val schemaAddColumns = StructType(table.schema)
+        .add(HBaseUtil.CARBON_TIMESTAMP, "long")
+        .add(HBaseUtil.CARBON_DELETE_STATUS, "long")
+      val propertiesAdded =
+        table.properties ++ Map("streaming" -> "true")
+      // add 2 more columns timestamp and deletestatus for carbon, hbase wal to carbon data will use.
+      val tableAddColumns = table.copy(schema = schemaAddColumns, properties = propertiesAdded)
+      CarbonSource.updateCatalogTableWithCarbonSchema(tableAddColumns, sparkSession)
+        .copy(provider = Some("org.apache.spark.sql.CarbonSource"))
+    } catch {
+      case e: Exception =>
+        LOGGER.error(e)
+        //  drop table in hbase
+        deleteCarbonTableFolder(table)
+        throw e
+    }
+
+    // step 2: create table in hbase, should have "CARBON_SCHEMA"
+    try {
+      val carbonSchema = HBaseUtil.buildHBaseCarbonSchema(sparkSession, updatedCatalog)
+      HBaseUtil.createTable(db, tableName, false, carbonSchema, sparkSession)
+    } catch {
+      case e: Exception =>
+        LOGGER.error(e)
+        //  drop table in hbase
+        HBaseUtil.deleteTable(db, tableName, true, sparkSession)
+        throw e
+    }
+
+    // step 3: save meta in metastore, undo previous steps if failed
+    try {
+      // the added columns of carbontable shall not update into hive meta, in future use
+      // updatedCatalogWithoutAddColumns instead of updatedCatalog.
+      val updatedCatalogWithoutAddColumns = updatedCatalog.copy(schema = table.schema)
+      val cmd = CreateDataSourceTableCommand(updatedCatalog, ignoreIfExists)
+      cmd.run(sparkSession)
+    } catch {
+      case e: Exception =>
+        LOGGER.error(e)
+        //  drop table in hbase
+        HBaseUtil.deleteTable(db, tableName, true, sparkSession)
+        deleteCarbonTableFolder(table)
+        throw e
+    }
   }
 
   private def createNPKTable(sparkSession: SparkSession): Seq[Row] = {
@@ -73,5 +133,13 @@ case class LeoCreateTableCommand(
   private def deleteCarbonTableFolder(table: CatalogTable): Boolean = {
     val path = table.properties("tablePath")
     FileFactory.deleteAllCarbonFilesOfDir(FileFactory.getCarbonFile(path))
+  }
+
+  private def existKeyWordColumnsPKTable(schema: StructType): Boolean = {
+    schema.fields.exists(filed => isKeyWordColumn(filed.name))
+  }
+  private def isKeyWordColumn(columnName: String): Boolean = {
+    columnName.equalsIgnoreCase(HBaseUtil.CARBON_TIMESTAMP) ||
+    columnName.equalsIgnoreCase(HBaseUtil.CARBON_DELETE_STATUS)
   }
 }

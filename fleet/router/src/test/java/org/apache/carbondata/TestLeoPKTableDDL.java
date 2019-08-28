@@ -35,7 +35,7 @@ public class TestLeoPKTableDDL {
 
     runSQL(session, "create database if not exists leodb ");
     runSQL(session, "create table if not exists leodb.test(id int, name string)"
-        + " tblproperties('primary_key'='id')");
+        + " tblproperties('primary_key_columns'='id')");
     runSQL(session, "drop table if exists leodb.test");
     runSQL(session, "drop database if exists leodb");
 
