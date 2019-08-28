@@ -39,6 +39,7 @@ import org.apache.carbondata.core.scan.result.iterator.CarbonBatchIterator;
 import org.apache.carbondata.core.scan.result.vector.CarbonColumnVector;
 import org.apache.carbondata.core.scan.result.vector.CarbonColumnarBatch;
 import org.apache.carbondata.core.scan.result.vector.impl.CarbonColumnVectorImpl;
+import org.apache.carbondata.core.statusmanager.FileFormat;
 import org.apache.carbondata.core.util.ByteUtil;
 import org.apache.carbondata.hadoop.AbstractRecordReader;
 import org.apache.carbondata.hadoop.CarbonInputSplit;
@@ -85,7 +86,8 @@ public class CarbonVectorizedRecordReader extends AbstractRecordReader<Object> {
       String splitPath = carbonInputSplit.getFilePath();
       if ((null != carbonInputSplit.getDetailInfo()
           && carbonInputSplit.getDetailInfo().getBlockFooterOffset() == 0L) || (
-          null == carbonInputSplit.getDetailInfo() && carbonInputSplit.getStart() == 0)) {
+          null == carbonInputSplit.getDetailInfo() && carbonInputSplit.getStart() == 0
+              &&carbonInputSplit.getFileFormat() != FileFormat.ROW_V1)) {
         FileReader reader = FileFactory.getFileHolder(FileFactory.getFileType(splitPath),
             taskAttemptContext.getConfiguration());
         ByteBuffer buffer = reader
