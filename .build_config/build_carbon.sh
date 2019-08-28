@@ -34,7 +34,7 @@ echo "Carbon branch: ${CARBON_BRANCH}"
 export COMPONENT_NAME=${COMPONENT_NAME:-EI_CarbonData_Kernel_Component}
 # origin version
 export COMPONENT_VERSION=${COMPONENT_VERSION:-1.6.1.0100}
-export DP_VERSION=${DP_VERSION:-dplatform-1.0.0}
+export DP_VERSION=${DP_VERSION:-dplatform}
 # HW_internal_version, tag name, eg. EI_CarbonData_Kernel_Component_1.6.0.0100.B001
 export INTERNAL_VERSION=${CARBON_BRANCH:-1.6.0.0100.B001}
 export HADOOP_VERSION=${HADOOP_VERSION:-3.1.1.0100}
@@ -47,7 +47,6 @@ export CI_LOCAL_REPOSITORY="carbon_local_repository"
 #-Dspark.version=${SPARK_VERSION} -Dhadoop.version=${HADOOP_VERSION} -Dbuild.version=${BUILD_VERSION}
 
 sed -i "s/<localRepository>.*/<localRepository>${CI_LOCAL_REPOSITORY}<\/localRepository>/" .build_config/carbon_settings.xml
-echo '10.1.204.218 hadoopkernel.inhuawei.com' >> /etc/hosts
 
 # change build version
 echo "Carbon build version: ${BUILD_VERSION}"
@@ -95,7 +94,7 @@ cd ${Carbon_FOLDER}
 mkdir -p ${Carbon_FOLDER}/org/apache/
 cp -r ${CI_LOCAL_REPOSITORY}/org/apache/carbondata ${Carbon_FOLDER}/org/apache/
 cd ${Carbon_FOLDER}
-find ./org -regex '.*\.repositories\|.*\.sha1\|.*\.md5\|.*\.xml\|.*javadoc\.jar\|.*sources\.jar' > list.txt
+find ./org -regex '.*\.repositories\|.*\.zip\|.*\.sha1\|.*\.md5\|.*\.xml\|.*javadoc\.jar\|.*sources\.jar' > list.txt
 cat list.txt | while read line
 do
 rm -rf $line
