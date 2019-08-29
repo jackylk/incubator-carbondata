@@ -106,8 +106,6 @@ if [ -e carbondata_jars.tar.gz ];then
   mv carbondata_jars.tar.gz ${Carbon_FOLDER}/package
 fi
 
-cp fleet/project/target/fleet-2.11-${COMPONENT_VERSION}-${DP_VERSION}.zip  package
-
 cd ${Carbon_FOLDER}
 cd package/
 # EI_CarbonData_Kernel_Component_MRS_ same as EI_CarbonData_Kernel_Component_
