@@ -28,9 +28,9 @@
     </dependency>
     <!--  fleet-hbase-core is installed into mvn repo by fleet project  -->
     <dependency>
-      <groupId>org.apache.carbondata</groupId>
-      <artifactId>fleet-hbase-core</artifactId>
-      <version>1.6.1.0100</version>
+      <groupId>com.huawei.dplatform</groupId>
+      <artifactId>leo-hbase-core</artifactId>
+      <version>${project.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
