@@ -803,12 +803,6 @@
         <module>examples/spark2</module>
         <module>datamap/lucene</module>
         <module>tools/cli</module>
-        <module>fleet/query-server</module>
-        <module>fleet/job</module>
-        <module>fleet/hbase</module>
-        <module>fleet/router</module>
-        <module>fleet/vision</module>
-        <module>fleet/project</module>
       </modules>
       <build>
         <plugins>
@@ -845,13 +839,6 @@
                 <sourceDirectory>${basedir}/store/sdk/src/main/java</sourceDirectory>
                 <sourceDirectory>${basedir}/datamap/bloom/src/main/java</sourceDirectory>
                 <sourceDirectory>${basedir}/datamap/lucene/src/main/java</sourceDirectory>
-                <sourceDirectory>${basedir}/fleet/query-server/src/main/java</sourceDirectory>
-                <sourceDirectory>${basedir}/fleet/job/src/main/java</sourceDirectory>
-                <sourceDirectory>${basedir}/fleet/job/src/main/scala</sourceDirectory>
-                <sourceDirectory>${basedir}/fleet/router/src/main/java</sourceDirectory>
-                <sourceDirectory>${basedir}/fleet/router/src/main/scala</sourceDirectory>
-                <sourceDirectory>${basedir}/fleet/vision/src/main/scala</sourceDirectory>
-                <sourceDirectory>${basedir}/fleet/vector/src/main/java</sourceDirectory>
                 <sourceDirectory>${basedir}/cloud/src/main/java</sourceDirectory>
                 <sourceDirectory>${basedir}/cloud/src/main/scala</sourceDirectory>
               </sourceDirectories>
@@ -980,6 +967,17 @@
       <id>hbase</id>
       <modules>
         <module>integration/hbase</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>fleet</id>
+      <modules>
+        <module>fleet/query-server</module>
+        <module>fleet/job</module>
+        <module>fleet/hbase</module>
+        <module>fleet/router</module>
+        <module>fleet/vision</module>
+        <module>fleet/project</module>
       </modules>
     </profile>
     <profile>
