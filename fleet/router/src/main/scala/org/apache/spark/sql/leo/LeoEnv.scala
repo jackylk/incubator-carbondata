@@ -49,6 +49,17 @@ object LeoEnv {
     session
   }
 
+  def isPKTable(table: CatalogTable): Boolean = {
+    table.properties.keys
+      .exists(_.equals(CarbonCommonConstants.PRIMARY_KEY_COLUMNS))
+  }
+
+  def isPKTable(db: String, table: String, sparkSession: SparkSession): Boolean = {
+    CarbonEnv.getCarbonTable(Some(db), table)(sparkSession)
+      .getTableInfo.getFactTable.getTableProperties.containsKey(CarbonCommonConstants
+      .PRIMARY_KEY_COLUMNS)
+  }
+
   def bucketName(dbName: String): String = {
     "leo-db-" + dbName
   }

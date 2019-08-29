@@ -168,7 +168,7 @@
               <outputDirectory>${project.build.directory}/fleet/conf</outputDirectory>
               <resources>
                 <resource>
-                  <directory>${project.basedir}/../cloud/conf</directory>
+                  <directory>${project.basedir}/../cloud-resource/conf</directory>
                   <filtering>false</filtering>
                 </resource>
               </resources>
@@ -184,7 +184,7 @@
               <outputDirectory>${project.build.directory}/fleet/jars</outputDirectory>
               <resources>
                 <resource>
-                  <directory>${project.basedir}/../cloud/lib/huawei</directory>
+                  <directory>${project.basedir}/../cloud-resource/lib/huawei</directory>
                   <filtering>false</filtering>
                 </resource>
               </resources>

@@ -36,7 +36,7 @@ class TestOcrUdf extends QueryTest with BeforeAndAfterAll {
     sql(s"CREATE DATABASE $dbName")
     sql(s"USE $dbName")
     prepareTable("base_table")
-    val confFile = TestQueryExecutor.projectPath + "/fleet/cloud/conf/carbon.properties"
+    val confFile = TestQueryExecutor.projectPath + "/cloud/conf/carbon.properties"
     val properties = new Properties()
     properties.load(new FileInputStream(confFile))
     val iterator = properties.entrySet().iterator()

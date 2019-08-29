@@ -48,6 +48,30 @@ public interface QueryRunner {
   SqlResult doSyncJob(Query query);
 
   /**
+   * perform a synchronous query based on primary key.
+   *
+   * @param query query request
+   * @return query result
+   */
+  List<String[]> doPKQuery(Query query);
+
+  /**
+   * perform a synchronous insert based on primary key.
+   *
+   * @param insert insert request
+   * @return insert result
+   */
+  int doPKInsert(Query insert);
+
+  /**
+   * start a continuous job, like streaming ingestion job
+   * @param query
+   * @return
+   * @throws IOException
+   */
+  SqlResult doContinuousJob(Query query, String projectId) throws IOException;
+
+  /**
    * get job meta from query runner cache or meta store client if not found.
    * @param  jobId
    * @return job JobMeta

@@ -937,7 +937,7 @@ public static Schema readSchema(String path, boolean validateSchema, Configurati
 /**
  * This method return the version details in formatted string by reading from carbondata file
  * If application name is SDK_1.0.0 and this has written the carbondata file in carbondata 1.6 project version,
- * then this API returns the String "SDK_1.0.0 in version: 1.6.0-SNAPSHOT"
+ * then this API returns the String "SDK_1.0.0 in version: 1.6.1.0100"
  *
  * @param dataFilePath complete path including carbondata file name
  * @return string with information of who has written this file in which carbondata project version

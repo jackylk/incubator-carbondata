@@ -8,7 +8,7 @@
     <groupId>org.apache.carbondata</groupId>
     <artifactId>carbondata-parent</artifactId>
     <version>1.6.1.0100</version>
-    <relativePath>../../pom.xml</relativePath>
+    <relativePath>../pom.xml</relativePath>
   </parent>
 
   <artifactId>carbondata-cloud</artifactId>

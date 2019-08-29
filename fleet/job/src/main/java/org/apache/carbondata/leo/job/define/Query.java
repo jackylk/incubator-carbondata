@@ -40,12 +40,31 @@ public class Query {
 
   private QueryTypeDef type;
 
+  private KVQueryParams kvQueryParams;
+
   private Query(String originSql, QueryTypeDef type) {
     this.originSql = originSql;
     this.type = type;
   }
 
   /**
+   * create a query containing primary key filter
+   * @param originSql
+   * @param kvQueryParams
+   * @return a new Query object
+   */
+
+  public static Query makePKQuery(String originSql, LogicalPlan originPlan,
+      KVQueryParams kvQueryParams) {
+    Query query =
+        new Query(originSql, QueryDef.getQueryTypeDef(QueryDef.QueryType.HBASE_SELECT.name()));
+    query.originPlan = originPlan;
+    query.kvQueryParams = kvQueryParams;
+    return query;
+  }
+
+  /**
+   * create a query without primary key filter
    * @param originSql
    * @param originPlan
    * @param rewrittenSql
@@ -92,6 +111,10 @@ public class Query {
 
   public String getRewrittenSql() {
     return rewrittenSql;
+  }
+
+  public KVQueryParams getKvQueryParams() {
+    return kvQueryParams;
   }
 
   public QueryDef.QueryTypeDef getTypeDef() {

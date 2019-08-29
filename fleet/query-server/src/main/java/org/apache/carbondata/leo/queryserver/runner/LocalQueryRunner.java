@@ -18,12 +18,17 @@
 package org.apache.carbondata.leo.queryserver.runner;
 
 import java.io.IOException;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import com.huawei.cloud.obs.OBSUtil;
+
+import org.apache.carbondata.leo.job.define.QueryDef;
 import org.apache.carbondata.leo.job.define.QueryDef.QueryType;
 import org.apache.carbondata.leo.queryserver.model.view.SqlResult;
 import org.apache.carbondata.leo.queryserver.util.SqlResultUtil;
@@ -47,6 +52,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.execution.command.RunnableCommand;
+import org.apache.spark.sql.leo.command.LeoCreateConsumerCommand;
 import org.apache.spark.sql.util.SparkSQLUtil;
 
 public class LocalQueryRunner implements QueryRunner {
@@ -74,7 +80,6 @@ public class LocalQueryRunner implements QueryRunner {
       CacheBuilder.newBuilder().maximumSize(2048).expireAfterWrite(2, TimeUnit.HOURS)
           .build();
   private ThreadPoolExecutor carbonQueryPool;
-
   public LocalQueryRunner() {
 
   }
@@ -90,7 +95,6 @@ public class LocalQueryRunner implements QueryRunner {
     }
     this.metaClient = metaStoreClient;
     this.sparkSession = sparkSession;
-    final Configuration configuration = new Configuration();
   }
 
   @Override
@@ -223,6 +227,21 @@ public class LocalQueryRunner implements QueryRunner {
     return sqlResult;
   }
 
+  @Override
+  public List<String[]> doPKQuery(Query query) {
+    return null;
+  }
+
+  @Override
+  public int doPKInsert(Query insert) {
+    return 0;
+  }
+
+  @Override
+  public SqlResult doContinuousJob(Query query, String projectId) throws IOException {
+    return null;
+  }
+
   public SparkSession getSparkSession() {
     return sparkSession;
   }
@@ -238,4 +257,5 @@ public class LocalQueryRunner implements QueryRunner {
   public void setMetaClient(JobMetaStoreClient metaClient) {
     this.metaClient = metaClient;
   }
+
 }

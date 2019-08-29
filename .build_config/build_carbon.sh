@@ -66,8 +66,8 @@ yunlongRepo="http://wlg1.artifactory.cd-cloud-artifact.tools.huawei.com/artifact
 wget ${yunlongRepo}/it/unimi/dsi/fastutil/8.2.3/fastutil-8.2.3.jar
 wget ${yunlongRepo}/com/google/code/gson/gson/2.4/gson-2.4.jar
 wget ${yunlongRepo}/com/github/luben/zstd-jni/1.3.2-2/zstd-jni-1.3.2-2.jar
-cp ${Carbon_FOLDER}/fleet/cloud/lib/huawei/ais-client-sdk-1.0.1.jar ./
-cp ${Carbon_FOLDER}/fleet/cloud/lib/huawei/java-sdk-core-2.0.1.jar ./
+cp ${Carbon_FOLDER}/cloud/lib/huawei/ais-client-sdk-1.0.1.jar ./
+cp ${Carbon_FOLDER}/cloud/lib/huawei/java-sdk-core-2.0.1.jar ./
 
 cd ${Carbon_FOLDER}
 if [  -d ${Carbon_FOLDER}/CI ]; then

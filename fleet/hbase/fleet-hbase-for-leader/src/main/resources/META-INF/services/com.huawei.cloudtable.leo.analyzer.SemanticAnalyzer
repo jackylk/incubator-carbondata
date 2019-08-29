@@ -1,0 +1,2 @@
+com.huawei.cloudtable.leo.analyzers.SelectAnalyzer
+com.huawei.cloudtable.leo.analyzers.InsertAnalyzer$FromValues

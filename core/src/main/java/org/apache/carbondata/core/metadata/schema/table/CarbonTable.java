@@ -1038,6 +1038,11 @@ public class CarbonTable implements Serializable, Writable {
         .equalsIgnoreCase("sink"));
   }
 
+  public boolean isPKTable() {
+    String pk = getTableInfo().getFactTable().getTableProperties()
+        .get(CarbonCommonConstants.PRIMARY_KEY_COLUMNS);
+    return pk != null;
+  }
   /**
    * Return true if this is a streaming source (table with property "streaming"="source")
    */
