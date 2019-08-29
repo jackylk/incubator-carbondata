@@ -122,4 +122,4 @@ rm -rf fleet/
 
 tar -czf ${COMPONENT_NAME}_${COMPONENT_VERSION}-${DP_VERSION}_release.tar.gz *
 
-echo "Finished."
+echo "Finished.   "
