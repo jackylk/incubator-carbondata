@@ -112,13 +112,6 @@ cd ${Carbon_FOLDER}
 cd package/
 # EI_CarbonData_Kernel_Component_MRS_ same as EI_CarbonData_Kernel_Component_
 rm -rf EI_CarbonData_Kernel_Component_MRS_*
-# set version.properties for fleet zip
-tar -xzf ${COMPONENT_NAME}_${COMPONENT_VERSION}-${DP_VERSION}.tar.gz
-unzip -o fleet-2.11-${COMPONENT_VERSION}-${DP_VERSION}.zip
-cp carbonlib/version.properties fleet/
-zip -r fleet-2.11-${COMPONENT_VERSION}-${DP_VERSION}.zip fleet/
-rm -rf carbonlib/
-rm -rf fleet/
 
 tar -czf ${COMPONENT_NAME}_${COMPONENT_VERSION}-${DP_VERSION}_release.tar.gz *
 
