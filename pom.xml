@@ -787,6 +787,7 @@
         <scala.version>2.11.8</scala.version>
       </properties>
       <modules>
+        <module>cloud</module>
         <module>vector</module>
         <module>integration/spark2</module>
         <module>integration/spark-datasource</module>
@@ -807,7 +808,6 @@
         <module>fleet/hbase</module>
         <module>fleet/router</module>
         <module>fleet/vision</module>
-        <module>fleet/cloud</module>
         <module>fleet/project</module>
       </modules>
       <build>
@@ -852,8 +852,8 @@
                 <sourceDirectory>${basedir}/fleet/router/src/main/scala</sourceDirectory>
                 <sourceDirectory>${basedir}/fleet/vision/src/main/scala</sourceDirectory>
                 <sourceDirectory>${basedir}/fleet/vector/src/main/java</sourceDirectory>
-                <sourceDirectory>${basedir}/fleet/cloud/src/main/java</sourceDirectory>
-                <sourceDirectory>${basedir}/fleet/cloud/src/main/scala</sourceDirectory>
+                <sourceDirectory>${basedir}/cloud/src/main/java</sourceDirectory>
+                <sourceDirectory>${basedir}/cloud/src/main/scala</sourceDirectory>
               </sourceDirectories>
             </configuration>
           </plugin>
