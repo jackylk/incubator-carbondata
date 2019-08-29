@@ -30,7 +30,7 @@
     <dependency>
       <groupId>org.apache.carbondata</groupId>
       <artifactId>fleet-hbase-core</artifactId>
-      <version>1.6.0-SNAPSHOT</version>
+      <version>1.6.1.0100</version>
       <scope>provided</scope>
     </dependency>
     <dependency>

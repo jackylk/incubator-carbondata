@@ -804,6 +804,7 @@
         <module>tools/cli</module>
         <module>fleet/query-server</module>
         <module>fleet/job</module>
+        <module>fleet/hbase</module>
         <module>fleet/router</module>
         <module>fleet/vision</module>
         <module>fleet/cloud</module>
