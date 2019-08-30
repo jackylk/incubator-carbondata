@@ -26,6 +26,7 @@ import com.huawei.cloud.orc.HWOcrClientAKSK;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -42,6 +43,7 @@ public class TestOcrAPI {
     }
   }
 
+  @Ignore
   @Test
   public void testOcrIdCard() throws IOException {
     String Httpendpoint="https://ocr.cn-north-1.myhuaweicloud.com"; //httpendpoint for the service

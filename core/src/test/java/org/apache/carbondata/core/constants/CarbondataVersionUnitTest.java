@@ -19,6 +19,7 @@ package org.apache.carbondata.core.constants;
 
 import org.apache.carbondata.core.constants.CarbonVersionConstants;
 import org.apache.commons.lang3.StringUtils;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static junit.framework.TestCase.assertTrue;
@@ -32,6 +33,7 @@ public class CarbondataVersionUnitTest {
     assertTrue(StringUtils.isNoneEmpty(CarbonVersionConstants.CARBONDATA_BUILD_DATE));
   }
 
+  @Ignore
   @Test public void testCarbonBVersion() {
     assertTrue(CarbonVersionConstants.CARBONDATA_VERSION.contains(".B0"));
   }

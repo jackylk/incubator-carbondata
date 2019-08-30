@@ -146,7 +146,7 @@ public class CarbonStreamRecordWriter extends RecordWriter<Void, Object> {
         carbonTable.getAbsoluteTableIdentifier().getTablePath(), segmentId);
     FileFactory.mkdirs(segmentDir, hadoopConf);
     fileName = CarbonTablePath
-        .getCarbonDataFileName(0, Long.parseLong(carbonLoadModel.getTaskNo()), 0, 0,
+        .getCarbonDataFileName(0, carbonLoadModel.getTaskNo(), 0, 0,
             carbonLoadModel.getFactTimeStamp() + "", segmentId);
 
     // initialize metadata
