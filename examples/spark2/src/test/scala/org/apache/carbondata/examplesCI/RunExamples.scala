@@ -116,12 +116,12 @@ class RunExamples extends QueryTest with BeforeAndAfterAll {
     LuceneDataMapExample.exampleBody(spark)
   }*/
 
-  test("ExternalTableExample") {
-    ExternalTableExample.exampleBody(spark)
-  }
-
-  test("CarbonReaderExample") {
-    CarbonReaderExample.main(null)
-  }
+//  test("ExternalTableExample") {
+//    ExternalTableExample.exampleBody(spark)
+//  }
+//
+//  test("CarbonReaderExample") {
+//    CarbonReaderExample.main(null)
+//  }
 
 }

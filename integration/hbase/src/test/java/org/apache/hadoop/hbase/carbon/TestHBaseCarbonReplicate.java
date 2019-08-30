@@ -47,6 +47,7 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.hadoop.hbase.coprocessor.CarbonMasterObserver.HBASE_MAPPING_DETAILS;
@@ -206,6 +207,7 @@ public class TestHBaseCarbonReplicate extends TestCase {
     assert (i == size);
   }
 
+  @Ignore
   @Test public void testLoadDataAndVerifyFilter()
       throws IOException, InvalidLoadOptionException, InterruptedException {
     String tablePath = path + "/tableHbase";
