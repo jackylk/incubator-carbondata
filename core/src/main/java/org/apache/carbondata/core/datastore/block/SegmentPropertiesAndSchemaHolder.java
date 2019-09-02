@@ -253,41 +253,6 @@ public class SegmentPropertiesAndSchemaHolder {
     }
   }
 
-
-  /**
-   * Method to remove the given segment ID
-   *
-   * @param segmentId
-   * @param clearSegmentWrapperFromMap flag to specify whether to clear segmentPropertiesWrapper
-   *                                   from Map if all the segment's using it have become stale
-   */
-  public void invalidate(String segmentId, SegmentPropertiesWrapper segmentPropertiesWrapper,
-      boolean clearSegmentWrapperFromMap) {
-    SegmentIdAndSegmentPropertiesIndexWrapper segmentIdAndSegmentPropertiesIndexWrapper =
-        segmentPropWrapperToSegmentSetMap.get(segmentPropertiesWrapper);
-    if (segmentIdAndSegmentPropertiesIndexWrapper != null) {
-      synchronized (getOrCreateTableLock(segmentPropertiesWrapper.getTableIdentifier())) {
-        segmentIdAndSegmentPropertiesIndexWrapper.removeSegmentId(segmentId);
-        // if after removal of given SegmentId, the segmentIdSet becomes empty that means this
-        // segmentPropertiesWrapper is not getting used at all. In that case this object can be
-        // removed from all the holders
-        if (clearSegmentWrapperFromMap && segmentIdAndSegmentPropertiesIndexWrapper.segmentIdSet
-            .isEmpty()) {
-          indexToSegmentPropertiesWrapperMapping
-              .remove(segmentIdAndSegmentPropertiesIndexWrapper.getSegmentPropertiesIndex());
-          segmentPropWrapperToSegmentSetMap.remove(segmentPropertiesWrapper);
-        } else if (!clearSegmentWrapperFromMap
-            && segmentIdAndSegmentPropertiesIndexWrapper.segmentIdSet.isEmpty()) {
-          // min max columns can very when cache is modified. So even though entry is not required
-          // to be deleted from map clear the column cache so that it can filled again
-          segmentPropertiesWrapper.clear();
-          LOGGER.info("cleared min max for segmentProperties at index: "
-              + segmentIdAndSegmentPropertiesIndexWrapper.getSegmentPropertiesIndex());
-        }
-      }
-    }
-  }
-
   /**
    * add segmentId at given segmentPropertyIndex
    * Note: This method is getting used in extension with other features. Please do not remove
