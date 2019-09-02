@@ -26,11 +26,19 @@
       <version>${hbase.version}</version>
       <scope>provided</scope>
     </dependency>
-    <!--  fleet-hbase-core is installed into mvn repo by fleet project  -->
+    <!--  leo-hbase-core should be uploaded to FUXI mvn repo by Leo project when in future,
+     and this pom should be changed to 'provided' and using real 'version' instead  -->
     <dependency>
       <groupId>com.huawei.dplatform</groupId>
       <artifactId>leo-hbase-core</artifactId>
-      <version>${project.version}</version>
+      <version>${leo.version}</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/lib/leo-hbase-core-1.6.1.0100-test.jar</systemPath>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-common</artifactId>
+      <version>${hadoop.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>

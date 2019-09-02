@@ -100,11 +100,29 @@
     <module>processing</module>
     <module>hadoop</module>
     <module>store/sdk</module>
+    <module>format</module>
     <module>store/project-sdk</module>
+    <module>cloud</module>
+    <module>vector</module>
+    <module>integration/spark2</module>
     <module>integration/spark-datasource</module>
+    <module>integration/spark-common</module>
+    <module>integration/spark-common-test</module>
+    <!--<module>integration/presto</module>-->
     <module>integration/hive</module>
     <module>integration/flink</module>
+    <module>integration/hbase</module>
+    <module>streaming</module>
+    <module>datamap/bloom</module>
+    <module>datamap/lucene</module>
+    <module>datamap/examples</module>
+    <module>datamap/mv/plan</module>
+    <module>datamap/mv/core</module>
     <module>assembly</module>
+    <module>secondary_index</module>
+    <module>common-plugin</module>
+    <module>tools/cli</module>
+    <module>examples/spark2</module>
   </modules>
 
   <properties>
@@ -120,6 +138,10 @@
     <hadoop.aws.version>2.8.3</hadoop.aws.version>
     <hadoop.huaweicloud.version>2.8.3.20</hadoop.huaweicloud.version>
     <hbase.version>2.1.1</hbase.version>
+    <!-- 1.6.1.0100-test used to build carbon-hbase plugin jar in integration/hbase, just compile and run UT -->
+    <!--  leo-hbase-core should be uploaded to FUXI mvn repo by Leo project when in future,
+    and this pom should be changed to 'provided' and using real 'version' instead  -->
+    <leo.version>1.6.1.0100-test</leo.version>
     <arrow.version>0.12.0</arrow.version>
     <avro.version>1.8.1</avro.version>
     <hadoop.deps.scope>compile</hadoop.deps.scope>
@@ -610,40 +632,6 @@
       </modules>
     </profile>
     <profile>
-      <!-- This profile only should be used for release prepare to cover all the modules -->
-      <id>build-all</id>
-      <properties>
-        <spark.version>2.2.1</spark.version>
-        <maven.test.skip>true</maven.test.skip>
-      </properties>
-      <modules>
-        <module>format</module>
-        <module>integration/spark2</module>
-        <module>integration/spark-datasource</module>
-        <module>examples/spark2</module>
-        <module>common-plugin</module>
-        <module>integration/hive</module>
-        <!--module>integration/presto</module-->
-        <module>examples/flink</module>
-        <module>streaming</module>
-        <module>integration/spark-common</module>
-        <module>integration/spark-common-test</module>
-        <module>datamap/examples</module>
-        <module>assembly</module>
-      </modules>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.jacoco</groupId>
-            <artifactId>jacoco-maven-plugin</artifactId>
-            <configuration>
-              <skip>true</skip>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
       <id>hadoop-2.8</id>
       <activation>
         <activeByDefault>true</activeByDefault>
@@ -786,24 +774,6 @@
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11.8</scala.version>
       </properties>
-      <modules>
-        <module>cloud</module>
-        <module>vector</module>
-        <module>integration/spark2</module>
-        <module>integration/spark-datasource</module>
-        <module>integration/spark-common-test</module>
-        <!--<module>integration/presto</module>-->
-        <module>streaming</module>
-        <module>datamap/bloom</module>
-        <module>integration/spark-common</module>
-        <module>datamap/examples</module>
-        <module>assembly</module>
-        <module>secondary_index</module>
-        <module>common-plugin</module>
-        <module>examples/spark2</module>
-        <module>datamap/lucene</module>
-        <module>tools/cli</module>
-      </modules>
       <build>
         <plugins>
           <plugin>
@@ -848,136 +818,9 @@
       </build>
     </profile>
     <profile>
-      <id>dli</id>
-      <activation>
-        <activeByDefault>true</activeByDefault>
-      </activation>
-      <properties>
-        <spark.version>2.3.2.0100</spark.version>
-        <hadoop.version>2.7.2.0100</hadoop.version>
-        <scala.binary.version>2.11</scala.binary.version>
-        <scala.version>2.11.8</scala.version>
-      </properties>
-      <modules>
-        <module>tools/cli</module>
-      </modules>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.eluder.coveralls</groupId>
-            <artifactId>coveralls-maven-plugin</artifactId>
-            <version>4.3.0</version>
-            <configuration>
-              <repoToken>opPwqWW41vYppv6KISea3u1TJvE1ugJ5Y</repoToken>
-              <sourceEncoding>UTF-8</sourceEncoding>
-              <jacocoReports>
-                <jacocoReport>${basedir}/target/carbondata-coverage-report/carbondata-coverage-report.xml
-                </jacocoReport>
-              </jacocoReports>
-              <sourceDirectories>
-                <sourceDirectory>${basedir}/common/src/main/java</sourceDirectory>
-                <sourceDirectory>${basedir}/core/src/main/java</sourceDirectory>
-                <sourceDirectory>${basedir}/processing/src/main/java</sourceDirectory>
-                <sourceDirectory>${basedir}/hadoop/src/main/java</sourceDirectory>
-                <sourceDirectory>${basedir}/integration/spark2/src/main/scala</sourceDirectory>
-                <sourceDirectory>${basedir}/integration/spark2/src/main/commonTo2.2And2.3</sourceDirectory>
-                <sourceDirectory>${basedir}/integration/spark2/src/main/spark2.3</sourceDirectory>
-                <sourceDirectory>${basedir}/integration/spark2/src/main/java</sourceDirectory>
-                <sourceDirectory>${basedir}/integration/spark-common/src/main/scala</sourceDirectory>
-                <sourceDirectory>${basedir}/integration/spark-common/src/main/java</sourceDirectory>
-                <sourceDirectory>${basedir}/integration/spark-common-test/src/main/scala</sourceDirectory>
-                <sourceDirectory>${basedir}/integration/spark-common-test/src/main/java</sourceDirectory>
-                <sourceDirectory>${basedir}/integration/hive/src/main/scala</sourceDirectory>
-                <sourceDirectory>${basedir}/integration/hive/src/main/java</sourceDirectory>
-                <sourceDirectory>${basedir}/store/sdk/src/main/java</sourceDirectory>
-              </sourceDirectories>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-	  <profile>
-      <id>mrs</id>
-      <properties>
-        <spark.version>2.2.1.0200</spark.version>
-		    <hadoop.version>2.8.3.0100</hadoop.version>
-        <scala.binary.version>2.11</scala.binary.version>
-        <scala.version>2.11.8</scala.version>
-      </properties>
-      <modules>
-        <module>integration/spark-common</module>
-        <module>integration/spark-common-test</module>
-        <module>datamap/examples</module>
-        <module>assembly</module>
-        <module>integration/spark2</module>
-        <module>common-plugin</module>
-        <module>secondary_index</module>
-        <!--<module>integration/hive</module>-->
-        <module>streaming</module>
-        <module>examples/spark2</module>
-		    <module>datamap/lucene</module>
-        <module>datamap/bloom</module>
-        <module>tools/cli</module>
-      </modules>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.eluder.coveralls</groupId>
-            <artifactId>coveralls-maven-plugin</artifactId>
-            <version>4.3.0</version>
-            <configuration>
-              <repoToken>opPwqWW41vYppv6KISea3u1TJvE1ugJ5Y</repoToken>
-              <sourceEncoding>UTF-8</sourceEncoding>
-              <jacocoReports>
-                <jacocoReport>${basedir}/target/carbondata-coverage-report/carbondata-coverage-report.xml
-                </jacocoReport>
-              </jacocoReports>
-              <sourceDirectories>
-                <sourceDirectory>${basedir}/common/src/main/java</sourceDirectory>
-                <sourceDirectory>${basedir}/core/src/main/java</sourceDirectory>
-                <sourceDirectory>${basedir}/processing/src/main/java</sourceDirectory>
-                <sourceDirectory>${basedir}/hadoop/src/main/java</sourceDirectory>
-                <sourceDirectory>${basedir}/integration/spark2/src/main/scala</sourceDirectory>
-                <sourceDirectory>${basedir}/integration/spark2/src/main/spark2.2</sourceDirectory>
-                <sourceDirectory>${basedir}/integration/spark2/src/main/java</sourceDirectory>
-                <sourceDirectory>${basedir}/integration/spark-common/src/main/scala</sourceDirectory>
-                <sourceDirectory>${basedir}/integration/spark-common/src/main/java</sourceDirectory>
-                <sourceDirectory>${basedir}/integration/spark-common-test/src/main/scala</sourceDirectory>
-                <sourceDirectory>${basedir}/integration/spark-common-test/src/main/java</sourceDirectory>
-                <sourceDirectory>${basedir}/integration/hive/src/main/scala</sourceDirectory>
-                <sourceDirectory>${basedir}/integration/hive/src/main/java</sourceDirectory>
-                <sourceDirectory>${basedir}/streaming/src/main/java</sourceDirectory>
-                <sourceDirectory>${basedir}/streaming/src/main/scala</sourceDirectory>
-              </sourceDirectories>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
-      <id>include-all</id>
-    </profile>
-    <profile>
       <id>sdvtest</id>
       <modules>
         <module>integration/spark-common-cluster-test</module>
-      </modules>
-    </profile>
-    <profile>
-      <id>hbase</id>
-      <modules>
-        <module>integration/hbase</module>
-      </modules>
-    </profile>
-    <profile>
-      <id>fleet</id>
-      <modules>
-        <module>fleet/query-server</module>
-        <module>fleet/job</module>
-        <module>fleet/hbase</module>
-        <module>fleet/router</module>
-        <module>fleet/vision</module>
-        <module>fleet/project</module>
       </modules>
     </profile>
     <profile>
@@ -1020,10 +863,14 @@
       </properties>
     </profile>
     <profile>
-      <id>mv</id>
+      <id>fleet</id>
       <modules>
-        <module>datamap/mv/plan</module>
-        <module>datamap/mv/core</module>
+        <module>fleet/query-server</module>
+        <module>fleet/job</module>
+        <module>fleet/hbase</module>
+        <module>fleet/router</module>
+        <module>fleet/vision</module>
+        <module>fleet/project</module>
       </modules>
     </profile>
   </profiles>
