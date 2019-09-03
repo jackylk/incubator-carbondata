@@ -82,41 +82,41 @@ class TestOcrUdf extends QueryTest with BeforeAndAfterAll {
     // sql(s"DROP DATABASE $dbName CASCADE")
   }
 
-  test("Test ocr: form") {
-    testOcrUdf("image_form", "table_form", "ocr_form")
-  }
-
-  test("Test ocr: general_table") {
-    testOcrUdf("image_general_table", "table_general_table", "ocr_general_table")
-  }
-
-  test("Test ocr: handwriting") {
-    testOcrUdf("image_handwriting", "table_handwriting", "ocr_handwriting")
-  }
-
-  test("Test ocr: mvs_invoice") {
-    testOcrUdf("image_mvs_invoice", "table_mvs_invoice", "ocr_mvs_invoice")
-  }
-
-  test("Test ocr: vehicle_license") {
-    testOcrUdf("image_vehicle_license", "table_vehicle_license", "ocr_vehicle_license")
-  }
-
-  test("Test ocr: driver_license") {
-    testOcrUdf("image_driver_license", "table_driver_license", "ocr_vehicle_license")
-  }
-
-  test("Test ocr: general_text") {
-    testOcrUdf("image_general_text", "table_general_text", "ocr_general_text")
-  }
-
-  test("Test ocr: id_card") {
-    testOcrUdf("image_id_card", "table_id_card", "ocr_id_card")
-  }
-
-  test("Test ocr: vat_invoice") {
-    testOcrUdf("image_vat_invoice", "table_vat_invoice", "ocr_vat_invoice")
-  }
+//  test("Test ocr: form") {
+//    testOcrUdf("image_form", "table_form", "ocr_form")
+//  }
+//
+//  test("Test ocr: general_table") {
+//    testOcrUdf("image_general_table", "table_general_table", "ocr_general_table")
+//  }
+//
+//  test("Test ocr: handwriting") {
+//    testOcrUdf("image_handwriting", "table_handwriting", "ocr_handwriting")
+//  }
+//
+//  test("Test ocr: mvs_invoice") {
+//    testOcrUdf("image_mvs_invoice", "table_mvs_invoice", "ocr_mvs_invoice")
+//  }
+//
+//  test("Test ocr: vehicle_license") {
+//    testOcrUdf("image_vehicle_license", "table_vehicle_license", "ocr_vehicle_license")
+//  }
+//
+//  test("Test ocr: driver_license") {
+//    testOcrUdf("image_driver_license", "table_driver_license", "ocr_vehicle_license")
+//  }
+//
+//  test("Test ocr: general_text") {
+//    testOcrUdf("image_general_text", "table_general_text", "ocr_general_text")
+//  }
+//
+//  test("Test ocr: id_card") {
+//    testOcrUdf("image_id_card", "table_id_card", "ocr_id_card")
+//  }
+//
+//  test("Test ocr: vat_invoice") {
+//    testOcrUdf("image_vat_invoice", "table_vat_invoice", "ocr_vat_invoice")
+//  }
 
 //  test("Test ocr: plate_number") {
 //    testOcrUdf("image_plate_number", "table_plate_number", "ocr_plate_number")
