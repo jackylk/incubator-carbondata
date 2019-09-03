@@ -31,6 +31,7 @@ import org.apache.carbondata.core.metadata.schema.BucketingInfo;
 import org.apache.carbondata.core.metadata.schema.SortColumnRangeInfo;
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonColumn;
 import org.apache.carbondata.processing.loading.converter.DictionaryCardinalityFinder;
+import org.apache.carbondata.processing.loading.model.learned.LearnedPartitionModel;
 
 public class CarbonDataLoadConfiguration {
 
@@ -127,6 +128,35 @@ public class CarbonDataLoadConfiguration {
 
   private int numberOfLoadingCores;
 
+  /**
+   * sort algorithm to be used to sortStep
+   */
+  private String sortAlgorithm;
+
+  /**
+   * number of SortDataRows
+   */
+  private int numberOfSortDataRows;
+
+  /**
+   * partition algorithm
+   */
+  private String partitionAlgorithm;
+
+  /**
+   * learned partition model
+   */
+  private LearnedPartitionModel learnedPartitionModel;
+
+  /*
+   * Params about Range Partition info
+   */
+  private int numberOfRangePartition;
+
+  /**
+   * Take 1 example for each samplingGap set
+   */
+  private int samplingGap;
   public CarbonDataLoadConfiguration() {
   }
 
@@ -444,4 +474,53 @@ public class CarbonDataLoadConfiguration {
   public void setNumberOfLoadingCores(int numberOfLoadingCores) {
     this.numberOfLoadingCores = numberOfLoadingCores;
   }
+
+  public String getSortAlgorithm() {
+    return sortAlgorithm;
+  }
+
+  public void setSortAlgorithm(String sortAlgorithm) {
+    this.sortAlgorithm = sortAlgorithm;
+  }
+
+  public int getNumberOfSortDataRows() {
+    return numberOfSortDataRows;
+  }
+
+  public void setNumberOfSortDataRows(int numberOfSortDataRows) {
+    this.numberOfSortDataRows = numberOfSortDataRows;
+  }
+
+  public String getPartitionAlgorithm() {
+    return partitionAlgorithm;
+  }
+
+  public void setPartitionAlgorithm(String partitionAlgorithm) {
+    this.partitionAlgorithm = partitionAlgorithm;
+  }
+
+  public LearnedPartitionModel getLearnedPartitionModel() {
+    return learnedPartitionModel;
+  }
+
+  public void setLearnedPartitionModel(LearnedPartitionModel learnedPartitionModel) {
+    this.learnedPartitionModel = learnedPartitionModel;
+  }
+
+  public int getNumberOfRangePartition() {
+    return numberOfRangePartition;
+  }
+
+  public void setNumberOfRangePartition(int numberOfRangePartition) {
+    this.numberOfRangePartition = numberOfRangePartition;
+  }
+
+  public int getSamplingGap() {
+    return samplingGap;
+  }
+
+  public void setSamplingGap(int samplingGap) {
+    this.samplingGap = samplingGap;
+  }
+
 }

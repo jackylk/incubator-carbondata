@@ -38,14 +38,7 @@ import org.apache.carbondata.core.util.CarbonProperties;
 import org.apache.carbondata.processing.loading.constants.DataLoadProcessorConstants;
 import org.apache.carbondata.processing.loading.exception.CarbonDataLoadingException;
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel;
-import org.apache.carbondata.processing.loading.steps.CarbonRowDataWriterProcessorStepImpl;
-import org.apache.carbondata.processing.loading.steps.DataConverterProcessorStepImpl;
-import org.apache.carbondata.processing.loading.steps.DataWriterBatchProcessorStepImpl;
-import org.apache.carbondata.processing.loading.steps.DataWriterProcessorStepImpl;
-import org.apache.carbondata.processing.loading.steps.InputProcessorStepImpl;
-import org.apache.carbondata.processing.loading.steps.InputProcessorStepWithNoConverterImpl;
-import org.apache.carbondata.processing.loading.steps.JsonInputProcessorStepImpl;
-import org.apache.carbondata.processing.loading.steps.SortProcessorStepImpl;
+import org.apache.carbondata.processing.loading.steps.*;
 import org.apache.carbondata.processing.util.CarbonDataProcessorUtil;
 
 import org.apache.commons.lang3.StringUtils;
@@ -73,6 +66,9 @@ public final class DataLoadProcessBuilder {
       return buildInternalForBucketing(inputIterators, configuration);
     } else if (sortScope.equals(SortScopeOptions.SortScope.BATCH_SORT)) {
       return buildInternalForBatchSort(inputIterators, configuration);
+    }  else if (loadModel.getPartitionAlgorithm() != null && "LEARNED"
+            .equalsIgnoreCase(loadModel.getPartitionAlgorithm())) {
+      return buildInternalForLearnedPartition(inputIterators, configuration, loadModel);
     } else {
       return buildInternal(inputIterators, configuration);
     }
@@ -193,6 +189,12 @@ public final class DataLoadProcessBuilder {
         new SortProcessorStepImpl(configuration, converterProcessorStep);
     // 4. Writes the sorted data in carbondata format.
     return new DataWriterProcessorStepImpl(configuration, sortProcessorStep);
+  }
+
+  private AbstractDataLoadProcessorStep buildInternalForLearnedPartition(
+          CarbonIterator[] inputIterators, CarbonDataLoadConfiguration configuration,
+          CarbonLoadModel loadModel) {
+    return new LearnedPartitionPreProcessorStepImpl(configuration, inputIterators, loadModel);
   }
 
   public static CarbonDataLoadConfiguration createConfiguration(CarbonLoadModel loadModel,

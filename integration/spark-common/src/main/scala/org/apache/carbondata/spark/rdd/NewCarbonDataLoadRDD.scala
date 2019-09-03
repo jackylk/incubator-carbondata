@@ -143,6 +143,15 @@ class NewCarbonDataLoadRDD[K, V](
         loader.initialize()
         // need to clear thread local before every load.
         DataTypeUtil.clearFormatter()
+
+        if ("LEARNED".equalsIgnoreCase(model.getPartitionAlgorithm)) {
+          val preRecordReaders = getInputIterators
+          val preExecutor = new DataLoadExecutor()
+          preExecutor.execute(model, loader.storeLocation, preRecordReaders)
+          preExecutor.close()
+          model.setPartitionAlgorithm(null)
+        }
+
         val executor = new DataLoadExecutor()
         // in case of success, failure or cancelation clear memory and stop execution
         context

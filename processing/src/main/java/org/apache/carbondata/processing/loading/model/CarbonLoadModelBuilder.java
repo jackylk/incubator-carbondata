@@ -307,6 +307,29 @@ public class CarbonLoadModelBuilder {
     validateAndSetBinaryDecoder(carbonLoadModel);
 
     validateRangeColumn(optionsFinal, carbonLoadModel);
+
+    // set the learned info
+    carbonLoadModel.setSortAlgorithm(optionsFinal.get("sort_algorithm"));
+    carbonLoadModel.setPartitionAlgorithm(optionsFinal.get("partition_algorithm"));
+    String numOfPartition = checkNumberValue(options.get("number_of_partitions"), "1");
+    carbonLoadModel.setNumberOfRangePartition(Integer.parseInt(numOfPartition));
+    String numberOfSortDataRows = checkNumberValue(options.get("number_of_sortdatarows"), "1");
+    carbonLoadModel.setNumberOfSortDataRows(Integer.parseInt(numberOfSortDataRows));
+  }
+
+  private String checkNumberValue(String value, String defaultValue) {
+    if (StringUtils.isEmpty(value)) {
+      return defaultValue;
+    }
+    try {
+      int result = Integer.parseInt(value);
+      if (result < 1) {
+        return defaultValue;
+      }
+    } catch (NumberFormatException ex) {
+      return defaultValue;
+    }
+    return value;
   }
 
   private void validateRangeColumn(Map<String, String> optionsFinal,

@@ -67,4 +67,21 @@ public class UnsafeIntSortDataFormat
   @Override public IntPointerBuffer allocate(int length) {
     return new IntPointerBuffer(length);
   }
+
+  @Override
+  int getPointer(IntPointerBuffer data, int pos) {
+    return data.get(pos);
+  }
+
+  @Override
+  int getAndSetAddress(IntPointerBuffer data, int pos0, int pos1) {
+    int tempPointer = data.get(pos0);
+    data.set(pos0, pos1);
+    return tempPointer;
+  }
+
+  @Override
+  void setAddress(IntPointerBuffer data, int pos, int addr) {
+    data.set(pos, addr);
+  }
 }

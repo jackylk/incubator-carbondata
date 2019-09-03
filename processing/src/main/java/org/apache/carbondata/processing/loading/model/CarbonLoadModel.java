@@ -32,6 +32,7 @@ import org.apache.carbondata.core.statusmanager.LoadMetadataDetails;
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager;
 import org.apache.carbondata.core.statusmanager.SegmentUpdateStatusManager;
 import org.apache.carbondata.core.util.path.CarbonTablePath;
+import org.apache.carbondata.processing.loading.model.learned.LearnedPartitionModel;
 
 public class CarbonLoadModel implements Serializable {
 
@@ -254,6 +255,19 @@ public class CarbonLoadModel implements Serializable {
    * input size = max(bockletSize, (blockSize - blocketSize)) * scaleFactor
    */
   private int scaleFactor;
+
+  private String sortAlgorithm;
+
+  private int numberOfSortDataRows;
+
+  private String partitionAlgorithm;
+
+  /*
+   * Params about Range Partition info
+   */
+  private int numberOfRangePartition;
+
+  private LearnedPartitionModel learnedPartitionModel;
 
   public boolean isAggLoadRequest() {
     return isAggLoadRequest;
@@ -497,6 +511,11 @@ public class CarbonLoadModel implements Serializable {
     copy.rangePartitionColumn = rangePartitionColumn;
     copy.scaleFactor = scaleFactor;
     copy.totalSize = totalSize;
+    copy.sortAlgorithm = sortAlgorithm;
+    copy.numberOfSortDataRows = numberOfSortDataRows;
+    copy.partitionAlgorithm = partitionAlgorithm;
+    copy.learnedPartitionModel = learnedPartitionModel;
+    copy.numberOfRangePartition = numberOfRangePartition;
     return copy;
   }
 
@@ -557,6 +576,11 @@ public class CarbonLoadModel implements Serializable {
     copyObj.rangePartitionColumn = rangePartitionColumn;
     copyObj.scaleFactor = scaleFactor;
     copyObj.totalSize = totalSize;
+    copyObj.sortAlgorithm = sortAlgorithm;
+    copyObj.numberOfSortDataRows = numberOfSortDataRows;
+    copyObj.partitionAlgorithm = partitionAlgorithm;
+    copyObj.learnedPartitionModel = learnedPartitionModel;
+    copyObj.numberOfRangePartition = numberOfRangePartition;
     return copyObj;
   }
 
@@ -997,5 +1021,45 @@ public class CarbonLoadModel implements Serializable {
 
   public int getScaleFactor() {
     return scaleFactor;
+  }
+
+  public String getSortAlgorithm() {
+    return sortAlgorithm;
+  }
+
+  public void setSortAlgorithm(String sortAlgorithm) {
+    this.sortAlgorithm = sortAlgorithm;
+  }
+
+  public int getNumberOfSortDataRows() {
+    return numberOfSortDataRows;
+  }
+
+  public void setNumberOfSortDataRows(int numberOfSortDataRows) {
+    this.numberOfSortDataRows = numberOfSortDataRows;
+  }
+
+  public int getNumberOfRangePartition() {
+    return numberOfRangePartition;
+  }
+
+  public void setNumberOfRangePartition(int numberOfRangePartition) {
+    this.numberOfRangePartition = numberOfRangePartition;
+  }
+
+  public String getPartitionAlgorithm() {
+    return partitionAlgorithm;
+  }
+
+  public void setPartitionAlgorithm(String partitionAlgorithm) {
+    this.partitionAlgorithm = partitionAlgorithm;
+  }
+
+  public LearnedPartitionModel getLearnedPartitionModel() {
+    return learnedPartitionModel;
+  }
+
+  public void setLearnedPartitionModel(LearnedPartitionModel learnedPartitionModel) {
+    this.learnedPartitionModel = learnedPartitionModel;
   }
 }

@@ -77,4 +77,20 @@ abstract class SortDataFormat<K, Buffer> {
    * All elements of the buffer should be considered invalid until data is explicitly copied in.
    */
   abstract Buffer allocate(int length);
+
+  /**
+   * Return the pointer for the element at the given index.
+   */
+  abstract int getPointer(Buffer data, int pos);
+
+  /**
+   * Get and set address
+   */
+  abstract int getAndSetAddress(Buffer data, int pos0, int pos1);
+
+  /**
+   * Set address
+   */
+  abstract void setAddress(Buffer data, int pos, int addr);
+
 }
