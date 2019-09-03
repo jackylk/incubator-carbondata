@@ -38,7 +38,11 @@ class CreateCarbonRelationEventListener extends OperationEventListener with Logg
         val databaseName = createCarbonRelationPostEvent.carbonTable.getDatabaseName
         val tableName = createCarbonRelationPostEvent.carbonTable.getTableName
         val sparkSession = createCarbonRelationPostEvent.sparkSession
-        CarbonInternalMetastore.refreshIndexInfo(databaseName, tableName, carbonTable)(sparkSession)
+        CarbonInternalMetastore
+          .refreshIndexInfo(databaseName,
+            tableName,
+            carbonTable,
+            createCarbonRelationPostEvent.needLock)(sparkSession)
     }
   }
 }

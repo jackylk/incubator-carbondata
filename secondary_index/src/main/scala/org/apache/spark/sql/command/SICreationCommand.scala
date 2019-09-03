@@ -12,17 +12,17 @@
 
 package org.apache.spark.sql.command
 
-import java.io.{File, IOException}
+import java.io.IOException
 import java.util.{ArrayList, UUID}
 
 import scala.collection.JavaConverters._
 import scala.language.implicitConversions
 
 import org.apache.spark.sql._
-import org.apache.spark.sql.catalyst.parser.ParseException
 import org.apache.spark.sql.catalyst.TableIdentifier
+import org.apache.spark.sql.catalyst.parser.ParseException
 import org.apache.spark.sql.execution.command.AtomicRunnableCommand
-import org.apache.spark.sql.hive.{CarbonInternalHiveMetadataUtil, CarbonInternalMetastore, CarbonRelation, CarbonSessionCatalog}
+import org.apache.spark.sql.hive.{CarbonInternalHiveMetadataUtil, CarbonRelation, CarbonSessionCatalog}
 import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
@@ -33,11 +33,12 @@ import org.apache.carbondata.core.locks.{CarbonLockFactory, CarbonLockUtil, ICar
 import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier
 import org.apache.carbondata.core.metadata.datatype.{DataType, DataTypes}
 import org.apache.carbondata.core.metadata.encoder.Encoding
-import org.apache.carbondata.core.metadata.schema.{SchemaEvolution, SchemaEvolutionEntry, SchemaReader}
-import org.apache.carbondata.core.metadata.schema.table.{CarbonTable, TableInfo, TableSchema}
 import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema
+import org.apache.carbondata.core.metadata.schema.table.{CarbonTable, TableInfo, TableSchema}
+import org.apache.carbondata.core.metadata.schema.{SchemaEvolution, SchemaEvolutionEntry, SchemaReader}
 import org.apache.carbondata.core.service.impl.ColumnUniqueIdGenerator
 import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
+import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.events.{CreateTablePostExecutionEvent, CreateTablePreExecutionEvent, OperationContext, OperationListenerBus}
 import org.apache.carbondata.spark.core.metadata.IndexMetadata
 import org.apache.carbondata.spark.spark.indextable.{IndexTableInfo, IndexTableUtil}
@@ -82,16 +83,12 @@ class ErrorMessage(message: String) extends Exception(message) {
       s"Creating Index with Database name [$databaseName] and Index name [$indexTableName]")
     val catalog = CarbonEnv.getInstance(sparkSession).carbonMetaStore
     val identifier = TableIdentifier(tableName, indexModel.databaseName)
-    catalog.checkSchemasModifiedTimeAndReloadTable(identifier)
     var carbonTable: CarbonTable = null
     var locks: List[ICarbonLock] = List()
     var oldIndexInfo = ""
 
     try {
-      carbonTable =
-        CarbonEnv.getInstance(sparkSession).carbonMetaStore
-          .lookupRelation(indexModel.databaseName, tableName)(sparkSession)
-          .asInstanceOf[CarbonRelation].metaData.carbonTable
+      carbonTable = CarbonEnv.getCarbonTable(indexModel.databaseName, tableName)(sparkSession)
       if (carbonTable == null) {
         throw new ErrorMessage(s"Parent Table $databaseName.$tableName is not found")
       }
@@ -270,12 +267,10 @@ class ErrorMessage(message: String) extends Exception(message) {
         val catalog = CarbonEnv.getInstance(sparkSession).carbonMetaStore
         //        val tablePath = tableIdentifier.getTablePath
         val carbonSchemaString = catalog.generateTableSchemaString(tableInfo, tableIdentifier)
-        val indexCarbonTable = CarbonInternalScalaUtil
-          .getIndexCarbonTable(tableInfo.getDatabaseName, indexTableName)(sparkSession)
         // set index information in index table
         val indexTableMeta = new IndexMetadata(indexTableName, true, carbonTable.getTablePath)
-        indexCarbonTable.getTableInfo.getFactTable.getTableProperties
-          .put(indexCarbonTable.getCarbonTableIdentifier.getTableId, indexTableMeta.serialize)
+        tableInfo.getFactTable.getTableProperties
+          .put(tableInfo.getFactTable.getTableId, indexTableMeta.serialize)
         // set index information in parent table
         val parentIndexMetadata = if (
           carbonTable.getTableInfo.getFactTable.getTableProperties
@@ -348,34 +343,25 @@ class ErrorMessage(message: String) extends Exception(message) {
 
       CarbonInternalHiveMetadataUtil.refreshTable(databaseName, tableName, sparkSession)
 
-        // update the timestamp for modified.mdt file after completion of the operation.
-        // This is done for concurrent scenarios where another DDL say Alter table drop column is
-        // executed on the same on which SI creation is in progress. Then in that case if
-        // modified.mdt file is not touched then catalog cache will not be refreshed in the
-        // other beeline session and SI on that column will not be dropped
-        catalog.updateAndTouchSchemasUpdatedTime()
-        // clear parent table from meta store cache as it is also required to be
-        // refreshed when SI table is created
-        CarbonInternalMetastore.removeTableFromMetadataCache(databaseName, tableName)(sparkSession)
-        // refersh the parent table relation
-        sparkSession.sessionState.catalog.refreshTable(identifier)
-        // load data for secondary index
-        if (isCreateSIndex) {
-          LoadDataForSecondaryIndex(indexModel).run(sparkSession)
-        }
-
-        val isMaintableSegEqualToSISegs = CarbonInternalLoaderUtil
-          .checkMainTableSegEqualToSISeg(carbonTable.getMetadataPath,
-            indexCarbonTable.getMetadataPath)
-        if (isMaintableSegEqualToSISegs) {
-          // enable the SI table
-          sparkSession.sql(
-            s"""ALTER TABLE $databaseName.$indexTableName SET
-               |SERDEPROPERTIES ('isSITableEnabled' = 'true')""".stripMargin)
-        }
-        val createTablePostExecutionEvent: CreateTablePostExecutionEvent =
-          new CreateTablePostExecutionEvent(sparkSession, tableIdentifier)
-        OperationListenerBus.getInstance.fireEvent(createTablePostExecutionEvent, operationContext)
+      // refersh the parent table relation
+      sparkSession.sessionState.catalog.refreshTable(identifier)
+      // load data for secondary index
+      if (isCreateSIndex) {
+        LoadDataForSecondaryIndex(indexModel).run(sparkSession)
+      }
+      val indexTablePath = CarbonTablePath
+        .getMetadataPath(tableInfo.getOrCreateAbsoluteTableIdentifier.getTablePath)
+      val isMaintableSegEqualToSISegs = CarbonInternalLoaderUtil
+        .checkMainTableSegEqualToSISeg(carbonTable.getMetadataPath, indexTablePath)
+      if (isMaintableSegEqualToSISegs) {
+        // enable the SI table
+        sparkSession.sql(
+          s"""ALTER TABLE $databaseName.$indexTableName SET
+             |SERDEPROPERTIES ('isSITableEnabled' = 'true')""".stripMargin)
+      }
+      val createTablePostExecutionEvent: CreateTablePostExecutionEvent =
+        new CreateTablePostExecutionEvent(sparkSession, tableIdentifier)
+      OperationListenerBus.getInstance.fireEvent(createTablePostExecutionEvent, operationContext)
       LOGGER.info(
         s"Index created with Database name [$databaseName] and Index name [$indexTableName]")
     } catch {

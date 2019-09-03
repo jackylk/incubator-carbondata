@@ -140,7 +140,7 @@ object CarbonInternalMetastore {
   }
 
   def refreshIndexInfo(dbName: String, tableName: String,
-      carbonTable: CarbonTable)(sparkSession: SparkSession): Unit = {
+      carbonTable: CarbonTable, needLock: Boolean = true)(sparkSession: SparkSession): Unit = {
     val indexTableExists = CarbonInternalScalaUtil.isIndexTableExists(carbonTable)
     // tables created without property "indexTableExists", will return null, for those tables enter
     // into below block, gather the actual data from hive and then set this property to true/false
@@ -183,14 +183,14 @@ object CarbonInternalMetastore {
             // to false as there is no index table for this table
             CarbonInternalScalaUtil
               .addOrModifyTableProperty(carbonTable,
-                Map("indexTableExists" -> "false"), schema)(sparkSession,
+                Map("indexTableExists" -> "false"), schema, needLock)(sparkSession,
                 sparkSession.sessionState.catalog.asInstanceOf[CarbonSessionCatalog])
           } else {
             // modify the tableProperties of mainTable by adding "indexTableExists" property
             // to true as there are some index table for this table
             CarbonInternalScalaUtil
               .addOrModifyTableProperty(carbonTable,
-                Map("indexTableExists" -> "true"), schema)(sparkSession,
+                Map("indexTableExists" -> "true"), schema, needLock)(sparkSession,
                 sparkSession.sessionState.catalog.asInstanceOf[CarbonSessionCatalog])
           }
         }
@@ -284,15 +284,10 @@ object CarbonInternalMetastore {
     sparkSession: SparkSession): Unit = {
     val databaseLocation = CarbonEnv.getDatabaseLocation(dbName, sparkSession)
     val tablePath = databaseLocation + CarbonCommonConstants.FILE_SEPARATOR + tableName.toLowerCase
-    val tableIdentifier = AbsoluteTableIdentifier.from(tablePath, dbName, tableName)
     val metadataFilePath =
       CarbonTablePath.getMetadataPath(tablePath)
     val fileType = FileFactory.getFileType(metadataFilePath)
     if (FileFactory.isFileExist(metadataFilePath, fileType)) {
-      // while drop we should refresh the schema modified time so that if any thing has changed
-      // in the other beeline need to update.
-      CarbonEnv.getInstance(sparkSession).carbonMetaStore
-        .checkSchemasModifiedTimeAndReloadTable(TableIdentifier(tableName, Option(dbName)))
       val file = FileFactory.getCarbonFile(metadataFilePath, fileType)
       CarbonUtil.deleteFoldersAndFilesSilent(file.getParentFile)
     }

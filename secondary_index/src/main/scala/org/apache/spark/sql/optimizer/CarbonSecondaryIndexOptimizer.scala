@@ -127,6 +127,18 @@ class CarbonSecondaryIndexOptimizer(sparkSession: SparkSession) {
         filter.output
       }
       var mainTableDf = createDF(sparkSession, Project(project, filter))
+
+      // If the createDF creates DF from MV flow by hitting MV datamap, no need to consider this DF
+      // as main table DF and then do join with SI table and go ahead, So here checking whether the
+      // DF is from child table, if it is, just return the filter as it is without rewriting
+      val tableRelation = mainTableDf.logicalPlan collect {
+        case l: LogicalRelation if l.relation.isInstanceOf[CarbonDatasourceHadoopRelation] =>
+          l.relation.asInstanceOf[CarbonDatasourceHadoopRelation]
+      }
+      if (tableRelation.nonEmpty && tableRelation.head.carbonTable.isChildTable) {
+        return filter
+      }
+
       if (!isPositionIDPresent) {
         mainTableDf = mainTableDf.selectExpr("getPositionId() as positionId", "*")
       } else {

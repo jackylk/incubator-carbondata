@@ -56,10 +56,17 @@ private[sql] case class ShowIndexes(
     val indexTableMap = indexesMap.asScala
     if (indexTableMap.nonEmpty) {
       val indexList = indexTableMap.map { indexInfo =>
-        (indexInfo._1, indexInfo._2.asScala.mkString(","))
+        val isSITableEnabled = sparkSession.sessionState.catalog
+          .getTableMetadata(TableIdentifier(indexInfo._1, Some(databaseName))).storage.properties
+          .getOrElse("isSITableEnabled", "true").equalsIgnoreCase("true")
+        if (isSITableEnabled) {
+          (indexInfo._1, indexInfo._2.asScala.mkString(","), "enabled")
+        } else {
+          (indexInfo._1, indexInfo._2.asScala.mkString(","), "disabled")
+        }
       }
-      indexList.map { case (indexTableName, columnName) =>
-        Row(f"$indexTableName%-30s $columnName")
+      indexList.map { case (indexTableName, columnName, isSITableEnabled) =>
+        Row(indexTableName, isSITableEnabled, columnName)
       }.toSeq
     } else {
       Seq.empty

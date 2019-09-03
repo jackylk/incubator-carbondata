@@ -2254,7 +2254,6 @@ public final class CarbonUtil {
     org.apache.carbondata.format.TableInfo tableInfo =
         new org.apache.carbondata.format.TableInfo(thriftFactTable,
             new ArrayList<org.apache.carbondata.format.TableSchema>());
-
     tableInfo.setDataMapSchemas(null);
     return tableInfo;
   }
@@ -2765,14 +2764,30 @@ public final class CarbonUtil {
     LOGGER.info(String.format("Copying %s to %s, operation id %d", localFilePath,
         carbonDataDirectoryPath, copyStartTime));
     try {
-      CarbonFile localCarbonFile =
-          FileFactory.getCarbonFile(localFilePath, FileFactory.getFileType(localFilePath));
+      CarbonFile localCarbonFile = FileFactory.getCarbonFile(localFilePath);
+      // the size of local carbon file must be greater than 0
+      if (localCarbonFile.getSize() == 0L) {
+        LOGGER.error("The size of local carbon file: " + localFilePath + " is 0.");
+        throw new CarbonDataWriterException("The size of local carbon file is 0.");
+      }
       String carbonFilePath = carbonDataDirectoryPath + localFilePath
           .substring(localFilePath.lastIndexOf(File.separator));
       copyLocalFileToCarbonStore(carbonFilePath, localFilePath,
           CarbonCommonConstants.BYTEBUFFER_SIZE,
           getMaxOfBlockAndFileSize(fileSizeInBytes, localCarbonFile.getSize()));
-    } catch (IOException e) {
+      CarbonFile targetCarbonFile = FileFactory.getCarbonFile(carbonFilePath);
+      // the size of carbon file must be greater than 0
+      // and the same as the size of local carbon file
+      if (targetCarbonFile.getSize() == 0L ||
+          (targetCarbonFile.getSize() != localCarbonFile.getSize())) {
+        LOGGER.error("The size of carbon file: " + carbonFilePath + " is 0 "
+            + "or is not the same as the size of local carbon file: ("
+            + "carbon file size=" + targetCarbonFile.getSize()
+            + ", local carbon file size=" + localCarbonFile.getSize() + ")");
+        throw new CarbonDataWriterException("The size of carbon file is 0 "
+            + "or is not the same as the size of local carbon file.");
+      }
+    } catch (Exception e) {
       throw new CarbonDataWriterException(
           "Problem while copying file from local store to carbon store", e);
     }

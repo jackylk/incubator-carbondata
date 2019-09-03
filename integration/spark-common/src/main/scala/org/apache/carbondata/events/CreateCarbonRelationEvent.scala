@@ -38,4 +38,4 @@ case class CreateCarbonRelationPreEvent(sparkSession: SparkSession,
  * @param carbonTable
  */
 case class CreateCarbonRelationPostEvent(sparkSession: SparkSession,
-    carbonTable: CarbonTable) extends Event with CreateCarbonRelationEventInfo
+    carbonTable: CarbonTable, needLock: Boolean) extends Event with CreateCarbonRelationEventInfo

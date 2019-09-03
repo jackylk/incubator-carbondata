@@ -56,24 +56,19 @@ public class ExtendedBlockletWrapper implements Writable, Serializable {
 
   private static final Logger LOGGER =
       LogServiceFactory.getLogService(ExtendedBlockletWrapper.class.getName());
-
-  private boolean isWrittenToFile;
-
-  private int dataSize;
-
-  private byte[] bytes;
-
   private static final int BUFFER_SIZE = 8 * 1024 * 1024;
-
   private static final int BLOCK_SIZE = 256 * 1024 * 1024;
+  private boolean isWrittenToFile;
+  private int dataSize;
+  private byte[] bytes;
 
   public ExtendedBlockletWrapper() {
   }
 
   public ExtendedBlockletWrapper(List<ExtendedBlocklet> extendedBlockletList, String tablePath,
-      String queryId, boolean isWriteToFile) {
+      String queryId, boolean isWriteToFile, boolean isCountJob) {
     Map<String, Short> uniqueLocations = new HashMap<>();
-    byte[] bytes = convertToBytes(tablePath, uniqueLocations, extendedBlockletList);
+    byte[] bytes = convertToBytes(tablePath, uniqueLocations, extendedBlockletList, isCountJob);
     int serializeAllowedSize = Integer.parseInt(CarbonProperties.getInstance()
         .getProperty(CarbonCommonConstants.CARBON_INDEX_SERVER_SERIALIZATION_THRESHOLD,
             CarbonCommonConstants.CARBON_INDEX_SERVER_SERIALIZATION_THRESHOLD_DEFAULT)) * 1024;
@@ -121,13 +116,13 @@ public class ExtendedBlockletWrapper implements Writable, Serializable {
   }
 
   private byte[] convertToBytes(String tablePath, Map<String, Short> uniqueLocations,
-      List<ExtendedBlocklet> extendedBlockletList) {
+      List<ExtendedBlocklet> extendedBlockletList, boolean isCountJob) {
     ByteArrayOutputStream bos = new ExtendedByteArrayOutputStream();
     DataOutputStream stream = new DataOutputStream(bos);
     try {
       for (ExtendedBlocklet extendedBlocklet : extendedBlockletList) {
         extendedBlocklet.setFilePath(extendedBlocklet.getFilePath().replace(tablePath, ""));
-        extendedBlocklet.serializeData(stream, uniqueLocations);
+        extendedBlocklet.serializeData(stream, uniqueLocations, isCountJob);
       }
       return new SnappyCompressor().compressByte(bos.toByteArray());
     } catch (IOException e) {
@@ -141,6 +136,7 @@ public class ExtendedBlockletWrapper implements Writable, Serializable {
    * Below method will be used to write the data to stream[file/memory]
    * Data Format
    * <number of splits><number of unique location[short]><locations><serialize data len><data>
+   *
    * @param stream
    * @param data
    * @param uniqueLocation
@@ -157,7 +153,7 @@ public class ExtendedBlockletWrapper implements Writable, Serializable {
       final Map.Entry<String, Short> next = iterator.next();
       uniqueLoc[next.getValue()] = next.getKey();
     }
-    stream.writeShort((short)uniqueLoc.length);
+    stream.writeShort((short) uniqueLoc.length);
     for (String loc : uniqueLoc) {
       stream.writeUTF(loc);
     }
@@ -169,12 +165,14 @@ public class ExtendedBlockletWrapper implements Writable, Serializable {
    * deseralize the blocklet data from file or stream
    * data format
    * <number of splits><number of unique location[short]><locations><serialize data len><data>
+   *
    * @param tablePath
    * @param queryId
    * @return
    * @throws IOException
    */
-  public List<ExtendedBlocklet> readBlocklet(String tablePath, String queryId) throws IOException {
+  public List<ExtendedBlocklet> readBlocklet(String tablePath, String queryId, boolean isCountJob)
+      throws IOException {
     byte[] data;
     if (bytes != null) {
       if (isWrittenToFile) {
@@ -217,7 +215,7 @@ public class ExtendedBlockletWrapper implements Writable, Serializable {
       try {
         for (int i = 0; i < numberOfBlocklet; i++) {
           ExtendedBlocklet extendedBlocklet = new ExtendedBlocklet();
-          extendedBlocklet.deserializeFields(eDIS, locations, tablePath);
+          extendedBlocklet.deserializeFields(eDIS, locations, tablePath, isCountJob);
           extendedBlockletList.add(extendedBlocklet);
         }
       } finally {
@@ -247,4 +245,5 @@ public class ExtendedBlockletWrapper implements Writable, Serializable {
     }
     this.dataSize = in.readInt();
   }
+
 }

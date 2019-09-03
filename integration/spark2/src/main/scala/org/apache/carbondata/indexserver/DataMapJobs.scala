@@ -65,7 +65,8 @@ class DistributedDataMapJob extends AbstractDataMapJob {
           dataMapFormat.getCarbonTable.getAbsoluteTableIdentifier, filterProcessor)
         dataMapFormat.setFilterResolverIntf(filterInf)
         IndexServer.getClient.getSplits(dataMapFormat)
-          .getExtendedBlockets(dataMapFormat.getCarbonTable.getTablePath, dataMapFormat.getQueryId)
+          .getExtendedBlockets(dataMapFormat.getCarbonTable.getTablePath, dataMapFormat
+            .getQueryId, dataMapFormat.isCountStarJob)
       } finally {
         val tmpPath = CarbonUtil
           .getIndexServerTempPath(dataMapFormat.getCarbonTable.getTablePath,
@@ -106,7 +107,11 @@ class DistributedDataMapJob extends AbstractDataMapJob {
         filterInf.getFilterExpression.getFilterExpressionType == ExpressionType.UNKNOWN) {
       return filterProcessor.changeUnknownResloverToTrue(tableIdentifer)
     }
-    return filterInf;
+    filterInf
+  }
+
+  override def executeCountJob(dataMapFormat: DistributableDataMapFormat): java.lang.Long = {
+    IndexServer.getClient.getCount(dataMapFormat).get()
   }
 }
 
@@ -121,8 +126,8 @@ class EmbeddedDataMapJob extends AbstractDataMapJob {
     val originalJobDesc = spark.sparkContext.getLocalProperty("spark.job.description")
     dataMapFormat.setIsWriteToFile(false)
     dataMapFormat.setFallbackJob()
-    val splits = IndexServer.getSplits(dataMapFormat)
-      .getExtendedBlockets(dataMapFormat.getCarbonTable.getTablePath, dataMapFormat.getQueryId)
+    val splits = IndexServer.getSplits(dataMapFormat).getExtendedBlockets(dataMapFormat
+      .getCarbonTable.getTablePath, dataMapFormat.getQueryId, dataMapFormat.isCountStarJob)
     if (!dataMapFormat.isJobToClearDataMaps) {
       // Fire a job to clear the cache from executors as Embedded mode does not maintain the cache.
       IndexServer
@@ -131,6 +136,10 @@ class EmbeddedDataMapJob extends AbstractDataMapJob {
     }
     spark.sparkContext.setLocalProperty("spark.job.description", originalJobDesc)
     splits
+  }
+
+  override def executeCountJob(dataMapFormat: DistributableDataMapFormat): java.lang.Long = {
+    IndexServer.getCount(dataMapFormat).get()
   }
 
 }
