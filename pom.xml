@@ -101,7 +101,6 @@
     <module>hadoop</module>
     <module>store/sdk</module>
     <module>format</module>
-    <module>store/project-sdk</module>
     <module>cloud</module>
     <module>vector</module>
     <module>integration/spark2</module>
@@ -111,6 +110,7 @@
     <!--<module>integration/presto</module>-->
     <module>integration/hive</module>
     <module>integration/flink</module>
+    <module>store/sdk-for-hbase-project</module>
     <module>integration/hbase</module>
     <module>streaming</module>
     <module>datamap/bloom</module>
