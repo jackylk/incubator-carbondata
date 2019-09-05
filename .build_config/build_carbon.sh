@@ -113,4 +113,4 @@ rm -rf EI_CarbonData_Kernel_Component_MRS_*
 
 tar -czf ${COMPONENT_NAME}_${COMPONENT_VERSION}-${DP_VERSION}_release.tar.gz *
 
-echo "Finished.   "
+echo "Finished."
