@@ -14,6 +14,8 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
+
+<!-- Note: this project only provide sdk to hbase, the others pls use carbondata-store-sdk project -->
 <assembly>
   <id>${scala.binary.version}-${project.version}</id>
   <formats>
@@ -21,8 +23,9 @@
   </formats>
   <fileSets>
     <fileSet>
-      <directory>${project.build.directory}/sdk/jars</directory>
+      <directory>${project.build.directory}/sdk-for-hbase/jars</directory>
       <outputDirectory>jars</outputDirectory>
     </fileSet>
   </fileSets>
 </assembly>
+<!-- Note: this project only provide sdk to hbase, the others pls use carbondata-store-sdk project -->
