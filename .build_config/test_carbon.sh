@@ -71,46 +71,7 @@ echo -e "
         </formats>
         <aggregate>true</aggregate>
       </configuration>
-     </plugin>
-     <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.18</version>
-        <configuration>
-          <reportsDirectory>\${project.build.directory}/surefire-reports</reportsDirectory>
-          <argLine>-Xmx3g -XX:MaxPermSize=512m -XX:ReservedCodeCacheSize=512m</argLine>
-          <systemProperties>
-            <java.awt.headless>true</java.awt.headless>
-          </systemProperties>
-          <failIfNoTests>false</failIfNoTests>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.scalatest</groupId>
-        <artifactId>scalatest-maven-plugin</artifactId>
-        <version>1.0</version>
-        <configuration>
-          <reportsDirectory>\${project.build.directory}/surefire-reports</reportsDirectory>
-          <junitxml>.</junitxml>
-          <filereports>CarbonTestSuite.txt</filereports>
-          <argLine>\${argLine} -ea -Xmx3g -XX:MaxPermSize=512m -XX:ReservedCodeCacheSize=512m
-          </argLine>
-          <stderr />
-          <environmentVariables>
-          </environmentVariables>
-          <systemProperties>
-            <java.awt.headless>true</java.awt.headless>
-          </systemProperties>
-        </configuration>
-        <executions>
-          <execution>
-            <id>test</id>
-            <goals>
-              <goal>test</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>" > s.txt
+     </plugin>" > s.txt
 keyWord="<pluginManagement>"
 r1=`grep -n ${keyWord} pom.xml|awk -F: '{print $1}'|head -1`
 ((r2=r1+1))
