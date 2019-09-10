@@ -36,29 +36,7 @@ export DISPLAY_VERSION=${COMPONENT_VERSION}-${DP_VERSION}
 export BUILD_VERSION=${DISPLAY_VERSION}
 export CI_LOCAL_REPOSITORY="carbon_local_repository"
 sed -i "s/<localRepository>.*/<localRepository>${CI_LOCAL_REPOSITORY}<\/localRepository>/" .build_config/carbon_settings.xml
-echo -e "
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <forkCount>10</forkCount>
-          <reuseForks>true</reuseForks>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.scalatest</groupId>
-        <artifactId>scalatest-maven-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>cobertura-maven-plugin</artifactId>
-      </plugin>" > s.txt
-keyWord="<artifactId>maven-checkstyle-plugin</artifactId>"
-r1=`grep -n ${keyWord} pom.xml|awk -F: '{print $1}'|head -1`
-((r2=r1-3))
-sed -i "${r2} r s.txt" pom.xml
-rm s.txt -rf
-
+# add plugin management
 echo -e "
     <plugin>
       <groupId>org.codehaus.mojo</groupId>
@@ -71,10 +49,61 @@ echo -e "
         </formats>
         <aggregate>true</aggregate>
       </configuration>
-     </plugin>" > s.txt
+     </plugin>
+	 <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.18</version>
+        <configuration>
+          <reportsDirectory>\${project.build.directory}/surefire-reports</reportsDirectory>
+          <argLine>-Xmx3g -XX:MaxPermSize=512m -XX:ReservedCodeCacheSize=512m</argLine>
+          <systemProperties>
+            <java.awt.headless>true</java.awt.headless>
+          </systemProperties>
+          <failIfNoTests>false</failIfNoTests>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.scalatest</groupId>
+        <artifactId>scalatest-maven-plugin</artifactId>
+        <version>1.0</version>
+        <configuration>
+          <reportsDirectory>\${project.build.directory}/surefire-reports</reportsDirectory>
+          <junitxml>.</junitxml>
+          <filereports>CarbonTestSuite.txt</filereports>
+          <argLine>\${argLine} -ea -Xmx3g -XX:MaxPermSize=512m -XX:ReservedCodeCacheSize=512m
+          </argLine>
+          <stderr />
+          <environmentVariables>
+          </environmentVariables>
+          <systemProperties>
+            <java.awt.headless>true</java.awt.headless>
+          </systemProperties>
+        </configuration>
+        <executions>
+          <execution>
+            <id>test</id>
+            <goals>
+              <goal>test</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>" > s.txt
 keyWord="<pluginManagement>"
 r1=`grep -n ${keyWord} pom.xml|awk -F: '{print $1}'|head -1`
 ((r2=r1+1))
+sed -i "${r2} r s.txt" pom.xml
+rm s.txt -rf
+
+#add plungins
+echo -e "
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>cobertura-maven-plugin</artifactId>
+      </plugin>" > s.txt
+keyWord="<artifactId>maven-checkstyle-plugin</artifactId>"
+r1=`grep -n ${keyWord} pom.xml|awk -F: '{print $1}'|head -1`
+((r2=r1-3))
 sed -i "${r2} r s.txt" pom.xml
 rm s.txt -rf
 
