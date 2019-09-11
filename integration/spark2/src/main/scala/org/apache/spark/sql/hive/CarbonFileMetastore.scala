@@ -151,8 +151,8 @@ class CarbonFileMetastore extends CarbonMetaStore {
     val tables = Option(CarbonMetadata.getInstance.getCarbonTable(database, tableName))
     tables match {
       case Some(t) =>
-        if (isSchemaRefreshed(absIdentifier, sparkSession)) {
-          readCarbonSchema(absIdentifier, parameters, sparkSession, false)
+        if (isSchemaRefreshed(t.getAbsoluteTableIdentifier, sparkSession)) {
+          readCarbonSchema(t.getAbsoluteTableIdentifier, parameters, sparkSession, false)
         } else {
           CarbonRelation(database, tableName, CarbonSparkUtil.createSparkMeta(t), t)
         }
