@@ -16,21 +16,19 @@
  */
 package org.apache.carbondata.presto.server
 
-import java.sql.{Connection, DriverManager, ResultSet}
+import java.sql.{Connection, DriverManager, ResultSet, Statement}
 import java.util
-import java.util.{Locale, Optional, Properties}
+import java.util.{Optional, Properties}
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
-import com.facebook.presto.Session
-import com.facebook.presto.execution.QueryIdGenerator
-import com.facebook.presto.jdbc.PrestoStatement
-import com.facebook.presto.metadata.SessionPropertyManager
-import com.facebook.presto.spi.`type`.TimeZoneKey.UTC_KEY
-import com.facebook.presto.spi.security.Identity
-import com.facebook.presto.tests.DistributedQueryRunner
 import com.google.common.collect.ImmutableMap
+import io.prestosql.Session
+import io.prestosql.execution.QueryIdGenerator
+import io.prestosql.metadata.SessionPropertyManager
+import io.prestosql.spi.security.Identity
+import io.prestosql.tests.DistributedQueryRunner
 import org.slf4j.{Logger, LoggerFactory}
 
 import org.apache.carbondata.presto.CarbondataPlugin
@@ -45,10 +43,9 @@ class PrestoServer {
 
   val prestoProperties: util.Map[String, String] = Map(("http-server.http.port", "8086")).asJava
   val carbonProperties: util.Map[String, String] = new util.HashMap[String, String]()
-  createSession
-  lazy val queryRunner = new DistributedQueryRunner(createSession, 4, prestoProperties)
-  var dbName : String = null
-  var statement : PrestoStatement = _
+  var queryRunner: DistributedQueryRunner = _
+  var dbName : String = _
+  var statement : Statement = _
 
 
   /**
@@ -58,7 +55,7 @@ class PrestoServer {
   def startServer(): Unit = {
 
     LOGGER.info("======== STARTING PRESTO SERVER ========")
-    val queryRunner: DistributedQueryRunner = createQueryRunner(prestoProperties)
+    queryRunner = createQueryRunner(prestoProperties)
 
     LOGGER.info("STARTED SERVER AT :" + queryRunner.getCoordinator.getBaseUrl)
   }
@@ -73,16 +70,21 @@ class PrestoServer {
     this.dbName = dbName
     carbonProperties.putAll(properties)
     LOGGER.info("======== STARTING PRESTO SERVER ========")
-    val queryRunner: DistributedQueryRunner = createQueryRunner(prestoProperties)
+    queryRunner = createQueryRunner(prestoProperties)
     val conn: Connection = createJdbcConnection(dbName)
-    statement = conn.createStatement().asInstanceOf[PrestoStatement]
+    statement = conn.createStatement()
     LOGGER.info("STARTED SERVER AT :" + queryRunner.getCoordinator.getBaseUrl)
   }
 
   /**
    * Instantiates the Presto Server to connect with the Apache CarbonData
    */
-  private def createQueryRunner(extraProperties: util.Map[String, String]) = {
+  private def createQueryRunner(extraProperties: util.Map[String, String]): DistributedQueryRunner = {
+    val session = createSession
+    val queryRunner = DistributedQueryRunner.builder(session)
+      .setNodeCount(4)
+      .setExtraProperties(prestoProperties)
+      .build()
     Try {
       queryRunner.installPlugin(new CarbondataPlugin)
       val carbonProperties = ImmutableMap.builder[String, String]
@@ -145,7 +147,7 @@ class PrestoServer {
    * @return
    */
   private def createJdbcConnection(dbName: String) = {
-    val JDBC_DRIVER = "com.facebook.presto.jdbc.PrestoDriver"
+    val JDBC_DRIVER = "io.prestosql.jdbc.PrestoDriver"
     var DB_URL : String = null
     if (dbName == null) {
       DB_URL = "jdbc:presto://localhost:8086/carbondata/default"
@@ -194,10 +196,11 @@ class PrestoServer {
     Session.builder(new SessionPropertyManager)
       .setQueryId(new QueryIdGenerator().createNextQueryId)
       .setIdentity(new Identity("user", Optional.empty()))
-      .setSource(CARBONDATA_SOURCE).setCatalog(CARBONDATA_CATALOG)
-      .setTimeZoneKey(UTC_KEY).setLocale(Locale.ENGLISH)
+      .setSource(CARBONDATA_SOURCE)
+      .setCatalog(CARBONDATA_CATALOG)
       .setRemoteUserAddress("address")
-      .setUserAgent("agent").build
+      .setUserAgent("agent")
+      .build
   }
 
 }

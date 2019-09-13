@@ -28,20 +28,20 @@ import org.apache.carbondata.presto.impl.CarbonTableReader;
 
 import static org.apache.carbondata.presto.Types.checkType;
 
-import com.facebook.presto.hive.HdfsEnvironment;
-import com.facebook.presto.hive.HiveClientConfig;
-import com.facebook.presto.hive.HivePageSourceFactory;
-import com.facebook.presto.hive.HivePageSourceProvider;
-import com.facebook.presto.hive.HiveRecordCursorProvider;
-import com.facebook.presto.hive.HiveSplit;
-import com.facebook.presto.spi.ColumnHandle;
-import com.facebook.presto.spi.ConnectorPageSource;
-import com.facebook.presto.spi.ConnectorSession;
-import com.facebook.presto.spi.ConnectorSplit;
-import com.facebook.presto.spi.SchemaTableName;
-import com.facebook.presto.spi.connector.ConnectorTransactionHandle;
-import com.facebook.presto.spi.type.TypeManager;
+import io.prestosql.plugin.hive.HdfsEnvironment;
+import io.prestosql.plugin.hive.HiveConfig;
+import io.prestosql.plugin.hive.HivePageSourceFactory;
+import io.prestosql.plugin.hive.HivePageSourceProvider;
+import io.prestosql.plugin.hive.HiveRecordCursorProvider;
+import io.prestosql.plugin.hive.HiveSplit;
+import io.prestosql.spi.connector.ConnectorTransactionHandle;
+import io.prestosql.spi.type.TypeManager;
 import com.google.inject.Inject;
+import io.prestosql.spi.connector.ColumnHandle;
+import io.prestosql.spi.connector.ConnectorPageSource;
+import io.prestosql.spi.connector.ConnectorSession;
+import io.prestosql.spi.connector.ConnectorSplit;
+import io.prestosql.spi.connector.SchemaTableName;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
@@ -57,7 +57,7 @@ public class CarbondataPageSourceProvider extends HivePageSourceProvider {
   private HdfsEnvironment hdfsEnvironment;
 
   @Inject public CarbondataPageSourceProvider(
-      HiveClientConfig hiveClientConfig,
+      HiveConfig hiveClientConfig,
       HdfsEnvironment hdfsEnvironment,
       Set<HiveRecordCursorProvider> cursorProviders,
       Set<HivePageSourceFactory> pageSourceFactories,

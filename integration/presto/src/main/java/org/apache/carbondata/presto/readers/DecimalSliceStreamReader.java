@@ -21,27 +21,26 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Objects;
 
-import static java.math.RoundingMode.HALF_UP;
-
 import org.apache.carbondata.core.cache.dictionary.Dictionary;
 import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.metadata.datatype.DataTypes;
 import org.apache.carbondata.core.scan.result.vector.impl.CarbonColumnVectorImpl;
 import org.apache.carbondata.core.util.DataTypeUtil;
 
-import com.facebook.presto.spi.block.Block;
-import com.facebook.presto.spi.block.BlockBuilder;
-import com.facebook.presto.spi.type.DecimalType;
-import com.facebook.presto.spi.type.Decimals;
-import com.facebook.presto.spi.type.Type;
 import io.airlift.slice.Slice;
+import io.prestosql.spi.block.Block;
+import io.prestosql.spi.block.BlockBuilder;
+import io.prestosql.spi.type.DecimalType;
+import io.prestosql.spi.type.Decimals;
+import io.prestosql.spi.type.Type;
 
-import static com.facebook.presto.spi.type.Decimals.encodeUnscaledValue;
-import static com.facebook.presto.spi.type.Decimals.isShortDecimal;
-import static com.facebook.presto.spi.type.Decimals.rescale;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static io.airlift.slice.Slices.utf8Slice;
+import static io.prestosql.spi.type.Decimals.encodeUnscaledValue;
+import static io.prestosql.spi.type.Decimals.isShortDecimal;
+import static io.prestosql.spi.type.Decimals.rescale;
+import static java.math.RoundingMode.HALF_UP;
 
 
 
@@ -114,7 +113,7 @@ public class DecimalSliceStreamReader extends CarbonColumnVectorImpl
 
   private void decimalBlockWriter(BigDecimal value) {
     if (isShortDecimal(type)) {
-      long rescaledDecimal = Decimals.rescale(value.unscaledValue().longValue(), value.scale(),
+      long rescaledDecimal = rescale(value.unscaledValue().longValue(), value.scale(),
           ((DecimalType) type).getScale());
       type.writeLong(builder, rescaledDecimal);
     } else {
@@ -134,12 +133,12 @@ public class DecimalSliceStreamReader extends CarbonColumnVectorImpl
           BigInteger unscaledDecimal =
               rescale(bigDecimalValue.unscaledValue(), bigDecimalValue.scale(),
                   bigDecimalValue.scale());
-          Slice decimalSlice = Decimals.encodeUnscaledValue(unscaledDecimal);
+          Slice decimalSlice = encodeUnscaledValue(unscaledDecimal);
           return utf8Slice(Decimals.toString(decimalSlice, actual.getScale()));
         } else {
           BigInteger unscaledDecimal =
               rescale(bigDecimalValue.unscaledValue(), bigDecimalValue.scale(), actual.getScale());
-          Slice decimalSlice = Decimals.encodeUnscaledValue(unscaledDecimal);
+          Slice decimalSlice = encodeUnscaledValue(unscaledDecimal);
           return utf8Slice(Decimals.toString(decimalSlice, actual.getScale()));
         }
       }

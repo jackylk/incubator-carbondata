@@ -29,40 +29,41 @@ import org.apache.carbondata.hadoop.api.CarbonTableInputFormat;
 import org.apache.carbondata.hadoop.api.CarbonTableOutputFormat;
 import org.apache.carbondata.presto.impl.CarbonTableConfig;
 
-import com.facebook.presto.hive.HiveAnalyzeProperties;
-import com.facebook.presto.hive.HiveConnector;
-import com.facebook.presto.hive.HiveConnectorFactory;
-import com.facebook.presto.hive.HiveMetadataFactory;
-import com.facebook.presto.hive.HiveProcedureModule;
-import com.facebook.presto.hive.HiveSchemaProperties;
-import com.facebook.presto.hive.HiveSessionProperties;
-import com.facebook.presto.hive.HiveStorageFormat;
-import com.facebook.presto.hive.HiveTableProperties;
-import com.facebook.presto.hive.HiveTransactionManager;
-import com.facebook.presto.hive.NodeVersion;
-import com.facebook.presto.hive.RebindSafeMBeanServer;
-import com.facebook.presto.hive.authentication.HiveAuthenticationModule;
-import com.facebook.presto.hive.metastore.HiveMetastoreModule;
-import com.facebook.presto.hive.s3.HiveS3Module;
-import com.facebook.presto.hive.security.HiveSecurityModule;
-import com.facebook.presto.hive.security.PartitionsAwareAccessControl;
-import com.facebook.presto.spi.NodeManager;
-import com.facebook.presto.spi.PageIndexerFactory;
-import com.facebook.presto.spi.PageSorter;
-import com.facebook.presto.spi.classloader.ThreadContextClassLoader;
-import com.facebook.presto.spi.connector.Connector;
-import com.facebook.presto.spi.connector.ConnectorAccessControl;
-import com.facebook.presto.spi.connector.ConnectorContext;
-import com.facebook.presto.spi.connector.ConnectorNodePartitioningProvider;
-import com.facebook.presto.spi.connector.ConnectorPageSinkProvider;
-import com.facebook.presto.spi.connector.ConnectorPageSourceProvider;
-import com.facebook.presto.spi.connector.ConnectorSplitManager;
-import com.facebook.presto.spi.connector.classloader.ClassLoaderSafeConnectorPageSinkProvider;
-import com.facebook.presto.spi.connector.classloader.ClassLoaderSafeConnectorPageSourceProvider;
-import com.facebook.presto.spi.connector.classloader.ClassLoaderSafeConnectorSplitManager;
-import com.facebook.presto.spi.connector.classloader.ClassLoaderSafeNodePartitioningProvider;
-import com.facebook.presto.spi.procedure.Procedure;
-import com.facebook.presto.spi.type.TypeManager;
+import io.prestosql.plugin.hive.HiveAnalyzeProperties;
+import io.prestosql.plugin.hive.HiveCatalogName;
+import io.prestosql.plugin.hive.HiveConnector;
+import io.prestosql.plugin.hive.HiveConnectorFactory;
+import io.prestosql.plugin.hive.HiveMetadataFactory;
+import io.prestosql.plugin.hive.HiveProcedureModule;
+import io.prestosql.plugin.hive.HiveSchemaProperties;
+import io.prestosql.plugin.hive.HiveSessionProperties;
+import io.prestosql.plugin.hive.HiveStorageFormat;
+import io.prestosql.plugin.hive.HiveTableProperties;
+import io.prestosql.plugin.hive.HiveTransactionManager;
+import io.prestosql.plugin.hive.NodeVersion;
+import io.prestosql.plugin.hive.RebindSafeMBeanServer;
+import io.prestosql.plugin.hive.authentication.HiveAuthenticationModule;
+import io.prestosql.plugin.hive.metastore.HiveMetastoreModule;
+import io.prestosql.plugin.hive.s3.HiveS3Module;
+import io.prestosql.plugin.hive.security.HiveSecurityModule;
+import io.prestosql.plugin.hive.security.PartitionsAwareAccessControl;
+import io.prestosql.spi.NodeManager;
+import io.prestosql.spi.PageIndexerFactory;
+import io.prestosql.spi.PageSorter;
+import io.prestosql.spi.classloader.ThreadContextClassLoader;
+import io.prestosql.spi.connector.Connector;
+import io.prestosql.spi.connector.ConnectorAccessControl;
+import io.prestosql.spi.connector.ConnectorContext;
+import io.prestosql.spi.connector.ConnectorNodePartitioningProvider;
+import io.prestosql.spi.connector.ConnectorPageSinkProvider;
+import io.prestosql.spi.connector.ConnectorPageSourceProvider;
+import io.prestosql.spi.connector.ConnectorSplitManager;
+import io.prestosql.spi.connector.classloader.ClassLoaderSafeConnectorPageSinkProvider;
+import io.prestosql.spi.connector.classloader.ClassLoaderSafeConnectorPageSourceProvider;
+import io.prestosql.spi.connector.classloader.ClassLoaderSafeConnectorSplitManager;
+import io.prestosql.spi.connector.classloader.ClassLoaderSafeNodePartitioningProvider;
+import io.prestosql.spi.procedure.Procedure;
+import io.prestosql.spi.type.TypeManager;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -97,8 +98,8 @@ public class CarbondataConnectorFactory extends HiveConnectorFactory {
 
     try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(classLoader)) {
       Bootstrap app = new Bootstrap(new EventModule(), new MBeanModule(), new JsonModule(),
-          new CarbondataModule(catalogName), new HiveS3Module(catalogName),
-          new HiveMetastoreModule(catalogName, Optional.ofNullable(null)), new HiveSecurityModule(),
+          new CarbondataModule(catalogName), new HiveS3Module(),
+          new HiveMetastoreModule(Optional.ofNullable(null)), new HiveSecurityModule(),
           new HiveAuthenticationModule(), new HiveProcedureModule(), binder -> {
         javax.management.MBeanServer platformMBeanServer =
             ManagementFactory.getPlatformMBeanServer();
@@ -110,6 +111,7 @@ public class CarbondataConnectorFactory extends HiveConnectorFactory {
         binder.bind(TypeManager.class).toInstance(context.getTypeManager());
         binder.bind(PageIndexerFactory.class).toInstance(context.getPageIndexerFactory());
         binder.bind(PageSorter.class).toInstance(context.getPageSorter());
+        binder.bind(HiveCatalogName.class).toInstance(new HiveCatalogName(catalogName));
         configBinder(binder).bindConfig(CarbonTableConfig.class);
       });
 

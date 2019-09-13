@@ -17,13 +17,17 @@
 
 package org.apache.carbondata.presto;
 
-import java.util.*;
+import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.OptionalInt;
+import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
-
-import javax.inject.Inject;
-
-import static java.util.Objects.requireNonNull;
 
 import org.apache.carbondata.core.scan.expression.Expression;
 import org.apache.carbondata.core.stats.QueryStatistic;
@@ -35,34 +39,35 @@ import org.apache.carbondata.presto.impl.CarbonLocalMultiBlockSplit;
 import org.apache.carbondata.presto.impl.CarbonTableCacheModel;
 import org.apache.carbondata.presto.impl.CarbonTableReader;
 
-import com.facebook.presto.hive.CoercionPolicy;
-import com.facebook.presto.hive.DirectoryLister;
-import com.facebook.presto.hive.ForHiveClient;
-import com.facebook.presto.hive.HdfsEnvironment;
-import com.facebook.presto.hive.HiveClientConfig;
-import com.facebook.presto.hive.HiveColumnHandle;
-import com.facebook.presto.hive.HiveSplit;
-import com.facebook.presto.hive.HiveSplitManager;
-import com.facebook.presto.hive.HiveTableLayoutHandle;
-import com.facebook.presto.hive.HiveTransactionHandle;
-import com.facebook.presto.hive.NamenodeStats;
-import com.facebook.presto.hive.metastore.SemiTransactionalHiveMetastore;
-import com.facebook.presto.hive.metastore.Table;
-import com.facebook.presto.spi.ConnectorSession;
-import com.facebook.presto.spi.ConnectorSplit;
-import com.facebook.presto.spi.ConnectorSplitSource;
-import com.facebook.presto.spi.ConnectorTableLayoutHandle;
-import com.facebook.presto.spi.FixedSplitSource;
-import com.facebook.presto.spi.HostAddress;
-import com.facebook.presto.spi.SchemaTableName;
-import com.facebook.presto.spi.TableNotFoundException;
-import com.facebook.presto.spi.connector.ConnectorTransactionHandle;
-import com.facebook.presto.spi.predicate.TupleDomain;
 import com.google.common.collect.ImmutableList;
+import io.prestosql.plugin.hive.CoercionPolicy;
+import io.prestosql.plugin.hive.DirectoryLister;
+import io.prestosql.plugin.hive.ForHive;
+import io.prestosql.plugin.hive.HdfsEnvironment;
+import io.prestosql.plugin.hive.HiveColumnHandle;
+import io.prestosql.plugin.hive.HiveConfig;
+import io.prestosql.plugin.hive.HiveSplit;
+import io.prestosql.plugin.hive.HiveSplitManager;
+import io.prestosql.plugin.hive.HiveTableLayoutHandle;
+import io.prestosql.plugin.hive.HiveTransactionHandle;
+import io.prestosql.plugin.hive.NamenodeStats;
+import io.prestosql.plugin.hive.metastore.SemiTransactionalHiveMetastore;
+import io.prestosql.plugin.hive.metastore.Table;
+import io.prestosql.spi.HostAddress;
+import io.prestosql.spi.connector.ConnectorSession;
+import io.prestosql.spi.connector.ConnectorSplit;
+import io.prestosql.spi.connector.ConnectorSplitSource;
+import io.prestosql.spi.connector.ConnectorTableLayoutHandle;
+import io.prestosql.spi.connector.ConnectorTransactionHandle;
+import io.prestosql.spi.connector.FixedSplitSource;
+import io.prestosql.spi.connector.SchemaTableName;
+import io.prestosql.spi.connector.TableNotFoundException;
+import io.prestosql.spi.predicate.TupleDomain;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Build Carbontable splits
@@ -74,10 +79,10 @@ public class CarbondataSplitManager extends HiveSplitManager {
   private final Function<HiveTransactionHandle, SemiTransactionalHiveMetastore> metastoreProvider;
   private final HdfsEnvironment hdfsEnvironment;
 
-  @Inject public CarbondataSplitManager(HiveClientConfig hiveClientConfig,
+  @Inject public CarbondataSplitManager(HiveConfig hiveClientConfig,
       Function<HiveTransactionHandle, SemiTransactionalHiveMetastore> metastoreProvider,
       NamenodeStats namenodeStats, HdfsEnvironment hdfsEnvironment, DirectoryLister directoryLister,
-      @ForHiveClient ExecutorService executorService, CoercionPolicy coercionPolicy,
+      @ForHive ExecutorService executorService, CoercionPolicy coercionPolicy,
       CarbonTableReader reader) {
     super(hiveClientConfig, metastoreProvider, namenodeStats, hdfsEnvironment, directoryLister,
         executorService, coercionPolicy);
