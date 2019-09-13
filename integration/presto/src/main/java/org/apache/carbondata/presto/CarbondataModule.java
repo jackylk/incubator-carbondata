@@ -130,9 +130,9 @@ public class CarbondataModule extends HiveModule {
     binder.bind(LocationService.class).to(HiveLocationService.class).in(Scopes.SINGLETON);
 //    binder.bind(HiveMetadataFactory.class).in(Scopes.SINGLETON);
     binder.bind(new TypeLiteral<Supplier<TransactionalMetadata>>() {}).to(HiveMetadataFactory.class).in(Scopes.SINGLETON);
-    binder.bind(HiveTransactionManager.class).in(Scopes.SINGLETON);
+//    binder.bind(HiveTransactionManager.class).in(Scopes.SINGLETON);
 //    binder.bind(ConnectorSplitManager.class).to(HiveSplitManager.class).in(Scopes.SINGLETON);
-    newExporter(binder).export(ConnectorSplitManager.class).as(generator -> generator.generatedNameOf(HiveSplitManager.class));
+//    newExporter(binder).export(HiveSplitManager.class).as(generator -> generator.generatedNameOf(HiveSplitManager.class));
 //    binder.bind(ConnectorPageSourceProvider.class).to(HivePageSourceProvider.class).in(Scopes.SINGLETON);
 //    binder.bind(ConnectorPageSinkProvider.class).to(HivePageSinkProvider.class).in(Scopes.SINGLETON);
 //    binder.bind(ConnectorNodePartitioningProvider.class).to(HiveNodePartitioningProvider.class).in(Scopes.SINGLETON);
@@ -191,10 +191,11 @@ public class CarbondataModule extends HiveModule {
 //    binder.bind(TableParameterCodec.class).in(Scopes.SINGLETON);
     binder.bind(HiveMetadataFactory.class).in(Scopes.SINGLETON);
     newExporter(binder).export(HiveMetadataFactory.class).as(generatedNameOf(HiveMetadataFactory.class, connectorId));
-//    binder.bind(new TypeLiteral<Supplier<TransactionalMetadata>>() {}).to(HiveMetadataFactory.class).in(Scopes.SINGLETON);
-//    binder.bind(HiveTransactionManager.class).in(Scopes.SINGLETON);
+    binder.bind(new TypeLiteral<Supplier<TransactionalMetadata>>() {}).to(HiveMetadataFactory.class).in(Scopes.SINGLETON);
+    binder.bind(HiveTransactionManager.class).in(Scopes.SINGLETON);
 
-    newExporter(binder).export(ConnectorSplitManager.class).as(generatedNameOf(HiveSplitManager.class, connectorId));
+    binder.bind(HiveSplitManager.class).to(HiveSplitManager.class).in(Scopes.SINGLETON);
+    newExporter(binder).export(HiveSplitManager.class).as(generatedNameOf(HiveSplitManager.class, connectorId));
 
     binder.bind(ConnectorPageSinkProvider.class).to(HivePageSinkProvider.class)
         .in(Scopes.SINGLETON);
