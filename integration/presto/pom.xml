@@ -28,7 +28,7 @@
 
   <artifactId>carbondata-presto</artifactId>
   <name>Apache CarbonData :: presto</name>
-  <packaging>presto-plugin</packaging>
+<!--  <packaging>presto-plugin</packaging>-->
 
   <properties>
     <prestosql.version>308</prestosql.version>

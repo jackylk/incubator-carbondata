@@ -140,10 +140,14 @@ public class CarbondataModule extends HiveModule {
     binder.bind(new TypeLiteral<Supplier<TransactionalMetadata>>() {
     }).to(HiveMetadataFactory.class).in(Scopes.SINGLETON);
     binder.bind(HiveTransactionManager.class).in(Scopes.SINGLETON);
-    ////////////
-    binder.bind(HiveSplitManager.class).in(Scopes.SINGLETON);
+
     binder.bind(ConnectorSplitManager.class).to(CarbondataSplitManager.class).in(Scopes.SINGLETON);
-    newExporter(binder).export(ConnectorSplitManager.class).as(generatedNameOf(CarbondataSplitManager.class, connectorId));
+//    newExporter(binder).export(ConnectorSplitManager.class).as(generatedNameOf(CarbondataSplitManager.class, connectorId));
+
+
+    ////////////
+//    binder.bind(ConnectorSplitManager.class).to(CarbondataSplitManager.class).in(Scopes.SINGLETON);
+//    newExporter(binder).export(ConnectorSplitManager.class).as(generatedNameOf(CarbondataSplitManager.class, connectorId));
 //    newExporter(binder).export(HiveSplitManager.class).as(generatedNameOf(HiveSplitManager.class, connectorId));
     ///////////
     binder.bind(ConnectorPageSourceProvider.class).to(CarbondataPageSourceProvider.class)
