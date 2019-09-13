@@ -194,8 +194,8 @@ public class CarbondataModule extends HiveModule {
     binder.bind(new TypeLiteral<Supplier<TransactionalMetadata>>() {}).to(HiveMetadataFactory.class).in(Scopes.SINGLETON);
     binder.bind(HiveTransactionManager.class).in(Scopes.SINGLETON);
 
-    binder.bind(HiveSplitManager.class).to(HiveSplitManager.class).in(Scopes.SINGLETON);
-    newExporter(binder).export(HiveSplitManager.class).as(generatedNameOf(HiveSplitManager.class, connectorId));
+//    binder.bind(HiveSplitManager.class).to(HiveSplitManager.class).in(Scopes.SINGLETON);
+//    newExporter(binder).export(HiveSplitManager.class).as(generatedNameOf(HiveSplitManager.class, connectorId));
 
     binder.bind(ConnectorPageSinkProvider.class).to(HivePageSinkProvider.class)
         .in(Scopes.SINGLETON);
@@ -208,20 +208,11 @@ public class CarbondataModule extends HiveModule {
     newExporter(binder).export(FileFormatDataSourceStats.class)
         .as(generatedNameOf(FileFormatDataSourceStats.class, connectorId));
 
-//    Multibinder<HivePageSourceFactory> pageSourceFactoryBinder =
-//        newSetBinder(binder, HivePageSourceFactory.class);
-//    pageSourceFactoryBinder.addBinding().to(OrcPageSourceFactory.class).in(Scopes.SINGLETON);
-//    pageSourceFactoryBinder.addBinding().to(ParquetPageSourceFactory.class).in(Scopes.SINGLETON);
-//    pageSourceFactoryBinder.addBinding().to(RcFilePageSourceFactory.class).in(Scopes.SINGLETON);
-
-//    Multibinder<HiveFileWriterFactory> fileWriterFactoryBinder = newSetBinder(binder, HiveFileWriterFactory.class);
-//    binder.bind(OrcFileWriterFactory.class).in(Scopes.SINGLETON);
-//    newExporter(binder).export(OrcFileWriterFactory.class).as(generatedNameOf(OrcFileWriterFactory.class, connectorId));
-//    configBinder(binder).bindConfig(OrcFileWriterConfig.class);
-//    fileWriterFactoryBinder.addBinding().to(OrcFileWriterFactory.class).in(Scopes.SINGLETON);
-//    fileWriterFactoryBinder.addBinding().to(RcFileFileWriterFactory.class).in(Scopes.SINGLETON);
-
     binder.bind(ConnectorSplitManager.class).to(CarbondataSplitManager.class).in(Scopes.SINGLETON);
+    newExporter(binder).export(ConnectorSplitManager.class)
+        .as(generatedNameOf(HiveSplitManager.class, connectorId));
+
+//    binder.bind(ConnectorSplitManager.class).to(CarbondataSplitManager.class).in(Scopes.SINGLETON);
     binder.bind(ConnectorPageSourceProvider.class).to(CarbondataPageSourceProvider.class).in(Scopes.SINGLETON);
     binder.bind(CarbonTableReader.class).in(Scopes.SINGLETON);
 
