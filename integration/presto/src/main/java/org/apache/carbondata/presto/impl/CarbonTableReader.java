@@ -306,7 +306,7 @@ public class CarbonTableReader {
                     .toArray(String[]::new)));
           }
         }
-        LOGGER.error("Size fo MultiblockList   " + multiBlockSplitList.size());
+        LOGGER.info("Size fo MultiblockList   " + multiBlockSplitList.size());
 
       }
 
