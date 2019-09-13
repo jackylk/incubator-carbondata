@@ -101,6 +101,7 @@ public class CarbondataConnectorFactory extends HiveConnectorFactory {
           new CarbondataModule(catalogName), new HiveS3Module(),
           new HiveMetastoreModule(Optional.ofNullable(null)), new HiveSecurityModule(),
           new HiveAuthenticationModule(), new HiveProcedureModule(), binder -> {
+        binder.bind(HiveCatalogName.class).toInstance(new HiveCatalogName(catalogName));
         javax.management.MBeanServer platformMBeanServer =
             ManagementFactory.getPlatformMBeanServer();
         binder.bind(javax.management.MBeanServer.class)
@@ -111,7 +112,6 @@ public class CarbondataConnectorFactory extends HiveConnectorFactory {
         binder.bind(TypeManager.class).toInstance(context.getTypeManager());
         binder.bind(PageIndexerFactory.class).toInstance(context.getPageIndexerFactory());
         binder.bind(PageSorter.class).toInstance(context.getPageSorter());
-        binder.bind(HiveCatalogName.class).toInstance(new HiveCatalogName(catalogName));
         configBinder(binder).bindConfig(CarbonTableConfig.class);
       });
 
@@ -142,14 +142,22 @@ public class CarbondataConnectorFactory extends HiveConnectorFactory {
       Set<Procedure> procedures = injector.getInstance(Key.get(new TypeLiteral<Set<Procedure>>() {
       }));
 
-      return new HiveConnector(lifeCycleManager, metadataFactory, transactionManager,
+      return new HiveConnector(
+          lifeCycleManager,
+          metadataFactory,
+          transactionManager,
           new ClassLoaderSafeConnectorSplitManager(splitManager, classLoader),
           new ClassLoaderSafeConnectorPageSourceProvider(connectorPageSource, classLoader),
           new ClassLoaderSafeConnectorPageSinkProvider(pageSinkProvider, classLoader),
           new ClassLoaderSafeNodePartitioningProvider(connectorDistributionProvider, classLoader),
-          ImmutableSet.of(), procedures, hiveSessionProperties.getSessionProperties(),
-          HiveSchemaProperties.SCHEMA_PROPERTIES, hiveTableProperties.getTableProperties(),
-          hiveAnalyzeProperties.getAnalyzeProperties(), accessControl, classLoader);
+          ImmutableSet.of(),
+          procedures,
+          hiveSessionProperties.getSessionProperties(),
+          HiveSchemaProperties.SCHEMA_PROPERTIES,
+          hiveTableProperties.getTableProperties(),
+          hiveAnalyzeProperties.getAnalyzeProperties(),
+          accessControl,
+          classLoader);
     } catch (Exception e) {
       throwIfUnchecked(e);
       throw new RuntimeException(e);
