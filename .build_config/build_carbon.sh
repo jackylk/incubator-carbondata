@@ -79,7 +79,20 @@ cp -r .build_config/CI/* CI/
 
 cd ${Carbon_FOLDER}/CI
 
-ant -DVERSION=${COMPONENT_VERSION} -DDISPLAY_VERSION=${DISPLAY_VERSION} -DINTERNAL_VERSION=${INTERNAL_VERSION} -DHADOOP_VERSION=${HADOOP_VERSION} -DSPARK_VERSION=${SPARK_VERSION} -DBUILD_VERSION=${BUILD_VERSION} -DCOMPONENT_NAME=${COMPONENT_NAME} -f 1.6.1_KernelCarbon_2.3_MRS.xml package
+if [[ ${SPARK_VERSION} =~ "2.2.1" ]]
+then
+    echo "Build Carbon with spark 2.2 for MRS 1.8"
+    ANT_BUILD_FILE="1.6.1_KernelCarbon_2.2_MRS.xml"
+elif [[ ${SPARK_VERSION} =~ "2.3.2" ]]
+then
+    echo "Build Carbon with spark 2.3 for MRS 2.0"
+    ANT_BUILD_FILE="1.6.1_KernelCarbon_2.3_MRS.xml"
+else
+    echo "Warning： Build Carbon with spark ${SPARK_VERSION} for MRS 2.0"
+    ANT_BUILD_FILE="1.6.1_KernelCarbon_2.3_MRS.xml"
+fi
+
+ant -DVERSION=${COMPONENT_VERSION} -DDISPLAY_VERSION=${DISPLAY_VERSION} -DINTERNAL_VERSION=${INTERNAL_VERSION} -DHADOOP_VERSION=${HADOOP_VERSION} -DSPARK_VERSION=${SPARK_VERSION} -DBUILD_VERSION=${BUILD_VERSION} -DCOMPONENT_NAME=${COMPONENT_NAME} -f ${ANT_BUILD_FILE} package
 
 cd ${Carbon_FOLDER}
 if [  -d ${Carbon_FOLDER}/package ]; then
