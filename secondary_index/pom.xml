@@ -286,22 +286,22 @@
       </build>
     </profile>
     <profile>
-      <id>mrs</id>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.spark</groupId>
-          <artifactId>spark-mrs_${scala.binary.version}</artifactId>
-          <version>${spark.version}</version>
-        </dependency>
-      </dependencies>
+      <id>spark-2.2</id>
       <activation>
-        <activeByDefault>true</activeByDefault>
+        <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
         <spark.version>2.2.1.0200</spark.version>
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11.8</scala.version>
       </properties>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.spark</groupId>
+          <artifactId>spark-mrs_2.11</artifactId>
+          <version>${spark.version}</version>
+        </dependency>
+      </dependencies>
       <build>
         <plugins>
           <plugin>
@@ -348,7 +348,7 @@
         </dependency>
       </dependencies>
       <properties>
-        <spark.version>2.3.2.0101</spark.version>
+        <spark.version>2.3.2.0100</spark.version>
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11.8</scala.version>
       </properties>
