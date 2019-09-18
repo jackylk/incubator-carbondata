@@ -861,17 +861,6 @@
         <script.exetension>.bat</script.exetension>
       </properties>
     </profile>
-    <profile>
-      <id>fleet</id>
-      <modules>
-        <module>fleet/query-server</module>
-        <module>fleet/job</module>
-        <module>fleet/hbase</module>
-        <module>fleet/router</module>
-        <module>fleet/vision</module>
-        <module>fleet/project</module>
-      </modules>
-    </profile>
   </profiles>
 
 </project>
