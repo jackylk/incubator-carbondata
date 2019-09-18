@@ -33,42 +33,6 @@
       <artifactId>spark-om_${scala.binary.version}</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.apache.carbondata</groupId>
-      <artifactId>carbondata-spark-common</artifactId>
-      <version>${project.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.apache.spark</groupId>
-          <artifactId>spark-hive-thriftserver_2.10</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.carbondata</groupId>
-      <artifactId>carbondata-common-plugin</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.carbondata</groupId>
-      <artifactId>carbondata-spark-datasource</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.carbondata</groupId>
-      <artifactId>carbondata-spark2</artifactId>
-      <version>${project.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.apache.spark</groupId>
-          <artifactId>spark-hive-thriftserver_2.10</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.spark</groupId>
-          <artifactId>spark-repl_2.10</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-hive-thriftserver_${scala.binary.version}</artifactId>
     </dependency>
@@ -301,6 +265,62 @@
           <artifactId>spark-mrs_2.11</artifactId>
           <version>${spark.version}</version>
         </dependency>
+        <dependency>
+          <groupId>org.apache.carbondata</groupId>
+          <artifactId>carbondata-spark2</artifactId>
+          <version>${project.version}</version>
+          <exclusions>
+            <exclusion>
+              <groupId>org.apache.spark</groupId>
+              <artifactId>spark-hive-thriftserver_2.10</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.spark</groupId>
+              <artifactId>spark-repl_2.10</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.carbondata</groupId>
+              <artifactId>carbondata-vector</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.carbondata</groupId>
+          <artifactId>carbondata-spark-common</artifactId>
+          <version>${project.version}</version>
+          <exclusions>
+            <exclusion>
+              <groupId>org.apache.spark</groupId>
+              <artifactId>spark-hive-thriftserver_2.10</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.carbondata</groupId>
+              <artifactId>carbondata-vector</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.carbondata</groupId>
+          <artifactId>carbondata-common-plugin</artifactId>
+          <version>${project.version}</version>
+          <exclusions>
+            <exclusion>
+              <groupId>org.apache.carbondata</groupId>
+              <artifactId>carbondata-vector</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.carbondata</groupId>
+          <artifactId>carbondata-spark-datasource</artifactId>
+          <version>${project.version}</version>
+          <exclusions>
+            <exclusion>
+              <groupId>org.apache.carbondata</groupId>
+              <artifactId>carbondata-vector</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
       </dependencies>
       <build>
         <plugins>
@@ -345,6 +365,42 @@
           <groupId>org.apache.spark</groupId>
           <artifactId>spark-hw-plugin_${scala.binary.version}</artifactId>
           <version>${spark.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.carbondata</groupId>
+          <artifactId>carbondata-spark2</artifactId>
+          <version>${project.version}</version>
+          <exclusions>
+            <exclusion>
+              <groupId>org.apache.spark</groupId>
+              <artifactId>spark-hive-thriftserver_2.10</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.spark</groupId>
+              <artifactId>spark-repl_2.10</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.carbondata</groupId>
+          <artifactId>carbondata-spark-common</artifactId>
+          <version>${project.version}</version>
+          <exclusions>
+            <exclusion>
+              <groupId>org.apache.spark</groupId>
+              <artifactId>spark-hive-thriftserver_2.10</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.carbondata</groupId>
+          <artifactId>carbondata-common-plugin</artifactId>
+          <version>${project.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.carbondata</groupId>
+          <artifactId>carbondata-spark-datasource</artifactId>
+          <version>${project.version}</version>
         </dependency>
       </dependencies>
       <properties>
