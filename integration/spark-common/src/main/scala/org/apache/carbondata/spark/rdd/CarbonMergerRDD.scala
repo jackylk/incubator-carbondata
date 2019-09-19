@@ -88,7 +88,7 @@ class CarbonMergerRDD[K, V](
   val databaseName = carbonMergerMapping.databaseName
   val factTableName = carbonMergerMapping.factTableName
   val tableId = carbonMergerMapping.tableId
-  var rangeColumn: CarbonColumn = null
+  var rangeColumn: Array[CarbonColumn] = null
   var singleRange = false
   var expressionMapForRangeCol: util.Map[Integer, Expression] = null
   var broadCastSplits: Broadcast[util.List[CarbonInputSplit]] = null
@@ -312,7 +312,6 @@ class CarbonMergerRDD[K, V](
       tablePath, new CarbonTableIdentifier(databaseName, factTableName, tableId)
     )
     val carbonTable = carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable
-    var rangeColumn: Array[CarbonColumn] = null
     if (CarbonProperties.getInstance().isRangeCompactionAllowed &&
         !carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable.isHivePartitionTable) {
       // If the table is not a partition table then only we go for range column compaction flow
@@ -419,7 +418,6 @@ class CarbonMergerRDD[K, V](
     totalTaskCount = totalTaskCount / carbonMergerMapping.validSegments.size
     val LOGGER = LogServiceFactory.getLogService(this.getClass.getName)
     var allRanges: Array[Array[Object]] = new Array[Array[Object]](0)
-    var singleRange = false
     if (rangeColumn != null) {
       // Calculate the number of ranges to be made, min 2 ranges/tasks to be made in any case
       // We take the minimum of average number of tasks created during load time and the number
@@ -690,7 +688,8 @@ class CarbonMergerRDD[K, V](
       val objectOrdering: Ordering[Object] = createOrderingForColumn(rangeColumn(0))
       val sparkDataType = Util.convertCarbonToSparkDataType(dataType(0))
       // Change string type to support all types
-      val sampleRdd = scanRdd.map(row => (row(0), null))
+      val sampleRdd = scanRdd.asInstanceOf[CarbonScanRDD[InternalRow]]
+        .map(row => (row.get(0, sparkDataType), null))
       val value = new DataSkewRangePartitioner(
         defaultParallelism, sampleRdd, true)(objectOrdering, classTag[Object])
       value.rangeBounds.map(Array(_))
