@@ -2548,7 +2548,9 @@ public final class CarbonUtil {
         if (carbonLock.unlock()) {
           LOGGER.debug("Table unlocked successfully after table status updation");
         } else {
-          LOGGER.error("Unable to unlock Table lock for table during table status updation");
+          if (updateSize) {
+            LOGGER.error("Unable to unlock Table lock for table during table status updation");
+          }
         }
       }
     }
