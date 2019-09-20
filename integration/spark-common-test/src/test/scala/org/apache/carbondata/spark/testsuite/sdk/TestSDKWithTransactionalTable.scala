@@ -105,6 +105,7 @@ class TestSDKWithTransactionalTable extends QueryTest with BeforeAndAfterAll {
   }
 
   test("test sdk with transactional table, read as row") {
+    sql("DROP TABLE if exists carbon_load1")
 
     sql(
       """
@@ -133,39 +134,39 @@ class TestSDKWithTransactionalTable extends QueryTest with BeforeAndAfterAll {
     sql("DROP TABLE carbon_load1")
   }
 
-  test("test load with binary data") {
-    sql(
-      s"""
-         | CREATE TABLE IF NOT EXISTS train (
-         |    id int,
-         |    digit int,
-         |    image binary)
-         | STORED AS 'carbondata'
-             """.stripMargin)
-    sql(
-      s"""
-         | LOAD DATA LOCAL INPATH '/home/root1/binarymnisttrain.csv'
-         | INTO TABLE train
-         | OPTIONS('header'='false','DELIMITER'=',','binary_decoder'='baSe64')
-             """.stripMargin)
-    sql("select count(*) from train").show()
-
-    sql(
-      s"""
-         | CREATE TABLE IF NOT EXISTS test (
-         |    id int,
-         |    digit int,
-         |    image binary)
-         | STORED AS 'carbondata'
-             """.stripMargin)
-    sql(
-      s"""
-         | LOAD DATA LOCAL INPATH '/home/root1/binarymnisttest.csv'
-         | INTO TABLE test
-         | OPTIONS('header'='false','DELIMITER'=',','binary_decoder'='baSe64')
-             """.stripMargin)
-    sql("select count(*) from test").show()
-  }
+//  test("test load with binary data") {
+//    sql(
+//      s"""
+//         | CREATE TABLE IF NOT EXISTS train (
+//         |    id int,
+//         |    digit int,
+//         |    image binary)
+//         | STORED AS 'carbondata'
+//             """.stripMargin)
+//    sql(
+//      s"""
+//         | LOAD DATA LOCAL INPATH '/home/root1/binarymnisttrain.csv'
+//         | INTO TABLE train
+//         | OPTIONS('header'='false','DELIMITER'=',','binary_decoder'='baSe64')
+//             """.stripMargin)
+//    sql("select count(*) from train").show()
+//
+//    sql(
+//      s"""
+//         | CREATE TABLE IF NOT EXISTS test (
+//         |    id int,
+//         |    digit int,
+//         |    image binary)
+//         | STORED AS 'carbondata'
+//             """.stripMargin)
+//    sql(
+//      s"""
+//         | LOAD DATA LOCAL INPATH '/home/root1/binarymnisttest.csv'
+//         | INTO TABLE test
+//         | OPTIONS('header'='false','DELIMITER'=',','binary_decoder'='baSe64')
+//             """.stripMargin)
+//    sql("select count(*) from test").show()
+//  }
 
 
   override def afterAll {
