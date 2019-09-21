@@ -799,10 +799,13 @@ abstract class CarbonDDLSqlParser extends AbstractCarbonSparkSQLParser {
     var primaryKeyOption = tableProperties.get(CarbonCommonConstants.PRIMARY_KEY_COLUMNS)
     val primaryKeyDimsTmp =
       extractSortColumns(primaryKeyOption, fields, varcharCols, "primary_key_columns")
-    val sortColSet = new java.util.TreeSet[String](primaryKeyDimsTmp.asJava)
-    sortColSet.addAll(sortKeyDimsTmp.asJava)
-    sortKeyDimsTmp = sortColSet.asScala.toSeq
-
+    sortKeyDimsTmp = if (primaryKeyDimsTmp.isEmpty) {
+      sortKeyDimsTmp
+    } else {
+      val sortColSet = new java.util.TreeSet[String](primaryKeyDimsTmp.asJava)
+      sortColSet.addAll(sortKeyDimsTmp.asJava)
+      sortColSet.asScala.toSeq
+    }
     // range_column should be there in create table cols
     if (tableProperties.get(CarbonCommonConstants.RANGE_COLUMN).isDefined) {
       val rangeColumn = tableProperties.get(CarbonCommonConstants.RANGE_COLUMN).get.trim
