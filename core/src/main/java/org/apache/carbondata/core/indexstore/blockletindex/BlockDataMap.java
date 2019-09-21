@@ -125,7 +125,7 @@ public class BlockDataMap extends CoarseGrainDataMap
     Path path = new Path(blockletDataMapInfo.getFilePath());
     // store file path only in case of partition table, non transactional table and flat folder
     // structure
-    byte[] filePath = null;
+    byte[] filePath;
     boolean isPartitionTable = blockletDataMapInfo.getCarbonTable().isHivePartitionTable();
     if (isPartitionTable || !blockletDataMapInfo.getCarbonTable().isTransactionalTable() ||
         blockletDataMapInfo.getCarbonTable().isSupportFlatFolder() ||
@@ -134,6 +134,8 @@ public class BlockDataMap extends CoarseGrainDataMap
             blockletDataMapInfo.getCarbonTable().getTablePath())) {
       filePath = path.getParent().toString().getBytes(CarbonCommonConstants.DEFAULT_CHARSET);
       isFilePathStored = true;
+    } else {
+      filePath = new byte[0];
     }
     byte[] fileName = path.getName().getBytes(CarbonCommonConstants.DEFAULT_CHARSET);
     byte[] segmentId =
@@ -501,7 +503,8 @@ public class BlockDataMap extends CoarseGrainDataMap
     if (null != summaryRow) {
       summaryRow.setByteArray(fileName, SUMMARY_INDEX_FILE_NAME);
       summaryRow.setByteArray(segmentId, SUMMARY_SEGMENTID);
-      if (null != filePath) {
+      // file path is not empty always.
+      if (filePath.length > 0) {
         summaryRow.setByteArray(filePath, SUMMARY_INDEX_PATH);
       }
       try {
@@ -629,8 +632,12 @@ public class BlockDataMap extends CoarseGrainDataMap
       // dummy value
       return 0;
     } else {
-      return ByteBuffer.wrap(getBlockletRowCountForEachBlock()).getShort(
-          index * CarbonCommonConstants.SHORT_SIZE_IN_BYTE);
+      final byte[] bytes = getBlockletRowCountForEachBlock();
+      if (bytes.length == 0) {
+        return 0;
+      } else {
+        return ByteBuffer.wrap(bytes).getShort(index * CarbonCommonConstants.SHORT_SIZE_IN_BYTE);
+      }
     }
   }
 

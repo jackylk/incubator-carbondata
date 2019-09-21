@@ -165,7 +165,7 @@ class CarbonScanRDD[T: ClassTag](
       } else {
         splits.asScala.foreach { split =>
           val carbonInputSplit = split.asInstanceOf[CarbonInputSplit]
-          if (FileFormat.ROW_V1 == carbonInputSplit.getFileFormat) {
+          if (FileFormat.ROW_V1.equals(carbonInputSplit.getFileFormat)) {
             carbonInputSplit.setVersion(ColumnarFormatVersion.R1)
           }
         }
@@ -473,7 +473,7 @@ class CarbonScanRDD[T: ClassTag](
       // one query id per table
       model.setQueryId(queryId)
       // get RecordReader by FileFormat
-      var reader: RecordReader[Void, Object] = inputSplit.getFileFormat match {
+      var reader: RecordReader[Void, Object] =
 //        case FileFormat.ROW_V1 =>
 //          // create record reader for row format
 //          DataTypeUtil.setDataTypeConverter(dataTypeConverterClz.newInstance())
@@ -486,7 +486,7 @@ class CarbonScanRDD[T: ClassTag](
 //          val streamReader = inputFormat.createRecordReader(inputSplit, attemptContext)
 //            .asInstanceOf[RecordReader[Void, Object]]
 //          streamReader
-        case FileFormat.VECTOR_V1 =>
+        if (inputSplit.getFileFormat.equals(FileFormat.VECTOR_V1)) {
           // set segmentNo for insert columns
           VectorTableInputFormat.setSegmentNo(
             inputSplit.asInstanceOf[CarbonMultiBlockSplit].getAllSplits.get(0).getSegmentId
@@ -494,7 +494,7 @@ class CarbonScanRDD[T: ClassTag](
           // create RecordReader
           VectorTableInputFormat.createRecordReader(
             model, attemptContext.getConfiguration, vectorReader)
-        case _ =>
+        } else {
           // create record reader for CarbonData file format
           if (vectorReader) {
             model.setDirectVectorFill(directFill)

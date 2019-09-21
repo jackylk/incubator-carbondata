@@ -44,6 +44,7 @@ import org.apache.carbondata.core.datastore.block.SegmentProperties;
 import org.apache.carbondata.core.features.TableOperation;
 import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier;
 import org.apache.carbondata.core.metadata.CarbonTableIdentifier;
+import org.apache.carbondata.core.metadata.SegmentFileStore;
 import org.apache.carbondata.core.metadata.encoder.Encoding;
 import org.apache.carbondata.core.metadata.schema.BucketingInfo;
 import org.apache.carbondata.core.metadata.schema.PartitionInfo;
@@ -60,6 +61,8 @@ import org.apache.carbondata.core.scan.filter.intf.FilterOptimizer;
 import org.apache.carbondata.core.scan.filter.optimizer.RangeFilterOptmizer;
 import org.apache.carbondata.core.scan.filter.resolver.FilterResolverIntf;
 import org.apache.carbondata.core.scan.model.QueryModel;
+import org.apache.carbondata.core.statusmanager.LoadMetadataDetails;
+import org.apache.carbondata.core.statusmanager.SegmentStatusManager;
 import org.apache.carbondata.core.util.CarbonProperties;
 import org.apache.carbondata.core.util.CarbonUtil;
 import org.apache.carbondata.core.util.DataTypeUtil;
@@ -1389,4 +1392,28 @@ public class CarbonTable implements Serializable, Writable {
     tableInfo.readFields(in);
     updateTableByTableInfo(this, tableInfo);
   }
+
+  /**
+   * Return all external segment folders in this table
+   */
+  public List<String> getAllExternalSegmentFolders() throws IOException {
+    LoadMetadataDetails[] loads = SegmentStatusManager.readTableStatusFile(
+        CarbonTablePath.getTableStatusFilePath(getTablePath()));
+    List<String> folders = new LinkedList<>();
+    for (LoadMetadataDetails load : loads) {
+      SegmentFileStore.SegmentFile segment = SegmentFileStore.readSegmentFile(
+          CarbonTablePath.getSegmentFilePath(getTablePath(), load.getSegmentFile()));
+      if (segment != null) {
+        if (!segment.getLocationMap().values().toArray(
+            new SegmentFileStore.FolderDetails[0])[0].isRelative()) {
+          final String segmentFolder = segment.getOptions().get("path");
+          if (segmentFolder != null) {
+            folders.add(segmentFolder);
+          }
+        }
+      }
+    }
+    return folders;
+  }
+
 }
