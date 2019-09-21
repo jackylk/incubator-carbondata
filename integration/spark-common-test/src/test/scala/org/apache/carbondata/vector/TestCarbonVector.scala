@@ -20,6 +20,7 @@ package org.apache.carbondata.vector
 import java.sql.{Date, Timestamp}
 
 import org.apache.spark.sql.test.util.QueryTest
+import org.apache.spark.util.SparkUtil
 import org.scalatest.BeforeAndAfterAll
 
 class TestCarbonVector extends QueryTest with BeforeAndAfterAll {
@@ -54,309 +55,322 @@ class TestCarbonVector extends QueryTest with BeforeAndAfterAll {
   }
 
   test("Test insert column with primitive data type") {
-    val tableName = "vector_table"
-    sql(s"drop table if exists $tableName")
-    sql(
-      s"""create table $tableName(
-         | smallIntField smallInt,
-         | intField int,
-         | bigIntField bigint,
-         | floatField float,
-         | doubleField double,
-         | decimalField decimal(25, 4),
-         | timestampField timestamp,
-         | dateField date,
-         | stringField string,
-         | varcharField varchar(10),
-         | charField char(10),
-         | booleanField boolean,
-         | binaryFiled binary
-         | )
-         | stored by 'carbondata'
-         | tblproperties('vector'='true')
+    if (SparkUtil.isSparkVersionXandAbove("2.3")) {
+      val tableName = "vector_table"
+      sql(s"drop table if exists $tableName")
+      sql(
+        s"""create table $tableName(
+           | smallIntField smallInt,
+           | intField int,
+           | bigIntField bigint,
+           | floatField float,
+           | doubleField double,
+           | decimalField decimal(25, 4),
+           | timestampField timestamp,
+           | dateField date,
+           | stringField string,
+           | varcharField varchar(10),
+           | charField char(10),
+           | booleanField boolean,
+           | binaryFiled binary
+           | )
+           | stored by 'carbondata'
+           | tblproperties('vector'='true')
       """.stripMargin)
 
-    sql(s"insert into $tableName select * from base_table")
+      sql(s"insert into $tableName select * from base_table")
 
-    sql(s"insert into $tableName select * from base_table")
+      sql(s"insert into $tableName select * from base_table")
 
-    sql(s"show segments for table $tableName").show(100, false)
+      sql(s"show segments for table $tableName").show(100, false)
 
-    sql(s"select * from $tableName").show(100, false)
+      sql(s"select * from $tableName").show(100, false)
 
-    sql(s"select smallIntField, stringField from $tableName").show(100, false)
+      sql(s"select smallIntField, stringField from $tableName").show(100, false)
 
-    sql(s"select count(*) from $tableName").show(100, false)
+      sql(s"select count(*) from $tableName").show(100, false)
 
-    sql(s"select smallIntField, stringField from $tableName where smallIntField = 1").show(100, false)
+      sql(s"select smallIntField, stringField from $tableName where smallIntField = 1").show(100, false)
 
-    sql(s"""insert columns(newcol1, newcol2 int, newcol3)
-        | into table $tableName
-        | select smallIntField + 100,
-        | case when smallIntField > 1 then smallIntField + 100 end,
-        | stringField
-        | from $tableName""".stripMargin
-    ).show(100, false)
+      sql(s"""insert columns(newcol1, newcol2 int, newcol3)
+             | into table $tableName
+             | select smallIntField + 100,
+             | case when smallIntField > 1 then smallIntField + 100 end,
+             | stringField
+             | from $tableName""".stripMargin
+      ).show(100, false)
 
-    sql(s"""insert columns(newcol4, newcol5, newcol6)
-           | into table $tableName
-           | select smallIntField + 100,
-           | stringField,
-           | timestampField
-           | from $tableName
-           | where smallIntField > 1""".stripMargin
-    ).show(100, false)
+      sql(s"""insert columns(newcol4, newcol5, newcol6)
+             | into table $tableName
+             | select smallIntField + 100,
+             | stringField,
+             | timestampField
+             | from $tableName
+             | where smallIntField > 1""".stripMargin
+      ).show(100, false)
 
-    sql(s"describe formatted $tableName").show(100, false)
+      sql(s"describe formatted $tableName").show(100, false)
 
-    sql(s"select * from $tableName").show(100, false)
+      sql(s"select * from $tableName").show(100, false)
+    }
   }
 
   test("Test insert column with complex data type") {
-    val tableName = "vector_table_complex"
-    sql(s"drop table if exists $tableName")
-    sql(
-      s"""create table $tableName(
-         | smallIntField smallInt,
-         | intField int,
-         | bigIntField bigint,
-         | floatField float,
-         | doubleField double,
-         | decimalField decimal(25, 4),
-         | timestampField timestamp,
-         | dateField date,
-         | stringField string,
-         | varcharField varchar(10),
-         | charField char(10),
-         | booleanField boolean,
-         | binaryFiled binary,
-         | arrayField array<string>,
-         | structField struct<col1:string, col2:int, col3:array<string>>,
-         | mapField map<string, int>
-         | )
-         | stored by 'carbondata'
-         | tblproperties('vector'='true')
+    if (SparkUtil.isSparkVersionXandAbove("2.3")) {
+      val tableName = "vector_table_complex"
+      sql(s"drop table if exists $tableName")
+      sql(
+        s"""create table $tableName(
+           | smallIntField smallInt,
+           | intField int,
+           | bigIntField bigint,
+           | floatField float,
+           | doubleField double,
+           | decimalField decimal(25, 4),
+           | timestampField timestamp,
+           | dateField date,
+           | stringField string,
+           | varcharField varchar(10),
+           | charField char(10),
+           | booleanField boolean,
+           | binaryFiled binary,
+           | arrayField array<string>,
+           | structField struct<col1:string, col2:int, col3:array<string>>,
+           | mapField map<string, int>
+           | )
+           | stored by 'carbondata'
+           | tblproperties('vector'='true')
       """.stripMargin)
 
-    sql(s"insert into $tableName select * from base_table")
+      sql(s"insert into $tableName select * from base_table")
 
-    sql(s"insert into $tableName select * from base_table")
+      sql(s"insert into $tableName select * from base_table")
 
-    sql(s"show segments for table $tableName").show(100, false)
+      sql(s"show segments for table $tableName").show(100, false)
 
-    sql(s"select arrayField from $tableName").show(100, false)
+      sql(s"select arrayField from $tableName").show(100, false)
 
-    sql(s"select structField.col1 from $tableName").show(100, false)
+      sql(s"select structField.col1 from $tableName").show(100, false)
 
-    sql(s"select mapField from $tableName").show(100, false)
+      sql(s"select mapField from $tableName").show(100, false)
 
-    sql(s"select count(*) from $tableName").show(100, false)
+      sql(s"select count(*) from $tableName").show(100, false)
 
-    sql(
-      s""" insert columns(
-         |   newCol1,
-         |   newArrayField,
-         |   newCol2,
-         |   newStructField struct<col1:string, col2:int, col3:array<string>>,
-         |   newCol3,
-         |   newMapField)
-         | into table $tableName
-         | select
-         |   bigIntField,
-         |   arrayField,
-         |   doubleField,
-         |   structField,
-         |   smallIntField,
-         |   mapField
-         | from $tableName""".stripMargin
-    ).show(100, false)
+      sql(
+        s""" insert columns(
+           |   newCol1,
+           |   newArrayField,
+           |   newCol2,
+           |   newStructField struct<col1:string, col2:int, col3:array<string>>,
+           |   newCol3,
+           |   newMapField)
+           | into table $tableName
+           | select
+           |   bigIntField,
+           |   arrayField,
+           |   doubleField,
+           |   structField,
+           |   smallIntField,
+           |   mapField
+           | from $tableName""".stripMargin
+      ).show(100, false)
 
-    sql(s"describe formatted $tableName").show(100, false)
+      sql(s"describe formatted $tableName").show(100, false)
 
-    sql(s"select * from $tableName").show(100, false)
+      sql(s"select * from $tableName").show(100, false)
+    }
   }
 
   test("Test insert column with infer data type") {
-    val tableName = "vector_table_infer"
-    sql(s"drop table if exists $tableName")
-    sql(
-      s"""create table $tableName(
-         | smallIntField smallInt,
-         | intField int,
-         | bigIntField bigint,
-         | floatField float,
-         | doubleField double,
-         | decimalField decimal(25, 4),
-         | timestampField timestamp,
-         | dateField date,
-         | stringField string,
-         | varcharField varchar(10),
-         | charField char(10),
-         | booleanField boolean,
-         | binaryFiled binary,
-         | arrayField array<string>,
-         | structField struct<col1:string, col2:int, col3:array<string>>,
-         | mapField map<string, int>
-         | )
-         | stored by 'carbondata'
-         | tblproperties('vector'='true')
+    if (SparkUtil.isSparkVersionXandAbove("2.3")) {
+      val tableName = "vector_table_infer"
+      sql(s"drop table if exists $tableName")
+      sql(
+        s"""create table $tableName(
+           | smallIntField smallInt,
+           | intField int,
+           | bigIntField bigint,
+           | floatField float,
+           | doubleField double,
+           | decimalField decimal(25, 4),
+           | timestampField timestamp,
+           | dateField date,
+           | stringField string,
+           | varcharField varchar(10),
+           | charField char(10),
+           | booleanField boolean,
+           | binaryFiled binary,
+           | arrayField array<string>,
+           | structField struct<col1:string, col2:int, col3:array<string>>,
+           | mapField map<string, int>
+           | )
+           | stored by 'carbondata'
+           | tblproperties('vector'='true')
       """.stripMargin)
 
-    sql(s"insert into $tableName select * from base_table")
+      sql(s"insert into $tableName select * from base_table")
 
-    sql(s"insert into $tableName select * from base_table")
+      sql(s"insert into $tableName select * from base_table")
 
-    sql(s"show segments for table $tableName").show(100, false)
+      sql(s"show segments for table $tableName").show(100, false)
 
-    sql(s"select arrayField from $tableName").show(100, false)
+      sql(s"select arrayField from $tableName").show(100, false)
 
-    sql(s"select structField.col1 from $tableName").show(100, false)
+      sql(s"select structField.col1 from $tableName").show(100, false)
 
-    sql(s"select mapField from $tableName").show(100, false)
+      sql(s"select mapField from $tableName").show(100, false)
 
-    sql(s"select count(*) from $tableName").show(100, false)
+      sql(s"select count(*) from $tableName").show(100, false)
 
-    sql(s"select smallIntField, structField from $tableName where structfield.col1 = 'c1'").show(100, false)
+      sql(s"select smallIntField, structField from $tableName where structfield.col1 = 'c1'").show(100, false)
 
-    sql(s"select smallIntField, structField from $tableName where mapField['k1'] = 1").show(100, false)
+      sql(s"select smallIntField, structField from $tableName where mapField['k1'] = 1").show(100, false)
 
-    sql(s"insert columns(newArrayField) into table $tableName select arrayField from $tableName").show(100, false)
+      sql(s"insert columns(newArrayField) into table $tableName select arrayField from $tableName").show(100, false)
 
-    sql(s"select newArrayField, arrayField from $tableName").show(100, false)
+      sql(s"select newArrayField, arrayField from $tableName").show(100, false)
 
-    sql(s"insert columns(newStructField) into $tableName select structField from $tableName").show(100, false)
+      sql(s"insert columns(newStructField) into $tableName select structField from $tableName").show(100, false)
 
-    sql(s"select newStructField, structField from $tableName").show(100, false)
+      sql(s"select newStructField, structField from $tableName").show(100, false)
 
-    sql(s"insert columns(newMapField) into $tableName select mapField from $tableName").show(100, false)
+      sql(s"insert columns(newMapField) into $tableName select mapField from $tableName").show(100, false)
 
-    sql(s"select newMapField, mapField from $tableName").show(100, false)
+      sql(s"select newMapField, mapField from $tableName").show(100, false)
 
-    sql(s"insert columns(newcol1 bigint) into table $tableName select smallIntField + 100 from $tableName").show(100, false)
+      sql(s"insert columns(newcol1 bigint) into table $tableName select smallIntField + 100 from $tableName").show(100, false)
 
-    sql(s"select smallIntField, newcol1 from $tableName").show(100, false)
+      sql(s"select smallIntField, newcol1 from $tableName").show(100, false)
 
-    sql(s"insert columns(newcol2) into $tableName select case when smallIntField > 1 then smallIntField + 100 end from $tableName").show(100, false)
+      sql(s"insert columns(newcol2) into $tableName select case when smallIntField > 1 then smallIntField + 100 end from $tableName").show(100, false)
 
-    sql(s"select smallIntField, newcol2 from $tableName").show(100, false)
+      sql(s"select smallIntField, newcol2 from $tableName").show(100, false)
 
-    sql(s"insert columns(newcol3 string) into $tableName select smallIntField + 100 from $tableName where smallIntField > 1").show(100, false)
+      sql(s"insert columns(newcol3 string) into $tableName select smallIntField + 100 from $tableName where smallIntField > 1").show(100, false)
 
-    sql(s"select smallIntField, newcol3 from $tableName").show(100, false)
+      sql(s"select smallIntField, newcol3 from $tableName").show(100, false)
 
-    sql(s"describe formatted $tableName").show(100, false)
+      sql(s"describe formatted $tableName").show(100, false)
 
-    sql(s"select * from $tableName").show(100, false)
+      sql(s"select * from $tableName").show(100, false)
+    }
   }
 
   test("Test insert column with json schema infer") {
-    val tableName = "vector_table_json"
-    sql(s"drop table if exists $tableName")
-    val rdd = sqlContext
-      .sparkSession
-      .sparkContext
-      .parallelize(Seq(
-        JsonRecord("{\"name\":\"abc\", \"age\":1}"),
-        JsonRecord("{\"name\":\"bcd\", \"age\":2}"),
-        JsonRecord("{\"name\":\"ddd\", \"age\":32}")
-         ))
-    val df = sqlContext.createDataFrame(rdd)
-    df.createOrReplaceTempView("json_table")
+    if (SparkUtil.isSparkVersionXandAbove("2.3")) {
+      val tableName = "vector_table_json"
+      sql(s"drop table if exists $tableName")
+      val rdd = sqlContext
+        .sparkSession
+        .sparkContext
+        .parallelize(Seq(
+          JsonRecord("{\"name\":\"abc\", \"age\":1}"),
+          JsonRecord("{\"name\":\"bcd\", \"age\":2}"),
+          JsonRecord("{\"name\":\"ddd\", \"age\":32}")
+        ))
+      val df = sqlContext.createDataFrame(rdd)
+      df.createOrReplaceTempView("json_table")
 
-    sql(
-      s"""create table $tableName(
-         | jsonContent string
-         | )
-         | stored by 'carbondata'
-         | tblproperties('vector'='true')
+      sql(
+        s"""create table $tableName(
+           | jsonContent string
+           | )
+           | stored by 'carbondata'
+           | tblproperties('vector'='true')
       """.stripMargin)
 
-    sql(s"insert into $tableName select * from json_table")
+      sql(s"insert into $tableName select * from json_table")
 
-    sql(s"insert into $tableName select * from json_table")
+      sql(s"insert into $tableName select * from json_table")
 
-    sql(s"insert columns(jsonStringField) into $tableName select jsonContent from $tableName").show(100, false)
+      sql(s"insert columns(jsonStringField) into $tableName select jsonContent from $tableName").show(100, false)
 
-    sql(s"select * from $tableName").show(100, false)
+      sql(s"select * from $tableName").show(100, false)
 
-    sql(s"insert columns(jsonObjectField json) into $tableName select jsonContent from $tableName").show(100, false)
+      sql(s"insert columns(jsonObjectField json) into $tableName select jsonContent from $tableName").show(100, false)
 
-    sql(s"select * from $tableName").show(100, false)
+      sql(s"select * from $tableName").show(100, false)
 
-    sql(s"describe formatted $tableName").show(100, false)
+      sql(s"describe formatted $tableName").show(100, false)
+    }
+
   }
 
   test("query with complex") {
-    val tableName = "query_complex"
-    sql(s"drop table if exists $tableName")
-    val rdd = sqlContext
-      .sparkSession
-      .sparkContext
-      .parallelize(Seq(
-        NewRecord(SubRecord2("aa1"), SubRecord3(Array("bb1", "cc3"), "dd1")),
-        NewRecord(SubRecord2("aa2"), SubRecord3(Array("bb2", "cc3"), "dd2")),
-        NewRecord(SubRecord2("aa3"), SubRecord3(Array("bb3", "cc3"), "dd3"))
-      ))
-    val df = sqlContext.createDataFrame(rdd)
-    df.createOrReplaceTempView("base_query_complex")
+    if (SparkUtil.isSparkVersionXandAbove("2.3")) {
+      val tableName = "query_complex"
+      sql(s"drop table if exists $tableName")
+      val rdd = sqlContext
+        .sparkSession
+        .sparkContext
+        .parallelize(Seq(
+          NewRecord(SubRecord2("aa1"), SubRecord3(Array("bb1", "cc3"), "dd1")),
+          NewRecord(SubRecord2("aa2"), SubRecord3(Array("bb2", "cc3"), "dd2")),
+          NewRecord(SubRecord2("aa3"), SubRecord3(Array("bb3", "cc3"), "dd3"))
+        ))
+      val df = sqlContext.createDataFrame(rdd)
+      df.createOrReplaceTempView("base_query_complex")
 
-    sql(
-      s"""create table $tableName(
-         |  col1 struct<col5: string>,
-         |  col2 struct<col3: array<string>, col4: string>
-         | )
-         | stored by 'carbondata'
-         | tblproperties('vector'='true')
+      sql(
+        s"""create table $tableName(
+           |  col1 struct<col5: string>,
+           |  col2 struct<col3: array<string>, col4: string>
+           | )
+           | stored by 'carbondata'
+           | tblproperties('vector'='true')
       """.stripMargin)
 
-    sql(s"insert into $tableName select * from base_query_complex")
+      sql(s"insert into $tableName select * from base_query_complex")
 
-    sql(s"describe formatted $tableName").show(100, false)
+      sql(s"describe formatted $tableName").show(100, false)
 
-    sql(s"select * from $tableName").show(100, false)
+      sql(s"select * from $tableName").show(100, false)
 
-    sql(s"select col1.col5, col2.col4 from $tableName").show(100, false)
+      sql(s"select col1.col5, col2.col4 from $tableName").show(100, false)
+    }
   }
 
   test("Test insert multiple columns") {
-    val tableName = "insert_multiple_columns"
-    sql(s"drop table if exists $tableName")
-    sql(
-      s"""create table $tableName(
-         | smallIntField smallInt,
-         | intField int,
-         | bigIntField bigint,
-         | floatField float,
-         | doubleField double,
-         | decimalField decimal(25, 4),
-         | timestampField timestamp,
-         | dateField date,
-         | stringField string,
-         | varcharField varchar(10),
-         | charField char(10),
-         | booleanField boolean,
-         | binaryFiled binary,
-         | arrayField array<string>,
-         | structField struct<col1:string, col2:int, col3:array<string>>,
-         | mapField map<string, int>
-         | )
-         | stored by 'carbondata'
-         | tblproperties('vector'='true')
+    if (SparkUtil.isSparkVersionXandAbove("2.3")) {
+      val tableName = "insert_multiple_columns"
+      sql(s"drop table if exists $tableName")
+      sql(
+        s"""create table $tableName(
+           | smallIntField smallInt,
+           | intField int,
+           | bigIntField bigint,
+           | floatField float,
+           | doubleField double,
+           | decimalField decimal(25, 4),
+           | timestampField timestamp,
+           | dateField date,
+           | stringField string,
+           | varcharField varchar(10),
+           | charField char(10),
+           | booleanField boolean,
+           | binaryFiled binary,
+           | arrayField array<string>,
+           | structField struct<col1:string, col2:int, col3:array<string>>,
+           | mapField map<string, int>
+           | )
+           | stored by 'carbondata'
+           | tblproperties('vector'='true')
       """.stripMargin)
 
-    sql(s"insert into $tableName select * from base_table")
+      sql(s"insert into $tableName select * from base_table")
 
-    sql(s"insert into $tableName select * from base_table")
+      sql(s"insert into $tableName select * from base_table")
 
-    sql(s"show segments for table $tableName").show(100, false)
+      sql(s"show segments for table $tableName").show(100, false)
 
-    sql(s"select count(*) from $tableName").show(100, false)
+      sql(s"select count(*) from $tableName").show(100, false)
 
-    sql(s"insert columns(newcol1, newcol2) into table $tableName select smallIntField + 100, case when smallIntField > 1 then smallIntField + 100 end from $tableName").show(100, false)
+      sql(s"insert columns(newcol1, newcol2) into table $tableName select smallIntField + 100, case when smallIntField > 1 then smallIntField + 100 end from $tableName").show(100, false)
 
-    sql(s"describe formatted $tableName").show(100, false)
+      sql(s"describe formatted $tableName").show(100, false)
 
-    sql(s"select * from $tableName").show(100, false)
+      sql(s"select * from $tableName").show(100, false)
+    }
   }
 }
 
