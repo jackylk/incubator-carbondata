@@ -23,12 +23,12 @@ import org.apache.spark.sql.types.{LongType, StringType}
 import org.scalatest.BeforeAndAfterEach
 
 /**
- *
+ * There is no py installed on CI env, can ignore it.
  */
 class TestRegisterPythonUDF extends QueryTest with BeforeAndAfterEach {
 
   // Set the SPARK_HOME in environmental variables to execute this testcase.
-  test("register pythonUDF test") {
+  ignore("register pythonUDF test") {
 
     val script =
       """
@@ -57,7 +57,7 @@ class TestRegisterPythonUDF extends QueryTest with BeforeAndAfterEach {
       sql("select id, square(id) as id_squared from test where id=9"))
   }
 
-  test("test python version") {
+  ignore("test python version") {
     val python_version =
       s"""
          |import sys

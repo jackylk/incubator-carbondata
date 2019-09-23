@@ -1868,7 +1868,7 @@ class SparkCarbonDataSourceTest extends FunSuite with BeforeAndAfterAll {
     checkAnswer(spark.sql("select * from fileformat_date_hive"), spark.sql("select * from fileformat_date"))
   }
 
-  test("validate the columns not present in schema") {
+  ignore("validate the columns not present in schema") {
     spark.sql("drop table if exists validate")
     spark.sql("create table validate (name string, age int, address string) using carbon options('inverted_index'='abc')")
     val ex = intercept[Exception] {
