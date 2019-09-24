@@ -264,8 +264,8 @@ class DDLStrategy(sparkSession: SparkSession) extends SparkStrategy {
         }
       case set@SetCommand(kv) =>
         ExecutedCommandExec(CarbonSetCommand(set)) :: Nil
-      case reset@ResetCommand =>
-        ExecutedCommandExec(CarbonResetCommand()) :: Nil
+      case reset: CarbonResetCommand =>
+        ExecutedCommandExec(reset) :: Nil
       case org.apache.spark.sql.execution.datasources.CreateTable(tableDesc, mode, None)
         if tableDesc.provider.get != DDLUtils.HIVE_PROVIDER
           && (tableDesc.provider.get.equals("org.apache.spark.sql.CarbonSource")
