@@ -92,8 +92,6 @@ class TestSDKWithTransactionalTable extends QueryTest with BeforeAndAfterAll {
 
     val schema = CarbonSchemaReader.readSchema(table.getTablePath)
 
-    val l = reader.readArrowBatchAddress(schema)
-    println(l)
     var count = 0
     while(reader.hasNext) {
       reader.readNextRow()
