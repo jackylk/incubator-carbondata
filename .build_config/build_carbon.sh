@@ -1,20 +1,9 @@
 #!/usr/bin/env bash
 set -xe
-
-env
-
-export JAVA_HOME=/root/buildbox/jdk1.8.0_191
-export PATH=$PATH:$JAVA_HOME/bin
-export SCALA_HOME=/root/dplatform/scala-2.11.8
-export PATH=$PATH:$SCALA_HOME/bin
-export M2_HOME=/root/dplatform/apache-maven-3.3.9
-export PATH=$PATH:$M2_HOME/bin
-export MAVEN_OPTS="-Xmx2g -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512m -Xms2g -Dmaven.multiModuleProjectDirectory=$M2_HOME"
-export ANT_HOME=/root/buildbox/apache-ant-1.9.13
-export PATH=$PATH:$ANT_HOME/bin
-
-whoami
+source /root/.bash_profile
 echo $PATH
+env
+whoami
 which java
 which ant
 whoami
@@ -39,6 +28,14 @@ export DP_VERSION=${DP_VERSION:-dplatform}
 export INTERNAL_VERSION=${CARBON_BRANCH:-1.6.0.0100.B001}
 export HADOOP_VERSION=${HADOOP_VERSION:-3.1.1.0100}
 export SPARK_VERSION=${SPARK_VERSION:-2.3.2.0101}
+export HADOOP_ARM_VERSION=${HADOOP_ARM_VERSION:$HADOOP_VERSION-aarch64}
+export SPARK_ARM_VERSION=${SPARK_ARM_VERSION:$SPARK_VERSION-aarch64}
+echo "Carbon Build Platform: $CID_BUILD_PLATFORM"
+if [[ $CID_BUILD_PLATFORM = 'aarch64' ]]; then
+  DP_VERSION=${CID_BUILD_PLATFORM}-${DP_VERSION}
+  HADOOP_VERSION=$HADOOP_ARM_VERSION
+  SPARK_VERSION=$SPARK_ARM_VERSION
+fi
 # HW_display_version
 export DISPLAY_VERSION=${COMPONENT_VERSION}-${DP_VERSION}
 export BUILD_VERSION=${DISPLAY_VERSION}

@@ -4,6 +4,9 @@ set -xe
 export COMPONENT_NAME=${COMPONENT_NAME:-EI_CarbonData_Kernel_Component}
 export COMPONENT_VERSION=${COMPONENT_VERSION:-1.6.1.0100}
 export DP_VERSION=${DP_VERSION:-dplatform}
+if [[ $BUILD_PLATFORM = 'aarch64' ]]; then
+  DP_VERSION=${BUILD_PLATFORM}-${DP_VERSION}
+fi
 CARBON_RELEASE_PACKAGE=${COMPONENT_NAME}_${COMPONENT_VERSION}-${DP_VERSION}_release.tar.gz
 JAR_VERSION=${COMPONENT_VERSION}-${DP_VERSION}
 GROUP_ID="org.apache.carbondata"
@@ -119,7 +122,7 @@ do
     jarPath=${artifact}/${JAR_VERSION}
     pomFile=${artifact}-${JAR_VERSION}.pom
     jarFile=${artifact}-${JAR_VERSION}.jar
-    testJarFile=${artifact}-${JAR_VERSION}-test.jar
+    testJarFile=${artifact}-${JAR_VERSION}-tests.jar
 
     if [[ ! -f "${jarPath}/${pomFile}" ]]; then
         echo "error: ${jarPath}/${pomFile} not exists"
@@ -136,6 +139,6 @@ do
 
     if [[ -f "${jarPath}/${testJarFile}" ]]; then
         echo "deploy ${pomFile} ${testJarFile}"
-        mvn deploy:deploy-file   -Dclassifier=test -DgroupId=${GROUP_ID} -DartifactId=${artifact} -Dversion=${JAR_VERSION} -Dpackaging=jar -Dfile=${jarPath}/${testJarFile} -DpomFile=${jarPath}/${pomFile} -Durl=http://wlg1.artifactory.cd-cloud-artifact.tools.huawei.com/artifactory/${repositoryId} -DrepositoryId=${repositoryId} -s ${SETTINGS_FILE}
+        mvn deploy:deploy-file   -Dclassifier=tests -DgroupId=${GROUP_ID} -DartifactId=${artifact} -Dversion=${JAR_VERSION} -Dpackaging=jar -Dfile=${jarPath}/${testJarFile} -DpomFile=${jarPath}/${pomFile} -Durl=http://wlg1.artifactory.cd-cloud-artifact.tools.huawei.com/artifactory/${repositoryId} -DrepositoryId=${repositoryId} -s ${SETTINGS_FILE}
     fi
 done
