@@ -27,7 +27,7 @@ import org.apache.spark.sql.execution.command.management.{CarbonAlterTableCompac
 import org.apache.spark.sql.execution.command.partition.{CarbonAlterTableAddHivePartitionCommand, CarbonAlterTableDropHivePartitionCommand, CarbonShowCarbonPartitionsCommand}
 import org.apache.spark.sql.execution.command.schema._
 import org.apache.spark.sql.execution.command.table.{CarbonDescribeFormattedCommand, CarbonDropTableCommand}
-import org.apache.spark.sql.hive.execution.command.{CarbonDropDatabaseCommand, CarbonResetCommand, CarbonSetCommand}
+import org.apache.spark.sql.hive.execution.command.{CarbonDropDatabaseCommand, CarbonResetCommand, CarbonSetCommand, MatchResetCommand}
 import org.apache.spark.sql.CarbonExpressions.{CarbonDescribeTable => DescribeTableCommand}
 import org.apache.spark.sql.execution.datasources.{RefreshResource, RefreshTable}
 import org.apache.spark.sql.hive.{CarbonRelation, CreateCarbonSourceTableAsSelectCommand}
@@ -264,8 +264,8 @@ class DDLStrategy(sparkSession: SparkSession) extends SparkStrategy {
         }
       case set@SetCommand(kv) =>
         ExecutedCommandExec(CarbonSetCommand(set)) :: Nil
-      case reset: CarbonResetCommand =>
-        ExecutedCommandExec(reset) :: Nil
+      case MatchResetCommand(_) =>
+        ExecutedCommandExec(CarbonResetCommand()) :: Nil
       case org.apache.spark.sql.execution.datasources.CreateTable(tableDesc, mode, None)
         if tableDesc.provider.get != DDLUtils.HIVE_PROVIDER
           && (tableDesc.provider.get.equals("org.apache.spark.sql.CarbonSource")
