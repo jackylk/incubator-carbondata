@@ -269,7 +269,7 @@ public class OBSUtil {
    * @param session
    * @param recursive
    */
-  public static void copyToLocal(String path, String destDir, SparkSession session, boolean recursive)
+  public static void copyToLocal(String path, String destDir, String ak, String sk, String endPoint, boolean recursive)
       throws IOException {
     String bucket = getBucketName(path);
     String obsPath = path.substring(path.indexOf(bucket) + bucket.length());
@@ -283,7 +283,7 @@ public class OBSUtil {
       throw new RuntimeException("Error creating directory " + localDir.getParentFile().toString());
     }
 
-    try (ObsClient obsClient = createObsClient(session)) {
+    try (ObsClient obsClient = new ObsClient(ak, sk, endPoint)) {
       if (!path.endsWith("/")) {
         // Only one file to copy
         ObsObject obsObject = obsClient.getObject(bucket, obsPath);
@@ -319,11 +319,17 @@ public class OBSUtil {
             if (!new File(destDir + dirName).mkdirs()) {
               throw new RuntimeException("Error creating directory " + localDir.getParentFile().toString());
             }
-            copyToLocal(path + dirName + "/", destDir + dirName + "/", session, true);
+            copyToLocal(path + dirName + "/", destDir + dirName + "/", ak, sk, endPoint, true);
           }
         }
       }
     }
   }
 
+  public static void copyToLocal(String path, String destDir, SparkSession session, boolean recursive) throws IOException{
+    String ak = session.conf().get(OBSSparkConstants.AK);
+    String sk = session.conf().get(OBSSparkConstants.SK);
+    String endpoint = session.conf().get(OBSSparkConstants.END_POINT);
+    copyToLocal(path, destDir, ak, sk, endpoint, recursive);
+  }
 }
