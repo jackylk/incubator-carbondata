@@ -235,6 +235,8 @@ public class CarbonTableOutputFormat extends FileOutputFormat<NullWritable, Obje
     return this.committer;
   }
 
+  private static final AtomicLong DEFAULT_TASK_NO = new AtomicLong(0);
+
   @Override
   public RecordWriter<NullWritable, ObjectArrayWritable> getRecordWriter(
       final TaskAttemptContext taskAttemptContext) throws IOException {
@@ -254,7 +256,7 @@ public class CarbonTableOutputFormat extends FileOutputFormat<NullWritable, Obje
     }
     if (null == loadModel.getTaskNo() || loadModel.getTaskNo().isEmpty()) {
       loadModel.setTaskNo(taskAttemptContext.getConfiguration()
-          .get("carbon.outputformat.taskno", String.valueOf(System.nanoTime())));
+          .get("carbon.outputformat.taskno", String.valueOf(DEFAULT_TASK_NO.getAndIncrement())));
     }
     loadModel.setDataWritePath(
         taskAttemptContext.getConfiguration().get("carbon.outputformat.writepath"));

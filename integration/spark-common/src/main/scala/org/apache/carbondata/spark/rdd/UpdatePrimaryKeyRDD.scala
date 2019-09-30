@@ -243,7 +243,7 @@ class UpdatePrimaryKeyRDD[K, V](
     val splits = inputFormat.getSplits(job)
     val filteredSplit =
       splits.asScala.map(_.asInstanceOf[CarbonInputSplit]).filter{ carbonInputSplit =>
-        FileFormat.ROW_V1 != carbonInputSplit.getFileFormat
+        !FileFormat.ROW_V1.equals(carbonInputSplit.getFileFormat)
     }
     CarbonInputFormat.setSegmentsToAccess(job.getConfiguration, segmentList)
     CarbonInputFormat.setValidateSegmentsToAccess(job.getConfiguration, false)

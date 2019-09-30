@@ -203,7 +203,8 @@ object CarbonInternalMergerUtil {
               indexCarbonTable,
               seg.getLoadName,
               segmentIdToLoadStartTimeMapping(seg.getLoadName).toString,
-              carbonLoadModel.getFactTimeStamp.toString)
+              carbonLoadModel.getFactTimeStamp.toString,
+              null)
             val segment = new Segment(seg.getLoadName, file)
             SegmentFileStore.updateSegmentFile(indexCarbonTable,
               seg.getLoadName,

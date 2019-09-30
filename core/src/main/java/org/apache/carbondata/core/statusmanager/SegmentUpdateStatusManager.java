@@ -252,23 +252,23 @@ public class SegmentUpdateStatusManager {
    * @throws Exception
    */
   public String[] getDeleteDeltaFilePath(String blockFilePath, String segmentId) throws Exception {
-    return getDeltaFiles(blockFilePath, segmentId, CarbonCommonConstants.DELETE_DELTA_FILE_EXT)
+    return getDeltaFiles(blockFilePath, segmentId)
         .toArray(new String[0]);
   }
 
   /**
    * Returns all delta file paths of specified block
    */
-  private List<String> getDeltaFiles(String blockPath, String segment, String extension)
-      throws Exception {
-    Path path = new Path(blockPath);
+  private List<String> getDeltaFiles(String file, String segmentId) throws Exception {
+    Path path = new Path(file);
     String completeBlockName = path.getName();
     String blockNameWithoutExtn =
         completeBlockName.substring(0, completeBlockName.lastIndexOf('.'));
     //blockName without timestamp
     final String blockNameFromTuple =
         blockNameWithoutExtn.substring(0, blockNameWithoutExtn.lastIndexOf("-"));
-    return getDeltaFiles(path.getParent().toString(), blockNameFromTuple, extension, segment);
+    return getDeltaFiles(path.getParent().toString(), blockNameFromTuple,
+        CarbonCommonConstants.DELETE_DELTA_FILE_EXT, segmentId);
   }
 
   /**

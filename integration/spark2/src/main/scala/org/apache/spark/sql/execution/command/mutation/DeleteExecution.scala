@@ -21,6 +21,7 @@ import java.util
 
 import scala.collection.JavaConverters._
 
+import org.apache.commons.lang3.StringUtils
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.mapred.JobConf
 import org.apache.hadoop.mapreduce.Job
@@ -39,8 +40,8 @@ import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.mutate.{CarbonUpdateUtil, DeleteDeltaBlockDetails, SegmentUpdateDetails, TupleIdEnum}
-import org.apache.carbondata.core.mutate.data.{BlockMappingVO, RowCountDetailsVO}
-import org.apache.carbondata.core.statusmanager.{SegmentStatus, SegmentStatusManager, SegmentUpdateStatusManager}
+import org.apache.carbondata.core.mutate.data.RowCountDetailsVO
+import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatus, SegmentStatusManager, SegmentUpdateStatusManager}
 import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil, ThreadLocalSessionInfo}
 import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.core.writer.CarbonDeleteDeltaWriterImpl
@@ -137,7 +138,8 @@ object DeleteExecution {
                        groupedRows.toIterator,
                        timestamp,
                        rowCountDetailsVO,
-                       isStandardTable)
+                       isStandardTable,
+                       metadataDetails)
           }
           result
         }).collect()
@@ -155,14 +157,13 @@ object DeleteExecution {
       executorErrors,
       isUpdateOperation)
 
-
-
     def deleteDeltaFunc(index: Int,
         key: String,
         iter: Iterator[Row],
         timestamp: String,
         rowCountDetailsVO: RowCountDetailsVO,
-        isStandardTable: Boolean
+        isStandardTable: Boolean,
+        loads: Array[LoadMetadataDetails]
     ): Iterator[(SegmentStatus, (SegmentUpdateDetails, ExecutionErrors))] = {
 
       val result = new DeleteDelataResultImpl()
@@ -173,6 +174,7 @@ object DeleteExecution {
         .getBlockName(
           CarbonTablePath.addDataPartPrefix(key.split(CarbonCommonConstants.FILE_SEPARATOR)(1)))
       val segmentId = key.split(CarbonCommonConstants.FILE_SEPARATOR)(0)
+      val load = loads.find(l => l.getLoadName.equalsIgnoreCase(segmentId)).get
       val deleteDeltaBlockDetails: DeleteDeltaBlockDetails = new DeleteDeltaBlockDetails(blockName)
       val resultIter = new Iterator[(SegmentStatus, (SegmentUpdateDetails, ExecutionErrors))] {
         val segmentUpdateDetails = new SegmentUpdateDetails()
@@ -199,7 +201,11 @@ object DeleteExecution {
           }
 
           val blockPath =
-            CarbonUpdateUtil.getTableBlockPath(TID, tablePath, isStandardTable)
+            if (StringUtils.isNotEmpty(load.getPath)) {
+              load.getPath
+            } else {
+              CarbonUpdateUtil.getTableBlockPath(TID, tablePath, isStandardTable)
+            }
           val completeBlockName = CarbonTablePath
             .addDataPartPrefix(CarbonUpdateUtil.getRequiredFieldFromTID(TID, TupleIdEnum.BLOCK_ID) +
                                CarbonCommonConstants.FACT_FILE_EXT)

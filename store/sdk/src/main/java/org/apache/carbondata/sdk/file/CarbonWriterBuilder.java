@@ -563,6 +563,16 @@ public class CarbonWriterBuilder {
   /**
    * to build a {@link CarbonWriter}, which accepts Avro object
    *
+   * @return CarbonWriterBuilder
+   */
+  public CarbonWriterBuilder withAvroInput() {
+    this.writerType = WRITER_TYPE.AVRO;
+    return this;
+  }
+
+  /**
+   * to build a {@link CarbonWriter}, which accepts Avro object
+   *
    * @param avroSchema avro Schema object {org.apache.avro.Schema}
    * @return CarbonWriterBuilder
    */
@@ -686,7 +696,7 @@ public class CarbonWriterBuilder {
 
   public CarbonLoadModel buildLoadModel(Schema carbonSchema)
       throws IOException, InvalidLoadOptionException {
-    timestamp = System.nanoTime();
+    timestamp = System.currentTimeMillis();
     // validate long_string_column
     Set<String> longStringColumns = new HashSet<>();
     if (options != null && options.get(CarbonCommonConstants.LONG_STRING_COLUMNS) != null) {

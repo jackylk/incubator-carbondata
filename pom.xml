@@ -109,6 +109,8 @@
     <!--<module>integration/presto</module>-->
     <module>integration/hive</module>
     <module>integration/flink</module>
+    <module>integration/flink-package</module>
+    <module>integration/flink-proxy</module>
     <module>store/sdk-for-hbase-project</module>
     <module>integration/hbase</module>
     <module>streaming</module>
