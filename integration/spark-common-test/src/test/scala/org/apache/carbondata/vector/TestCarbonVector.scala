@@ -115,7 +115,7 @@ class TestCarbonVector extends QueryTest with BeforeAndAfterAll {
     }
   }
 
-  test("Test insert column with complex data type") {
+  ignore("Test insert column with complex data type") {
     if (SparkUtil.isSparkVersionXandAbove("2.3")) {
       val tableName = "vector_table_complex"
       sql(s"drop table if exists $tableName")
@@ -181,7 +181,7 @@ class TestCarbonVector extends QueryTest with BeforeAndAfterAll {
     }
   }
 
-  test("Test insert column with infer data type") {
+  ignore("Test insert column with infer data type") {
     if (SparkUtil.isSparkVersionXandAbove("2.3")) {
       val tableName = "vector_table_infer"
       sql(s"drop table if exists $tableName")
@@ -330,7 +330,7 @@ class TestCarbonVector extends QueryTest with BeforeAndAfterAll {
     }
   }
 
-  test("Test insert multiple columns") {
+  ignore("Test insert multiple columns") {
     if (SparkUtil.isSparkVersionXandAbove("2.3")) {
       val tableName = "insert_multiple_columns"
       sql(s"drop table if exists $tableName")

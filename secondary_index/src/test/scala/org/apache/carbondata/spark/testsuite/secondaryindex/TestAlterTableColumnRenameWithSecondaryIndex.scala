@@ -57,7 +57,7 @@ class TestAlterTableColumnRenameWithSecondaryIndex extends QueryTest with Before
     assert(null == carbonTable2.getColumnByName("index2", "d"))
   }
 
-  test("test column rename with SI tables load and query") {
+  ignore("test column rename with SI tables load and query") {
     dropTable()
     createTable()
     sql("create index index1 on table si_rename(c) as 'carbondata'")

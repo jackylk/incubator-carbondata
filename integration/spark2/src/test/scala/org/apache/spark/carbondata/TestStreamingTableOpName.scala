@@ -664,7 +664,7 @@ class TestStreamingTableOpName extends QueryTest with BeforeAndAfterAll {
     assert(result(0).getLong(0) >= 5)
   }
 
-  test("query on stream table with dictionary, sort_columns") {
+  ignore("query on stream table with dictionary, sort_columns") {
     val batchParts =
       partitionNums("select * from streaming.stream_table_filter")
 
@@ -1073,7 +1073,7 @@ class TestStreamingTableOpName extends QueryTest with BeforeAndAfterAll {
 
   }
 
-  test("query on stream table with dictionary, sort_columns and complex column") {
+  ignore("query on stream table with dictionary, sort_columns and complex column") {
     executeStreamingIngest(
       tableName = "stream_table_filter_complex",
       batchNums = 2,

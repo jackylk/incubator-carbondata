@@ -86,8 +86,19 @@ public abstract class AbstractDFSCarbonFile implements CarbonFile {
     this.hadoopConf = hadoopConf;
     FileSystem fs;
     try {
+      long s = System.currentTimeMillis();
       fs = path.getFileSystem(this.hadoopConf);
+      long t = System.currentTimeMillis() - s;
+      if(t > 1000) {
+        LOGGER.warn("###################getFileSystem cost: " + t + " fs is: " + fs.getClass().getName());
+      }
+
+      long s2 = System.currentTimeMillis();
       fileStatus = fs.getFileStatus(path);
+      long t2 = System.currentTimeMillis() - s2;
+      if (t2 > 1000) {
+        LOGGER.warn("###################getFileStatus cost: " + t2 + " using path: " + path.toString());
+      }
     } catch (IOException e) {
       LOGGER.debug("Exception occurred:" + e.getMessage(), e);
     }

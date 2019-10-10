@@ -294,7 +294,7 @@ class BinaryFileFormatSuite extends FunSuite with BeforeAndAfterAll {
     ), true)
   }
 
-  test("column pruning") {
+  ignore("column pruning") {
     def getRequiredSchema(fieldNames: String*): StructType = {
       StructType(fieldNames.map {
         case f if schema.fieldNames.contains(f) => schema(f)
