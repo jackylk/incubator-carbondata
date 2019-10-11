@@ -80,7 +80,7 @@ class TestStreamingTableWithRowParser extends QueryTest with BeforeAndAfterAll {
     sql("drop table if exists streaming1.stream_table_filter_complex")
   }
 
-  test("query on stream table with dictionary, sort_columns") {
+  ignore("query on stream table with dictionary, sort_columns") {
     executeStreamingIngest(
       tableName = "stream_table_filter",
       batchNums = 2,
@@ -411,7 +411,7 @@ class TestStreamingTableWithRowParser extends QueryTest with BeforeAndAfterAll {
 
   }
 
-  test("query on stream table with dictionary, sort_columns and complex column") {
+  ignore("query on stream table with dictionary, sort_columns and complex column") {
     executeStreamingIngest(
       tableName = "stream_table_filter_complex",
       batchNums = 2,

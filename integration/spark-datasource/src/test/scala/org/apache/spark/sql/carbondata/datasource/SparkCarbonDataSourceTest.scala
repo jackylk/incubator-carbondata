@@ -1242,7 +1242,7 @@ class SparkCarbonDataSourceTest extends FunSuite with BeforeAndAfterAll {
     spark.sql("drop table if exists parquet_table")
   }
 
-  test("test read using different sort order data") {
+  ignore("test read using different sort order data") {
     if (!spark.sparkContext.version.startsWith("2.1")) {
       spark.sql("drop table if exists old_comp")
       FileFactory.deleteAllFilesOfDir(new File(warehouse1 + "/testdb"))
