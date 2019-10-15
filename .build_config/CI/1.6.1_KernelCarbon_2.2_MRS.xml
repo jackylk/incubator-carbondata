@@ -73,7 +73,7 @@
 		<!--<copy file="../vector/target/carbondata-vector-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>-->
 		<copy file="../cloud/target/carbondata-cloud-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
 		<copy file="../CI/dependency_jars/ais-client-sdk-1.0.1.jar" toDir="${libDir}" overwrite="true"/>
-		<copy file="../CI/dependency_jars/java-sdk-core-2.0.1.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../CI/dependency_jars/java-sdk-core-3.0.10.jar" toDir="${libDir}" overwrite="true"/>
 		<!--<copy file="../datamap/lucene/target/carbondata-lucene-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
 		<copy file="../libraries/TPJars/commons-vfs-1.0.jar" toDir="${libDir}" overwrite="true"/> -->
 
@@ -146,7 +146,7 @@
 		<!--<copy file="../vector/target/carbondata-vector-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>-->
 		<copy file="../cloud/target/carbondata-cloud-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
 		<copy file="../CI/dependency_jars/ais-client-sdk-1.0.1.jar" toDir="${libDirMRS}" overwrite="true"/>
-		<copy file="../CI/dependency_jars/java-sdk-core-2.0.1.jar" toDir="${libDirMRS}" overwrite="true"/>
+		<copy file="../CI/dependency_jars/java-sdk-core-3.0.10.jar" toDir="${libDirMRS}" overwrite="true"/>
 
 		<!--<copy file="../datamap/lucene/target/carbondata-lucene-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
 		<copy file="../libraries/TPJars/commons-vfs-1.0.jar" toDir="${libDirMRS}" overwrite="true"/> -->
