@@ -626,6 +626,26 @@
 
   <profiles>
     <profile>
+      <id>build-with-source</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>3.0.0</version>
+            <executions>
+              <execution>
+                <phase>compile</phase>
+                <goals>
+                  <goal>jar-no-fork</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
       <!--This profile does not build spark module, so user should explicitly give spark profile also like spark-2.1 -->
       <id>build-with-format</id>
       <modules>
