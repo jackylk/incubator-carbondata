@@ -12,11 +12,14 @@ dependencies:
 machine:
   container:
     euler:
-      - registry-cbu.huawei.com/cloudtable-leo/dplatform:1.0.0
+      - registry-cbu.huawei.com/cloudtable-leo/dplatform:1.0.2
+    arm_euler2.8_for_task:
+      - registry-cbu.huawei.com/cloudtable-leo/dplatform-arm:1.0.2
+
 
 scripts:
   - sh .build_config/build_carbon.sh
 
 artifacts:
   package:
-    - package/${COMPONENT_NAME}_${COMPONENT_VERSION}-${DP_VERSION}_release.tar.gz
+    - package/${COMPONENT_NAME}_${COMPONENT_VERSION}-.*._release.tar.gz
