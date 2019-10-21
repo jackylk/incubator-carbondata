@@ -279,7 +279,7 @@ object CarbonSession {
         if (extensionConfOption.isDefined) {
           val extensionConfClassName = extensionConfOption.get
           try {
-            val extensionConfClass = Utils.classForName(extensionConfClassName)
+            val extensionConfClass = Utils.classForName(extensionConfClassName.head)
             val ex = extensionConfClass.newInstance()
               .asInstanceOf[(SparkSessionExtensions) => Unit]
             ex(extensionInstance)
