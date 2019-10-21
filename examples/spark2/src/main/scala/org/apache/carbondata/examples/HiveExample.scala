@@ -19,6 +19,7 @@ package org.apache.carbondata.examples
 import java.io.File
 import java.sql.{DriverManager, ResultSet, Statement}
 
+import org.apache.commons.io.FileUtils
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.fs.permission.{FsAction, FsPermission}
 
@@ -100,11 +101,16 @@ object HiveExample {
     // for HiveServer can run on the same metastore
     checkAndDeleteDBLock
 
+    val metaFolder = new File(metaStoreLoc)
+    if (metaFolder.exists()) {
+      FileUtils.deleteDirectory(metaFolder)
+    }
+    FileUtils.moveDirectory(new File("metastore_db"), metaFolder)
   }
 
   def checkAndDeleteDBLock: Unit = {
-    val dbLockPath = FileFactory.getUpdatedFilePath(s"$metaStoreLoc/db.lck")
-    val dbexLockPath = FileFactory.getUpdatedFilePath(s"$metaStoreLoc/dbex.lck")
+    val dbLockPath = FileFactory.getUpdatedFilePath(s"metastore_db/db.lck")
+    val dbexLockPath = FileFactory.getUpdatedFilePath(s"metastore_db/dbex.lck")
     if(FileFactory.isFileExist(dbLockPath)) {
       FileFactory.deleteFile(dbLockPath, FileFactory.getFileType(dbLockPath))
     }

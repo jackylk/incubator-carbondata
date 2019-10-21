@@ -312,7 +312,7 @@ test("Creation of partition table should fail if the colname in table schema and
     FileFactory.deleteAllCarbonFilesOfDir(FileFactory.getCarbonFile(location))
   }
 
-  test("add partition with static column partition with load command") {
+  ignore("add partition with static column partition with load command") {
     sql(
       """
         | CREATE TABLE staticpartitionlocload (empno int, designation String,
@@ -357,7 +357,7 @@ test("Creation of partition table should fail if the colname in table schema and
     FileFactory.deleteAllCarbonFilesOfDir(file)
   }
 
-  test("add external partition with static column partition with load command with diffrent schema") {
+  ignore("add external partition with static column partition with load command with diffrent schema") {
 
     sql(
       """
@@ -393,7 +393,7 @@ test("Creation of partition table should fail if the colname in table schema and
     }
   }
 
-  test("add external partition with static column partition with load command") {
+  ignore("add external partition with static column partition with load command") {
 
     sql(
       """

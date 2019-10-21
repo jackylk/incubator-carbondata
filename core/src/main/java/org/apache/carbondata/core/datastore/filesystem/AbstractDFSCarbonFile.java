@@ -89,8 +89,9 @@ public abstract class AbstractDFSCarbonFile implements CarbonFile {
       long s = System.currentTimeMillis();
       fs = path.getFileSystem(this.hadoopConf);
       long t = System.currentTimeMillis() - s;
-      if(t > 1000) {
-        LOGGER.warn("###################getFileSystem cost: " + t + " fs is: " + fs.getClass().getName());
+      if (t > 1000) {
+        LOGGER.warn(
+            "###################getFileSystem cost: " + t + " fs is: " + fs.getClass().getName());
       }
 
       long s2 = System.currentTimeMillis();

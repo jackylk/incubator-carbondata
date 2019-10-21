@@ -37,7 +37,7 @@ import org.apache.spark.sql.catalyst.catalog.CatalogTable
 import org.apache.spark.sql.catalyst.expressions.{Ascending, AttributeReference, SortOrder}
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, Project, Sort}
 import org.apache.spark.sql.execution.LogicalRDD
-import org.apache.spark.sql.execution.command.{AtomicRunnableCommand, DataLoadTableFileMapping, UpdateTableModel}
+import org.apache.spark.sql.execution.command.{AlterTableRecoverPartitionsCommand, AtomicRunnableCommand, DataLoadTableFileMapping, UpdateTableModel}
 import org.apache.spark.sql.execution.datasources.{CatalogFileIndex, FindDataSourceTable, HadoopFsRelation, LogicalRelation, SparkCarbonTableFormat}
 import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.sql.optimizer.CarbonFilters
@@ -672,7 +672,7 @@ case class CarbonLoadDataCommand(
     val dateFormat = new SimpleDateFormat(dateFormatString)
     // Clean up the alreday dropped partitioned data
     SegmentFileStore.cleanSegments(table, null, false)
-    CarbonSession.threadSet("partition.operationcontext", operationContext)
+    CarbonUtils.threadSet("partition.operationcontext", operationContext)
     // input data from csv files. Convert to logical plan
     val allCols = new ArrayBuffer[String]()
     // get only the visible dimensions from table
@@ -843,6 +843,7 @@ case class CarbonLoadDataCommand(
           ifPartitionNotExists = false)
       SparkUtil.setNullExecutionId(sparkSession)
       Dataset.ofRows(sparkSession, convertedPlan)
+      AlterTableRecoverPartitionsCommand(catalogTable.identifier).run(sparkSession)
     } catch {
       case ex: Throwable =>
         val (executorMessage, errorMessage) = CarbonScalaUtil.retrieveAndLogErrorMsg(ex, LOGGER)
@@ -853,7 +854,7 @@ case class CarbonLoadDataCommand(
         LOGGER.error(ex)
         throw ex
     } finally {
-      CarbonSession.threadUnset("partition.operationcontext")
+      CarbonUtils.threadUnset("partition.operationcontext")
       if (isOverwriteTable) {
         DataMapStoreManager.getInstance().clearDataMaps(table.getAbsoluteTableIdentifier)
         // Clean the overwriting segments if any.

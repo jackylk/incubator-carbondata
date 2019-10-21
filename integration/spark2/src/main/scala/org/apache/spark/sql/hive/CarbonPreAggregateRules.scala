@@ -172,6 +172,7 @@ case class CarbonPreAggregateQueryRules(sparkSession: SparkSession) extends Rule
     isValidPlan
   }
   override def apply(plan: LogicalPlan): LogicalPlan = {
+    updatedExpression.clear()
     var needAnalysis = true
     plan.transformExpressions {
       // first check if any preAgg scala function is applied it is present is in plan
@@ -639,7 +640,7 @@ case class CarbonPreAggregateQueryRules(sparkSession: SparkSession) extends Rule
 
     }
     if(isPlanUpdated) {
-      CarbonSession.threadSet(CarbonCommonConstants.SUPPORT_DIRECT_QUERY_ON_DATAMAP, "true")
+      CarbonUtils.threadSet(CarbonCommonConstants.SUPPORT_DIRECT_QUERY_ON_DATAMAP, "true")
     }
     updatedPlan
   }
@@ -729,13 +730,13 @@ case class CarbonPreAggregateQueryRules(sparkSession: SparkSession) extends Rule
   def setSegmentsForStreaming(parentTable: CarbonTable, dataMapSchema: DataMapSchema): Unit = {
     val mainTableKey = parentTable.getDatabaseName + '.' + parentTable.getTableName
     val factManager = new SegmentStatusManager(parentTable.getAbsoluteTableIdentifier)
-    CarbonSession
+    CarbonUtils
       .threadSet(CarbonCommonConstantsInternal.QUERY_ON_PRE_AGG_STREAMING + mainTableKey, "true")
-    CarbonSession
+    CarbonUtils
       .threadSet(
         CarbonCommonConstants.CARBON_INPUT_SEGMENTS + mainTableKey,
         factManager.getValidAndInvalidSegments.getValidSegments.asScala.mkString(","))
-    CarbonSession
+    CarbonUtils
       .threadSet(CarbonCommonConstants.VALIDATE_CARBON_INPUT_SEGMENTS + mainTableKey, "true")
     // below code is for aggregate table
     val identifier = TableIdentifier(
@@ -750,11 +751,11 @@ case class CarbonPreAggregateQueryRules(sparkSession: SparkSession) extends Rule
       .mkString(",")
     val childTableKey = carbonRelation.carbonTable.getDatabaseName + '.' +
                    carbonRelation.carbonTable.getTableName
-    CarbonSession
+    CarbonUtils
       .threadSet(CarbonCommonConstantsInternal.QUERY_ON_PRE_AGG_STREAMING + childTableKey, "true")
-    CarbonSession
+    CarbonUtils
       .threadSet(CarbonCommonConstants.CARBON_INPUT_SEGMENTS + childTableKey, validSegments)
-    CarbonSession
+    CarbonUtils
       .threadSet(CarbonCommonConstants.VALIDATE_CARBON_INPUT_SEGMENTS + childTableKey, "false")
   }
 

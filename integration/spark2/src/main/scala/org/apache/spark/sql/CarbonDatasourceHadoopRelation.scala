@@ -55,7 +55,7 @@ case class CarbonDatasourceHadoopRelation(
     paths.head,
     CarbonEnv.getDatabaseName(caseInsensitiveMap.get("dbname"))(sparkSession),
     caseInsensitiveMap("tablename"))
-  CarbonSession.updateSessionInfoToCurrentThread(sparkSession)
+  CarbonUtils.updateSessionInfoToCurrentThread(sparkSession)
 
   // Incase of RowDataSourceScanExec,
   // logical relation will not be present, so use needPriv from this base relation extension class
@@ -183,7 +183,7 @@ case class CarbonDatasourceHadoopRelation(
       requiredColumns.foreach(projection.addColumn)
     }
 
-    CarbonSession.threadUnset(CarbonCommonConstants.SUPPORT_DIRECT_QUERY_ON_DATAMAP)
+    CarbonUtils.threadUnset(CarbonCommonConstants.SUPPORT_DIRECT_QUERY_ON_DATAMAP)
     val inputMetricsStats: CarbonInputMetrics = new CarbonInputMetrics
     new CarbonScanRDD(
       sparkSession,
