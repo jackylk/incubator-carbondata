@@ -82,7 +82,12 @@
                     <groupId>com.jamesmurty.utils</groupId>
                     <artifactId>java-xmlbuilder</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>com.huawei.storage</groupId>
+                    <artifactId>esdk-obs-java</artifactId>
+                </exclusion>
             </exclusions>
+
         </dependency>
         <dependency>
             <groupId>com.jamesmurty.utils</groupId>

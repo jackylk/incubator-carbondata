@@ -31,14 +31,32 @@
     <dependency>
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-om_${scala.binary.version}</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>com.huawei.storage</groupId>
+          <artifactId>esdk-obs-java</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-hive-thriftserver_${scala.binary.version}</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>com.huawei.storage</groupId>
+          <artifactId>esdk-obs-java</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-repl_${scala.binary.version}</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>com.huawei.storage</groupId>
+          <artifactId>esdk-obs-java</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>junit</groupId>

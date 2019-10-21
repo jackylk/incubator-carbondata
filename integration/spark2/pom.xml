@@ -63,6 +63,10 @@
           <groupId>net.jpountz.lz4</groupId>
           <artifactId>lz4</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>com.huawei.storage</groupId>
+          <artifactId>esdk-obs-java</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
@@ -300,7 +304,7 @@
         <activeByDefault>true</activeByDefault>
       </activation>
       <properties>
-        <spark.version>2.3.2.0100</spark.version>
+        <spark.version>2.3.2.0202001-dplatform-SNAPSHOT</spark.version>
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11.8</scala.version>
       </properties>
