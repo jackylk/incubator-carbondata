@@ -14,7 +14,7 @@ import org.apache.spark.sql.execution.command.mutation.{CarbonProjectForDeleteCo
 import org.apache.spark.sql.execution.command.partition.{CarbonAlterTableAddHivePartitionCommand, CarbonAlterTableDropHivePartitionCommand, CarbonAlterTableDropPartitionCommand, CarbonAlterTableSplitPartitionCommand, CarbonShowCarbonPartitionsCommand}
 import org.apache.spark.sql.execution.command.schema._
 import org.apache.spark.sql.execution.command.stream.{CarbonCreateStreamCommand, CarbonDropStreamCommand, CarbonShowStreamsCommand}
-import org.apache.spark.sql.execution.datasources.CreateTable
+import org.apache.spark.sql.execution.datasources.{CreateTable, RefreshTable}
 
 object LeoDatabase {
   var DEFAULT_PROJECTID: String = "defaultprojectid"
@@ -102,6 +102,16 @@ object LeoDatabase {
         }
         val db = LeoDatabase.convertUserDBNameToLeo(databaseName)
         CreateDatabaseCommand(db, ifNotExists, path, comment, props)
+
+      case cmd@RefreshTable(tableIdentifier) =>
+        requireDBNameNonEmpty(tableIdentifier) match {
+          case Some(msg) => return (None, msg)
+          case None =>
+        }
+        val newTable = new TableIdentifier(
+          tableIdentifier.table,
+          Some(LeoDatabase.convertUserDBNameToLeo(tableIdentifier.database.get)))
+        RefreshTable(newTable)
 
       case cmd@DropDatabaseCommand(databaseName, ifExists, cascade) =>
         val db = LeoDatabase.convertUserDBNameToLeo(databaseName)
