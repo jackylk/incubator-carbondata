@@ -23,7 +23,7 @@ import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.execution.strategy.{CarbonLateDecodeStrategy, DDLStrategy, StreamingTableStrategy}
 import org.apache.spark.sql.hive.{CarbonIUDAnalysisRule, CarbonPreInsertionCasts}
 import org.apache.spark.sql.optimizer.{CarbonIUDRule, CarbonLateDecodeRule, CarbonUDFTransformRule}
-import org.apache.spark.sql.parser.CarbonSparkSqlParser
+import org.apache.spark.sql.parser.{CarbonExtensionSqlParser, CarbonSparkSqlParser}
 import org.apache.spark.util.CarbonReflectionUtils
 
 class CarbonExtensions extends ((SparkSessionExtensions) => Unit) {
@@ -33,8 +33,8 @@ class CarbonExtensions extends ((SparkSessionExtensions) => Unit) {
   override def apply(extensions: SparkSessionExtensions): Unit = {
     // Carbon parser
     extensions
-      .injectParser((sparkSession: SparkSession, _: ParserInterface) =>
-        new CarbonSparkSqlParser(new SQLConf, sparkSession))
+      .injectParser((sparkSession: SparkSession, parser: ParserInterface) =>
+        new CarbonExtensionSqlParser(new SQLConf, sparkSession, parser))
 
     // carbon analyzer rules
     extensions

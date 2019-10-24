@@ -1115,7 +1115,7 @@ class TestComplexDataType extends QueryTest with BeforeAndAfterAll {
         "stored by 'carbondata'")
     sql(
       "load data inpath '" + resourcesPath + "/complexbinary.csv' into table carbon_table options" +
-      "('delimiter'=',',  'quotechar'='\\','fileheader'='id,label,name,binaryField1,binaryField2," +
+      "('delimiter'=',',  'quotechar'='\\\\','fileheader'='id,label,name,binaryField1,binaryField2," +
       "binaryField3','complex_delimiter_level_1'='$', 'complex_delimiter_level_2'='&')")
     checkAnswer(sql("SELECT binaryField1[0] FROM carbon_table where id=1"),
       sql("SELECT  binaryField1[0] FROM hive_table where id=1"))

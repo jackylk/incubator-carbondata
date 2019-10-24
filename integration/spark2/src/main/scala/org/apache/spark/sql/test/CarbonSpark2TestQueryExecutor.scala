@@ -70,7 +70,6 @@ object CarbonSpark2TestQueryExecutor {
     .enableHiveSupport()
     .config("spark.sql.warehouse.dir", warehouse)
     .config("spark.sql.crossJoin.enabled", "true")
-    .config("spark.sql.extensions", "org.apache.spark.sql.CarbonExtensions")
     .getOrCreateCarbonSession(null, TestQueryExecutor.metaStoreDB)
 
   CarbonEnv.getInstance(spark)

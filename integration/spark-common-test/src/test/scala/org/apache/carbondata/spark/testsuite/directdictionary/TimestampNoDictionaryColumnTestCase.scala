@@ -86,6 +86,6 @@ class TimestampNoDictionaryColumnTestCase extends QueryTest with BeforeAndAfterA
 
 
   override def afterAll {
-    sql("drop table timestamp_nodictionary")
+    sql("drop table if exists timestamp_nodictionary")
   }
 }

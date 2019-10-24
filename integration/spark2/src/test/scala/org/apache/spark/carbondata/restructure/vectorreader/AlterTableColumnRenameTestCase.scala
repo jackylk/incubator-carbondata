@@ -17,8 +17,8 @@
 
 package org.apache.spark.carbondata.restructure.vectorreader
 
+import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.common.util.Spark2QueryTest
-import org.apache.spark.util.SparkUtil
 import org.scalatest.BeforeAndAfterAll
 
 import org.apache.carbondata.core.metadata.CarbonMetadata
@@ -266,10 +266,11 @@ class AlterTableColumnRenameTestCase extends Spark2QueryTest with BeforeAndAfter
     sql("drop table if exists complex")
     sql(
       "create table complex (id int, name string, structField struct<intval:int, stringval:string>) stored by 'carbondata'")
-    val ex = intercept[ProcessMetaDataException] {
+
+    val ex = intercept[AnalysisException] {
       sql("alter table complex change structField complexTest struct")
     }
-    assert(ex.getMessage.contains("Rename column is unsupported for complex datatype column structfield"))
+    assert(ex.getMessage.contains("DataType struct is not supported"))
   }
 
   test("test SET command with column rename") {

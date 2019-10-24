@@ -15,7 +15,7 @@
   <name> Apache CarbonData :: Cloud </name>
 
   <properties>
-    <dev.path>${basedir}/../../dev</dev.path>
+    <dev.path>${basedir}/../dev</dev.path>
   </properties>
 
   <dependencies>

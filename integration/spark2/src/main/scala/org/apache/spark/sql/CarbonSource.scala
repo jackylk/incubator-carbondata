@@ -24,6 +24,7 @@ import scala.collection.mutable
 import scala.language.implicitConversions
 
 import org.apache.commons.lang.StringUtils
+import org.apache.spark.sql.catalyst.CarbonParserUtil
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.catalyst.catalog.CatalogTable
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
@@ -303,8 +304,14 @@ object CarbonSource {
         sqlParser.getFields(dataSchema)
     }
     val bucketFields = sqlParser.getBucketFields(map, fields, options)
-    sqlParser.prepareTableModel(ifNotExistPresent = false, Option(identifier.getDatabaseName),
-      identifier.getTableName, fields, Nil, map, bucketFields)
+    CarbonParserUtil.prepareTableModel(
+      ifNotExistPresent = false,
+      Option(identifier.getDatabaseName),
+      identifier.getTableName,
+      fields,
+      Nil,
+      map,
+      bucketFields)
   }
 
   /**

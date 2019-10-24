@@ -23,7 +23,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 import org.apache.spark.sql.{CarbonEnv, CarbonToSparkAdapter, SparkSession}
-import org.apache.spark.sql.catalyst.TableIdentifier
+import org.apache.spark.sql.catalyst.{CarbonParserUtil, TableIdentifier}
 import org.apache.spark.sql.catalyst.catalog.CatalogTable
 import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeReference, Cast, Coalesce, Expression, NamedExpression, ScalaUDF, SortOrder}
 import org.apache.spark.sql.catalyst.expressions.aggregate._
@@ -184,9 +184,9 @@ object MVHelper {
     TableIdentifier(dataMapSchema.getDataMapName + "_table",
       selectTables.head.identifier.database)
     // prepare table model of the collected tokens
-    val tableModel: TableModel = new CarbonSpark2SqlParser().prepareTableModel(
+    val tableModel: TableModel = CarbonParserUtil.prepareTableModel(
       ifNotExistPresent = ifNotExistsSet,
-      new CarbonSpark2SqlParser().convertDbNameToLowerCase(tableIdentifier.database),
+      CarbonParserUtil.convertDbNameToLowerCase(tableIdentifier.database),
       tableIdentifier.table.toLowerCase,
       fields,
       partitionerFields,

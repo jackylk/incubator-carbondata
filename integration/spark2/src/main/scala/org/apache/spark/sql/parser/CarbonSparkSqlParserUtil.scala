@@ -21,7 +21,7 @@ import scala.collection.mutable
 
 import org.antlr.v4.runtime.tree.TerminalNode
 import org.apache.spark.sql.{CarbonEnv, SparkSession}
-import org.apache.spark.sql.catalyst.TableIdentifier
+import org.apache.spark.sql.catalyst.{CarbonParserUtil, TableIdentifier}
 import org.apache.spark.sql.catalyst.parser.ParseException
 import org.apache.spark.sql.catalyst.parser.ParserUtils.operationNotAllowed
 import org.apache.spark.sql.catalyst.parser.SqlBaseParser._
@@ -204,7 +204,7 @@ object CarbonSparkSqlParserUtil {
       table
     } else {
       // prepare table model of the collected tokens
-      val tableModel: TableModel = parser.prepareTableModel(
+      val tableModel: TableModel = CarbonParserUtil.prepareTableModel(
         ifNotExists,
         convertDbNameToLowerCase(tableIdentifier.database),
         tableIdentifier.table.toLowerCase,

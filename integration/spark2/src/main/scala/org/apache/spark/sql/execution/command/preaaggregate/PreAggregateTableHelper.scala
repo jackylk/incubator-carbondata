@@ -21,7 +21,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 import org.apache.spark.sql._
-import org.apache.spark.sql.catalyst.TableIdentifier
+import org.apache.spark.sql.catalyst.{CarbonParserUtil, TableIdentifier}
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.command.datamap.CarbonDropDataMapCommand
 import org.apache.spark.sql.execution.command.management.CarbonLoadDataCommand
@@ -96,9 +96,9 @@ case class PreAggregateTableHelper(
       TableIdentifier(parentTable.getTableName + "_" + dataMapName,
         Some(parentTable.getDatabaseName))
     // prepare table model of the collected tokens
-    val tableModel: TableModel = new CarbonSpark2SqlParser().prepareTableModel(
+    val tableModel: TableModel = CarbonParserUtil.prepareTableModel(
       ifNotExistPresent = ifNotExistsSet,
-      new CarbonSpark2SqlParser().convertDbNameToLowerCase(tableIdentifier.database),
+      CarbonParserUtil.convertDbNameToLowerCase(tableIdentifier.database),
       tableIdentifier.table.toLowerCase,
       fields,
       partitionerFields,

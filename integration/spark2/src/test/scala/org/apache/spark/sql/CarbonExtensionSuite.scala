@@ -1,7 +1,7 @@
 package org.apache.spark.sql
 
 import org.apache.spark.sql.execution.strategy.DDLStrategy
-import org.apache.spark.sql.parser.CarbonSparkSqlParser
+import org.apache.spark.sql.parser.{CarbonExtensionSqlParser, CarbonSparkSqlParser}
 import org.apache.spark.sql.test.util.PlanTest
 import org.scalatest.BeforeAndAfterAll
 
@@ -25,7 +25,7 @@ class CarbonExtensionSuite extends PlanTest with BeforeAndAfterAll {
   }
 
   test("test parser injection") {
-    assert(session.sessionState.sqlParser.isInstanceOf[CarbonSparkSqlParser])
+    assert(session.sessionState.sqlParser.isInstanceOf[CarbonExtensionSqlParser])
     (carbonCommands ++ sparkCommands) foreach (command =>
       session.sql(command).show)
   }

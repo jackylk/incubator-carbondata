@@ -17,12 +17,14 @@
 
 package org.apache.spark.sql.hive
 
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{CarbonEnv, SparkSession}
+import org.apache.spark.sql.catalyst.{CarbonParserUtil, TableIdentifier}
 import org.apache.spark.sql.catalyst.parser.ParserUtils.string
 import org.apache.spark.sql.catalyst.parser.SqlBaseParser
 import org.apache.spark.sql.catalyst.parser.SqlBaseParser.{AddTableColumnsContext, CreateHiveTableContext}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.SparkSqlAstBuilder
+import org.apache.spark.sql.execution.command.management.CarbonLoadDataCommand
 import org.apache.spark.sql.hive.execution.command.CarbonResetCommand
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.parser.{CarbonHelperSqlAstBuilder, CarbonSpark2SqlParser, CarbonSparkSqlParserUtil}
@@ -54,5 +56,48 @@ class CarbonSqlAstBuilder(conf: SQLConf, parser: CarbonSpark2SqlParser, sparkSes
 
   override def visitResetConfiguration(ctx: SqlBaseParser.ResetConfigurationContext): LogicalPlan = {
     CarbonResetCommand()
+  }
+
+  override def visitLoadData(ctx: SqlBaseParser.LoadDataContext): LogicalPlan = {
+    val tableIdent = visitTableIdentifier(ctx.tableIdentifier)
+    val dbOption = tableIdent.database.map(_.toLowerCase)
+    val tableIdentifier = TableIdentifier(tableIdent.table.toLowerCase(), dbOption)
+    val isCarbonTable = CarbonEnv
+      .getInstance(sparkSession)
+      .carbonMetaStore
+      .tableExists(tableIdentifier)(sparkSession)
+    if (isCarbonTable) {
+      val optionsList =
+        Option(ctx.tablePropertyList)
+          .map(visitPropertyKeyValues)
+          .getOrElse(Map.empty)
+          .map { entry =>
+            (entry._1.trim.toLowerCase(), entry._2)
+          }
+      if (!optionsList.isEmpty) {
+        CarbonParserUtil.validateOptions(Option(optionsList.toList))
+      }
+      CarbonLoadDataCommand(
+        databaseNameOp = tableIdentifier.database,
+        tableName = tableIdentifier.table,
+        factPathFromUser = string(ctx.path),
+        dimFilesPath = Seq(),
+        options = optionsList,
+        isOverwriteTable = ctx.OVERWRITE != null,
+        inputSqlString = null,
+        dataFrame = None,
+        updateModel = None,
+        tableInfoOp = None,
+        internalOptions = Map.empty,
+        partition =
+          Option(ctx.partitionSpec)
+            .map(visitNonOptionalPartitionSpec)
+            .getOrElse(Map.empty)
+            .map { case (col, value) =>
+              (col, Some(value))
+            })
+    } else {
+      super.visitLoadData(ctx)
+    }
   }
 }
