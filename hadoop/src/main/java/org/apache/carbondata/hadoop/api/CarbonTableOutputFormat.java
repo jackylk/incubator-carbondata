@@ -120,6 +120,12 @@ public class CarbonTableOutputFormat extends FileOutputFormat<NullWritable, Obje
   private static final Logger LOG =
       LogServiceFactory.getLogService(CarbonTableOutputFormat.class.getName());
 
+  /**
+   * Output format task id generator. It should generate a unique id for every task.
+   * It's may conflict when use System.nonaTime() as task id.
+   */
+  private static final AtomicLong DEFAULT_TASK_NO = new AtomicLong(0);
+
   private CarbonOutputCommitter committer;
 
   public static void setDatabaseName(Configuration configuration, String databaseName) {
@@ -255,7 +261,7 @@ public class CarbonTableOutputFormat extends FileOutputFormat<NullWritable, Obje
     }
     if (null == loadModel.getTaskNo() || loadModel.getTaskNo().isEmpty()) {
       loadModel.setTaskNo(taskAttemptContext.getConfiguration()
-          .get("carbon.outputformat.taskno", String.valueOf(System.nanoTime())));
+          .get("carbon.outputformat.taskno", String.valueOf(DEFAULT_TASK_NO.getAndIncrement())));
     }
     loadModel.setDataWritePath(
         taskAttemptContext.getConfiguration().get("carbon.outputformat.writepath"));

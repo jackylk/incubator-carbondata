@@ -55,6 +55,18 @@ public class CarbonTablePath {
   private static final String STREAMING_LOG_DIR = "log";
   private static final String STREAMING_CHECKPOINT_DIR = "checkpoint";
 
+  private static final String LOAD_DETAILS_DIR = "load_details";
+  private static final String LOAD_DETAILS_DIR_HISTORY = "load_details_history";
+  public static final String LOAD_DETAILS_SUBFIX = ".success";
+
+  public static String getLoadDetailsDir(String tablePath) {
+    return tablePath + CarbonCommonConstants.FILE_SEPARATOR + LOAD_DETAILS_DIR;
+  }
+
+  public static String getLoadDetailsHistoryDir(String tablePath) {
+    return tablePath + CarbonCommonConstants.FILE_SEPARATOR + LOAD_DETAILS_DIR_HISTORY;
+  }
+
   /**
    * This class provides static utility only.
    */
@@ -139,7 +151,7 @@ public class CarbonTablePath {
    * Return metadata path
    */
   public static String getMetadataPath(String tablePath) {
-    return tablePath + File.separator + METADATA_DIR;
+    return tablePath + CarbonCommonConstants.FILE_SEPARATOR + METADATA_DIR;
   }
 
   /**
@@ -214,7 +226,7 @@ public class CarbonTablePath {
    * Return absolute path of table status file
    */
   public static String getTableStatusFilePath(String tablePath) {
-    return getMetadataPath(tablePath) + File.separator + TABLE_STATUS_FILE;
+    return getMetadataPath(tablePath) + CarbonCommonConstants.FILE_SEPARATOR + TABLE_STATUS_FILE;
   }
 
   public static String getTableStatusFilePathWithUUID(String tablePath, String uuid) {
@@ -294,7 +306,8 @@ public class CarbonTablePath {
    * Return the segment path from table path and segmentId
    */
   public static String getSegmentPath(String tablePath, String segmentId) {
-    return getPartitionDir(tablePath) + File.separator + SEGMENT_PREFIX + segmentId;
+    return getPartitionDir(tablePath) + CarbonCommonConstants.FILE_SEPARATOR
+            + SEGMENT_PREFIX + segmentId;
   }
 
   /**
@@ -342,12 +355,12 @@ public class CarbonTablePath {
   public static final String DEPRECATED_PARTITION_ID = "0";
 
   public static String getPartitionDir(String tablePath) {
-    return getFactDir(tablePath) + File.separator + PARTITION_PREFIX +
+    return getFactDir(tablePath) + CarbonCommonConstants.FILE_SEPARATOR + PARTITION_PREFIX +
         CarbonTablePath.DEPRECATED_PARTITION_ID;
   }
 
   public static String getFactDir(String tablePath) {
-    return tablePath + File.separator + FACT_DIR;
+    return tablePath + CarbonCommonConstants.FILE_SEPARATOR + FACT_DIR;
   }
 
   public static String getStreamingLogDir(String tablePath) {
