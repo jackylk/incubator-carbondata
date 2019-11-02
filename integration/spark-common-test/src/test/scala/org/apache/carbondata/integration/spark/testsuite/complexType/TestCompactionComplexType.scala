@@ -1085,7 +1085,7 @@ class TestCompactionComplexType extends QueryTest with BeforeAndAfterAll {
       "STRUCT_OF_ARRAY struct<ID:int,CHECK_DATE:string,SNo:array<int>,sal1:array<double>," +
       "state:array<string>," +
       "date1:array<string>>,CARD_COUNT int,DEBIT_COUNT int,CREDIT_COUNT int, DEPOSIT double, " +
-      "HQ_DEPOSIT double) STORED AS carbondata" +
+      "HQ_DEPOSIT double) STORED AS carbondata " +
       "TBLPROPERTIES('DICTIONARY_INCLUDE'='STRUCT_OF_ARRAY,DEPOSIT,HQ_DEPOSIT')")
     sql(
       s"LOAD DATA LOCAL INPATH '$resourcesPath/structofarray.csv' INTO TABLE compactComplex OPTIONS" +

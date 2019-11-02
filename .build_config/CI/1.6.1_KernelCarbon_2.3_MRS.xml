@@ -30,11 +30,11 @@
 		<delete dir="release"/>
 		<exec dir = "./../" executable = "sh"  failifexecutionfails="true" failonerror="true">
 
-			<arg line="-c 'mvn -s ./.build_config/carbon_settings.xml clean install -U -Pbuild-with-format -Pspark-2.3 -Pmv -DskipTests -Dfindbugs.skip=true -Dcheckstyle.skip=true -Dscalastyle.skip=true -Dspark.version=${SPARK_VERSION} -Dhadoop.version=${HADOOP_VERSION} -Dbuild.version=${BUILD_VERSION}'"/>
+			<arg line="-c 'mvn -s ./.build_config/carbon_settings.xml clean install -U -Pbuild-with-format -Pspark-2.3 -DskipTests -Dfindbugs.skip=true -Dcheckstyle.skip=true -Dscalastyle.skip=true -Dspark.version=${SPARK_VERSION} -Dhadoop.version=${HADOOP_VERSION} -Dbuild.version=${BUILD_VERSION}'"/>
 
 		</exec>
 
-		<echo message="MVN command=mvn -s ./.build_config/carbon_settings.xml clean install -U -Pbuild-with-format -Pspark-2.3 -Pmv -DskipTests -Dfindbugs.skip=true -Dcheckstyle.skip=true -Dscalastyle.skip=true -Dspark.version=${SPARK_VERSION} -Dhadoop.version=${HADOOP_VERSION} -Dbuild.version=${BUILD_VERSION}"/>
+		<echo message="MVN command=mvn -s ./.build_config/carbon_settings.xml clean install -U -Pbuild-with-format -Pspark-2.3 -DskipTests -Dfindbugs.skip=true -Dcheckstyle.skip=true -Dscalastyle.skip=true -Dspark.version=${SPARK_VERSION} -Dhadoop.version=${HADOOP_VERSION} -Dbuild.version=${BUILD_VERSION}"/>
 	</target>
 
 	<target name="package" depends = "exec" description="Creates the package.">
