@@ -106,7 +106,7 @@ class TestCarbonFileInputFormatWithExternalCarbonTable extends QueryTest with Be
 
     //new provider carbonfile
     sql(
-      s"""CREATE EXTERNAL TABLE sdkOutputTable STORED BY 'carbonfile' LOCATION
+      s"""CREATE EXTERNAL TABLE sdkOutputTable STORED AS 'carbonfile' LOCATION
          |'$writerPath' """.stripMargin)
 
     sql("Describe formatted sdkOutputTable").show(false)
@@ -146,7 +146,7 @@ class TestCarbonFileInputFormatWithExternalCarbonTable extends QueryTest with Be
 
     //data source file format
     sql(
-      s"""CREATE EXTERNAL TABLE sdkOutputTable STORED BY 'carbonfile' LOCATION
+      s"""CREATE EXTERNAL TABLE sdkOutputTable STORED AS 'carbonfile' LOCATION
          |'$writerPath' """.stripMargin)
 
     val exception = intercept[MalformedCarbonCommandException]
@@ -170,7 +170,7 @@ class TestCarbonFileInputFormatWithExternalCarbonTable extends QueryTest with Be
 
     //data source file format
     sql(
-      s"""CREATE EXTERNAL TABLE sdkOutputTable STORED BY 'carbonfile' LOCATION
+      s"""CREATE EXTERNAL TABLE sdkOutputTable STORED AS 'carbonfile' LOCATION
          |'$writerPath' """.stripMargin)
 
     //org.apache.spark.SparkException: Index file not present to read the carbondata file
@@ -196,7 +196,7 @@ class TestCarbonFileInputFormatWithExternalCarbonTable extends QueryTest with Be
     val exception = intercept[Exception] {
       //    data source file format
     sql(
-      s"""CREATE EXTERNAL TABLE sdkOutputTable STORED BY 'carbonfile' LOCATION
+      s"""CREATE EXTERNAL TABLE sdkOutputTable STORED AS 'carbonfile' LOCATION
          |'$writerPath' """.stripMargin)
     }
     assert(exception.getMessage()
@@ -219,7 +219,7 @@ class TestCarbonFileInputFormatWithExternalCarbonTable extends QueryTest with Be
     val exception = intercept[Exception] {
       //data source file format
       sql(
-      s"""CREATE EXTERNAL TABLE sdkOutputTable STORED BY 'carbonfile' LOCATION
+      s"""CREATE EXTERNAL TABLE sdkOutputTable STORED AS 'carbonfile' LOCATION
          |'$writerPath' """.stripMargin)
 
       sql("select * from sdkOutputTable").show(false)

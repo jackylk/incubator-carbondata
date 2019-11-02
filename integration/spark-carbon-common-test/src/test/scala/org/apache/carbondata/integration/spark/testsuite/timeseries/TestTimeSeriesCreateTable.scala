@@ -17,7 +17,7 @@
 package org.apache.carbondata.integration.spark.testsuite.timeseries.timeseries
 
 import org.apache.spark.sql.AnalysisException
-import org.apache.spark.sql.test.util.CarbonQueryTest
+import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
 import org.apache.carbondata.common.exceptions.sql.{MalformedCarbonCommandException, MalformedDataMapCommandException}
@@ -25,7 +25,7 @@ import org.apache.carbondata.core.metadata.schema.datamap.DataMapClassProvider.T
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.util.CarbonProperties
 
-class TestTimeSeriesCreateTable extends CarbonQueryTest with BeforeAndAfterAll with BeforeAndAfterEach{
+class TestTimeSeriesCreateTable extends QueryTest with BeforeAndAfterAll with BeforeAndAfterEach{
 
   val timeSeries = TIMESERIES.toString
   var timestampFormat: String = _
@@ -38,7 +38,7 @@ class TestTimeSeriesCreateTable extends CarbonQueryTest with BeforeAndAfterAll w
     CarbonProperties.getInstance()
       .addProperty(CarbonCommonConstants.CARBON_TIMESTAMP_FORMAT,
         CarbonCommonConstants.CARBON_TIMESTAMP_DEFAULT_FORMAT)
-    sql("CREATE TABLE mainTable(dataTime timestamp, name string, city string, age int) STORED BY 'org.apache.carbondata.format'")
+    sql("CREATE TABLE mainTable(dataTime timestamp, name string, city string, age int) STORED AS carbondata")
     sql(
       s"""
          | CREATE DATAMAP agg0_second ON TABLE mainTable
@@ -436,7 +436,7 @@ class TestTimeSeriesCreateTable extends CarbonQueryTest with BeforeAndAfterAll w
          | floatField FLOAT,
          | dataTime timestamp
          | )
-         | STORED BY 'carbondata'
+         | STORED AS carbondata
        """.stripMargin)
 
 

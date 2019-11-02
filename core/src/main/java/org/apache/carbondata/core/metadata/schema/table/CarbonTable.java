@@ -1406,7 +1406,10 @@ public class CarbonTable implements Serializable, Writable {
       if (segment != null) {
         if (!segment.getLocationMap().values().toArray(
             new SegmentFileStore.FolderDetails[0])[0].isRelative()) {
-          final String segmentFolder = segment.getOptions().get("path");
+          final String segmentFolder = null;
+          if (segment.getOptions() != null) {
+            segment.getOptions().get("path");
+          }
           if (segmentFolder != null) {
             folders.add(segmentFolder);
           }

@@ -21,7 +21,7 @@ import java.sql.Timestamp
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.hive.CarbonRelation
-import org.apache.spark.sql.test.util.CarbonQueryTest
+import org.apache.spark.sql.test.util.QueryTest
 import org.apache.spark.sql.{CarbonDatasourceHadoopRelation, Row}
 import org.apache.spark.util.SparkUtil4Test
 import org.scalatest.BeforeAndAfterAll
@@ -30,7 +30,7 @@ import org.apache.carbondata.core.metadata.schema.datamap.DataMapClassProvider.T
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.util.CarbonProperties
 
-class TestTimeseriesTableSelection extends CarbonQueryTest with BeforeAndAfterAll {
+class TestTimeseriesTableSelection extends QueryTest with BeforeAndAfterAll {
 
   val timeSeries = TIMESERIES.toString
   var timestampFormat: String = _
@@ -47,7 +47,7 @@ class TestTimeseriesTableSelection extends CarbonQueryTest with BeforeAndAfterAl
     sql(
       """
         | CREATE TABLE mainTable(mytime timestamp, name string, age int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(
       s"""

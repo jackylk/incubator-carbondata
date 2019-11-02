@@ -17,7 +17,7 @@
 package org.apache.carbondata.integration.spark.testsuite.timeseries.timeseries
 
 import org.apache.spark.sql.AnalysisException
-import org.apache.spark.sql.test.util.CarbonQueryTest
+import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
 import org.apache.carbondata.common.exceptions.sql.{MalformedCarbonCommandException, NoSuchDataMapException}
@@ -25,7 +25,7 @@ import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.spark.exception.ProcessMetaDataException
 
-class TestTimeSeriesDropSuite extends CarbonQueryTest with BeforeAndAfterAll with BeforeAndAfterEach {
+class TestTimeSeriesDropSuite extends QueryTest with BeforeAndAfterAll with BeforeAndAfterEach {
 
   val timeSeries = "timeseries"
   var timestampFormat: String = _
@@ -45,7 +45,7 @@ class TestTimeSeriesDropSuite extends CarbonQueryTest with BeforeAndAfterAll wit
         |   name STRING,
         |   city STRING,
         |   age INT)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
   }
 

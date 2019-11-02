@@ -28,7 +28,7 @@ class TestCarbonJoin extends QueryTest with BeforeAndAfterAll {
     sql("DROP TABLE IF EXISTS table1")
     sql("DROP TABLE IF EXISTS ptable")
     sql("DROP TABLE IF EXISTS result")
-    sql("create table if not exists table1 (ID string) stored by 'carbondata'")
+    sql("create table if not exists table1 (ID string) STORED AS carbondata")
     sql("insert into table1 select 'animal'")
     sql("insert into table1 select 'person'")
     sql("create table ptable(pid string) stored as parquet")
@@ -52,9 +52,9 @@ class TestCarbonJoin extends QueryTest with BeforeAndAfterAll {
     sql("DROP TABLE IF EXISTS ctable")
     sql("DROP TABLE IF EXISTS ptable")
     sql("DROP TABLE IF EXISTS result")
-    sql("create table if not exists ctable (type int, id1 string, id string) stored by " +
-        "'carbondata'")
-    sql("create index cindex on table ctable (id) AS 'org.apache.carbondata.format'")
+    sql("create table if not exists ctable (type int, id1 string, id string) stored as " +
+        "carbondata")
+    sql("create index cindex on table ctable (id) AS carbondata")
     sql("insert into ctable select 0, 'animal1', 'animal'")
     sql("insert into ctable select 1, 'person1', 'person'")
     sql("create table ptable(pid string) stored as parquet")

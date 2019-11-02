@@ -19,7 +19,7 @@ package org.apache.carbondata.integration.spark.testsuite.timeseries.timeseries
 import java.sql.Timestamp
 
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.test.util.CarbonQueryTest
+import org.apache.spark.sql.test.util.QueryTest
 import org.apache.spark.util.SparkUtil4Test
 import org.scalatest.BeforeAndAfterAll
 
@@ -28,7 +28,7 @@ import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.metadata.schema.datamap.DataMapClassProvider.TIMESERIES
 import org.apache.carbondata.core.util.CarbonProperties
 
-class TestTimeseriesDataLoad extends CarbonQueryTest with BeforeAndAfterAll {
+class TestTimeseriesDataLoad extends QueryTest with BeforeAndAfterAll {
 
   val timeSeries = TIMESERIES.toString
   var timestampFormat: String = _
@@ -42,7 +42,7 @@ class TestTimeseriesDataLoad extends CarbonQueryTest with BeforeAndAfterAll {
       .addProperty(CarbonCommonConstants.CARBON_TIMESTAMP_FORMAT, CarbonCommonConstants.CARBON_TIMESTAMP_DEFAULT_FORMAT)
     sql("DROP TABLE IF EXISTS mainTable")
     sql("DROP TABLE IF EXISTS table_03")
-    sql("CREATE TABLE mainTable(mytime timestamp, name string, age int) STORED BY 'org.apache.carbondata.format'")
+    sql("CREATE TABLE mainTable(mytime timestamp, name string, age int) STORED AS carbondata")
     sql(
       s"""
          | CREATE DATAMAP agg0_second ON TABLE mainTable
@@ -105,7 +105,7 @@ class TestTimeseriesDataLoad extends CarbonQueryTest with BeforeAndAfterAll {
        """.stripMargin)
 
     sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/timeseriestest.csv' into table mainTable")
-    sql("CREATE TABLE table_03 (imei string,age int,mac string,productdate timestamp,updatedate timestamp,gamePointId double,contractid double ) STORED BY 'org.apache.carbondata.format'")
+    sql("CREATE TABLE table_03 (imei string,age int,mac string,productdate timestamp,updatedate timestamp,gamePointId double,contractid double ) STORED AS carbondata")
     sql(s"LOAD DATA inpath '$resourcesPath/data_sort.csv' INTO table table_03 options ('DELIMITER'=',', 'QUOTECHAR'='','FILEHEADER'='imei,age,mac,productdate,updatedate,gamePointId,contractid')")
 
     sql(
@@ -224,7 +224,7 @@ class TestTimeseriesDataLoad extends CarbonQueryTest with BeforeAndAfterAll {
 
   test("test timeseries table selection 10: if timeseries load is successful ON TABLE creation") {
     sql("DROP TABLE IF EXISTS mainTable")
-    sql("CREATE TABLE mainTable(mytime timestamp, name string, age int) STORED BY 'org.apache.carbondata.format'")
+    sql("CREATE TABLE mainTable(mytime timestamp, name string, age int) STORED AS carbondata")
     sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/timeseriestest.csv' into table mainTable")
     sql(
       s"""
@@ -253,7 +253,7 @@ class TestTimeseriesDataLoad extends CarbonQueryTest with BeforeAndAfterAll {
         |   mytime TIMESTAMP,
         |   name STRING,
         |   age INT)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/timeseriestest.csv' INTO TABLE mainTable")
     sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/timeseriestest.csv' INTO TABLE mainTable")
@@ -285,7 +285,7 @@ class TestTimeseriesDataLoad extends CarbonQueryTest with BeforeAndAfterAll {
         |   mytime timestamp,
         |   name string,
         |   age int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/timeseriestest.csv' into table mainTable")
 
@@ -331,7 +331,7 @@ class TestTimeseriesDataLoad extends CarbonQueryTest with BeforeAndAfterAll {
         |   mytime timestamp,
         |   name string,
         |   age int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/timeseriestest.csv' INTO TABLE mainTable")
 
@@ -382,7 +382,7 @@ class TestTimeseriesDataLoad extends CarbonQueryTest with BeforeAndAfterAll {
         |   mytime timestamp,
         |   name string,
         |   age int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/timeseriestest.csv' INTO TABLE main_table")
     sql(
@@ -422,7 +422,7 @@ class TestTimeseriesDataLoad extends CarbonQueryTest with BeforeAndAfterAll {
         |   mytime timestamp,
         |   name string,
         |   age int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"LOAD DATA INPATH '$resourcesPath/timeseriestest.csv' INTO TABLE main_table")
 
@@ -464,7 +464,7 @@ class TestTimeseriesDataLoad extends CarbonQueryTest with BeforeAndAfterAll {
         |   mytime timestamp,
         |   name string,
         |   age int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
 
     sql(s"LOAD DATA INPATH '$resourcesPath/timeseriestest.csv' INTO TABLE main_table")
@@ -507,7 +507,7 @@ class TestTimeseriesDataLoad extends CarbonQueryTest with BeforeAndAfterAll {
         |   mytime timestamp,
         |   name string,
         |   age int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
 
     sql(s"LOAD DATA INPATH '$resourcesPath/timeseriestest.csv' INTO TABLE main_table")
@@ -551,7 +551,7 @@ class TestTimeseriesDataLoad extends CarbonQueryTest with BeforeAndAfterAll {
         |   mytime timestamp,
         |   name string,
         |   age int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
 
     sql(s"LOAD DATA INPATH '$resourcesPath/timeseriestest.csv' INTO TABLE main_table")

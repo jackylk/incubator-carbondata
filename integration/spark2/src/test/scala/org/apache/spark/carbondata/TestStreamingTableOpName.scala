@@ -38,6 +38,7 @@ import org.apache.carbondata.common.exceptions.NoSuchStreamException
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.impl.FileFactory
+import org.apache.carbondata.core.metadata.schema.datamap.DataMapClassProvider.TIMESERIES
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.statusmanager.{FileFormat, SegmentStatus}
 import org.apache.carbondata.core.util.CarbonProperties
@@ -73,7 +74,7 @@ class TestStreamingTableOpName extends QueryTest with BeforeAndAfterAll {
         |    c2 int,
         |    c3 string,
         |    c5 string
-        | ) STORED BY 'org.apache.carbondata.format'
+        | ) STORED AS carbondata
         | TBLPROPERTIES ('streaming' = 'true')
       """.stripMargin)
     sql(s"""LOAD DATA LOCAL INPATH '$resourcesPath/IUD/dest.csv' INTO TABLE source""")
@@ -137,7 +138,7 @@ class TestStreamingTableOpName extends QueryTest with BeforeAndAfterAll {
       """
         | CREATE TABLE correct(
         |    c1 string
-        | ) STORED BY 'org.apache.carbondata.format'
+        | ) STORED AS carbondata
         | TBLPROPERTIES ('streaming' = 'true')
       """.stripMargin)
     sql("DROP TABLE correct")
@@ -145,7 +146,7 @@ class TestStreamingTableOpName extends QueryTest with BeforeAndAfterAll {
       """
         | CREATE TABLE correct(
         |    c1 string
-        | ) STORED BY 'org.apache.carbondata.format'
+        | ) STORED AS carbondata
         | TBLPROPERTIES ('streaming' = 'false')
       """.stripMargin)
     sql("DROP TABLE correct")
@@ -154,7 +155,7 @@ class TestStreamingTableOpName extends QueryTest with BeforeAndAfterAll {
         """
           | create table wrong(
           |    c1 string
-          | ) STORED BY 'org.apache.carbondata.format'
+          | ) STORED AS carbondata
           | TBLPROPERTIES ('streaming' = 'invalid')
         """.stripMargin)
     }
@@ -278,6 +279,278 @@ class TestStreamingTableOpName extends QueryTest with BeforeAndAfterAll {
     assertResult(exceptedRow)(row)
   }
 
+  test("test preaggregate table creation on streaming table without handoff") {
+    val identifier = new TableIdentifier("agg_table", Option("streaming"))
+    val carbonTable = CarbonEnv.getInstance(spark).carbonMetaStore.lookupRelation(identifier)(spark)
+      .asInstanceOf[CarbonRelation].metaData.carbonTable
+    val csvDataDir = new File("target/csvdatanew").getCanonicalPath
+    // streaming ingest 10 rows
+    val thread = createFileStreamingThread(spark, carbonTable, csvDataDir, intervalSecond = 1,
+      identifier)
+    thread.start()
+    Thread.sleep(5000)
+    thread.interrupt()
+    checkAnswer(
+      sql("select count(*) from streaming.agg_table"),
+      Seq(Row(10)))
+    sql("create datamap p1 on table agg_table using 'preaggregate' as select name, sum(salary) from agg_table group by name")
+    // No data should be loaded into aggregate table as hand-off is not yet fired
+    checkAnswer(sql("select * from agg_table_p1"), Seq())
+  }
+
+  test("test if data is loaded into preaggregate after handoff is fired") {
+    createTable(tableName = "agg_table2", streaming = true, withBatchLoad = false)
+    val identifier = new TableIdentifier("agg_table2", Option("streaming"))
+    val carbonTable = CarbonEnv.getInstance(spark).carbonMetaStore.lookupRelation(identifier)(spark)
+      .asInstanceOf[CarbonRelation].metaData.carbonTable
+    val csvDataDir = new File("target/csvdatanew").getCanonicalPath
+    // streaming ingest 10 rows
+    val thread = createFileStreamingThread(spark, carbonTable, csvDataDir, intervalSecond = 1,
+      identifier)
+    thread.start()
+    Thread.sleep(5000)
+    thread.interrupt()
+    checkAnswer(
+      sql("select count(*) from streaming.agg_table2"),
+      Seq(Row(10)))
+    sql("create datamap p1 on table agg_table2 using 'preaggregate' as select name, sum(salary) from agg_table2 group by name")
+    sql("create datamap p2 on table agg_table2 using 'preaggregate' as select name, avg(salary) from agg_table2 group by name")
+    sql("create datamap p3 on table agg_table2 using 'preaggregate' as select name, min(salary) from agg_table2 group by name")
+    sql("create datamap p4 on table agg_table2 using 'preaggregate' as select name, max(salary) from agg_table2 group by name")
+    sql("create datamap p5 on table agg_table2 using 'preaggregate' as select name, count(salary) from agg_table2 group by name")
+    sql("alter table agg_table2 finish streaming")
+    sql("alter table agg_table2 compact 'streaming'")
+    // Data should be loaded into aggregate table as hand-off is fired
+    checkAnswer(sql("select * from agg_table2_p1"),
+      Seq(
+        Row("name_10", 200000.0),
+        Row("name_11", 220000.0),
+        Row("name_12", 240000.0),
+        Row("name_13", 260000.0),
+        Row("name_14", 280000.0)))
+    checkAnswer(sql("select * from agg_table2_p2"),
+      Seq(
+        Row("name_10", 200000.0, 2.0),
+        Row("name_11", 220000.0, 2.0),
+        Row("name_12", 240000.0, 2.0),
+        Row("name_13", 260000.0, 2.0),
+        Row("name_14", 280000.0, 2.0)))
+    checkAnswer(sql("select * from agg_table2_p3"),
+      Seq(
+        Row("name_10", 100000.0),
+        Row("name_11", 110000.0),
+        Row("name_12", 120000.0),
+        Row("name_13", 130000.0),
+        Row("name_14", 140000.0)))
+    checkAnswer(sql("select * from agg_table2_p4"),
+      Seq(
+        Row("name_10", 100000.0),
+        Row("name_11", 110000.0),
+        Row("name_12", 120000.0),
+        Row("name_13", 130000.0),
+        Row("name_14", 140000.0)))
+    checkAnswer(sql("select * from agg_table2_p5"),
+      Seq(
+        Row("name_10", 2.0),
+        Row("name_11", 2.0),
+        Row("name_12", 2.0),
+        Row("name_13", 2.0),
+        Row("name_14", 2.0)))
+    sql("drop table agg_table2")
+  }
+
+  test("test whether data is loaded into preaggregate after handoff is fired") {
+    createTable(tableName = "agg_table2", streaming = true, withBatchLoad = false)
+    val identifier = new TableIdentifier("agg_table2", Option("streaming"))
+    val carbonTable = CarbonEnv.getInstance(spark).carbonMetaStore.lookupRelation(identifier)(spark)
+      .asInstanceOf[CarbonRelation].metaData.carbonTable
+    val csvDataDir = new File("target/csvdatanew").getCanonicalPath
+    // streaming ingest 10 rows
+    val thread = createFileStreamingThread(spark, carbonTable, csvDataDir, intervalSecond = 1,
+      identifier)
+    thread.start()
+    Thread.sleep(5000)
+    thread.interrupt()
+    checkAnswer(
+      sql("select count(*) from streaming.agg_table2"),
+      Seq(Row(10)))
+    sql(s"load data inpath '$csvDataDir' into table agg_table2 options('FILEHEADER'='id, name, city, salary, tax, percent, birthday, register, updated, file')")
+    sql("create datamap p1 on table agg_table2 using 'preaggregate' as select name, sum(salary) from agg_table2 group by name")
+    sql("alter table agg_table2 finish streaming")
+    sql("alter table agg_table2 compact 'streaming'")
+    // Data should be loaded into aggregate table as hand-off is fired
+    checkAnswer(sql("select name, sum(salary) from agg_table2 group by name"),
+      Seq(
+        Row("name_10", 400000.0),
+        Row("name_14", 560000.0),
+        Row("name_12", 480000.0),
+        Row("name_11", 440000.0),
+        Row("name_13", 520000.0)))
+    checkAnswer(sql("select * from agg_table2_p1"),
+      Seq(
+        Row("name_10", 200000.0),
+        Row("name_11", 220000.0),
+        Row("name_12", 240000.0),
+        Row("name_13", 260000.0),
+        Row("name_14", 280000.0),
+        Row("name_10", 200000.0),
+        Row("name_11", 220000.0),
+        Row("name_12", 240000.0),
+        Row("name_13", 260000.0),
+        Row("name_14", 280000.0)))
+
+    sql("drop table agg_table2")
+  }
+
+  test("test whether data is loaded into preaggregate before handoff is fired") {
+    createTable(tableName = "agg_table2", streaming = true, withBatchLoad = false)
+    val identifier = new TableIdentifier("agg_table2", Option("streaming"))
+    val carbonTable = CarbonEnv.getInstance(spark).carbonMetaStore.lookupRelation(identifier)(spark)
+      .asInstanceOf[CarbonRelation].metaData.carbonTable
+    val csvDataDir = new File("target/csvdatanew").getCanonicalPath
+    // streaming ingest 10 rows
+    val thread = createFileStreamingThread(spark, carbonTable, csvDataDir, intervalSecond = 1,
+      identifier)
+    thread.start()
+    Thread.sleep(5000)
+    thread.interrupt()
+    checkAnswer(
+      sql("select count(*) from streaming.agg_table2"),
+      Seq(Row(10)))
+    sql(s"load data inpath '$csvDataDir' into table agg_table2 options('FILEHEADER'='id, name, city, salary, tax, percent, birthday, register, updated, file')")
+    sql("create datamap p1 on table agg_table2 using 'preaggregate' as select name, sum(salary) from agg_table2 group by name")
+    // Data should be loaded into aggregate table as hand-off is fired
+    checkAnswer(sql("select name, sum(salary) from agg_table2 group by name"),
+      Seq(
+        Row("name_10", 400000.0),
+        Row("name_14", 560000.0),
+        Row("name_12", 480000.0),
+        Row("name_11", 440000.0),
+        Row("name_13", 520000.0)))
+    checkAnswer(sql("select * from agg_table2_p1"),
+      Seq(
+        Row("name_10", 200000.0),
+        Row("name_11", 220000.0),
+        Row("name_12", 240000.0),
+        Row("name_13", 260000.0),
+        Row("name_14", 280000.0)))
+
+    sql("drop table agg_table2")
+  }
+
+  test("test if timeseries load is successful when created on streaming table") {
+    sql("drop table if exists timeseries_table")
+    createTable(tableName = "timeseries_table", streaming = true, withBatchLoad = false)
+    val identifier = new TableIdentifier("timeseries_table", Option("streaming"))
+    val carbonTable = CarbonEnv.getInstance(spark).carbonMetaStore.lookupRelation(identifier)(spark)
+      .asInstanceOf[CarbonRelation].metaData.carbonTable
+    val csvDataDir = new File("target/csvdatanew").getCanonicalPath
+    val thread = createFileStreamingThread(spark, carbonTable, csvDataDir, intervalSecond = 1,
+      identifier)
+    thread.start()
+    Thread.sleep(5000)
+    thread.interrupt()
+    sql(
+      s"""
+         | CREATE DATAMAP agg0_second ON TABLE timeseries_table
+         | USING '${TIMESERIES.toString}'
+         | DMPROPERTIES (
+         | 'EVENT_TIME'='register',
+         | 'SECOND_GRANULARITY'='1')
+         | AS SELECT register, SUM(id) FROM timeseries_table
+         | GROUP BY register
+       """.stripMargin)
+    sql("alter table timeseries_table finish streaming")
+    sql("alter table timeseries_table compact 'streaming'")
+    checkAnswer( sql("select * FROM timeseries_table_agg0_second"), Seq(Row(Timestamp.valueOf("2010-01-01 10:01:01.0"), 120)))
+  }
+
+  test("test if timeseries load is successful when created on streaming table with day granularity") {
+    sql("drop table if exists timeseries_table")
+    createTable(tableName = "timeseries_table", streaming = true, withBatchLoad = false)
+    val identifier = new TableIdentifier("timeseries_table", Option("streaming"))
+    val carbonTable = CarbonEnv.getInstance(spark).carbonMetaStore.lookupRelation(identifier)(spark)
+      .asInstanceOf[CarbonRelation].metaData.carbonTable
+    val csvDataDir = new File("target/csvdatanew").getCanonicalPath
+    val thread = createFileStreamingThread(spark, carbonTable, csvDataDir, intervalSecond = 1,
+      identifier)
+    thread.start()
+    Thread.sleep(5000)
+    thread.interrupt()
+    sql(
+      s"""
+         | CREATE DATAMAP agg0_day ON TABLE timeseries_table
+         | USING '${TIMESERIES.toString}'
+         | DMPROPERTIES (
+         | 'EVENT_TIME'='register',
+         | 'DAY_GRANULARITY'='1')
+         | AS SELECT register, SUM(id) FROM timeseries_table
+         | GROUP BY register
+       """.stripMargin)
+    sql("alter table timeseries_table finish streaming")
+    sql("alter table timeseries_table compact 'streaming'")
+    checkAnswer( sql("select * FROM timeseries_table_agg0_day"), Seq(Row(Timestamp.valueOf("2010-01-01 00:00:00.0"), 120)))
+  }
+
+  test("test if minor compaction is successful for streaming and preaggregate tables") {
+    createTable(tableName = "agg_table2", streaming = true, withBatchLoad = false)
+    sql("create datamap p1 on table agg_table2 using 'preaggregate' as select name, sum(salary) from agg_table2 group by name")
+    sql("create datamap p2 on table agg_table2 using 'preaggregate' as select name, min(salary) from agg_table2 group by name")
+    loadData()
+    sql("alter table agg_table2 finish streaming")
+    sql("alter table agg_table2 compact 'streaming'")
+    loadData()
+    sql("alter table agg_table2 finish streaming")
+    sql("alter table agg_table2 compact 'streaming'")
+    loadData()
+    sql("alter table agg_table2 finish streaming")
+    sql("alter table agg_table2 compact 'streaming'")
+    loadData()
+    sql("alter table agg_table2 finish streaming")
+    sql("alter table agg_table2 compact 'streaming'")
+    sql("alter table agg_table2 compact 'minor'")
+    checkAnswer(sql("select * from agg_table2_p1"),
+      Seq(
+        Row("name_10", 800000.0),
+        Row("name_11", 880000.0),
+        Row("name_12", 960000.0),
+        Row("name_13", 1040000.0),
+        Row("name_14", 1120000.0)))
+    assert(sql("show segments for table agg_table2").collect().map(_.get(0)).contains("1.1"))
+    assert(sql("show segments for table agg_table2_p1").collect().map(_.get(0)).contains("0.1"))
+    assert(sql("show segments for table agg_table2_p2").collect().map(_.get(0)).contains("0.1"))
+    sql("drop table if exists agg_table2")
+  }
+
+  test("test if major compaction is successful for streaming and preaggregate tables") {
+    sql("drop table if exists agg_table2")
+    createTable(tableName = "agg_table2", streaming = true, withBatchLoad = false)
+    sql("create datamap p1 on table agg_table2 using 'preaggregate' as select name, sum(salary) from agg_table2 group by name")
+    loadData()
+    sql("alter table agg_table2 finish streaming")
+    sql("alter table agg_table2 compact 'streaming'")
+    loadData()
+    sql("alter table agg_table2 finish streaming")
+    sql("alter table agg_table2 compact 'streaming'")
+    loadData()
+    sql("alter table agg_table2 finish streaming")
+    sql("alter table agg_table2 compact 'streaming'")
+    loadData()
+    sql("alter table agg_table2 finish streaming")
+    sql("alter table agg_table2 compact 'streaming'")
+    sql("alter table agg_table2 compact 'major'")
+    checkAnswer(sql("select * from agg_table2_p1"),
+      Seq(
+        Row("name_10", 800000.0),
+        Row("name_11", 880000.0),
+        Row("name_12", 960000.0),
+        Row("name_13", 1040000.0),
+        Row("name_14", 1120000.0)))
+    assert(sql("show segments for table agg_table2").collect().map(_.get(0)).contains("1.1"))
+    assert(sql("show segments for table agg_table2_p1").collect().map(_.get(0)).contains("0.1"))
+    sql("drop table if exists agg_table2")
+  }
+
   def loadData() {
     val identifier = new TableIdentifier("agg_table2", Option("streaming"))
     val carbonTable = CarbonEnv.getInstance(spark).carbonMetaStore.lookupRelation(identifier)(spark)
@@ -292,6 +565,68 @@ class TestStreamingTableOpName extends QueryTest with BeforeAndAfterAll {
     generateCSVDataFile(spark, idStart = 10, rowNums = 5, csvDataDir)
     Thread.sleep(5000)
     thread.interrupt()
+  }
+
+  test("test if data is displayed when alias is used for column name") {
+    sql("drop table if exists agg_table2")
+    createTable(tableName = "agg_table2", streaming = true, withBatchLoad = false)
+    val identifier = new TableIdentifier("agg_table2", Option("streaming"))
+    val carbonTable = CarbonEnv.getInstance(spark).carbonMetaStore.lookupRelation(identifier)(spark)
+      .asInstanceOf[CarbonRelation].metaData.carbonTable
+    val csvDataDir = new File("target/csvdata1").getCanonicalPath
+    generateCSVDataFile(spark, idStart = 10, rowNums = 5, csvDataDir)
+    generateCSVDataFile(spark, idStart = 10, rowNums = 5, csvDataDir, SaveMode.Append)
+    // streaming ingest 10 rows
+    val thread = createFileStreamingThread(spark, carbonTable, csvDataDir, intervalSecond = 1,
+      identifier)
+    thread.start()
+    Thread.sleep(5000)
+    thread.interrupt()
+    checkAnswer(
+      sql("select count(*) from streaming.agg_table2"),
+      Seq(Row(10)))
+    sql(s"load data inpath '$csvDataDir' into table agg_table2 options('FILEHEADER'='id, name, city, salary, tax, percent, birthday, register, updated, file')")
+    sql("create datamap p1 on table agg_table2 using 'preaggregate' as select name, sum(salary) from agg_table2 group by name")
+    // Data should be loaded into aggregate table as hand-off is fired
+    checkAnswer(sql("select name as abc, sum(salary) as sal from agg_table2 group by name"),
+      Seq(
+        Row("name_14", 560000.0),
+        Row("name_10", 400000.0),
+        Row("name_12", 480000.0),
+        Row("name_11", 440000.0),
+        Row("name_13", 520000.0)))
+
+    sql("drop table agg_table2")
+  }
+
+  test("test if data is loaded in aggregate table after handoff is done for streaming table") {
+    createTable(tableName = "agg_table3", streaming = true, withBatchLoad = false)
+    val identifier = new TableIdentifier("agg_table3", Option("streaming"))
+    val carbonTable = CarbonEnv.getInstance(spark).carbonMetaStore.lookupRelation(identifier)(spark)
+      .asInstanceOf[CarbonRelation].metaData.carbonTable
+    val csvDataDir = new File("target/csvdatanew").getCanonicalPath
+    generateCSVDataFile(spark, idStart = 10, rowNums = 5, csvDataDir)
+    generateCSVDataFile(spark, idStart = 10, rowNums = 5, csvDataDir, SaveMode.Append)
+    // streaming ingest 10 rows
+    val thread = createFileStreamingThread(spark, carbonTable, csvDataDir, intervalSecond = 1,
+      identifier)
+    thread.start()
+    Thread.sleep(5000)
+    thread.interrupt()
+    checkAnswer(
+      sql("select count(*) from streaming.agg_table3"),
+      Seq(Row(10)))
+    sql("alter table agg_table3 finish streaming")
+    sql("alter table agg_table3 compact 'streaming'")
+    sql("create datamap p1 on table agg_table3 using 'preaggregate' as select name, sum(salary) from agg_table3 group by name")
+    // Data should be loaded into aggregate table as hand-off is fired
+    checkAnswer(sql("select * from agg_table3_p1"),
+      Seq(
+        Row("name_10", 200000.0),
+        Row("name_11", 220000.0),
+        Row("name_12", 240000.0),
+        Row("name_13", 260000.0),
+        Row("name_14", 280000.0)))
   }
 
   // bad records
@@ -1259,6 +1594,35 @@ class TestStreamingTableOpName extends QueryTest with BeforeAndAfterAll {
     )
   }
 
+  test("test autohandoff with preaggregate tables") {
+    sql("drop table if exists maintable")
+    createTable(tableName = "maintable", streaming = true, withBatchLoad = false)
+    sql("create datamap p1 on table maintable using 'preaggregate' as select name, sum(id) from maintable group by name")
+    executeStreamingIngest(
+      tableName = "maintable",
+      batchNums = 2,
+      rowNumsEachBatch = 100,
+      intervalOfSource = 5,
+      intervalOfIngest = 5,
+      continueSeconds = 20,
+      generateBadRecords = false,
+      badRecordAction = "force",
+      handoffSize = 1L,
+      autoHandoff = false)
+    executeStreamingIngest(
+      tableName = "maintable",
+      batchNums = 2,
+      rowNumsEachBatch = 100,
+      intervalOfSource = 5,
+      intervalOfIngest = 5,
+      continueSeconds = 20,
+      generateBadRecords = false,
+      badRecordAction = "force",
+      handoffSize = 1L,
+      autoHandoff = true)
+    checkAnswer(sql("select count(*) from maintable_p1"), Seq(Row(200)))
+  }
+
   test("block drop streaming table while streaming is in progress") {
     val identifier = new TableIdentifier("stream_table_drop", Option("streaming"))
     val carbonTable = CarbonEnv.getInstance(spark).carbonMetaStore.lookupRelation(identifier)(spark)
@@ -1282,6 +1646,12 @@ class TestStreamingTableOpName extends QueryTest with BeforeAndAfterAll {
         server.close()
       }
     }
+  }
+
+  test("support creating datamap on streaming table") {
+    sql("CREATE DATAMAP datamap ON TABLE source " +
+        "USING 'preaggregate'" +
+        " AS SELECT c1, sum(c2) FROM source GROUP BY c1")
   }
 
   test("check streaming property of table") {
@@ -1309,7 +1679,7 @@ class TestStreamingTableOpName extends QueryTest with BeforeAndAfterAll {
          | city STRING,
          | salary FLOAT
          | )
-         | STORED BY 'carbondata'
+         | STORED AS carbondata
          | TBLPROPERTIES('streaming'='true')
          | """.stripMargin)
 
@@ -1338,7 +1708,7 @@ class TestStreamingTableOpName extends QueryTest with BeforeAndAfterAll {
          | city STRING,
          | salary FLOAT
          | )
-         | STORED BY 'carbondata'
+         | STORED AS carbondata
          | TBLPROPERTIES('streaming'='true')
          | """.stripMargin)
 
@@ -1508,31 +1878,31 @@ class TestStreamingTableOpName extends QueryTest with BeforeAndAfterAll {
 
     sql(
       s"""
-        |CREATE STREAM stream123 ON TABLE sink
-        |STMPROPERTIES(
-        |  'trigger'='ProcessingTime',
-        |  'interval'='1 seconds',
-        |  'BAD_RECORDS_LOGGER_ENABLE' = 'FALSE',
-        |  'BAD_RECORDS_ACTION' = 'FORCE',
-        |  'BAD_RECORD_PATH'='$warehouse')
-        |AS
-        |  SELECT *
-        |  FROM source
-        |  WHERE id % 2 = 1
+         |CREATE STREAM stream123 ON TABLE sink
+         |STMPROPERTIES(
+         |  'trigger'='ProcessingTime',
+         |  'interval'='1 seconds',
+         |  'BAD_RECORDS_LOGGER_ENABLE' = 'FALSE',
+         |  'BAD_RECORDS_ACTION' = 'FORCE',
+         |  'BAD_RECORD_PATH'='$warehouse')
+         |AS
+         |  SELECT *
+         |  FROM source
+         |  WHERE id % 2 = 1
       """.stripMargin).show(false)
     sql(
       s"""
-        |CREATE STREAM IF NOT EXISTS stream123 ON TABLE sink
-        |STMPROPERTIES(
-        |  'trigger'='ProcessingTime',
-        |  'interval'='1 seconds',
-        |  'BAD_RECORDS_LOGGER_ENABLE' = 'FALSE',
-        |  'BAD_RECORDS_ACTION' = 'FORCE',
-        |  'BAD_RECORD_PATH'='$warehouse')
-        |AS
-        |  SELECT *
-        |  FROM source
-        |  WHERE id % 2 = 1
+         |CREATE STREAM IF NOT EXISTS stream123 ON TABLE sink
+         |STMPROPERTIES(
+         |  'trigger'='ProcessingTime',
+         |  'interval'='1 seconds',
+         |  'BAD_RECORDS_LOGGER_ENABLE' = 'FALSE',
+         |  'BAD_RECORDS_ACTION' = 'FORCE',
+         |  'BAD_RECORD_PATH'='$warehouse')
+         |AS
+         |  SELECT *
+         |  FROM source
+         |  WHERE id % 2 = 1
       """.stripMargin).show(false)
     Thread.sleep(200)
     sql("select * from sink").show
@@ -2186,7 +2556,7 @@ class TestStreamingTableOpName extends QueryTest with BeforeAndAfterAll {
          | register TIMESTAMP,
          | updated TIMESTAMP
          | )
-         | STORED BY 'carbondata'
+         | STORED AS carbondata
          | TBLPROPERTIES(${if (streaming) "'streaming'='true', " else "" }
          | 'sort_columns'='name', 'dictionary_include'='city,register', 'BAD_RECORD_PATH'='$badRecordFilePath')
          | """.stripMargin)
@@ -2215,7 +2585,7 @@ class TestStreamingTableOpName extends QueryTest with BeforeAndAfterAll {
          | updated TIMESTAMP,
          | file struct<school:array<string>, age:int>
          | )
-         | STORED BY 'carbondata'
+         | STORED AS carbondata
          | TBLPROPERTIES(${if (streaming) "'streaming'='true', " else "" }
          | 'sort_columns'='name', 'dictionary_include'='id,name,salary,tax,percent,updated', 'BAD_RECORD_PATH'='$badRecordFilePath')
          | """.stripMargin)

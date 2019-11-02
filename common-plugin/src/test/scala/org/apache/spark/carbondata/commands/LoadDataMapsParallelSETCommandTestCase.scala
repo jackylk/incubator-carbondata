@@ -27,22 +27,22 @@ class LoadDataMapsParallelSETCommandTestCase extends QueryTest with BeforeAndAft
     sql("DROP TABLE IF EXISTS carbon_table1")
     sql("DROP TABLE IF EXISTS carbon_table_par")
     sql("DROP TABLE IF EXISTS carbon_table_par1")
-    sql("CREATE TABLE IF NOT EXISTS carbon_table (empno String, doj String, salary Int) STORED BY " +
-        "'org.apache.carbondata.format'")
+    sql("CREATE TABLE IF NOT EXISTS carbon_table (empno String, doj String, salary Int) STORED AS " +
+        "carbondata")
     val csvFilePath = s"$resourcesPath/datasample.csv"
     sql("LOAD DATA local inpath '" + csvFilePath + "' INTO TABLE carbon_table OPTIONS"
         + "('DELIMITER'= ',', 'QUOTECHAR'= '\"')");
-    sql("CREATE TABLE IF NOT EXISTS carbon_table1 (empno String, doj String, salary Int) STORED BY " +
-        "'org.apache.carbondata.format'")
+    sql("CREATE TABLE IF NOT EXISTS carbon_table1 (empno String, doj String, salary Int) STORED AS " +
+        "carbondata")
     sql("LOAD DATA local inpath '" + csvFilePath + "' INTO TABLE carbon_table1 OPTIONS"
         + "('DELIMITER'= ',', 'QUOTECHAR'= '\"')");
 
-    sql("CREATE TABLE IF NOT EXISTS carbon_table_par (doj String, salary Int) PARTITIONED BY (empno String) STORED BY " +
-        "'org.apache.carbondata.format'")
+    sql("CREATE TABLE IF NOT EXISTS carbon_table_par (doj String, salary Int) PARTITIONED BY (empno String) STORED AS " +
+        "carbondata")
     sql("LOAD DATA local inpath '" + csvFilePath + "' INTO TABLE carbon_table_par OPTIONS"
         + "('DELIMITER'= ',', 'QUOTECHAR'= '\"')");
-    sql("CREATE TABLE IF NOT EXISTS carbon_table_par1 (doj String, salary Int) PARTITIONED BY (empno String) STORED BY " +
-        "'org.apache.carbondata.format'")
+    sql("CREATE TABLE IF NOT EXISTS carbon_table_par1 (doj String, salary Int) PARTITIONED BY (empno String) STORED AS " +
+        "carbondata")
     sql("LOAD DATA local inpath '" + csvFilePath + "' INTO TABLE carbon_table_par1 OPTIONS"
         + "('DELIMITER'= ',', 'QUOTECHAR'= '\"')");
   }

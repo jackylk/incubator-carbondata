@@ -17,17 +17,17 @@
 
 package org.apache.carbondata.integration.spark.testsuite.preaggregate
 
-import org.apache.spark.sql.test.util.CarbonQueryTest
+import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
 
 import org.apache.carbondata.common.exceptions.sql.NoSuchDataMapException
 import org.apache.carbondata.spark.exception.ProcessMetaDataException
 
-class TestPreAggregateDrop extends CarbonQueryTest with BeforeAndAfterAll {
+class TestPreAggregateDrop extends QueryTest with BeforeAndAfterAll {
 
   override def beforeAll {
     sql("drop table if exists maintable")
-    sql("create table maintable (a string, b string, c string) stored by 'carbondata'")
+    sql("create table maintable (a string, b string, c string) STORED AS carbondata")
   }
 
   test("create and drop preaggregate table") {
@@ -61,7 +61,7 @@ class TestPreAggregateDrop extends CarbonQueryTest with BeforeAndAfterAll {
     sql("drop table if exists maintable1")
     sql("create datamap preagg_same on table maintable using 'preaggregate' as select" +
     " a,sum(c) from maintable group by a")
-    sql("create table maintable1 (a string, b string, c string) stored by 'carbondata'")
+    sql("create table maintable1 (a string, b string, c string) STORED AS carbondata")
     sql("create datamap preagg_same on table maintable1 using 'preaggregate' as select" +
     " a,sum(c) from maintable1 group by a")
 
@@ -97,14 +97,14 @@ class TestPreAggregateDrop extends CarbonQueryTest with BeforeAndAfterAll {
 
   test("drop datamap with 'if exists' when datamap not exists") {
     sql("DROP TABLE IF EXISTS maintable")
-    sql("CREATE TABLE maintable (a STRING, b STRING, c STRING) STORED BY 'carbondata'")
+    sql("CREATE TABLE maintable (a STRING, b STRING, c STRING) STORED AS carbondata")
     sql("DROP DATAMAP IF EXISTS not_exists_datamap ON TABLE maintable")
     checkExistence(sql("DESCRIBE FORMATTED maintable"), false, "not_exists_datamap")
   }
 
   test("drop datamap without 'if exists' when datamap not exists") {
     sql("DROP TABLE IF EXISTS maintable")
-    sql("CREATE TABLE maintable (a STRING, b STRING, c STRING) STORED BY 'carbondata'")
+    sql("CREATE TABLE maintable (a STRING, b STRING, c STRING) STORED AS carbondata")
     sql("DROP DATAMAP IF EXISTS not_exists_datamap ON TABLE maintable")
     val e = intercept[NoSuchDataMapException] {
       sql("DROP DATAMAP not_exists_datamap ON TABLE maintable")
@@ -131,7 +131,7 @@ class TestPreAggregateDrop extends CarbonQueryTest with BeforeAndAfterAll {
 
   test("drop preaggregate datamap whose main table has other type datamaps") {
     sql("drop table if exists maintable")
-    sql("create table maintable (a string, b string, c string) stored by 'carbondata'")
+    sql("create table maintable (a string, b string, c string) STORED AS carbondata")
     sql(
       "create datamap bloom1 on table maintable using 'bloomfilter'" +
       " dmproperties('index_columns'='a')")

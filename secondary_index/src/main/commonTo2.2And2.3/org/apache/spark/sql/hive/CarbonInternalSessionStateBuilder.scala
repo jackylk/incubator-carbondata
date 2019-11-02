@@ -315,13 +315,6 @@ class CarbonACLInternalSessionStateBuilder(sparkSession: SparkSession,
   // need to be registered only once
   CarbonCommonInitializer.init
 
-  class CarbonPreOptimizerRule extends Rule[LogicalPlan] {
-
-    override def apply(plan: LogicalPlan): LogicalPlan = {
-      CarbonOptimizerUtil.transformForScalarSubQuery(plan)
-    }
-  }
-
   /**
    * Listener on session to handle clean during close session.
    */

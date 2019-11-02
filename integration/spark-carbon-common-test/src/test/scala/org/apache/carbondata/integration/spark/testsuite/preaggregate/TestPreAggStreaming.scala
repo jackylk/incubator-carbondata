@@ -19,27 +19,27 @@ package org.apache.carbondata.integration.spark.testsuite.preaggregate
 import org.apache.spark.sql.CarbonDatasourceHadoopRelation
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, Union}
 import org.apache.spark.sql.execution.datasources.LogicalRelation
-import org.apache.spark.sql.test.util.CarbonQueryTest
-import org.scalatest.{BeforeAndAfterAll, Ignore}
+import org.apache.spark.sql.test.util.QueryTest
+import org.scalatest.BeforeAndAfterAll
 
 
-class TestPreAggStreaming extends CarbonQueryTest with BeforeAndAfterAll {
+class TestPreAggStreaming extends QueryTest with BeforeAndAfterAll {
 
 
   override def beforeAll: Unit = {
     dropAll
-    sql("CREATE TABLE mainTable(id int, name string, city string, age string) STORED BY 'org.apache.carbondata.format' tblproperties('streaming'='true')")
+    sql("CREATE TABLE mainTable(id int, name string, city string, age string) STORED AS carbondata tblproperties('streaming'='true')")
     sql("create datamap agg0 on table mainTable using 'preaggregate' as select name from mainTable group by name")
     sql("create datamap agg1 on table mainTable using 'preaggregate' as select name,sum(age) from mainTable group by name")
     sql("create datamap agg2 on table mainTable using 'preaggregate' as select name,avg(age) from mainTable group by name")
     sql("create datamap agg3 on table mainTable using 'preaggregate' as select name,sum(CASE WHEN age=35 THEN id ELSE 0 END) from mainTable group by name")
-    sql("CREATE TABLE mainTableStreamingOne(id int, name string, city string, age smallint) STORED BY 'org.apache.carbondata.format' tblproperties('streaming'='true')")
+    sql("CREATE TABLE mainTableStreamingOne(id int, name string, city string, age smallint) STORED AS carbondata tblproperties('streaming'='true')")
     sql("create datamap aggStreamingAvg on table mainTableStreamingOne using 'preaggregate' as select name,avg(age) from mainTableStreamingOne group by name")
     sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/measureinsertintotest.csv' into table mainTable")
     sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/measureinsertintotest.csv' into table mainTableStreamingOne")
-    sql("CREATE TABLE origin(id int, name string, city string, age string) STORED BY 'org.apache.carbondata.format' tblproperties('streaming'='true')")
+    sql("CREATE TABLE origin(id int, name string, city string, age string) STORED AS carbondata tblproperties('streaming'='true')")
     sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/measureinsertintotest.csv' into table origin")
-    sql("CREATE TABLE binary_stream(id int, label boolean, name string,image binary,autoLabel boolean) STORED BY 'org.apache.carbondata.format' tblproperties('streaming'='true')")
+    sql("CREATE TABLE binary_stream(id int, label boolean, name string,image binary,autoLabel boolean) STORED AS carbondata tblproperties('streaming'='true')")
     sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/binaryDataBase64.csv' into table binary_stream OPTIONS('header'='false','DELIMITER'=',','binary_decoder'='baSe64')")
     sql("create datamap agg0 on table binary_stream using 'preaggregate' as select name from binary_stream group by name")
   }

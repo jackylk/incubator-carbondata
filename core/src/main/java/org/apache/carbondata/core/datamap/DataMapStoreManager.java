@@ -441,7 +441,6 @@ public final class DataMapStoreManager {
         dataMapSchema, dataMapFactory, blockletDetailsFetcher, segmentPropertiesFetcher);
 
     tableIndices.add(dataMap);
-    LOGGER.warn("put DataMaps: " + tableUniqueName);
     allDataMaps.put(tableUniqueName, tableIndices);
     tablePathMap.put(tableUniqueName, table.getTablePath());
     return dataMap;
@@ -546,7 +545,6 @@ public final class DataMapStoreManager {
       }
     }
     segmentRefreshMap.remove(identifier.uniqueName());
-    LOGGER.warn("remove DataMaps: " + tableUniqueName);
     clearDataMaps(tableUniqueName);
     allDataMaps.remove(tableUniqueName);
     tablePathMap.remove(tableUniqueName);

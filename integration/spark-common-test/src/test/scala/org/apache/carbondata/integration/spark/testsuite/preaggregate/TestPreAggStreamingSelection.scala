@@ -11,7 +11,7 @@ class TestPreAggStreamingSelection extends QueryTest with BeforeAndAfterAll {
   override def beforeAll: Unit = {
     sql("drop table if exists mainTable")
     sql("drop table if exists mainTableStreamingOne")
-    sql("CREATE TABLE mainTable(id int, name string, city string, age string) STORED BY 'org.apache.carbondata.format' tblproperties('streaming'='true')")
+    sql("CREATE TABLE mainTable(id int, name string, city string, age string) STORED AS carbondata tblproperties('streaming'='true')")
     sql(
       s"""
          | CREATE DATAMAP agg0 ON TABLE mainTable
@@ -68,7 +68,7 @@ class TestPreAggStreamingSelection extends QueryTest with BeforeAndAfterAll {
          | FROM mainTable GROUP BY name
          | """.stripMargin
     )
-    sql("CREATE TABLE mainTableStreamingOne(id int, name string, city string, age smallint) STORED BY 'org.apache.carbondata.format' tblproperties('streaming'='true')")
+    sql("CREATE TABLE mainTableStreamingOne(id int, name string, city string, age smallint) STORED AS carbondata tblproperties('streaming'='true')")
     sql(
       s"""
          | CREATE DATAMAP aggStreamingAvg ON TABLE mainTableStreamingOne

@@ -49,9 +49,7 @@ object TestUtil {
     .config("spark.sql.warehouse.dir", warehouse1)
     .config("spark.driver.host", "localhost")
     .config("spark.sql.crossJoin.enabled", "true")
-    .config("spark.sql.extensions", "org.apache.spark.sql.CarbonExtensions")
     .getOrCreate()
-  spark.sparkContext.setLogLevel("ERROR")
   if (!spark.sparkContext.version.startsWith("2.1")) {
     spark.experimental.extraOptimizations = Seq(new CarbonFileIndexReplaceRule)
   }

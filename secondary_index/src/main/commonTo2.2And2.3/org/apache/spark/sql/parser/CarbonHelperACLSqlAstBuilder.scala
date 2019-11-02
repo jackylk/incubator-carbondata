@@ -50,10 +50,10 @@ class CarbonHelperACLSqlAstBuilder(conf: SQLConf,
               "'STORED AS' FileFormat is not supported for internal table.", ctx
             )
           }
-        // STORED BY
+        // STORED AS
         case (null, s: StorageHandlerContext) =>
           operationNotAllowed(
-            "'STORED BY' StorageHandler is not supported for internal table.", ctx
+            "'STORED AS' StorageHandler is not supported for internal table.", ctx
           )
         case _ =>
       }

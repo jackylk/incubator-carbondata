@@ -17,14 +17,14 @@
 
 package org.apache.carbondata.integration.spark.testsuite.preaggregate
 
-import org.apache.spark.sql.test.util.CarbonQueryTest
+import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatest.Matchers._
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.util.CarbonProperties
 
-class TestPreAggregateCompaction extends CarbonQueryTest with BeforeAndAfterEach with BeforeAndAfterAll {
+class TestPreAggregateCompaction extends QueryTest with BeforeAndAfterEach with BeforeAndAfterAll {
 
   val testData = s"$resourcesPath/sample.csv"
 
@@ -32,11 +32,11 @@ class TestPreAggregateCompaction extends CarbonQueryTest with BeforeAndAfterEach
     sql("drop database if exists compaction cascade")
     sql("create database if not exists compaction")
     sql("use compaction")
-    sql("create table testtable (id int, name string, city string, age int) STORED BY 'org.apache.carbondata.format'")
+    sql("create table testtable (id int, name string, city string, age int) STORED AS carbondata")
     sql(
       """
         | CREATE TABLE maintable(id int, name string, city string, age int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(
       s"""create datamap preagg_sum on table maintable using 'preaggregate' as select id,sum(age) from maintable group by id"""

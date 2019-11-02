@@ -22,7 +22,7 @@
   <parent>
     <groupId>org.apache.carbondata</groupId>
     <artifactId>carbondata-parent</artifactId>
-    <version>1.6.1.0100</version>
+    <version>1.6.1.0101-hw-2.0.0.dli-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
@@ -156,6 +156,11 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
+      <groupId>org.apache.carbondata</groupId>
+      <artifactId>carbondata-common-plugin</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-hw-plugin_2.11</artifactId>
       <version>${spark.version}</version>
@@ -183,6 +188,7 @@
     </resources>
     <plugins>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
           <source>1.8</source>
@@ -252,6 +258,7 @@
       <plugin>
         <groupId>com.ning.maven.plugins</groupId>
         <artifactId>maven-duplicate-finder-plugin</artifactId>
+        <version>1.0.9</version>
         <configuration>
           <skip>true</skip>
         </configuration>

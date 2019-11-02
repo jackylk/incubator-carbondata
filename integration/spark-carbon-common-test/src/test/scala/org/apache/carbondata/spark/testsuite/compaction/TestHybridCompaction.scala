@@ -6,7 +6,7 @@ import scala.collection.mutable.ListBuffer
 
 import au.com.bytecode.opencsv.CSVWriter
 import org.apache.commons.io.FileUtils
-import org.apache.spark.sql.test.util.CarbonQueryTest
+import org.apache.spark.sql.test.util.QueryTest
 import org.junit.Assert
 import org.scalatest.Matchers._
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
@@ -15,7 +15,7 @@ import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.util.CarbonProperties
 
 
-class TestHybridCompaction extends CarbonQueryTest with BeforeAndAfterEach with BeforeAndAfterAll {
+class TestHybridCompaction extends QueryTest with BeforeAndAfterEach with BeforeAndAfterAll {
 
   val rootPath = new File(this.getClass.getResource("/").getPath + "../../../..").getCanonicalPath
 
@@ -103,7 +103,7 @@ class TestHybridCompaction extends CarbonQueryTest with BeforeAndAfterEach with 
       s"""
          | CREATE TABLE $tableName(seq int, first string, last string,
          |   age int, city string, state string, date date)
-         | STORED BY 'carbondata'
+         | STORED AS carbondata
          | TBLPROPERTIES(
          |   'sort_scope'='local_sort',
          |   'sort_columns'='state, age',

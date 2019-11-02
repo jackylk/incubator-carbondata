@@ -16,14 +16,14 @@
  */
 package org.apache.carbondata.mv.rewrite
 
-import org.apache.spark.sql.test.util.CarbonQueryTest
+import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
 
-class MVInvalidTestCase  extends CarbonQueryTest with BeforeAndAfterAll {
+class MVInvalidTestCase  extends QueryTest with BeforeAndAfterAll {
 
   override def beforeAll(): Unit = {
     drop
-    sql("create table main_table (name string,age int,height int) stored by 'carbondata'")
+    sql("create table main_table (name string,age int,height int) STORED AS carbondata")
   }
 
   def drop {

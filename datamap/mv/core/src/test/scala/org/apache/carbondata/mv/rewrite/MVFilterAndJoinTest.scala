@@ -17,16 +17,16 @@
 package org.apache.carbondata.mv.rewrite
 
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.test.util.CarbonQueryTest
+import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
 
-class MVFilterAndJoinTest extends CarbonQueryTest with BeforeAndAfterAll {
+class MVFilterAndJoinTest extends QueryTest with BeforeAndAfterAll {
 
   override def beforeAll(): Unit = {
     drop
-    sql("create table main_table (name string,age int,height int) stored by 'carbondata'")
-    sql("create table dim_table (name string,age int,height int) stored by 'carbondata'")
-    sql("create table sdr_table (name varchar(20),score int) stored by 'carbondata'")
+    sql("create table main_table (name string,age int,height int) STORED AS carbondata")
+    sql("create table dim_table (name string,age int,height int) STORED AS carbondata")
+    sql("create table sdr_table (name varchar(20),score int) STORED AS carbondata")
   }
 
   def drop() {

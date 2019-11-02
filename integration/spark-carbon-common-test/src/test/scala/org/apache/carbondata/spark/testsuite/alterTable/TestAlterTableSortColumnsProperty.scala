@@ -17,12 +17,13 @@
 
 package org.apache.carbondata.spark.testsuite.alterTable
 
-import org.apache.spark.sql.test.util.CarbonQueryTest
+import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
+
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.util.CarbonProperties
 
-class TestAlterTableSortColumnsProperty extends CarbonQueryTest with BeforeAndAfterAll {
+class TestAlterTableSortColumnsProperty extends QueryTest with BeforeAndAfterAll {
 
   override def beforeAll(): Unit = {
     CarbonProperties.getInstance().addProperty(CarbonCommonConstants.CARBON_DATE_FORMAT,

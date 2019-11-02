@@ -19,7 +19,6 @@ package org.apache.spark.sql.hive
 import java.util.concurrent.Callable
 
 import org.apache.hadoop.fs.Path
-
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.{QualifiedTableName, TableIdentifier}
 import org.apache.spark.sql.catalyst.analysis.Analyzer
@@ -31,6 +30,7 @@ import org.apache.spark.sql.internal.SessionState
 import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema
 import org.apache.carbondata.spark.util.CarbonScalaUtil
 import org.apache.spark.sql.catalyst.optimizer.Optimizer
+import org.apache.spark.sql.catalyst.rules.Rule
 
 object CarbonSessionCatalogUtil {
 
@@ -208,5 +208,12 @@ class CarbonSessionStateBuilder(sparkSession: SparkSession,
       conf,
       sparkSession,
       super.analyzer)
+  }
+}
+
+class CarbonPreOptimizerRule extends Rule[LogicalPlan] {
+
+  override def apply(plan: LogicalPlan): LogicalPlan = {
+    CarbonOptimizerUtil.transformForScalarSubQuery(plan)
   }
 }

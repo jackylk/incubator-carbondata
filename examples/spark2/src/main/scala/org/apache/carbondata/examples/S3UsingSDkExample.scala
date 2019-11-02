@@ -116,7 +116,7 @@ object S3UsingSdkExample {
     buildTestData(args, path, num)
 
     spark.sql("DROP TABLE IF EXISTS s3_sdk_table")
-    spark.sql(s"CREATE EXTERNAL TABLE s3_sdk_table STORED BY 'carbondata'" +
+    spark.sql(s"CREATE EXTERNAL TABLE s3_sdk_table STORED AS carbondata" +
       s" LOCATION '$path'")
     spark.sql("SELECT * FROM s3_sdk_table LIMIT 10").show()
     spark.stop()

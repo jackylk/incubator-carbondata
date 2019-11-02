@@ -21,13 +21,13 @@ import scala.collection.mutable.ArrayBuffer
 
 import org.apache.spark.SparkEnv
 import org.apache.spark.rpc.RpcEndpointRef
-import org.apache.spark.sql.test.util.CarbonQueryTest
+import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.util.CarbonProperties
 
-class ProfilerSuite extends CarbonQueryTest with BeforeAndAfterAll {
+class ProfilerSuite extends QueryTest with BeforeAndAfterAll {
   var setupEndpointRef: RpcEndpointRef = _
   var statementMessages: ArrayBuffer[ProfilerMessage] = _
   var executionMessages: ArrayBuffer[ProfilerMessage] = _
@@ -120,8 +120,8 @@ class ProfilerSuite extends CarbonQueryTest with BeforeAndAfterAll {
     checkCommand("DROP TABLE IF EXISTS mobile")
     checkCommand("DROP TABLE IF EXISTS emp")
     // create table
-    checkCommand("CREATE TABLE mobile (mid string,mobileId string, color string, id int) STORED BY 'carbondata' TBLPROPERTIES('DICTIONARY_EXCLUDE'='Color')")
-    checkCommand("CREATE TABLE emp (eid string,eName string, mobileId string,color string, id int) STORED BY 'carbondata' TBLPROPERTIES('DICTIONARY_EXCLUDE'='Color')")
+    checkCommand("CREATE TABLE mobile (mid string,mobileId string, color string, id int) STORED AS carbondata TBLPROPERTIES('DICTIONARY_EXCLUDE'='Color')")
+    checkCommand("CREATE TABLE emp (eid string,eName string, mobileId string,color string, id int) STORED AS carbondata TBLPROPERTIES('DICTIONARY_EXCLUDE'='Color')")
     // load data
     checkCommand(s"LOAD DATA LOCAL INPATH '$resourcesPath/join/mobile.csv' INTO TABLE mobile OPTIONS('FILEHEADER'='mid,mobileId,color,id')")
     checkCommand(s"LOAD DATA LOCAL INPATH '$resourcesPath/join/employee.csv' INTO TABLE emp OPTIONS('FILEHEADER'='eid,eName,mobileId,color,id')")

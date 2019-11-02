@@ -19,17 +19,17 @@ package org.apache.carbondata.integration.spark.testsuite.preaggregate
 import org.apache.spark.sql.CarbonDatasourceHadoopRelation
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.datasources.LogicalRelation
-import org.apache.spark.sql.test.util.CarbonQueryTest
+import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
 
 
-class TestPreAggregateWithSubQuery extends CarbonQueryTest with BeforeAndAfterAll {
+class TestPreAggregateWithSubQuery extends QueryTest with BeforeAndAfterAll {
 
   override def beforeAll: Unit = {
     sql("DROP TABLE IF EXISTS mainTable")
     sql("DROP TABLE IF EXISTS mainTable1")
-    sql("CREATE TABLE mainTable(id int, name string, city string, age string) STORED BY 'org.apache.carbondata.format'")
-    sql("CREATE TABLE mainTable1(id int, name string, city string, age string) STORED BY 'org.apache.carbondata.format'")
+    sql("CREATE TABLE mainTable(id int, name string, city string, age string) STORED AS carbondata")
+    sql("CREATE TABLE mainTable1(id int, name string, city string, age string) STORED AS carbondata")
     sql("create datamap agg0 on table mainTable using 'preaggregate' as select name,sum(age) from mainTable group by name")
     sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/measureinsertintotest.csv' into table mainTable")
     sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/measureinsertintotest.csv' into table mainTable1")

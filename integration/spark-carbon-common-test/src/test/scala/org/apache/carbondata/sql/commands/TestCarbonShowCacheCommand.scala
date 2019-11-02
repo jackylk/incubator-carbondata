@@ -41,7 +41,7 @@ class TestCarbonShowCacheCommand extends QueryTest with BeforeAndAfterAll {
         |  workgroupcategoryname String, deptno int, deptname String, projectcode int,
         |  projectjoindate Timestamp, projectenddate Timestamp,attendance int,utilization int,
         |  salary int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
         | TBLPROPERTIES('DICTIONARY_INCLUDE'='deptname')
       """.stripMargin)
     // bloom
@@ -56,7 +56,7 @@ class TestCarbonShowCacheCommand extends QueryTest with BeforeAndAfterAll {
         |  workgroupcategoryname String, deptno int, deptname String, projectcode int,
         |  projectjoindate Timestamp, projectenddate Timestamp,attendance int,utilization int,
         |  salary int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"LOAD DATA INPATH '$resourcesPath/data.csv' INTO TABLE cache_db.cache_2 ")
     sql("insert into table cache_2 select * from cache_1").collect()
@@ -68,7 +68,7 @@ class TestCarbonShowCacheCommand extends QueryTest with BeforeAndAfterAll {
         |  workgroupcategoryname String, deptno int, deptname String, projectcode int,
         |  projectjoindate Timestamp, projectenddate Timestamp,attendance int,utilization int,
         |  salary int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"LOAD DATA INPATH '$resourcesPath/data.csv' INTO TABLE cache_3 ")
 
@@ -81,7 +81,7 @@ class TestCarbonShowCacheCommand extends QueryTest with BeforeAndAfterAll {
         |  workgroupcategoryname String, deptno int, deptname String, projectcode int,
         |  projectjoindate Timestamp, projectenddate Timestamp,attendance int,utilization int,
         |  salary int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("insert into table cache_4 select * from cache_db.cache_2").collect()
 
@@ -94,7 +94,7 @@ class TestCarbonShowCacheCommand extends QueryTest with BeforeAndAfterAll {
         |  projectjoindate Timestamp, projectenddate Timestamp,attendance int,utilization int,
         |  salary int)
         | PARTITIONED BY (deptno int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(
       "insert into table cache_5 select empno,empname,designation,doj,workgroupcategory," +
@@ -118,7 +118,7 @@ class TestCarbonShowCacheCommand extends QueryTest with BeforeAndAfterAll {
     sql(s"CREATE TABLE empTable(empno int, empname String, designation String, " +
         s"doj Timestamp, workgroupcategory int, workgroupcategoryname String, deptno int, " +
         s"deptname String, projectcode int, projectjoindate Timestamp, projectenddate Timestamp," +
-        s"attendance int, utilization int, salary int) stored by 'carbondata'")
+        s"attendance int, utilization int, salary int) STORED AS carbondata")
     sql(s"LOAD DATA INPATH '$resourcesPath/data.csv' INTO TABLE empTable")
     sql(s"LOAD DATA INPATH '$resourcesPath/data.csv' INTO TABLE empTable")
     sql(s"LOAD DATA INPATH '$resourcesPath/data.csv' INTO TABLE empTable")
@@ -141,7 +141,7 @@ class TestCarbonShowCacheCommand extends QueryTest with BeforeAndAfterAll {
     sql(s"CREATE TABLE employeeTable(empno int, empname String, designation String, " +
         s"doj Timestamp, workgroupcategory int, workgroupcategoryname String, deptno int, " +
         s"deptname String, projectcode int, projectjoindate Timestamp, projectenddate Timestamp," +
-        s"attendance int, utilization int, salary int) stored by 'carbondata'")
+        s"attendance int, utilization int, salary int) STORED AS carbondata")
     sql(s"LOAD DATA INPATH '$resourcesPath/data.csv' INTO TABLE employeeTable")
     val table = CarbonEnv.getCarbonTable(Some("default"), "employeeTable")(sqlContext.sparkSession)
     val location = FileFactory

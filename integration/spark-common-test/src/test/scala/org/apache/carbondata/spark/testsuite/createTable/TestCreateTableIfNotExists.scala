@@ -34,10 +34,10 @@ class TestCreateTableIfNotExists extends QueryTest with BeforeAndAfterAll {
   }
 
   test("test create table if not exists") {
-    sql("create table test(a int, b string) stored by 'carbondata'")
+    sql("create table test(a int, b string) STORED AS carbondata")
     try {
       // table creation should be successful
-      sql("create table if not exists test(a int, b string) stored by 'carbondata'")
+      sql("create table if not exists test(a int, b string) STORED AS carbondata")
       assert(true)
     } catch {
       case ex: Exception =>
@@ -46,7 +46,7 @@ class TestCreateTableIfNotExists extends QueryTest with BeforeAndAfterAll {
   }
 
   test("test blocking of create table like command") {
-    sql("create table sourceTable(name string) stored by 'carbondata'")
+    sql("create table sourceTable(name string) STORED AS carbondata")
     val exception = intercept[MalformedCarbonCommandException] {
       sql("create table targetTable like sourceTable")
     }
@@ -74,7 +74,7 @@ class TestCreateTableIfNotExists extends QueryTest with BeforeAndAfterAll {
           // Create table
           var result = "PASS"
           try {
-            sql("create table IF NOT EXISTS TestIfExists(name string) stored by 'carbondata'")
+            sql("create table IF NOT EXISTS TestIfExists(name string) STORED AS carbondata")
           } catch {
             case exception: Exception =>
               result = exception.getMessage
@@ -88,7 +88,7 @@ class TestCreateTableIfNotExists extends QueryTest with BeforeAndAfterAll {
 
   test("test create table without column specified") {
     val exception = intercept[MalformedCarbonCommandException] {
-      sql("create table TableWithoutColumn stored by 'carbondata' tblproperties('sort_columns'='')")
+      sql("create table TableWithoutColumn STORED AS carbondata tblproperties('sort_columns'='')")
     }
     assert(exception.getMessage.contains("Creating table without column(s) is not supported"))
   }

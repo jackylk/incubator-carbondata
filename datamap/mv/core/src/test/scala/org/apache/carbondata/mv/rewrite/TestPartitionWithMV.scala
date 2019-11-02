@@ -19,9 +19,7 @@ package org.apache.carbondata.mv.rewrite
 
 import scala.collection.JavaConverters._
 
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.execution.datasources.LogicalRelation
-import org.apache.spark.sql.test.util.CarbonQueryTest
+import org.apache.spark.sql.test.util.QueryTest
 import org.apache.spark.sql.{CarbonEnv, Row}
 import org.scalatest.BeforeAndAfterAll
 
@@ -30,7 +28,7 @@ import org.apache.carbondata.core.datastore.impl.FileFactory
 /**
  * Test class for MV to verify partition scenarios
  */
-class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
+class TestPartitionWithMV extends QueryTest with BeforeAndAfterAll {
 
   val testData = s"$resourcesPath/sample.csv"
 
@@ -41,12 +39,12 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
     sql(
       """
         | CREATE TABLE par(id INT, name STRING, age INT) PARTITIONED BY(city STRING)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(
       """
         | CREATE TABLE maintable(id int, name string, city string) partitioned by (age int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"LOAD DATA LOCAL INPATH '$testData' into table maintable")
   }
@@ -87,7 +85,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
       """
         | CREATE TABLE if not exists partitionone (empname String, age int)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("drop datamap if exists p1")
     sql("create datamap p1 on table partitionone using 'mv' as select empname, year, sum(year),month,day from partitionone group by empname, year, month,day")
@@ -108,7 +106,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
       """
         | CREATE TABLE if not exists partitionone (empname String, age int)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("drop datamap if exists p1")
     sql("create datamap p1 on table partitionone using 'mv' as select empname, year, sum(year),month,day from partitionone group by empname, year, month,day")
@@ -127,7 +125,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
       """
         | CREATE TABLE if not exists partitionone (empname String, age int)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("drop datamap if exists p1")
     sql("create datamap p1 on table partitionone using 'mv' as select empname,  year, sum(year),month,day from partitionone group by empname, month, year,day")
@@ -149,7 +147,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
       """
         | CREATE TABLE if not exists partitionone (empname String, age int)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("drop datamap if exists p1")
     sql("create datamap p1 on table partitionone using 'mv' as select empname,  year, sum(year),month,day from partitionone group by empname, year, month,day")
@@ -170,7 +168,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
       """
         | CREATE TABLE if not exists partitionone (empname String, age int)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("drop datamap if exists p1")
     sql("create datamap p1 on table partitionone using 'mv' as select empname,  year, sum(year),month,day from partitionone group by empname, year, month,day")
@@ -191,7 +189,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
       """
         | CREATE TABLE if not exists partitionone (empname String, age int)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("drop datamap if exists p1")
     sql("create datamap p1 on table partitionone using 'mv' as select empname,  year, sum(year),month,day from partitionone group by empname, year, month, day")
@@ -211,7 +209,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
       """
         | CREATE TABLE if not exists partitionone (empname String, age int)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("drop datamap if exists p1")
     sql("create datamap p1 on table partitionone using 'mv' as select empname,  year, sum(year),month,day from partitionone group by empname, year, month, day")
@@ -231,7 +229,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
       """
         | CREATE TABLE if not exists droppartition (empname String, age int)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("drop datamap if exists p1")
     sql("create datamap p1 using 'mv' as select empname,  year, sum(year),month,day from droppartition group by empname, year, month, day")
@@ -259,7 +257,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
       """
         | CREATE TABLE if not exists partitionone (empname String, age int)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("drop datamap if exists p1")
     sql("create datamap p1 on table partitionone using 'mv' as select empname,  year, sum(year),month,day from partitionone group by empname, year, month, day")
@@ -279,7 +277,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
       """
         | CREATE TABLE if not exists partitionone (empname String,age int)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("drop datamap if exists p1")
     sql("create datamap p1 on table partitionone using 'mv' as select empname,  year, sum(year),month,day from partitionone group by empname, year, month, day")
@@ -299,7 +297,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
       """
         | CREATE TABLE if not exists partitionone (empname String, age int)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("drop datamap if exists p1")
     sql("create datamap p1 on table partitionone using 'mv' as select empname,  year, sum(year),month,day from partitionone group by empname, year, month, day")
@@ -319,7 +317,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
       """
         | CREATE TABLE if not exists partitionone (empname String, age int)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("drop datamap if exists p1")
     sql("create datamap p1 on table partitionone using 'mv' as select empname,  year, sum(year),month,day from partitionone group by empname, year, month, day")
@@ -340,7 +338,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
       """
         | CREATE TABLE if not exists partitionone (empname String, age int)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("drop datamap if exists p1")
     sql("create datamap p1 on table partitionone using 'mv' as select empname,  year, sum(year),month,day from partitionone group by empname, year, month, day")
@@ -360,7 +358,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
       """
         | CREATE TABLE if not exists partitionone (empname String,age int)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("drop datamap if exists p1")
     sql("drop datamap if exists p2")
@@ -385,7 +383,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
       """
         | CREATE TABLE if not exists partitionone (empname String, age int)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("drop datamap if exists p1")
     sql("drop datamap if exists p2")
@@ -413,7 +411,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
       """
         | CREATE TABLE if not exists partitionone (empname String)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("drop datamap if exists p1")
     sql(
@@ -433,7 +431,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
       """
         | CREATE TABLE if not exists partitionone (empname String, age int)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("drop datamap if exists p1")
     sql("drop datamap if exists p2")
@@ -458,7 +456,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
       """
         | CREATE TABLE if not exists partitionone (empname String)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("drop datamap if exists p1")
     sql(
@@ -476,7 +474,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
       """
         | CREATE TABLE if not exists partitionone (empname String)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("drop datamap if exists p1")
     sql(
@@ -494,7 +492,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
       """
         | CREATE TABLE if not exists partitionone (empname String)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("drop datamap if exists p1")
     sql(
@@ -510,7 +508,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
       """
         | CREATE TABLE if not exists partitionone (empname String, id int)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("drop datamap if exists p1")
     sql(
@@ -523,7 +521,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
   test("test dropping partition which has already been deleted") {
     sql("drop table if exists partitiontable")
     sql("create table partitiontable(id int,name string) partitioned by (email string) " +
-        "stored by 'carbondata' tblproperties('sort_scope'='global_sort')")
+        "STORED AS carbondata tblproperties('sort_scope'='global_sort')")
     sql("insert into table partitiontable select 1,'huawei','abc'")
     sql("create datamap ag1 on table partitiontable using 'mv' as select count(email),id" +
         " from partitiontable group by id")
@@ -552,7 +550,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
   test("test mv table creation with count(*) on Partition table") {
     sql("drop table if exists partitiontable")
     sql("create table partitiontable(id int,name string) partitioned by (email string) " +
-        "stored by 'carbondata' tblproperties('sort_scope'='global_sort')")
+        "STORED AS carbondata tblproperties('sort_scope'='global_sort')")
     sql("insert into table partitiontable select 1,'huawei','abc'")
     sql("drop datamap if exists ag1")
     sql("create datamap ag1 on table partitiontable using 'mv' as select count(*),id" +
@@ -565,7 +563,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
   test("test blocking partitioning of mv table") {
     sql("drop table if exists updatetime_8")
     sql("create table updatetime_8" +
-        "(countryid smallint,hs_len smallint,minstartdate string,startdate string,newdate string,minnewdate string) partitioned by (imex smallint) stored by 'carbondata' tblproperties('sort_scope'='global_sort','sort_columns'='countryid,imex,hs_len,minstartdate,startdate,newdate,minnewdate','table_blocksize'='256')")
+        "(countryid smallint,hs_len smallint,minstartdate string,startdate string,newdate string,minnewdate string) partitioned by (imex smallint) STORED AS carbondata tblproperties('sort_scope'='global_sort','sort_columns'='countryid,imex,hs_len,minstartdate,startdate,newdate,minnewdate','table_blocksize'='256')")
     sql("drop datamap if exists ag")
     sql("create datamap ag on table updatetime_8 using 'mv' dmproperties('partitioning'='false') as select imex,sum(hs_len) from updatetime_8 group by imex")
     val carbonTable = CarbonEnv.getCarbonTable(Some("partition_mv"), "ag_table")(sqlContext.sparkSession)
@@ -579,7 +577,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
       "create table partitionallcompaction(empno int,empname String,designation String," +
       "workgroupcategory int,workgroupcategoryname String,deptno int,projectjoindate timestamp," +
       "projectenddate date,attendance int,utilization int,salary int) partitioned by (deptname " +
-      "String,doj timestamp,projectcode int) stored  by 'carbondata' tblproperties" +
+      "String,doj timestamp,projectcode int) stored  as carbondata tblproperties" +
       "('sort_scope'='global_sort')")
     sql(
       "create datamap sensor_1 on table partitionallcompaction using 'mv' as select " +
@@ -620,7 +618,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
   test("Test data updation in Aggregate query after compaction on Partitioned table with mv table") {
     sql("drop table if exists updatetime_8")
     sql("create table updatetime_8" +
-        "(countryid smallint,hs_len smallint,minstartdate string,startdate string,newdate string,minnewdate string) partitioned by (imex smallint) stored by 'carbondata' tblproperties('sort_scope'='global_sort','sort_columns'='countryid,imex,hs_len,minstartdate,startdate,newdate,minnewdate','table_blocksize'='256')")
+        "(countryid smallint,hs_len smallint,minstartdate string,startdate string,newdate string,minnewdate string) partitioned by (imex smallint) STORED AS carbondata tblproperties('sort_scope'='global_sort','sort_columns'='countryid,imex,hs_len,minstartdate,startdate,newdate,minnewdate','table_blocksize'='256')")
     sql("drop datamap if exists ag")
     sql("create datamap ag on table updatetime_8 using 'mv' as select sum(hs_len), imex from updatetime_8 group by imex")
     sql("insert into updatetime_8 select 21,20,'fbv','gbv','wvsw','vwr',23")
@@ -642,7 +640,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
       """
         | CREATE TABLE if not exists partitionone (empname String, id int)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(
       "create datamap p7 on table partitionone using 'mv' as select empname, year, day, sum(year), sum(day) from partitionone group by empname, year, day")
@@ -670,7 +668,7 @@ class TestPartitionWithMV extends CarbonQueryTest with BeforeAndAfterAll {
 
   test("test partition at last column") {
     sql("drop table if exists partitionone")
-    sql("create table partitionone(a int,b int) partitioned by (c int) stored by 'carbondata'")
+    sql("create table partitionone(a int,b int) partitioned by (c int) STORED AS carbondata")
     sql("insert into partitionone values(1,2,3)")
     sql("drop datamap if exists dm1")
     sql("create datamap dm1 on table partitionone using 'mv' as select c,sum(b) from partitionone group by c")

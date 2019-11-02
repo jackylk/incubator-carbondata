@@ -128,7 +128,7 @@ class CarbonDataFrameWriter(sqlContext: SQLContext, val dataFrame: DataFrame) {
        | CREATE TABLE IF NOT EXISTS $dbName.${options.tableName}
        | (${ carbonSchema.mkString(", ") })
        | ${ if (partition.nonEmpty) s"PARTITIONED BY (${partition.mkString(", ")})" else ""}
-       | STORED BY 'carbondata'
+       | STORED AS carbondata
        | ${ if (options.tablePath.nonEmpty) s"LOCATION '${options.tablePath.get}'" else ""}
        |  ${ if (property.nonEmpty) "TBLPROPERTIES (" + property + ")" else "" }
        |

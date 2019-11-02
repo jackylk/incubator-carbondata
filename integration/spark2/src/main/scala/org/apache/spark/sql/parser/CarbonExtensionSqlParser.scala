@@ -17,12 +17,12 @@
 
 package org.apache.spark.sql.parser
 
-import org.apache.spark.sql.{CarbonUtils, HideSensitiveInfo, SparkSession}
-import org.apache.spark.sql.catalyst.parser.{AbstractSqlParser, ParserInterface, SqlBaseParser}
+import org.apache.spark.sql.{CarbonUtils, SparkSession}
+import org.apache.spark.sql.catalyst.parser.ParserInterface
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.internal.{SQLConf, VariableSubstitution}
+import org.apache.spark.sql.execution.SparkSqlParser
+import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.util.CarbonException
-import org.apache.spark.util.CarbonReflectionUtils
 
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.spark.util.CarbonScalaUtil
@@ -34,12 +34,9 @@ class CarbonExtensionSqlParser(
     conf: SQLConf,
     sparkSession: SparkSession,
     initialParser: ParserInterface
-) extends AbstractSqlParser {
+) extends SparkSqlParser(conf) {
 
   val parser = new CarbonExtensionSpark2SqlParser
-  val astBuilder = CarbonReflectionUtils.getAstBuilder(conf, parser, sparkSession)
-
-  private val substitutor = new VariableSubstitution(conf)
 
   override def parsePlan(sqlText: String): LogicalPlan = {
     CarbonUtils.updateSessionInfoToCurrentThread(sparkSession)
@@ -52,14 +49,13 @@ class CarbonExtensionSqlParser(
         throw ce
       case ex: Throwable =>
         try {
-          val parsedPlan = super.parsePlan(sqlText)
+          val parsedPlan = initialParser.parsePlan(sqlText)
           CarbonScalaUtil.cleanParserThreadLocals
           parsedPlan
         } catch {
           case mce: MalformedCarbonCommandException =>
             throw mce
           case e: Throwable =>
-            logError("spark parser failure", e)
             CarbonException.analysisException(
               s"""== Parse1 ==
                  |${ex.getMessage}
@@ -68,12 +64,5 @@ class CarbonExtensionSqlParser(
                """.stripMargin.trim)
         }
     }
-  }
-
-  protected override def parse[T](command: String)(toResult: SqlBaseParser => T): T = {
-    val cmd = substitutor.substitute(command)
-    super.setHideInfoEnable(!conf.showCompleteSql &&
-                            new HideSensitiveInfo(conf.sensitiveSqlData).hasSensitiveData(cmd))
-    super.parse(cmd)(toResult)
   }
 }

@@ -18,9 +18,7 @@
 package org.apache.carbondata.mv.rewrite
 
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.execution.datasources.LogicalRelation
-import org.apache.spark.sql.test.util.CarbonQueryTest
+import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
@@ -33,7 +31,7 @@ import org.apache.carbondata.core.statusmanager.{SegmentStatus, SegmentStatusMan
  * Test Class to verify Incremental Load on  MV Datamap
  */
 
-class MVIncrementalLoadingTestcase extends CarbonQueryTest with BeforeAndAfterAll {
+class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
 
   override def beforeAll(): Unit = {
     sql("drop table IF EXISTS test_table")
@@ -130,10 +128,10 @@ class MVIncrementalLoadingTestcase extends CarbonQueryTest with BeforeAndAfterAl
   test("test MV incremental loading with update operation on main table") {
     sql("drop table IF EXISTS main_table")
     sql("drop table IF EXISTS testtable")
-    sql("create table main_table(a string,b string,c int) stored by 'carbondata'")
+    sql("create table main_table(a string,b string,c int) STORED AS carbondata")
     sql("insert into main_table values('a','abc',1)")
     sql("insert into main_table values('b','bcd',2)")
-    sql("create table testtable(a string,b string,c int) stored by 'carbondata'")
+    sql("create table testtable(a string,b string,c int) STORED AS carbondata")
     sql("insert into testtable values('a','abc',1)")
     sql("insert into testtable values('b','bcd',2)")
     sql("drop datamap if exists datamap1")
@@ -239,7 +237,7 @@ class MVIncrementalLoadingTestcase extends CarbonQueryTest with BeforeAndAfterAl
 
   test("test insert overwrite") {
     sql("drop table IF EXISTS test_table")
-    sql("create table test_table(a string,b string,c int) stored by 'carbondata'")
+    sql("create table test_table(a string,b string,c int) STORED AS carbondata")
     sql("insert into test_table values('a','abc',1)")
     sql("insert into test_table values('b','bcd',2)")
     sql("drop datamap if exists datamap1")
@@ -265,19 +263,19 @@ class MVIncrementalLoadingTestcase extends CarbonQueryTest with BeforeAndAfterAl
 
   test("test inner join with mv") {
     sql("drop table if exists products")
-    sql("create table products (product string, amount int) stored by 'carbondata' ")
+    sql("create table products (product string, amount int) STORED AS carbondata ")
     sql(s"load data INPATH '$resourcesPath/products.csv' into table products")
     sql("drop table if exists sales")
-    sql("create table sales (product string, quantity int) stored by 'carbondata'")
+    sql("create table sales (product string, quantity int) STORED AS carbondata")
     sql(s"load data INPATH '$resourcesPath/sales_data.csv' into table sales")
     sql("drop datamap if exists innerjoin")
     sql("Create datamap innerjoin using 'mv'  with deferred rebuild as Select p.product, p.amount, s.quantity, s.product from " +
         "products p, sales s where p.product=s.product")
     sql("drop table if exists products1")
-    sql("create table products1 (product string, amount int) stored by 'carbondata' ")
+    sql("create table products1 (product string, amount int) STORED AS carbondata ")
     sql(s"load data INPATH '$resourcesPath/products.csv' into table products1")
     sql("drop table if exists sales1")
-    sql("create table sales1 (product string, quantity int) stored by 'carbondata'")
+    sql("create table sales1 (product string, quantity int) STORED AS carbondata")
     sql(s"load data INPATH '$resourcesPath/sales_data.csv' into table sales1")
     sql(s"rebuild datamap innerjoin")
     checkAnswer(sql("Select p.product, p.amount, s.quantity from products1 p, sales1 s where p.product=s.product"),
@@ -296,10 +294,10 @@ class MVIncrementalLoadingTestcase extends CarbonQueryTest with BeforeAndAfterAl
   test("test set segments with main table having mv datamap") {
     sql("drop table IF EXISTS main_table")
     sql("drop table IF EXISTS test_table")
-    sql("create table main_table(a string,b string,c int) stored by 'carbondata'")
+    sql("create table main_table(a string,b string,c int) STORED AS carbondata")
     sql("insert into main_table values('a','abc',1)")
     sql("insert into main_table values('b','bcd',2)")
-    sql("create table test_table(a string,b string,c int) stored by 'carbondata'")
+    sql("create table test_table(a string,b string,c int) STORED AS carbondata")
     sql("insert into test_table values('a','abc',1)")
     sql("insert into test_table values('b','bcd',2)")
     sql("drop datamap if exists datamap_mt")
@@ -319,7 +317,7 @@ class MVIncrementalLoadingTestcase extends CarbonQueryTest with BeforeAndAfterAl
 
   test("test set segments with main table having mv datamap before rebuild") {
     sql("drop table IF EXISTS main_table")
-    sql("create table main_table(a string,b string,c int) stored by 'carbondata'")
+    sql("create table main_table(a string,b string,c int) STORED AS carbondata")
     sql("insert into main_table values('a','abc',1)")
     sql("insert into main_table values('b','bcd',2)")
     sql("drop datamap if exists datamap1")
@@ -339,7 +337,7 @@ class MVIncrementalLoadingTestcase extends CarbonQueryTest with BeforeAndAfterAl
 
   test("test datamap table after datamap table compaction- custom") {
     sql("drop table IF EXISTS main_table")
-    sql("create table main_table(a string,b string,c int) stored by 'carbondata'")
+    sql("create table main_table(a string,b string,c int) STORED AS carbondata")
     sql("insert into main_table values('a','abc',1)")
     sql("insert into main_table values('b','bcd',2)")
     sql("drop datamap if exists datamap1")
@@ -368,7 +366,7 @@ class MVIncrementalLoadingTestcase extends CarbonQueryTest with BeforeAndAfterAl
   test("test sum(a) + sum(b)") {
     // Full rebuild will happen in this case
     sql("drop table IF EXISTS main_table")
-    sql("create table main_table(a int,b int,c int) stored by 'carbondata'")
+    sql("create table main_table(a int,b int,c int) STORED AS carbondata")
     sql("insert into main_table values(1,2,3)")
     sql("insert into main_table values(1,4,5)")
     sql("drop datamap if exists datamap_1")
@@ -432,10 +430,10 @@ class MVIncrementalLoadingTestcase extends CarbonQueryTest with BeforeAndAfterAl
   test("test MV incremental loading on non-lazy datamap with update operation on main table") {
     sql("drop table IF EXISTS main_table")
     sql("drop table IF EXISTS testtable")
-    sql("create table main_table(a string,b string,c int) stored by 'carbondata'")
+    sql("create table main_table(a string,b string,c int) STORED AS carbondata")
     sql("insert into main_table values('a','abc',1)")
     sql("insert into main_table values('b','bcd',2)")
-    sql("create table testtable(a string,b string,c int) stored by 'carbondata'")
+    sql("create table testtable(a string,b string,c int) STORED AS carbondata")
     sql("insert into testtable values('a','abc',1)")
     sql("insert into testtable values('b','bcd',2)")
     sql("drop datamap if exists datamap1")
@@ -469,10 +467,10 @@ class MVIncrementalLoadingTestcase extends CarbonQueryTest with BeforeAndAfterAl
   test("test MV incremental loading on non-lazy datamap with delete operation on main table") {
     sql("drop table IF EXISTS main_table")
     sql("drop table IF EXISTS testtable")
-    sql("create table main_table(a string,b string,c int) stored by 'carbondata'")
+    sql("create table main_table(a string,b string,c int) STORED AS carbondata")
     sql("insert into main_table values('a','abc',1)")
     sql("insert into main_table values('b','bcd',2)")
-    sql("create table testtable(a string,b string,c int) stored by 'carbondata'")
+    sql("create table testtable(a string,b string,c int) STORED AS carbondata")
     sql("insert into testtable values('a','abc',1)")
     sql("insert into testtable values('b','bcd',2)")
     sql("drop datamap if exists datamap1")
@@ -505,7 +503,7 @@ class MVIncrementalLoadingTestcase extends CarbonQueryTest with BeforeAndAfterAl
 
   test("test whether datamap table is compacted after main table compaction") {
     sql("drop table IF EXISTS main_table")
-    sql("create table main_table(a string,b string,c int) stored by 'carbondata'")
+    sql("create table main_table(a string,b string,c int) STORED AS carbondata")
     sql("insert into main_table values('a','abc',1)")
     sql("insert into main_table values('b','bcd',2)")
     sql("drop datamap if exists datamap1")
@@ -520,7 +518,7 @@ class MVIncrementalLoadingTestcase extends CarbonQueryTest with BeforeAndAfterAl
 
   test("test delete record when table contains single segment") {
     sql("drop table IF EXISTS main_table")
-    sql("create table main_table(a string,b string,c int) stored by 'carbondata'")
+    sql("create table main_table(a string,b string,c int) STORED AS carbondata")
     sql("insert into main_table values('a','abc',1)")
     sql("drop datamap if exists datamap1")
     sql("create datamap datamap1 using 'mv' as select a, sum(b) from main_table group by a")
@@ -535,7 +533,7 @@ class MVIncrementalLoadingTestcase extends CarbonQueryTest with BeforeAndAfterAl
 
   test("set segments on datamap table") {
     sql("drop table IF EXISTS main_table")
-    sql("create table main_table(a string,b string,c int) stored by 'carbondata'")
+    sql("create table main_table(a string,b string,c int) STORED AS carbondata")
     sql("insert into main_table values('a','abc',1)")
     sql("drop datamap if exists datamap1")
     sql("create datamap datamap1 using 'mv' as select a,b from main_table")
@@ -576,7 +574,7 @@ class MVIncrementalLoadingTestcase extends CarbonQueryTest with BeforeAndAfterAl
          |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
          |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
          |  utilization int,salary int)
-         | STORED BY 'org.apache.carbondata.format' TBLPROPERTIES('AUTO_LOAD_MERGE'='true','COMPACTION_LEVEL_THRESHOLD'='6,0')
+         | STORED AS carbondata TBLPROPERTIES('AUTO_LOAD_MERGE'='true','COMPACTION_LEVEL_THRESHOLD'='6,0')
       """.stripMargin)
     loadDataToFactTable("test_table")
     sql("drop datamap if exists datamap1")
@@ -616,7 +614,7 @@ class MVIncrementalLoadingTestcase extends CarbonQueryTest with BeforeAndAfterAl
          |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
          |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
          |  utilization int,salary int)
-         | STORED BY 'org.apache.carbondata.format'
+         | STORED AS carbondata
       """.stripMargin)
   }
 

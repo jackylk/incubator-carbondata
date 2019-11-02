@@ -16,7 +16,7 @@
  */
 package org.apache.carbondata.integration.spark.testsuite.timeseries.timeseries
 
-import org.apache.spark.sql.test.util.CarbonQueryTest
+import org.apache.spark.sql.test.util.QueryTest
 import org.apache.spark.util.SparkUtil4Test
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.Matchers._
@@ -25,7 +25,7 @@ import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.metadata.schema.datamap.DataMapClassProvider.TIMESERIES
 import org.apache.carbondata.core.util.CarbonProperties
 
-class TestTimeseriesCompaction extends CarbonQueryTest with BeforeAndAfterAll {
+class TestTimeseriesCompaction extends QueryTest with BeforeAndAfterAll {
 
   var isCompactionEnabled = false
   val timeSeries = TIMESERIES.toString
@@ -40,7 +40,7 @@ class TestTimeseriesCompaction extends CarbonQueryTest with BeforeAndAfterAll {
     CarbonProperties.getInstance()
       .addProperty(CarbonCommonConstants.ENABLE_AUTO_LOAD_MERGE, "true")
     sql("drop table if exists mainTable")
-    sql("CREATE TABLE mainTable(mytime timestamp, name string, age int) STORED BY 'org.apache.carbondata.format'")
+    sql("CREATE TABLE mainTable(mytime timestamp, name string, age int) STORED AS carbondata")
     sql(
       s"""
          | CREATE DATAMAP agg0_second ON TABLE mainTable

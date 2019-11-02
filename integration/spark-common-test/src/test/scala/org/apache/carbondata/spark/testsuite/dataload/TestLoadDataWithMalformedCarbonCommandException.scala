@@ -29,7 +29,7 @@ class TestLoadDataWithMalformedCarbonCommandException extends QueryTest with Bef
     sql("drop table if exists TestLoadTableOptions")
     sql("drop table if exists t3")
     sql("CREATE table TestLoadTableOptions (ID int, date String, country String, name String," +
-        "phonetype String, serialname String, salary int) stored by 'org.apache.carbondata.format'")
+        "phonetype String, serialname String, salary int) STORED AS carbondata")
   }
 
   override def afterAll {
@@ -43,7 +43,7 @@ class TestLoadDataWithMalformedCarbonCommandException extends QueryTest with Bef
            CREATE TABLE IF NOT EXISTS t3
            (ID Int, date Timestamp, country String,
            name String, phonetype String, serialname String, salary Int)
-           STORED BY 'org.apache.carbondata.format'
+           STORED AS carbondata
            TBLPROPERTIES('DICTIONARY_EXCLUDE'='country,phonetype,CCC')
         """)
   }
@@ -54,7 +54,7 @@ class TestLoadDataWithMalformedCarbonCommandException extends QueryTest with Bef
            CREATE TABLE IF NOT EXISTS t3
            (ID Int, date Timestamp, country String,
            name String, phonetype String, serialname String, salary Int)
-           STORED BY 'org.apache.carbondata.format'
+           STORED AS carbondata
            TBLPROPERTIES('DICTIONARY_INCLUDE'='AAA,country')
         """)
   }
@@ -65,7 +65,7 @@ class TestLoadDataWithMalformedCarbonCommandException extends QueryTest with Bef
            CREATE TABLE IF NOT EXISTS t3
            (ID Int, date Timestamp, country String,
            name String, phonetype String, serialname String, salary Int)
-           STORED BY 'org.apache.carbondata.format'
+           STORED AS carbondata
            TBLPROPERTIES('DICTIONARY_INCLUDE'='country','DICTIONARY_EXCLUDE'='country')
         """)
   }
@@ -76,7 +76,7 @@ class TestLoadDataWithMalformedCarbonCommandException extends QueryTest with Bef
            CREATE TABLE IF NOT EXISTS t3
            (ID Int, date Timestamp, country String,
            name String, phonetype String, serialname String, salary Int)
-           STORED BY 'org.apache.carbondata.format'
+           STORED AS carbondata
            TBLPROPERTIES('DICTIONARY_INCLUDE'='country','DICTIONARY_EXCLUDE'='country ')
       """)
   }

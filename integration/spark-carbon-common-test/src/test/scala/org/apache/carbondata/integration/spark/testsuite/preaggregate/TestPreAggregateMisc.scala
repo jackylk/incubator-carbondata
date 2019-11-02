@@ -17,16 +17,16 @@
 package org.apache.carbondata.integration.spark.testsuite.preaggregate
 
 import org.apache.spark.sql.{CarbonEnv, Row}
-import org.apache.spark.sql.test.util.CarbonQueryTest
+import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.{BeforeAndAfterAll, Ignore}
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 
 @Ignore
-class TestPreAggregateMisc extends CarbonQueryTest with BeforeAndAfterAll {
+class TestPreAggregateMisc extends QueryTest with BeforeAndAfterAll {
   override def beforeAll: Unit = {
     sql("drop table if exists mainTable")
-    sql("CREATE TABLE mainTable(id int, name string, city string, age string) STORED BY 'org.apache.carbondata.format'")
+    sql("CREATE TABLE mainTable(id int, name string, city string, age string) STORED AS carbondata")
     sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/measureinsertintotest.csv' into table mainTable")
     sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/measureinsertintotest.csv' into table mainTable")
   }
@@ -46,7 +46,7 @@ class TestPreAggregateMisc extends CarbonQueryTest with BeforeAndAfterAll {
   test("check preagg tbl properties sort columns inherit from main tbl") {
     sql("drop table if exists y ")
     sql(
-      "create table y(year int,month int,name string,salary int) stored by 'carbondata' " +
+      "create table y(year int,month int,name string,salary int) STORED AS carbondata " +
       "tblproperties('NO_INVERTED_INDEX'='name','sort_scope'='Global_sort'," +
       "'table_blocksize'='23','Dictionary_include'='month','Dictionary_exclude'='year,name'," +
       "'sort_columns'='month,year,name')")

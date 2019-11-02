@@ -22,8 +22,8 @@ import java.io.{File, FilenameFilter}
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.test.util.CarbonQueryTest
-import org.scalatest.{BeforeAndAfterAll, Ignore}
+import org.apache.spark.sql.test.util.QueryTest
+import org.scalatest.BeforeAndAfterAll
 
 import org.apache.carbondata.common.exceptions.MetadataProcessException
 import org.apache.carbondata.common.exceptions.sql.{MalformedCarbonCommandException, MalformedDataMapCommandException, NoSuchDataMapException}
@@ -34,7 +34,7 @@ import org.apache.carbondata.core.metadata.{CarbonMetadata, SegmentFileStore}
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.core.util.path.CarbonTablePath
 
-class TestDataMapCommand extends CarbonQueryTest with BeforeAndAfterAll {
+class TestDataMapCommand extends QueryTest with BeforeAndAfterAll {
 
   val testData = s"$resourcesPath/sample.csv"
 
@@ -42,7 +42,7 @@ class TestDataMapCommand extends CarbonQueryTest with BeforeAndAfterAll {
     sql("drop table if exists datamaptest")
     sql("drop table if exists datamapshowtest")
     sql("drop table if exists uniqdata")
-    sql("create table datamaptest (a string, b string, c string) stored by 'carbondata'")
+    sql("create table datamaptest (a string, b string, c string) STORED AS carbondata")
   }
 
   val newClass = "org.apache.spark.sql.CarbonSource"
@@ -84,7 +84,7 @@ class TestDataMapCommand extends CarbonQueryTest with BeforeAndAfterAll {
         .addProperty(CarbonCommonConstants.ENABLE_HIVE_SCHEMA_META_STORE,
           "true")
       sql("drop table if exists hiveMetaStoreTable")
-      sql("create table hiveMetaStoreTable (a string, b string, c string) stored by 'carbondata'")
+      sql("create table hiveMetaStoreTable (a string, b string, c string) STORED AS carbondata")
 
       sql(
         "create datamap datamap_hiveMetaStoreTable on table hiveMetaStoreTable using 'preaggregate' as select count(a) from hiveMetaStoreTable")
@@ -107,7 +107,7 @@ class TestDataMapCommand extends CarbonQueryTest with BeforeAndAfterAll {
         .addProperty(CarbonCommonConstants.ENABLE_HIVE_SCHEMA_META_STORE,
           "true")
       sql("drop table if exists hiveMetaStoreTable_1")
-      sql("create table hiveMetaStoreTable_1 (a string, b string, c string) stored by 'carbondata'")
+      sql("create table hiveMetaStoreTable_1 (a string, b string, c string) STORED AS carbondata")
 
       sql(
         "create datamap datamap_hiveMetaStoreTable_1 on table hiveMetaStoreTable_1 using 'preaggregate' as select count(a) from hiveMetaStoreTable_1")
@@ -166,7 +166,7 @@ class TestDataMapCommand extends CarbonQueryTest with BeforeAndAfterAll {
   test("test show datamap without preaggregate: don't support using non-exist class") {
     intercept[MetadataProcessException] {
       sql("drop table if exists datamapshowtest")
-      sql("create table datamapshowtest (a string, b string, c string) stored by 'carbondata'")
+      sql("create table datamapshowtest (a string, b string, c string) STORED AS carbondata")
       sql(s"CREATE DATAMAP datamap1 ON TABLE datamapshowtest USING '$newClass' ")
       sql(s"CREATE DATAMAP datamap2 ON TABLE datamapshowtest USING '$newClass' ")
       checkExistence(sql("SHOW DATAMAP ON TABLE datamapshowtest"), true, "datamap1", "datamap2", "(NA)", newClass)
@@ -176,7 +176,7 @@ class TestDataMapCommand extends CarbonQueryTest with BeforeAndAfterAll {
   test("test show datamap with preaggregate: don't support using non-exist class") {
     intercept[MetadataProcessException] {
       sql("drop table if exists datamapshowtest")
-      sql("create table datamapshowtest (a string, b string, c string) stored by 'carbondata'")
+      sql("create table datamapshowtest (a string, b string, c string) STORED AS carbondata")
       sql("create datamap datamap1 on table datamapshowtest using 'preaggregate' as select count(a) from datamapshowtest")
       sql(s"CREATE DATAMAP datamap2 ON TABLE datamapshowtest USING '$newClass' ")
       val frame = sql("show datamap on table datamapshowtest")
@@ -187,14 +187,14 @@ class TestDataMapCommand extends CarbonQueryTest with BeforeAndAfterAll {
 
   test("test show datamap with no datamap") {
     sql("drop table if exists datamapshowtest")
-    sql("create table datamapshowtest (a string, b string, c string) stored by 'carbondata'")
+    sql("create table datamapshowtest (a string, b string, c string) STORED AS carbondata")
     assert(sql("show datamap on table datamapshowtest").collect().length == 0)
   }
 
   test("test show datamap after dropping datamap: don't support using non-exist class") {
     intercept[MetadataProcessException] {
       sql("drop table if exists datamapshowtest")
-      sql("create table datamapshowtest (a string, b string, c string) stored by 'carbondata'")
+      sql("create table datamapshowtest (a string, b string, c string) STORED AS carbondata")
       sql("create datamap datamap1 on table datamapshowtest using 'preaggregate' as select count(a) from datamapshowtest")
       sql(s"CREATE DATAMAP datamap2 ON TABLE datamapshowtest USING '$newClass' ")
       sql("drop datamap datamap1 on table datamapshowtest")
@@ -211,7 +211,7 @@ class TestDataMapCommand extends CarbonQueryTest with BeforeAndAfterAll {
     val datamapName3 = "bloomdatamap3"
     sql(s"drop table if exists $tableName")
     // for index datamap
-    sql(s"create table $tableName (a string, b string, c string) stored by 'carbondata'")
+    sql(s"create table $tableName (a string, b string, c string) STORED AS carbondata")
     sql(
       s"""
          | create datamap $datamapName on table $tableName using 'bloomfilter'
@@ -236,7 +236,7 @@ class TestDataMapCommand extends CarbonQueryTest with BeforeAndAfterAll {
     sql(s"drop table if exists $tableName")
 
     // for timeseries datamap
-    sql(s"CREATE TABLE $tableName(mytime timestamp, name string, age int) STORED BY 'org.apache.carbondata.format'")
+    sql(s"CREATE TABLE $tableName(mytime timestamp, name string, age int) STORED AS carbondata")
     sql(
       s"""
          | CREATE DATAMAP agg0_hour ON TABLE $tableName
@@ -253,7 +253,7 @@ class TestDataMapCommand extends CarbonQueryTest with BeforeAndAfterAll {
 
     // for preaggreate datamap, the property is empty
     sql(s"CREATE TABLE $tableName(id int, name string, city string, age string)" +
-        s" STORED BY 'org.apache.carbondata.format'")
+        s" STORED AS carbondata")
     sql (
       s"""
          | CREATE DATAMAP agg0 ON TABLE $tableName USING 'preaggregate' AS
@@ -272,7 +272,7 @@ class TestDataMapCommand extends CarbonQueryTest with BeforeAndAfterAll {
         val datamapName2 = "bloomdatamap2"
         sql(s"drop table if exists $tableName")
         // for index datamap
-        sql(s"create table $tableName (a string, b string, c string, d binary, e binary) stored by 'carbondata'")
+        sql(s"create table $tableName (a string, b string, c string, d binary, e binary) STORED AS carbondata")
 
         sql(s"insert into $tableName  values('a1','b1','c1','d1','e1')")
         sql(s"insert into $tableName  values('a1','b2','c2','d1','e2')")
@@ -332,7 +332,7 @@ class TestDataMapCommand extends CarbonQueryTest with BeforeAndAfterAll {
         sql(s"drop table if exists $tableName")
 
         // for timeseries datamap
-        sql(s"CREATE TABLE $tableName(mytime timestamp, name string, age int, image binary) STORED BY 'org.apache.carbondata.format'")
+        sql(s"CREATE TABLE $tableName(mytime timestamp, name string, age int, image binary) STORED AS carbondata")
         val e = intercept[MalformedCarbonCommandException] {
             sql(
                 s"""
@@ -354,7 +354,7 @@ class TestDataMapCommand extends CarbonQueryTest with BeforeAndAfterAll {
 
         // for preaggreate datamap, the property is empty
         sql(s"CREATE TABLE $tableName(id int, name string, city string, age string, image binary)" +
-                s" STORED BY 'org.apache.carbondata.format'")
+                s" STORED AS carbondata")
 
         sql(s"insert into $tableName  values(1,'a3','b3','c1','image2')")
         sql(s"insert into $tableName  values(2,'a3','b2','c2','image2')")
@@ -406,7 +406,7 @@ class TestDataMapCommand extends CarbonQueryTest with BeforeAndAfterAll {
                |    name string,
                |    binaryField binary,
                |    image boolean)
-               | STORED BY 'carbondata'
+               | STORED AS carbondata
              """.stripMargin)
         sql(
             s"""
@@ -454,7 +454,7 @@ class TestDataMapCommand extends CarbonQueryTest with BeforeAndAfterAll {
         sql(s"drop table if exists $tableName")
 
         sql(s"CREATE TABLE $tableName(id int, name string, city string, age string, image binary)" +
-                s" STORED BY 'org.apache.carbondata.format'")
+                s" STORED AS carbondata")
 
         sql(s"insert into $tableName  values(1,'a3','b3','c1','image2')")
         sql(s"insert into $tableName  values(2,'a3','b2','c2','image2')")
@@ -505,7 +505,7 @@ class TestDataMapCommand extends CarbonQueryTest with BeforeAndAfterAll {
             sql(
                 """
                   | CREATE TABLE maintable(id int, name string, city string, age int)
-                  | STORED BY 'org.apache.carbondata.format'
+                  | STORED AS carbondata
                 """.stripMargin)
             sql(
                 s"""create datamap preagg_sum on table maintable using 'preaggregate' as select id,sum(age) from maintable group by id"""
@@ -523,7 +523,7 @@ class TestDataMapCommand extends CarbonQueryTest with BeforeAndAfterAll {
 
   test("test preaggregate load for decimal column for hivemetastore") {
     CarbonProperties.getInstance().addProperty(CarbonCommonConstants.ENABLE_HIVE_SCHEMA_META_STORE, "true")
-    sql("CREATE TABLE uniqdata(CUST_ID int,CUST_NAME String,ACTIVE_EMUI_VERSION string,DOB timestamp,DOJ timestamp, BIGINT_COLUMN1 bigint,BIGINT_COLUMN2 bigint,DECIMAL_COLUMN1 decimal(30,10),DECIMAL_COLUMN2 decimal(36,10),Double_COLUMN1 double, Double_COLUMN2 double,INTEGER_COLUMN1 int) STORED BY 'org.apache.carbondata.format'")
+    sql("CREATE TABLE uniqdata(CUST_ID int,CUST_NAME String,ACTIVE_EMUI_VERSION string,DOB timestamp,DOJ timestamp, BIGINT_COLUMN1 bigint,BIGINT_COLUMN2 bigint,DECIMAL_COLUMN1 decimal(30,10),DECIMAL_COLUMN2 decimal(36,10),Double_COLUMN1 double, Double_COLUMN2 double,INTEGER_COLUMN1 int) STORED AS carbondata")
     sql("insert into uniqdata select 9000,'CUST_NAME_00000','ACTIVE_EMUI_VERSION_00000','1970-01-01 01:00:03','1970-01-01 02:00:03',123372036854,-223372036854,12345678901.1234000000,22345678901.1234000000,11234567489.7976000000,-11234567489.7976000000,1")
     sql("create datamap uniqdata_agg on table uniqdata using 'preaggregate' as select min(DECIMAL_COLUMN1) from uniqdata group by DECIMAL_COLUMN1")
     checkAnswer(sql("select * from uniqdata_uniqdata_agg"), Seq(Row(12345678901.1234000000, 12345678901.1234000000)))
@@ -542,7 +542,7 @@ class TestDataMapCommand extends CarbonQueryTest with BeforeAndAfterAll {
          |     month int,
          |     name string,
          |     salary int)
-         | stored by 'carbondata'
+         | STORED AS carbondata
          | tblproperties('sort_columns'='month,year,name')
       """.stripMargin)
     sql("insert into main select 10,11,'amy',12")

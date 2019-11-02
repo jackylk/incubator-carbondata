@@ -90,7 +90,7 @@ class TestPreAggregateLoad extends CarbonSparkQueryTest with BeforeAndAfterAll w
     sql(
       """
         | CREATE TABLE maintable(id int, name string, city string, age int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     createAllAggregateTables("maintable")
     sql(s"LOAD DATA LOCAL INPATH '$testData' into table maintable")
@@ -112,7 +112,7 @@ class TestPreAggregateLoad extends CarbonSparkQueryTest with BeforeAndAfterAll w
     sql(
       """
         | CREATE TABLE maintable(id int, name string, city string, age int)
-        | STORED BY 'org.apache.carbondata.format' TBLPROPERTIES('dictionary_include'='id')
+        | STORED AS carbondata TBLPROPERTIES('dictionary_include'='id')
       """.stripMargin)
     createAllAggregateTables("maintable")
     sql(s"LOAD DATA LOCAL INPATH '$testData' into table maintable")
@@ -134,7 +134,7 @@ class TestPreAggregateLoad extends CarbonSparkQueryTest with BeforeAndAfterAll w
     sql(
       """
         | CREATE TABLE maintable(id int, name string, city string, age int)
-        | STORED BY 'org.apache.carbondata.format' TBLPROPERTIES('dictionary_include'='id')
+        | STORED AS carbondata TBLPROPERTIES('dictionary_include'='id')
       """.stripMargin)
     createAllAggregateTables("maintable")
     sql(s"LOAD DATA LOCAL INPATH '$testData' into table maintable options('single_pass'='true')")
@@ -156,7 +156,7 @@ class TestPreAggregateLoad extends CarbonSparkQueryTest with BeforeAndAfterAll w
     sql(
       """
         | CREATE TABLE maintable(id int, name string, city string, age int)
-        | STORED BY 'org.apache.carbondata.format' TBLPROPERTIES('dictionary_include'='id')
+        | STORED AS carbondata TBLPROPERTIES('dictionary_include'='id')
       """.stripMargin)
     createAllAggregateTables("maintable")
     sql(s"LOAD DATA LOCAL INPATH '$testData' into table maintable")
@@ -206,7 +206,7 @@ class TestPreAggregateLoad extends CarbonSparkQueryTest with BeforeAndAfterAll w
     sql(
       """
         | CREATE TABLE maintable(id int, name string, city string, age int)
-        | STORED BY 'org.apache.carbondata.format' TBLPROPERTIES('dictionary_include'='id')
+        | STORED AS carbondata TBLPROPERTIES('dictionary_include'='id')
       """.stripMargin)
     sql(
       s"""create datamap preagg_sum on table maintable using 'preaggregate' as select id,sum(age) from maintable group by id"""
@@ -221,7 +221,7 @@ class TestPreAggregateLoad extends CarbonSparkQueryTest with BeforeAndAfterAll w
     sql(
       """
         | CREATE TABLE maintable(id int, name string, city string, age int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"insert into maintable values(1, 'xyz', 'bengaluru', 26)")
     sql(s"insert into maintable values(1, 'xyz', 'bengaluru', 26)")
@@ -239,7 +239,7 @@ class TestPreAggregateLoad extends CarbonSparkQueryTest with BeforeAndAfterAll w
     sql(
       """
         | CREATE TABLE maintable(id int, name string, city string, age int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(
       s"""create datamap preagg_sum on table maintable using 'preaggregate' as select id, sum(age) from maintable group by id"""
@@ -254,7 +254,7 @@ class TestPreAggregateLoad extends CarbonSparkQueryTest with BeforeAndAfterAll w
     val originalBadRecordsAction = CarbonProperties.getInstance().getProperty(CarbonCommonConstants.CARBON_BAD_RECORDS_ACTION)
     CarbonProperties.getInstance().addProperty(CarbonCommonConstants.CARBON_BAD_RECORDS_ACTION, "FAIL")
     sql("drop table if exists y ")
-    sql("create table y(year int,month int,name string,salary int) stored by 'carbondata'")
+    sql("create table y(year int,month int,name string,salary int) STORED AS carbondata")
     sql("insert into y select 10,11,'babu',12")
     sql("create datamap y1_sum1 on table y using 'preaggregate' as select year,name,sum(salary) from y group by year,name")
     CarbonProperties.getInstance().addProperty(CarbonCommonConstants.CARBON_BAD_RECORDS_ACTION, originalBadRecordsAction)
@@ -265,7 +265,7 @@ class TestPreAggregateLoad extends CarbonSparkQueryTest with BeforeAndAfterAll w
     sql(
       """
         | CREATE TABLE maintable(id int, city string, age int) partitioned by(name string)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     createAllAggregateTables("maintable")
     sql(s"LOAD DATA LOCAL INPATH '$testData' into table maintable")
@@ -287,7 +287,7 @@ class TestPreAggregateLoad extends CarbonSparkQueryTest with BeforeAndAfterAll w
     sql(
       """
         | CREATE TABLE maintable(id int, name string, city string, age int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"insert into maintable values(1, 'xyz', 'bengaluru', 26)")
     sql(s"insert into maintable values(1, 'xyz', 'bengaluru', 26)")
@@ -309,7 +309,7 @@ class TestPreAggregateLoad extends CarbonSparkQueryTest with BeforeAndAfterAll w
     sql(
       """
         | CREATE TABLE maintable(id int, name string, city string, age int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(
       s"""create datamap preagg_sum on table maintable using 'preaggregate' as select id, sum(age) from maintable group by id,name"""
@@ -329,7 +329,7 @@ class TestPreAggregateLoad extends CarbonSparkQueryTest with BeforeAndAfterAll w
 
 test("check load and select for avg double datatype") {
   sql("drop table if exists maintbl ")
-  sql("create table maintbl(year int,month int,name string,salary double) stored by 'carbondata' tblproperties('sort_scope'='Global_sort','table_blocksize'='23','sort_columns'='month,year,name')")
+  sql("create table maintbl(year int,month int,name string,salary double) STORED AS carbondata tblproperties('sort_scope'='Global_sort','table_blocksize'='23','sort_columns'='month,year,name')")
   sql("insert into maintbl select 10,11,'babu',12.89")
   sql("insert into maintbl select 10,11,'babu',12.89")
   sql("create datamap maintbl_double on table maintbl using 'preaggregate' as select name,avg(salary) from maintbl group by name")
@@ -338,7 +338,7 @@ test("check load and select for avg double datatype") {
 
   test("check load and select for avg int datatype") {
     sql("drop table if exists maintbl ")
-    sql("create table maintbl(year int,month int,name string,salary int) stored by 'carbondata' tblproperties('sort_scope'='Global_sort','table_blocksize'='23','sort_columns'='month,year,name')")
+    sql("create table maintbl(year int,month int,name string,salary int) STORED AS carbondata tblproperties('sort_scope'='Global_sort','table_blocksize'='23','sort_columns'='month,year,name')")
     sql("insert into maintbl select 10,11,'babu',12")
     sql("insert into maintbl select 10,11,'babu',12")
     sql("create datamap maintbl_double on table maintbl using 'preaggregate' as select name,avg(salary) from maintbl group by name")
@@ -347,7 +347,7 @@ test("check load and select for avg double datatype") {
 
   test("check load and select for avg bigint datatype") {
     sql("drop table if exists maintbl ")
-    sql("create table maintbl(year int,month int,name string,salary bigint) stored by 'carbondata' tblproperties('sort_scope'='Global_sort','table_blocksize'='23','sort_columns'='month,year,name')")
+    sql("create table maintbl(year int,month int,name string,salary bigint) STORED AS carbondata tblproperties('sort_scope'='Global_sort','table_blocksize'='23','sort_columns'='month,year,name')")
     sql("insert into maintbl select 10,11,'babu',12")
     sql("insert into maintbl select 10,11,'babu',12")
     sql("create datamap maintbl_double on table maintbl using 'preaggregate' as select name,avg(salary) from maintbl group by name")
@@ -356,7 +356,7 @@ test("check load and select for avg double datatype") {
 
   test("check load and select for avg short datatype") {
     sql("drop table if exists maintbl ")
-    sql("create table maintbl(year int,month int,name string,salary short) stored by 'carbondata' tblproperties('sort_scope'='Global_sort','table_blocksize'='23','sort_columns'='month,year,name')")
+    sql("create table maintbl(year int,month int,name string,salary short) STORED AS carbondata tblproperties('sort_scope'='Global_sort','table_blocksize'='23','sort_columns'='month,year,name')")
     sql("insert into maintbl select 10,11,'babu',12")
     sql("insert into maintbl select 10,11,'babu',12")
     sql("create datamap maintbl_double on table maintbl using 'preaggregate' as select name,avg(salary) from maintbl group by name")
@@ -365,7 +365,7 @@ test("check load and select for avg double datatype") {
 
   test("check load and select for avg float datatype") {
     sql("drop table if exists maintbl ")
-    sql("create table maintbl(year int,month int,name string,salary float) stored by 'carbondata' tblproperties('sort_scope'='Global_sort','table_blocksize'='23','sort_columns'='month,year,name')")
+    sql("create table maintbl(year int,month int,name string,salary float) STORED AS carbondata tblproperties('sort_scope'='Global_sort','table_blocksize'='23','sort_columns'='month,year,name')")
     sql("insert into maintbl select 10,11,'babu',12")
     sql("insert into maintbl select 10,11,'babu',12")
     val rows = sql("select name,avg(salary) from maintbl group by name").collect()
@@ -378,7 +378,7 @@ test("check load and select for avg double datatype") {
     sql(
       """
         | CREATE TABLE maintable(id int, name string, city string, age int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"LOAD DATA LOCAL INPATH '$testData' into table maintable")
     sql(
@@ -409,7 +409,7 @@ test("check load and select for avg double datatype") {
     sql(
       """
         | CREATE TABLE maintable(id int, name string, city string, age int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
 
     sql(
@@ -440,7 +440,7 @@ test("check load and select for avg double datatype") {
     sql(
       """
         | CREATE TABLE maintable(id int, name string, city string, age int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"LOAD DATA LOCAL INPATH '$testData' into table maintable")
     sql(
@@ -470,7 +470,7 @@ test("check load and select for avg double datatype") {
 
   test("check load and select for avg int datatype and group by") {
     sql("drop table if exists maintable ")
-    sql("CREATE TABLE maintable(id int, city string, age int) stored by 'carbondata'")
+    sql("CREATE TABLE maintable(id int, city string, age int) STORED AS carbondata")
     sql(s"LOAD DATA LOCAL INPATH '$testData' into table maintable")
     sql(s"LOAD DATA LOCAL INPATH '$testData' into table maintable")
     sql(s"LOAD DATA LOCAL INPATH '$testData' into table maintable")
@@ -488,7 +488,7 @@ test("check load and select for avg double datatype") {
         |     name STRING,
         |     city STRING,
         |     age STRING)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     createAllAggregateTables("main_table")
 
@@ -565,7 +565,7 @@ test("check load and select for avg double datatype") {
         |     name STRING,
         |     city STRING,
         |     age STRING)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     createAllAggregateTables("main_table", "name")
     sql(s"LOAD DATA LOCAL INPATH '$testData' INTO TABLE main_table")
@@ -643,7 +643,7 @@ test("check load and select for avg double datatype") {
         |     name STRING,
         |     city STRING,
         |     age INT)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"INSERT INTO segmaintable VALUES(1, 'xyz', 'bengaluru', 26)")
 
@@ -677,7 +677,7 @@ test("check load and select for avg double datatype") {
         |     name STRING,
         |     city STRING,
         |     age INT)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"INSERT INTO segmaintable VALUES(1, 'xyz', 'bengaluru', 26)")
 
@@ -710,7 +710,7 @@ test("check load and select for avg double datatype") {
         |     name STRING,
         |     city STRING,
         |     age INT)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"INSERT INTO segmaintable VALUES(1, 'xyz', 'bengaluru', 26)")
     sql(s"INSERT INTO segmaintable VALUES(1, 'xyz', 'bengaluru', 26)")
@@ -762,7 +762,7 @@ test("check load and select for avg double datatype") {
         |     name STRING,
         |     city STRING,
         |     age INT)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"INSERT INTO segmaintable VALUES(1, 'xyz', 'bengaluru', 26)")
     sql("set carbon.input.segments.default.segmaintable=0")
@@ -819,7 +819,7 @@ test("check load and select for avg double datatype") {
         |     name STRING,
         |     city STRING,
         |     age INT)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"INSERT INTO segmaintable VALUES(1, 'xyz', 'bengaluru', 26)")
     sql(s"INSERT INTO segmaintable VALUES(1, 'xyz', 'bengaluru', 26)")
@@ -870,7 +870,7 @@ test("check load and select for avg double datatype") {
         |     name STRING,
         |     city STRING,
         |     age INT)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"INSERT INTO segmaintable VALUES(1, 'xyz', 'bengaluru', 26)")
     sql(s"INSERT INTO segmaintable VALUES(1, 'xyz', 'bengaluru', 26)")
@@ -915,7 +915,7 @@ test("check load and select for avg double datatype") {
         |     name STRING,
         |     city STRING,
         |     age INT)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"INSERT INTO main_table VALUES(1, 'xyz', 'bengaluru', 26)")
     sql(s"INSERT INTO main_table VALUES(1, 'xyz', 'bengaluru', 26)")
@@ -961,7 +961,7 @@ test("check load and select for avg double datatype") {
         |     name STRING,
         |     city STRING,
         |     age INT)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
 
     sql(s"INSERT INTO main_table VALUES(1, 'xyz', 'bengaluru', 26)")
@@ -1007,7 +1007,7 @@ test("check load and select for avg double datatype") {
     sql(
       s"""
         | CREATE TABLE $baseTable(id int, name string, city string, age int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     val deferredRebuildException = intercept[MalformedDataMapCommandException] {
       sql(

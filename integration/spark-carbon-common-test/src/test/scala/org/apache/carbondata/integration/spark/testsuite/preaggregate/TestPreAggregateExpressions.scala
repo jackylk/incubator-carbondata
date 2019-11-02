@@ -21,14 +21,14 @@ import org.apache.spark.sql.{CarbonDatasourceHadoopRelation, Row}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.hive.CarbonRelation
-import org.apache.spark.sql.test.util.CarbonQueryTest
+import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
 
-class TestPreAggregateExpressions extends CarbonQueryTest with BeforeAndAfterAll {
+class TestPreAggregateExpressions extends QueryTest with BeforeAndAfterAll {
 
   override def beforeAll: Unit = {
     sql("DROP TABLE IF EXISTS mainTable")
-    sql("CREATE TABLE mainTable(id int, name string, city string, age string) STORED BY 'org.apache.carbondata.format'")
+    sql("CREATE TABLE mainTable(id int, name string, city string, age string) STORED AS carbondata")
     sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/measureinsertintotest.csv' into table mainTable")
   }
 
@@ -166,7 +166,7 @@ class TestPreAggregateExpressions extends CarbonQueryTest with BeforeAndAfterAll
 
   test("Test Pre_aggregate with decimal column with order by") {
     sql("drop table if exists maintable")
-    sql("create table maintable(name string, decimal_col decimal(30,16)) stored by 'carbondata'")
+    sql("create table maintable(name string, decimal_col decimal(30,16)) STORED AS carbondata")
     sql("insert into table maintable select 'abc',452.564")
     sql(
       "create datamap ag1 on table maintable using 'preaggregate' as select name,avg(decimal_col)" +

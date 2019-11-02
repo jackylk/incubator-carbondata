@@ -26,7 +26,7 @@ import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream
 import org.apache.hadoop.conf.Configuration
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
-import org.apache.spark.sql.test.util.CarbonQueryTest
+import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
 
 import org.apache.carbondata.core.datamap.{DataMapDistributable, DataMapMeta, Segment}
@@ -429,7 +429,7 @@ class FGDataMapWriter(carbonTable: CarbonTable,
   }
 }
 
-class FGDataMapTestCase extends CarbonQueryTest with BeforeAndAfterAll {
+class FGDataMapTestCase extends QueryTest with BeforeAndAfterAll {
 
   val file2 = resourcesPath + "/compaction/fil2.csv"
 
@@ -443,7 +443,7 @@ class FGDataMapTestCase extends CarbonQueryTest with BeforeAndAfterAll {
     sql(
       """
         | CREATE TABLE normal_test(id INT, name STRING, city STRING, age INT)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
         | TBLPROPERTIES('SORT_COLUMNS'='city,name', 'SORT_SCOPE'='LOCAL_SORT')
       """.stripMargin)
     sql(s"LOAD DATA LOCAL INPATH '$file2' INTO TABLE normal_test OPTIONS('header'='false')")
@@ -454,7 +454,7 @@ class FGDataMapTestCase extends CarbonQueryTest with BeforeAndAfterAll {
     sql(
       """
         | CREATE TABLE datamap_test(id INT, name STRING, city STRING, age INT)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
         | TBLPROPERTIES('SORT_COLUMNS'='city,name', 'SORT_SCOPE'='LOCAL_SORT')
       """.stripMargin)
     val table = CarbonMetadata.getInstance().getCarbonTable("default_datamap_test")
@@ -475,7 +475,7 @@ class FGDataMapTestCase extends CarbonQueryTest with BeforeAndAfterAll {
     sql(
       """
         | CREATE TABLE datamap_test(id INT, name STRING, city STRING, age INT)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
         | TBLPROPERTIES('SORT_COLUMNS'='city,name', 'SORT_SCOPE'='LOCAL_SORT')
       """.stripMargin)
     val table = CarbonMetadata.getInstance().getCarbonTable("default_datamap_test")
@@ -507,7 +507,7 @@ class FGDataMapTestCase extends CarbonQueryTest with BeforeAndAfterAll {
     sql(
       s"""
          | CREATE TABLE $tableName(id INT, name STRING, city STRING, age INT)
-         | STORED BY 'org.apache.carbondata.format'
+         | STORED AS carbondata
          | TBLPROPERTIES('SORT_COLUMNS'='city,name', 'SORT_SCOPE'='LOCAL_SORT')
       """.stripMargin)
     // register datamap writer

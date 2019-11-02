@@ -23,13 +23,11 @@ import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.metadata.CarbonMetadata
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.core.util.path.CarbonTablePath
-
-import org.apache.spark.sql.test.util.CarbonQueryTest
-
+import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
 class CarbonIndexFileMergeTestCase
-  extends CarbonQueryTest with BeforeAndAfterEach with BeforeAndAfterAll {
+  extends QueryTest with BeforeAndAfterEach with BeforeAndAfterAll {
   val file2 = resourcesPath + "/compaction/fil2.csv"
 
   override protected def beforeAll(): Unit = {
@@ -54,7 +52,7 @@ class CarbonIndexFileMergeTestCase
     sql(
       """
         | CREATE TABLE preAggTable(id INT, name STRING, city STRING, age INT)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
         | TBLPROPERTIES('SORT_COLUMNS'='city,name')
       """.stripMargin)
     sql(s"LOAD DATA LOCAL INPATH '$file2' INTO TABLE preAggTable OPTIONS('header'='false')")

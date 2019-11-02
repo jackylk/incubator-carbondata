@@ -22,7 +22,7 @@ import java.util
 import scala.collection.JavaConverters._
 
 import org.apache.spark.sql.{DataFrame, SaveMode}
-import org.apache.spark.sql.test.util.CarbonQueryTest
+import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
@@ -94,7 +94,7 @@ class C2DataMapFactory(
   }
 }
 
-class DataMapWriterSuite extends CarbonQueryTest with BeforeAndAfterAll {
+class DataMapWriterSuite extends QueryTest with BeforeAndAfterAll {
   def buildTestData(numRows: Int): DataFrame = {
     import sqlContext.implicits._
     sqlContext.sparkContext.parallelize(1 to numRows, 1)
@@ -112,7 +112,7 @@ class DataMapWriterSuite extends CarbonQueryTest with BeforeAndAfterAll {
   }
 
   test("test write datamap 2 pages") {
-    sql(s"CREATE TABLE carbon1(c1 STRING, c2 STRING, c3 INT) STORED BY 'org.apache.carbondata.format'")
+    sql(s"CREATE TABLE carbon1(c1 STRING, c2 STRING, c3 INT) STORED AS carbondata")
     // register datamap writer
     sql(
       s"""
@@ -144,7 +144,7 @@ class DataMapWriterSuite extends CarbonQueryTest with BeforeAndAfterAll {
   }
 
   test("test write datamap 2 blocklet") {
-    sql(s"CREATE TABLE carbon2(c1 STRING, c2 STRING, c3 INT) STORED BY 'org.apache.carbondata.format'")
+    sql(s"CREATE TABLE carbon2(c1 STRING, c2 STRING, c3 INT) STORED AS carbondata")
     sql(
       s"""
          | CREATE DATAMAP test2 ON TABLE carbon2

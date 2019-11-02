@@ -18,16 +18,14 @@ package org.apache.carbondata.mv.rewrite
 
 import java.io.File
 
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.execution.datasources.LogicalRelation
-import org.apache.spark.sql.test.util.CarbonQueryTest
+import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.mv.rewrite.matching.TestSQLBatch._
 
-class MVSampleTestCase extends CarbonQueryTest with BeforeAndAfterAll {
+class MVSampleTestCase extends QueryTest with BeforeAndAfterAll {
 
   override def beforeAll {
     drop()
@@ -58,7 +56,7 @@ class MVSampleTestCase extends CarbonQueryTest with BeforeAndAfterAll {
          |  `qty`     int,
          |  `disc`    string
          |)
-         |STORED BY 'org.apache.carbondata.format'
+         |STORED AS carbondata
         """.stripMargin.trim,
       s"""
          |CREATE TABLE Dim (
@@ -67,14 +65,14 @@ class MVSampleTestCase extends CarbonQueryTest with BeforeAndAfterAll {
          |  `state`   string,
          |  `country` string
          |)
-         |STORED BY 'org.apache.carbondata.format'
+         |STORED AS carbondata
         """.stripMargin.trim,
       s"""
          |CREATE TABLE Item (
          |  `i_item_id`     int,
          |  `i_item_sk`     int
          |)
-         |STORED BY 'org.apache.carbondata.format'
+         |STORED AS carbondata
         """.stripMargin.trim
     )
   }

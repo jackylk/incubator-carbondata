@@ -20,14 +20,15 @@ import java.io.File
 import java.nio.file.{Files, Paths}
 
 import org.apache.spark.sql.{CarbonEnv, Row}
-import org.apache.spark.sql.test.util.CarbonQueryTest
+import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
+
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.core.util.path.CarbonTablePath
 
-class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
+class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
 
   override def beforeAll {
     drop()
@@ -43,7 +44,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
         |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
         |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
         |  utilization int,salary int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table1 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
     sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table1 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
@@ -53,7 +54,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
         |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
         |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
         |  utilization int,salary int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table2 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
     sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table2 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
@@ -64,7 +65,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
         |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
         |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
         |  utilization int,salary int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table3 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
     sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table3 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
@@ -75,7 +76,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
         |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
         |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
         |  utilization int,salary int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table4 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
     sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table4 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
@@ -85,7 +86,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
         |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
         |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
         |  utilization int,salary int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table5 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
     sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table5 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
@@ -96,7 +97,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
         |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
         |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
         |  utilization int,salary int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table6 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
     sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table6 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
@@ -654,7 +655,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
 
     sql("drop datamap if exists mv13")
     sql("drop table if exists test4")
-    sql("create table test4 ( name string,age int,salary int) stored by 'carbondata'")
+    sql("create table test4 ( name string,age int,salary int) STORED AS carbondata")
 
     sql(" insert into test4 select 'babu',12,12").show()
     sql("create datamap mv13 using 'mv' as select name,sum(salary) from test4 group by name")
@@ -710,7 +711,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
 
     sql("drop table if exists test1")
     sql("drop datamap if exists datamv2")
-    sql("create table test1( name string,country string,age int,salary int) stored by 'carbondata'")
+    sql("create table test1( name string,country string,age int,salary int) STORED AS carbondata")
     sql("insert into test1 select 'name1','USA',12,23")
     sql("create datamap datamv2 using 'mv' as select country,sum(salary) from test1 group by country")
     val frame = sql("select country,sum(salary) from test1 where country='USA' group by country")
@@ -744,7 +745,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
         |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
         |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
         |  utilization int,salary int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("drop datamap if exists MV_exp")
     sql("create datamap MV_exp using 'mv' as select doj,sum(salary) from xy.fact_tablexy group by doj")
@@ -760,7 +761,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
 
     sql("drop table if exists mvtable1")
     sql("drop datamap if exists map1")
-    sql("create table mvtable1(name string,age int,salary int) stored by 'carbondata'")
+    sql("create table mvtable1(name string,age int,salary int) STORED AS carbondata")
     sql(" insert into mvtable1 select 'n1',12,12")
     sql("  insert into mvtable1 select 'n1',12,12")
     sql(" insert into mvtable1 select 'n3',12,12")
@@ -866,8 +867,8 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
 
     sql("drop table if exists mvtable1")
     sql("drop table if exists mvtable2")
-    sql("create table mvtable1(name string,age int,salary int) stored by 'carbondata'")
-    sql("create table mvtable2(name string,age int,salary int) stored by 'carbondata'")
+    sql("create table mvtable1(name string,age int,salary int) STORED AS carbondata")
+    sql("create table mvtable2(name string,age int,salary int) STORED AS carbondata")
     sql("create datamap MV11 using 'mv' as select name from mvtable2")
     sql(" insert into mvtable1 select 'n1',12,12")
     sql("  insert into mvtable1 select 'n1',12,12")
@@ -890,7 +891,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
         |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
         |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
         |  utilization int,salary int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
         | tblproperties('streaming'='true')
       """.stripMargin)
     sql(
@@ -921,7 +922,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
         |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
         |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
         |  utilization int,salary int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
         | tblproperties('streaming'='true')
       """.stripMargin)
     sql(
@@ -966,7 +967,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
        | create table all_table(x1 bigint,x2 bigint,
        | x3 string,x4 bigint,x5 bigint,x6 int,x7 string,x8 int, x9 int,x10 bigint,
        | x11 bigint, x12 bigint,x13 bigint,x14 bigint,x15 bigint,x16 bigint,
-       | x17 bigint,x18 bigint,x19 bigint) stored by 'carbondata'""".stripMargin)
+       | x17 bigint,x18 bigint,x19 bigint) STORED AS carbondata""".stripMargin)
     sql("insert into all_table select 1,1,null,1,1,1,null,1,1,1,1,1,1,1,1,1,1,1,1")
 
     sql("create datamap all_table_mv on table all_table using 'mv' as " + querySQL)
@@ -981,7 +982,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
 
   test("test select * and distinct when MV is enabled") {
     sql("drop table if exists limit_fail")
-    sql("CREATE TABLE limit_fail (empname String, designation String, doj Timestamp,workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,utilization int,salary int)STORED BY 'org.apache.carbondata.format'")
+    sql("CREATE TABLE limit_fail (empname String, designation String, doj Timestamp,workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,utilization int,salary int)STORED AS carbondata")
     sql(s"LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE limit_fail  OPTIONS" +
         "('DELIMITER'= ',', 'QUOTECHAR'= '\"')")
     sql("create datamap limit_fail_dm1 using 'mv' as select empname,designation from limit_fail")
@@ -1008,7 +1009,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
         | create table all_table(x1 bigint,x2 bigint,
         | x3 string,x4 bigint,x5 bigint,x6 int,x7 string,x8 int, x9 int,x10 bigint,
         | x11 bigint, x12 bigint,x13 bigint,x14 bigint,x15 bigint,x16 bigint,
-        | x17 bigint,x18 bigint,x19 bigint,x20 binary) stored by 'carbondata'""".stripMargin)
+        | x17 bigint,x18 bigint,x19 bigint,x20 binary) STORED AS carbondata""".stripMargin)
     sql("insert into all_table select 1,1,null,1,1,1,null,1,1,1,1,1,1,1,1,1,1,1,1,'binary1'")
     sql("insert into all_table select 1,1,null,1,1,1,null,1,1,1,1,1,1,1,1,1,1,12,2,'binary2'")
     sql("insert into all_table select 1,1,null,1,1,1,null,1,1,1,1,1,1,1,1,1,1,1,2,'binary2'")
@@ -1051,7 +1052,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
   test(" test MV with like queries and filter queries") {
     sql("drop table if exists mv_like")
     sql(
-      "create table mv_like(name string, age int, address string, Country string, id int) stored by 'carbondata'")
+      "create table mv_like(name string, age int, address string, Country string, id int) STORED AS carbondata")
     sql(
       "create datamap mvlikedm1 using 'mv' as select name,address,sum(Country) from mv_like where Country NOT LIKE 'US' group by name,address")
     sql(
@@ -1069,7 +1070,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
 
   test("test distinct, count, sum on MV with single projection column") {
     sql("drop table if exists maintable")
-    sql("create table maintable(name string, age int, add string) stored by 'carbondata'")
+    sql("create table maintable(name string, age int, add string) STORED AS carbondata")
     sql("create datamap single_mv using 'mv' as select age from maintable")
     sql("insert into maintable select 'pheobe',31,'NY'")
     sql("insert into maintable select 'rachel',32,'NY'")
@@ -1090,7 +1091,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
   test("count test case") {
 
     sql("drop table if exists mvtable1")
-    sql("create table mvtable1(name string,age int,salary int) stored by 'carbondata'")
+    sql("create table mvtable1(name string,age int,salary int) STORED AS carbondata")
     sql("create datamap MV11 using 'mv' as select name from mvtable1")
     sql("insert into mvtable1 select 'n1',12,12")
     sql("rebuild datamap MV11")
@@ -1102,7 +1103,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
 
   test("test mv with duplicate columns in query and constant column") {
     sql("drop table if exists maintable")
-    sql("create table maintable(name string, age int, add string) stored by 'carbondata'")
+    sql("create table maintable(name string, age int, add string) STORED AS carbondata")
     sql("create datamap dupli_mv using 'mv' as select name, sum(age),sum(age) from maintable group by name")
     sql("create datamap dupli_projection using 'mv' as select age, age,add from maintable")
     sql("create datamap constant_mv using 'mv' as select name, sum(1) ex1 from maintable group by name")
@@ -1130,8 +1131,8 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
   test("test mv query when the column names and table name same in join scenario") {
     sql("drop table IF EXISTS price")
     sql("drop table IF EXISTS quality")
-    sql("create table price(product string,price int) stored by 'carbondata'")
-    sql("create table quality(product string,quality string) stored by 'carbondata'")
+    sql("create table price(product string,price int) STORED AS carbondata")
+    sql("create table quality(product string,quality string) STORED AS carbondata")
     sql("create datamap same_mv using 'mv' as select price.product,price.price,quality.product,quality.quality from price,quality where price.product = quality.product")
     val df1 = sql("select price.product from price,quality where price.product = quality.product")
     val analyzed1 = df1.queryExecution.analyzed
@@ -1141,7 +1142,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
   test("test datamap column having more than 128 characters") {
     sql("drop table IF EXISTS maintable")
     sql("create table maintable (m_month smallint, c_code string, " +
-        "c_country smallint, d_dollar_value double, q_quantity double, u_unit smallint, b_country smallint, i_id int, y_year smallint) stored by 'carbondata'")
+        "c_country smallint, d_dollar_value double, q_quantity double, u_unit smallint, b_country smallint, i_id int, y_year smallint) STORED AS carbondata")
     sql("insert into maintable select 10, 'xxx', 123, 456, 45, 5, 23, 1, 2000")
     sql("drop datamap if exists da_agg")
     sql("create datamap da_agg using 'mv' as select u_unit, y_year, m_month, c_country, b_country, sum(case when i_id=1 and (y_year=2000 and m_month=10)" +
@@ -1158,7 +1159,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
   test("test cast expression with mv") {
     sql("drop table IF EXISTS maintable")
     sql("create table maintable (m_month bigint, c_code string, " +
-        "c_country smallint, d_dollar_value double, q_quantity double, u_unit smallint, b_country smallint, i_id int, y_year smallint) stored by 'carbondata'")
+        "c_country smallint, d_dollar_value double, q_quantity double, u_unit smallint, b_country smallint, i_id int, y_year smallint) STORED AS carbondata")
     sql("insert into maintable select 10, 'xxx', 123, 456, 45, 5, 23, 1, 2000")
     sql("drop datamap if exists da_cast")
     sql(
@@ -1174,7 +1175,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
   test("test cast of expression with mv") {
     sql("drop table IF EXISTS maintable")
     sql("create table maintable (m_month bigint, c_code string, " +
-        "c_country smallint, d_dollar_value double, q_quantity double, u_unit smallint, b_country smallint, i_id int, y_year smallint) stored by 'carbondata'")
+        "c_country smallint, d_dollar_value double, q_quantity double, u_unit smallint, b_country smallint, i_id int, y_year smallint) STORED AS carbondata")
     sql("insert into maintable select 10, 'xxx', 123, 456, 45, 5, 23, 1, 2000")
     sql("drop datamap if exists da_cast")
     sql(
@@ -1190,7 +1191,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
   test("test cast with & without alias") {
     sql("drop table IF EXISTS maintable")
     sql("create table maintable (m_month bigint, c_code string, " +
-        "c_country smallint, d_dollar_value double, q_quantity double, u_unit smallint, b_country smallint, i_id int, y_year smallint) stored by 'carbondata'")
+        "c_country smallint, d_dollar_value double, q_quantity double, u_unit smallint, b_country smallint, i_id int, y_year smallint) STORED AS carbondata")
     sql("insert into maintable select 10, 'xxx', 123, 456, 45, 5, 23, 1, 2000")
     sql("drop datamap if exists da_cast")
     sql(
@@ -1211,7 +1212,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
   test("test mv with floor & ceil exp") {
     sql("drop table IF EXISTS maintable")
     sql("create table maintable (m_month bigint, c_code string, " +
-        "c_country smallint, d_dollar_value double, q_quantity double, u_unit smallint, b_country smallint, i_id int, y_year smallint) stored by 'carbondata'")
+        "c_country smallint, d_dollar_value double, q_quantity double, u_unit smallint, b_country smallint, i_id int, y_year smallint) STORED AS carbondata")
     sql("insert into maintable select 10, 'xxx', 123, 456, 45, 5, 23, 1, 2000")
     sql("drop datamap if exists da_floor")
     sql(
@@ -1253,7 +1254,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
         |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
         |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
         |  utilization int,salary int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table_addseg OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
 
@@ -1263,7 +1264,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
         |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
         |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
         |  utilization int,salary int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table_addseg1 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
 
@@ -1299,7 +1300,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
         |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
         |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
         |  utilization int,salary int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table_addseg OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
 
@@ -1309,7 +1310,7 @@ class MVCreateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
         |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
         |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
         |  utilization int,salary int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table_addseg1 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
 

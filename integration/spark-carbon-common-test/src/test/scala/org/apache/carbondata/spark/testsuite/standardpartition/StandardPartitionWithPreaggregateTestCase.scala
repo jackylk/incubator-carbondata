@@ -23,12 +23,12 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.sql.{CarbonDatasourceHadoopRelation, CarbonEnv, Row}
-import org.apache.spark.sql.test.util.CarbonQueryTest
+import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
 
 import org.apache.carbondata.core.datastore.impl.FileFactory
 
-class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with BeforeAndAfterAll {
+class StandardPartitionWithPreaggregateTestCase extends QueryTest with BeforeAndAfterAll {
 
   val testData = s"$resourcesPath/sample.csv"
 
@@ -39,12 +39,12 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
     sql(
       """
         | CREATE TABLE par(id INT, name STRING, age INT) PARTITIONED BY(city STRING)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(
       """
         | CREATE TABLE maintable(id int, name string, city string) partitioned by (age int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(s"LOAD DATA LOCAL INPATH '$testData' into table maintable")
   }
@@ -107,7 +107,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
       """
         | CREATE TABLE if not exists partitionone (empname String)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("create datamap p1 on table partitionone using 'preaggregate' as select empname, sum(year) from partitionone group by empname, year, month,day")
     sql("insert into partitionone values('k',2014,1,1)")
@@ -122,7 +122,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
       """
         | CREATE TABLE if not exists partitionone (empname String)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("create datamap p1 on table partitionone using 'preaggregate' as select empname, sum(year) from partitionone group by empname, year, month,day")
     sql("insert into partitionone values('k',2014,1,1)")
@@ -137,7 +137,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
       """
         | CREATE TABLE if not exists partitionone (empname String)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("create datamap p1 on table partitionone using 'preaggregate' as select empname, sum(year) from partitionone group by empname, month, year,day")
     val parentTable = CarbonEnv.getCarbonTable(Some("partition_preaggregate"), "partitionone")(sqlContext.sparkSession)
@@ -156,7 +156,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
       """
         | CREATE TABLE if not exists partitionone (empname String)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("create datamap p1 on table partitionone using 'preaggregate' as select empname, sum(year) from partitionone group by empname, year, month,day")
     sql("insert into partitionone values('k',2014,1,1)")
@@ -175,7 +175,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
       """
         | CREATE TABLE if not exists partitionone (empname String)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("create datamap p1 on table partitionone using 'preaggregate' as select empname, sum(year) from partitionone group by empname, year, month,day")
     sql("insert into partitionone values('k',2014,1,1)")
@@ -195,7 +195,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
       """
         | CREATE TABLE if not exists partitionone (empname String)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("create datamap p1 on table partitionone using 'preaggregate' as select empname, sum(year) from partitionone group by empname, year, month, day")
     sql("insert into partitionone values('k',2014,1,1)")
@@ -214,7 +214,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
       """
         | CREATE TABLE if not exists partitionone (empname String)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("create datamap p1 on table partitionone using 'preaggregate' as select empname, sum(year) from partitionone group by empname, year, month, day")
     sql("insert into partitionone values('k',2014,1,1)")
@@ -233,7 +233,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
       """
         | CREATE TABLE if not exists droppartition (empname String)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("insert into droppartition values('k',2014,1,1)")
     sql("insert into droppartition values('k',2015,2,3)")
@@ -253,7 +253,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
       """
         | CREATE TABLE if not exists partitionone (empname String)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("create datamap p1 on table partitionone using 'preaggregate' as select empname, sum(year) from partitionone group by empname, year, month, day")
     sql("insert into partitionone values('k',2014,1,1)")
@@ -272,7 +272,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
       """
         | CREATE TABLE if not exists partitionone (empname String)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("create datamap p1 on table partitionone using 'preaggregate' as select empname, sum(year) from partitionone group by empname, year, month, day")
     sql("insert into partitionone values('k',2014,1,1)")
@@ -291,7 +291,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
       """
         | CREATE TABLE if not exists partitionone (empname String)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("create datamap p1 on table partitionone using 'preaggregate' as select empname, sum(year) from partitionone group by empname, year, month, day")
     sql("insert into partitionone values('k',2014,1,1)")
@@ -310,7 +310,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
       """
         | CREATE TABLE if not exists partitionone (empname String)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("create datamap p1 on table partitionone using 'preaggregate' as select empname, sum(year) from partitionone group by empname, year, month, day")
     sql("insert into partitionone values('k',2014,1,1)")
@@ -331,7 +331,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
       """
         | CREATE TABLE if not exists partitionone (empname String)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql("create datamap p1 on table partitionone using 'preaggregate' as select empname, sum(year) from partitionone group by empname, year, month, day")
     sql("insert into partitionone values('k',2014,1,1)")
@@ -350,7 +350,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
       """
         | CREATE TABLE if not exists partitionone (empname String)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(
       "create datamap p1 on table partitionone using 'preaggregate' as select empname, sum(year) from partitionone group by empname, year, day")
@@ -372,7 +372,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
       """
         | CREATE TABLE if not exists partitionone (empname String)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(
       "create datamap p1 on table partitionone using 'preaggregate' as select empname, sum(year) from partitionone group by empname, year, month, day")
@@ -397,7 +397,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
       """
         | CREATE TABLE if not exists partitionone (empname String)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(
       "create datamap p1 on table partitionone using 'preaggregate' as select empname, sum(year) from partitionone group by empname")
@@ -416,7 +416,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
       """
         | CREATE TABLE if not exists partitionone (empname String)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(
       "create datamap p1 on table partitionone using 'preaggregate' as select empname, sum(year) from partitionone group by empname")
@@ -439,7 +439,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
       """
         | CREATE TABLE if not exists partitionone (empname String)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(
       "create datamap p1 on table partitionone using 'preaggregate' as select empname, sum(year) from partitionone group by empname, year")
@@ -456,7 +456,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
       """
         | CREATE TABLE if not exists partitionone (empname String)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(
       "create datamap p1 on table partitionone using 'preaggregate' as select empname, sum(year) from partitionone group by empname")
@@ -473,7 +473,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
       """
         | CREATE TABLE if not exists partitionone (empname String)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(
       "create datamap p1 on table partitionone using 'preaggregate' as select empname, sum(year) from partitionone group by empname")
@@ -488,7 +488,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
       """
         | CREATE TABLE if not exists partitionone (empname String, id int)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(
       "create datamap p1 on table partitionone using 'preaggregate' as select empname, sum(year) from partitionone group by empname")
@@ -500,7 +500,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
   test("test dropping partition which has already been deleted") {
     sql("drop table if exists partitiontable")
     sql("create table partitiontable(id int,name string) partitioned by (email string) " +
-      "stored by 'carbondata' tblproperties('sort_scope'='global_sort')")
+      "STORED AS carbondata tblproperties('sort_scope'='global_sort')")
     sql("insert into table partitiontable select 1,'huawei','abc'")
     sql("create datamap ag1 on table partitiontable using 'preaggregate' as select count(email),id" +
       " from partitiontable group by id")
@@ -528,7 +528,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
   test("test Pre-Aggregate table creation with count(*) on Partition table") {
     sql("drop table if exists partitiontable")
     sql("create table partitiontable(id int,name string) partitioned by (email string) " +
-      "stored by 'carbondata' tblproperties('sort_scope'='global_sort')")
+      "STORED AS carbondata tblproperties('sort_scope'='global_sort')")
     sql("insert into table partitiontable select 1,'huawei','abc'")
     sql("create datamap ag1 on table partitiontable using 'preaggregate' as select count(*),id" +
       " from partitiontable group by id")
@@ -540,7 +540,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
   test("test blocking partitioning of Pre-Aggregate table") {
     sql("drop table if exists updatetime_8")
     sql("create table updatetime_8" +
-      "(countryid smallint,hs_len smallint,minstartdate string,startdate string,newdate string,minnewdate string) partitioned by (imex smallint) stored by 'carbondata' tblproperties('sort_scope'='global_sort','sort_columns'='countryid,imex,hs_len,minstartdate,startdate,newdate,minnewdate','table_blocksize'='256')")
+      "(countryid smallint,hs_len smallint,minstartdate string,startdate string,newdate string,minnewdate string) partitioned by (imex smallint) STORED AS carbondata tblproperties('sort_scope'='global_sort','sort_columns'='countryid,imex,hs_len,minstartdate,startdate,newdate,minnewdate','table_blocksize'='256')")
     sql("create datamap ag on table updatetime_8 using 'preaggregate' dmproperties('partitioning'='false') as select imex,sum(hs_len) from updatetime_8 group by imex")
     val carbonTable = CarbonEnv.getCarbonTable(Some("partition_preaggregate"), "updatetime_8_ag")(sqlContext.sparkSession)
     assert(!carbonTable.isHivePartitionTable)
@@ -553,7 +553,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
       "create table partitionallcompaction(empno int,empname String,designation String," +
       "workgroupcategory int,workgroupcategoryname String,deptno int,projectjoindate timestamp," +
       "projectenddate date,attendance int,utilization int,salary int) partitioned by (deptname " +
-      "String,doj timestamp,projectcode int) stored  by 'carbondata' tblproperties" +
+      "String,doj timestamp,projectcode int) stored as carbondata tblproperties" +
       "('sort_scope'='global_sort')")
     sql(
       "create datamap sensor_1 on table partitionallcompaction using 'preaggregate' as select " +
@@ -593,7 +593,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
   test("Test data updation in Aggregate query after compaction on Partitioned table with Pre-Aggregate table") {
     sql("drop table if exists updatetime_8")
     sql("create table updatetime_8" +
-      "(countryid smallint,hs_len smallint,minstartdate string,startdate string,newdate string,minnewdate string) partitioned by (imex smallint) stored by 'carbondata' tblproperties('sort_scope'='global_sort','sort_columns'='countryid,imex,hs_len,minstartdate,startdate,newdate,minnewdate','table_blocksize'='256')")
+      "(countryid smallint,hs_len smallint,minstartdate string,startdate string,newdate string,minnewdate string) partitioned by (imex smallint) STORED AS carbondata tblproperties('sort_scope'='global_sort','sort_columns'='countryid,imex,hs_len,minstartdate,startdate,newdate,minnewdate','table_blocksize'='256')")
     sql("create datamap ag on table updatetime_8 using 'preaggregate' as select sum(hs_len) from updatetime_8 group by imex")
     sql("insert into updatetime_8 select 21,20,'fbv','gbv','wvsw','vwr',23")
     sql("insert into updatetime_8 select 21,20,'fbv','gbv','wvsw','vwr',24")
@@ -614,7 +614,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
       """
         | CREATE TABLE if not exists partitionone (empname String, id int)
         | PARTITIONED BY (year int, month int,day int)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
     sql(
       "create datamap p7 on table partitionone using 'preaggregate' as select empname, sum(year), sum(day) from partitionone group by empname, year, day")
@@ -641,7 +641,7 @@ class StandardPartitionWithPreaggregateTestCase extends CarbonQueryTest with Bef
 
   test("test partition at last column") {
     sql("drop table if exists partitionone")
-    sql("create table partitionone(a int,b int) partitioned by (c int) stored by 'carbondata'")
+    sql("create table partitionone(a int,b int) partitioned by (c int) STORED AS carbondata")
     sql("insert into partitionone values(1,2,3)")
     sql("drop datamap if exists dm1")
     sql("create datamap dm1 on table partitionone using 'preaggregate' as select c,sum(b) from partitionone group by c")

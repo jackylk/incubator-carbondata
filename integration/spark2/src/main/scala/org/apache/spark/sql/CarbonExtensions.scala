@@ -21,79 +21,61 @@ import org.apache.spark.sql.catalyst.parser.ParserInterface
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.execution.strategy.{CarbonLateDecodeStrategy, DDLStrategy, StreamingTableStrategy}
-import org.apache.spark.sql.hive.{CarbonIUDAnalysisRule, CarbonPreInsertionCasts}
+import org.apache.spark.sql.hive.{CarbonExtensionRulesForOnce, CarbonIUDAnalysisRule, CarbonPreInsertionCasts, CarbonPreOptimizerRule}
 import org.apache.spark.sql.optimizer.{CarbonIUDRule, CarbonLateDecodeRule, CarbonUDFTransformRule}
-import org.apache.spark.sql.parser.{CarbonExtensionSqlParser, CarbonSparkSqlParser}
-import org.apache.spark.util.CarbonReflectionUtils
+import org.apache.spark.sql.parser.CarbonExtensionSqlParser
 
 class CarbonExtensions extends ((SparkSessionExtensions) => Unit) {
 
-  CarbonExtensions
-
   override def apply(extensions: SparkSessionExtensions): Unit = {
-    // Carbon parser
+    // Carbon internal parser
     extensions
       .injectParser((sparkSession: SparkSession, parser: ParserInterface) =>
         new CarbonExtensionSqlParser(new SQLConf, sparkSession, parser))
 
     // carbon analyzer rules
+    // TODO: CarbonAccessControlRules
     extensions
       .injectResolutionRule((session: SparkSession) => CarbonIUDAnalysisRule(session))
     extensions
       .injectResolutionRule((session: SparkSession) => CarbonPreInsertionCasts(session))
 
+    extensions
+      .injectPostHocResolutionRule((session: SparkSession) => CarbonExtensionRulesForOnce(session))
     // Carbon Pre optimization rules
-    // TODO: Make CarbonOptimizerRule injectable Rule
-    val optimizerRules = Seq(new CarbonIUDRule,
-      new CarbonUDFTransformRule, new CarbonLateDecodeRule)
+    extensions
+      .injectPostHocResolutionRule((_: SparkSession) => new CarbonPreOptimizerRule)
+    // Carbon optimization rules
     extensions
       .injectResolutionRule((sparkSession: SparkSession) => {
-        CarbonUDFTransformRuleWrapper(sparkSession, optimizerRules)
+        CarbonOptimizationRulesWrapper(sparkSession)
       })
-
-    // TODO: CarbonPreAggregateDataLoadingRules
-    // TODO: CarbonPreAggregateQueryRules
-    // TODO: MVAnalyzerRule
 
     // carbon planner strategies
-    var streamingTableStratergy : StreamingTableStrategy = null
-    val decodeStrategy = new CarbonLateDecodeStrategy
-    var ddlStrategy : DDLStrategy = null
-
     extensions
-      .injectPlannerStrategy((session: SparkSession) => {
-        if (streamingTableStratergy == null) {
-          streamingTableStratergy = new StreamingTableStrategy(session)
-        }
-        streamingTableStratergy
-      })
-
+      .injectPlannerStrategy((session: SparkSession) => new StreamingTableStrategy(session))
     extensions
-      .injectPlannerStrategy((_: SparkSession) => decodeStrategy)
-
+      .injectPlannerStrategy((_: SparkSession) => new CarbonLateDecodeStrategy)
     extensions
-      .injectPlannerStrategy((sparkSession: SparkSession) => {
-        if (ddlStrategy == null) {
-          ddlStrategy = new DDLStrategy(sparkSession)
-        }
-        ddlStrategy
-      })
+      .injectPlannerStrategy((session: SparkSession) => new DDLStrategy(session))
+
+    // init CarbonEnv
+    CarbonEnv.init
   }
 }
 
-object CarbonExtensions {
-  CarbonEnv.init
-  CarbonReflectionUtils.updateCarbonSerdeInfo
-}
-
-case class CarbonUDFTransformRuleWrapper(session: SparkSession,
-                                         rules: Seq[Rule[LogicalPlan]])
+case class CarbonOptimizationRulesWrapper(session: SparkSession)
   extends Rule[LogicalPlan] {
 
   override def apply(plan: LogicalPlan): LogicalPlan = {
     if (session.sessionState.experimentalMethods.extraOptimizations.isEmpty) {
-      session.sessionState.experimentalMethods.extraOptimizations = rules
+      session.sessionState.experimentalMethods.extraOptimizations = Seq(
+        new CarbonIUDRule,
+        new CarbonUDFTransformRule,
+        new CarbonLateDecodeRule)
     }
-  plan
+    plan
+  }
 }
-}
+
+

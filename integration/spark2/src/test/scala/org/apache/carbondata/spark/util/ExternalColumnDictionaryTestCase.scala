@@ -78,7 +78,7 @@ class ExternalColumnDictionaryTestCase extends Spark2QueryTest with BeforeAndAft
      ActiveProvince:string, Activecity:string, ActiveDistrict:string, ActiveStreet:string>>,
      proddate struct<productionDate:string,activeDeactivedate:array<string>>,
      gamePointId double,contractNumber double)
-     STORED BY 'org.apache.carbondata.format'
+     STORED AS carbondata
      TBLPROPERTIES('DICTIONARY_INCLUDE' = 'deviceInformationId, channelsId')
         """)
     } catch {
@@ -89,7 +89,7 @@ class ExternalColumnDictionaryTestCase extends Spark2QueryTest with BeforeAndAft
       sql(
         """CREATE TABLE verticalDelimitedTable (deviceInformationId int,
      channelsId string,contractNumber double)
-     STORED BY 'org.apache.carbondata.format'
+     STORED AS carbondata
      TBLPROPERTIES('DICTIONARY_INCLUDE' = 'deviceInformationId, channelsId')
         """)
     } catch {
@@ -105,7 +105,7 @@ class ExternalColumnDictionaryTestCase extends Spark2QueryTest with BeforeAndAft
      ActiveProvince:string, Activecity:string, ActiveDistrict:string, ActiveStreet:string>>,
      proddate struct<productionDate:string,activeDeactivedate:array<string>>,
      gamePointId double,contractNumber double)
-     STORED BY 'org.apache.carbondata.format'
+     STORED AS carbondata
      TBLPROPERTIES('DICTIONARY_INCLUDE' = 'deviceInformationId')
         """)
     } catch {

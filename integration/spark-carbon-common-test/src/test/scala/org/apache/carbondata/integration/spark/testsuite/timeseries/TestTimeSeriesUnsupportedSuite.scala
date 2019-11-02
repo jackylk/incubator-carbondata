@@ -20,13 +20,13 @@ package org.apache.carbondata.integration.spark.testsuite.timeseries.timeseries
 import java.sql.Timestamp
 
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.test.util.CarbonQueryTest
+import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.util.CarbonProperties
 
-class TestTimeSeriesUnsupportedSuite extends CarbonQueryTest with BeforeAndAfterAll with BeforeAndAfterEach {
+class TestTimeSeriesUnsupportedSuite extends QueryTest with BeforeAndAfterAll with BeforeAndAfterEach {
 
   val timeSeries = "TIMESERIES"
   var timestampFormat: String = _
@@ -48,7 +48,7 @@ class TestTimeSeriesUnsupportedSuite extends CarbonQueryTest with BeforeAndAfter
         |   mytime TIMESTAMP,
         |   name STRING,
         |   age INT)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
       """.stripMargin)
   }
 

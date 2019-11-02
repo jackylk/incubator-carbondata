@@ -98,7 +98,7 @@ class AllDictionaryTestCase extends Spark2QueryTest with BeforeAndAfterAll {
     try {
       sql(
         "CREATE TABLE IF NOT EXISTS sample (id STRING, name STRING, city STRING, " +
-          "age INT) STORED BY 'org.apache.carbondata.format' " +
+          "age INT) STORED AS carbondata " +
           "TBLPROPERTIES('dictionary_include'='city')"
       )
     } catch {
@@ -111,7 +111,7 @@ class AllDictionaryTestCase extends Spark2QueryTest with BeforeAndAfterAll {
           "array<string>, locationinfo array<struct<ActiveAreaId: INT, ActiveCountry: string, " +
           "ActiveProvince: string, Activecity: string, ActiveDistrict: string, ActiveStreet: " +
           "string>>, proddate struct<productionDate: string,activeDeactivedate: array<string>>, " +
-          "gamePointId INT,contractNumber INT) STORED BY 'org.apache.carbondata.format'" +
+          "gamePointId INT,contractNumber INT) STORED AS carbondata " +
           "TBLPROPERTIES('DICTIONARY_EXCLUDE'='ROMSize', 'dictionary_include'='channelsId')"
       )
     } catch {

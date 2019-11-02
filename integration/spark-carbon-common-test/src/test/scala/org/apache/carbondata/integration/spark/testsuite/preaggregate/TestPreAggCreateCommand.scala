@@ -27,7 +27,7 @@ import org.apache.spark.sql.{AnalysisException, CarbonDatasourceHadoopRelation, 
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.hive.CarbonRelation
-import org.apache.spark.sql.test.util.CarbonQueryTest
+import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
@@ -37,7 +37,7 @@ import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.metadata.schema.datamap.DataMapClassProvider.TIMESERIES
 import org.apache.carbondata.core.util.CarbonProperties
 
-class TestPreAggCreateCommand extends CarbonQueryTest with BeforeAndAfterAll {
+class TestPreAggCreateCommand extends QueryTest with BeforeAndAfterAll {
 
   val timeSeries = TIMESERIES.toString
 
@@ -48,15 +48,15 @@ class TestPreAggCreateCommand extends CarbonQueryTest with BeforeAndAfterAll {
     sql("drop table if exists maintable")
     sql("drop table if exists showTables")
     sql("drop table if exists Preagg_twodb")
-    sql("create table preaggMain (a string, b string, c string) stored by 'carbondata'")
-    sql("create table preaggMain1 (a string, b string, c string) stored by 'carbondata' tblProperties('DICTIONARY_INCLUDE' = 'a')")
-    sql("create table maintable (column1 int, column6 string, column5 string, column2 string, column3 int, column4 int) stored by 'carbondata' tblproperties('dictionary_include'='column1,column6', 'dictionary_exclude'='column3,column5')")
+    sql("create table preaggMain (a string, b string, c string) STORED AS carbondata")
+    sql("create table preaggMain1 (a string, b string, c string) STORED AS carbondata tblProperties('DICTIONARY_INCLUDE' = 'a')")
+    sql("create table maintable (column1 int, column6 string, column5 string, column2 string, column3 int, column4 int) STORED AS carbondata tblproperties('dictionary_include'='column1,column6', 'dictionary_exclude'='column3,column5')")
     sql("drop table if exists stream_si")
     sql("drop table if exists part_si")
     sql("CREATE TABLE stream_si(c1 string,c2 int,c3 string,c5 string) " +
-        "STORED BY 'org.apache.carbondata.format' TBLPROPERTIES ('streaming' = 'true')")
+        "STORED AS carbondata TBLPROPERTIES ('streaming' = 'true')")
     sql("CREATE TABLE part_si(c1 string,c2 int,c3 string,c5 string) PARTITIONED BY (c6 string)" +
-        "STORED BY 'org.apache.carbondata.format' ")
+        "STORED AS carbondata ")
   }
 
   test("test pre agg create table 1") {
@@ -236,7 +236,7 @@ class TestPreAggCreateCommand extends CarbonQueryTest with BeforeAndAfterAll {
     CarbonProperties.getInstance().addProperty(CarbonCommonConstants.CARBON_SHOW_DATAMAPS,"false")
     sql("DROP TABLE IF EXISTS tbl_1")
     sql("DROP TABLE IF EXISTS sparktable")
-    sql("create table if not exists  tbl_1(imei string,age int,mac string ,prodate timestamp,update timestamp,gamepoint double,contrid double) stored by 'carbondata' ")
+    sql("create table if not exists  tbl_1(imei string,age int,mac string ,prodate timestamp,update timestamp,gamepoint double,contrid double) STORED AS carbondata ")
     sql("create table if not exists sparktable(a int,b string)")
     sql(
       s"""create datamap preagg_sum on table tbl_1 using 'preaggregate' as select mac,avg(age) from tbl_1 group by mac"""
@@ -252,7 +252,7 @@ class TestPreAggCreateCommand extends CarbonQueryTest with BeforeAndAfterAll {
     sql(
       """
         | CREATE TABLE maintabletime(year INT,month INT,name STRING,salary INT,dob STRING)
-        | STORED BY 'carbondata'
+        | STORED AS carbondata
         | TBLPROPERTIES(
         |   'SORT_SCOPE'='Global_sort',
         |   'TABLE_BLOCKSIZE'='23',
@@ -304,7 +304,7 @@ class TestPreAggCreateCommand extends CarbonQueryTest with BeforeAndAfterAll {
     CarbonProperties.getInstance().addProperty(CarbonCommonConstants.CARBON_SHOW_DATAMAPS, "false")
     CarbonProperties.getInstance().addProperty(CarbonCommonConstants.CARBON_SHOW_DATAMAPS,"false")
     sql("DROP TABLE IF EXISTS tbl_1")
-    sql("create table if not exists  tbl_1(imei string,age int,mac string ,prodate timestamp,update timestamp,gamepoint double,contrid double) stored by 'carbondata' ")
+    sql("create table if not exists  tbl_1(imei string,age int,mac string ,prodate timestamp,update timestamp,gamepoint double,contrid double) STORED AS carbondata ")
     sql("create datamap agg1 on table tbl_1 using 'preaggregate' as select mac, sum(age) from tbl_1 group by mac")
     sql("create table if not exists  sparktable(imei string,age int,mac string ,prodate timestamp,update timestamp,gamepoint double,contrid double) ")
     checkExistence(sql("show tables"), false, "tbl_1_agg1")
@@ -315,7 +315,7 @@ class TestPreAggCreateCommand extends CarbonQueryTest with BeforeAndAfterAll {
 
   test("test pre agg create table 25: remove TimeSeries agg tables from show table command") {
     sql("DROP TABLE IF EXISTS tbl_1")
-    sql("create table if not exists  tbl_1(imei string,age int,mac string ,prodate timestamp,update timestamp,gamepoint double,contrid double) stored by 'carbondata' ")
+    sql("create table if not exists  tbl_1(imei string,age int,mac string ,prodate timestamp,update timestamp,gamepoint double,contrid double) STORED AS carbondata ")
     sql(
       "create datamap agg2 on table tbl_1 using 'preaggregate' as select prodate, mac from tbl_1 group by prodate,mac")
     checkExistence(sql("show tables"), false, "tbl_1_agg2_day","tbl_1_agg2_hour","tbl_1_agg2_month","tbl_1_agg2_year")
@@ -368,12 +368,12 @@ class TestPreAggCreateCommand extends CarbonQueryTest with BeforeAndAfterAll {
 
   test("test create main and preagg table of same name in two database") {
     sql("drop table if exists Preagg_twodb")
-    sql("create table Preagg_twodb(name string, age int) stored by 'carbondata'")
+    sql("create table Preagg_twodb(name string, age int) STORED AS carbondata")
     sql("create datamap sameName on table Preagg_twodb using 'preaggregate' as select sum(age) from Preagg_twodb")
     sql("create database otherDB")
     sql("use otherDB")
     sql("drop table if exists Preagg_twodb")
-    sql("create table Preagg_twodb(name string, age int) stored by 'carbondata'")
+    sql("create table Preagg_twodb(name string, age int) STORED AS carbondata")
     try {
       sql(
         "create datamap sameName on table Preagg_twodb using 'preaggregate' as select sum(age) from Preagg_twodb")
@@ -446,7 +446,7 @@ class TestPreAggCreateCommand extends CarbonQueryTest with BeforeAndAfterAll {
   test("test codegen issue with preaggregate") {
     sql("DROP TABLE IF EXISTS PreAggMain")
     sql("CREATE TABLE PreAggMain (id Int, date date, country string, phonetype string, " +
-        "serialname String,salary int ) STORED BY 'org.apache.carbondata.format' " +
+        "serialname String,salary int ) STORED AS carbondata " +
         "tblproperties('dictionary_include'='country')")
     sql("create datamap PreAggSum on table PreAggMain using 'preaggregate' as " +
         "select country,sum(salary) as sum from PreAggMain group by country")
@@ -471,7 +471,7 @@ class TestPreAggCreateCommand extends CarbonQueryTest with BeforeAndAfterAll {
     sql("DROP TABLE IF EXISTS tbl_concurr")
     sql(
       "create table if not exists  tbl_concurr(imei string,age int,mac string ,prodate timestamp," +
-      "update timestamp,gamepoint double,contrid double) stored by 'carbondata' ")
+      "update timestamp,gamepoint double,contrid double) STORED AS carbondata ")
 
     var executorService: ExecutorService = Executors.newCachedThreadPool()
     val tasks = new util.ArrayList[Callable[String]]()

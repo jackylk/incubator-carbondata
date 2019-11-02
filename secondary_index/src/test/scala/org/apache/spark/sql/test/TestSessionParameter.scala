@@ -29,8 +29,7 @@ class TestSessionParameter {
       .createSession("spark.carbon.sessionstate.classname")
     sparkSession.sql("drop table if exists dest")
     sparkSession.sql(
-      "create table dest (c1 string,c2 int) STORED BY 'org.apache.carbondata" +
-      ".format'")
+      "create table dest (c1 string,c2 int) STORED AS carbondata")
     sparkSession.sql("insert into dest values('ab',1)")
     val result = sparkSession.sql("select count(*) from dest").collect()
     assert(result.length.equals(1))
@@ -44,8 +43,7 @@ class TestSessionParameter {
       .createSession("spark.sql.session.state.builder")
     sparkSession.sql("drop table if exists dest")
     sparkSession.sql(
-      "create table dest (c1 string,c2 int) STORED BY 'org.apache.carbondata" +
-      ".format'")
+      "create table dest (c1 string,c2 int) STORED AS carbondata")
     sparkSession.sql("insert into dest values('ab',1)")
     val result = sparkSession.sql("select count(*) from dest").collect()
     assert(result.length.equals(1))

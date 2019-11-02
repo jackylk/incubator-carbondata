@@ -79,7 +79,7 @@ object S3Example {
          | charField CHAR(5),
          | floatField FLOAT
          | )
-         | STORED BY 'carbondata'
+         | STORED AS carbondata
          | LOCATION '${args(2)}'
          | TBLPROPERTIES('SORT_COLUMNS'='', 'DICTIONARY_INCLUDE'='dateField, charField')
        """.stripMargin)

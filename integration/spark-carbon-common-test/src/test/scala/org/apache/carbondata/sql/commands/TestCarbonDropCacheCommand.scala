@@ -23,12 +23,13 @@ import scala.collection.JavaConverters._
 
 import org.apache.spark.sql.CarbonEnv
 import org.apache.spark.sql.catalyst.TableIdentifier
-import org.apache.spark.sql.test.util.CarbonQueryTest
+import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
+
 import org.apache.carbondata.core.cache.CacheProvider
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 
-class TestCarbonDropCacheCommand extends CarbonQueryTest with BeforeAndAfterAll {
+class TestCarbonDropCacheCommand extends QueryTest with BeforeAndAfterAll {
 
   val dbName = "cache_db"
 
@@ -49,7 +50,7 @@ class TestCarbonDropCacheCommand extends CarbonQueryTest with BeforeAndAfterAll 
     sql(s"CREATE TABLE $tableName(empno int, empname String, designation String, " +
         s"doj Timestamp, workgroupcategory int, workgroupcategoryname String, deptno int, " +
         s"deptname String, projectcode int, projectjoindate Timestamp, projectenddate Timestamp," +
-        s"attendance int, utilization int, salary int) stored by 'carbondata'")
+        s"attendance int, utilization int, salary int) STORED AS carbondata")
     sql(s"CREATE DATAMAP dpagg ON TABLE $tableName USING 'preaggregate' AS " +
         s"SELECT AVG(salary), workgroupcategoryname from $tableName GROUP BY workgroupcategoryname")
     sql(s"LOAD DATA INPATH '$resourcesPath/data.csv' INTO TABLE $tableName")
@@ -92,7 +93,7 @@ class TestCarbonDropCacheCommand extends CarbonQueryTest with BeforeAndAfterAll 
     sql(s"CREATE TABLE $tableName(empno int, empname String, designation String, " +
         s"doj Timestamp, workgroupcategory int, workgroupcategoryname String, deptno int, " +
         s"deptname String, projectcode int, projectjoindate Timestamp, projectenddate Timestamp," +
-        s"attendance int, utilization int, salary int) stored by 'carbondata'")
+        s"attendance int, utilization int, salary int) STORED AS carbondata")
     sql(s"CREATE DATAMAP dblom ON TABLE $tableName USING 'bloomfilter' " +
         "DMPROPERTIES('INDEX_COLUMNS'='deptno')")
     sql(s"LOAD DATA INPATH '$resourcesPath/data.csv' INTO TABLE $tableName")
@@ -132,7 +133,7 @@ class TestCarbonDropCacheCommand extends CarbonQueryTest with BeforeAndAfterAll 
     sql(s"CREATE TABLE $tableName(empno int, empname String, designation String, " +
         s"doj Timestamp, workgroupcategory int, workgroupcategoryname String, deptno int, " +
         s"deptname String, projectcode int, projectjoindate Timestamp, projectenddate Timestamp," +
-        s"attendance int, utilization int, salary int) stored by 'carbondata'")
+        s"attendance int, utilization int, salary int) STORED AS carbondata")
     sql(s"CREATE DATAMAP dpagg ON TABLE $tableName USING 'preaggregate' AS " +
         s"SELECT AVG(salary), workgroupcategoryname from $tableName GROUP BY workgroupcategoryname")
     sql(s"LOAD DATA INPATH '$resourcesPath/data.csv' INTO TABLE $tableName")

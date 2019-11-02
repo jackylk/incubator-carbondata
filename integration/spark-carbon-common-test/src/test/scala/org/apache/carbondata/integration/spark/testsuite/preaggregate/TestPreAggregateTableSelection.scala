@@ -47,7 +47,7 @@ class TestPreAggregateTableSelection extends CarbonSparkQueryTest with BeforeAnd
     sql("drop table if exists agg6")
     sql("drop table if exists agg7")
     sql("DROP TABLE IF EXISTS maintabledict")
-    sql("CREATE TABLE mainTable(id int, name string, city string, age string) STORED BY 'org.apache.carbondata.format'")
+    sql("CREATE TABLE mainTable(id int, name string, city string, age string) STORED AS carbondata")
     sql("create datamap agg0 on table mainTable using 'preaggregate' as select name from mainTable group by name")
     sql("create datamap agg1 on table mainTable using 'preaggregate' as select name,sum(age) from mainTable group by name")
     sql("create datamap agg2 on table mainTable using 'preaggregate' as select name,sum(id) from mainTable group by name")
@@ -58,7 +58,7 @@ class TestPreAggregateTableSelection extends CarbonSparkQueryTest with BeforeAnd
     sql("create datamap agg7 on table mainTable using 'preaggregate' as select name,max(age) from mainTable group by name")
     sql("create datamap agg8 on table maintable using 'preaggregate' as select name, sum(id), avg(id) from maintable group by name")
     sql("create datamap agg9 on table maintable using 'preaggregate' as select name, count(*) from maintable group by name")
-    sql("CREATE TABLE mainTableavg(id int, name string, city string, age bigint) STORED BY 'org.apache.carbondata.format'")
+    sql("CREATE TABLE mainTableavg(id int, name string, city string, age bigint) STORED AS carbondata")
     sql("create datamap agg0 on table mainTableavg using 'preaggregate' as select name,sum(age), avg(age) from mainTableavg group by name")
     sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/measureinsertintotest.csv' into table mainTable")
     sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/measureinsertintotest.csv' into table mainTableavg")
@@ -280,7 +280,7 @@ class TestPreAggregateTableSelection extends CarbonSparkQueryTest with BeforeAnd
         |     name STRING,
         |     city STRING,
         |     age STRING)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
         | TBLPROPERTIES('dictionary_include'='name,age')
       """.stripMargin)
     sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/measureinsertintotest.csv' into table filtertable")
@@ -307,7 +307,7 @@ class TestPreAggregateTableSelection extends CarbonSparkQueryTest with BeforeAnd
         |     name STRING,
         |     city STRING,
         |     age STRING)
-        | STORED BY 'org.apache.carbondata.format'
+        | STORED AS carbondata
         | TBLPROPERTIES('dictionary_include'='name,age')
       """.stripMargin)
     sql(s"LOAD DATA LOCAL INPATH '$resourcesPath/measureinsertintotest.csv' into table grouptable")
@@ -329,7 +329,7 @@ class TestPreAggregateTableSelection extends CarbonSparkQueryTest with BeforeAnd
     sql("drop table if exists maintabletime")
     sql(
       "create table maintabletime(year int,month int,name string,salary int,dob timestamp) stored" +
-      " by 'carbondata' tblproperties('sort_scope'='Global_sort','table_blocksize'='23'," +
+      " by carbondata tblproperties('sort_scope'='Global_sort','table_blocksize'='23'," +
       "'sort_columns'='month,year,name')")
     sql("insert into maintabletime select 10,11,'babu',12,'2014-01-01 00:00:00'")
     sql(
@@ -357,7 +357,7 @@ class TestPreAggregateTableSelection extends CarbonSparkQueryTest with BeforeAnd
     sql("DROP TABLE IF EXISTS maintabletime")
     sql(
       "create table maintabletime(year int,month int,name string,salary int,dob string) stored" +
-      " by 'carbondata' tblproperties('sort_scope'='Global_sort','table_blocksize'='23'," +
+      " by carbondata tblproperties('sort_scope'='Global_sort','table_blocksize'='23'," +
       "'sort_columns'='month,year,name')")
     sql("insert into maintabletime select 10,11,'x',12,'2014-01-01 00:00:00'")
     sql(
@@ -375,7 +375,7 @@ class TestPreAggregateTableSelection extends CarbonSparkQueryTest with BeforeAnd
   test("test PreAggregate table selection for avg with maintable containing dictionary include for group by column") {
     sql(
       "create table maintabledict(year int,month int,name string,salary int,dob string) stored" +
-      " by 'carbondata' tblproperties('DICTIONARY_INCLUDE'='year')")
+      " by carbondata tblproperties('DICTIONARY_INCLUDE'='year')")
     sql("insert into maintabledict select 10,11,'x',12,'2014-01-01 00:00:00'")
     sql("insert into maintabledict select 10,11,'x',12,'2014-01-01 00:00:00'")
     sql(
