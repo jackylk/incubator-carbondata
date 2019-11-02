@@ -23,6 +23,7 @@ import org.apache.spark.sql.{AnalysisException, CarbonEnv}
 import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
 
+import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.util.CarbonProperties
 
@@ -90,7 +91,7 @@ class TestCreateExternalTable extends QueryTest with BeforeAndAfterAll {
     }
   }
 
-  test("create external table with specified schema") {
+  ignore("create external table with specified schema") {
     assert(new File(originDataPath).exists())
     sql("DROP TABLE IF EXISTS source")
     val ex = intercept[AnalysisException] {
@@ -118,11 +119,11 @@ class TestCreateExternalTable extends QueryTest with BeforeAndAfterAll {
            |LOCATION './nothing'
          """.stripMargin)
     }
-    assert(exception.getMessage().contains("Invalid table path provided"))
+    assert(exception.getMessage().contains("Unable to infer the schema"))
   }
 
   test("create external table with CTAS") {
-    val exception = intercept[AnalysisException] {
+    val exception = intercept[MalformedCarbonCommandException] {
       sql(
         """
           |CREATE EXTERNAL TABLE source
@@ -140,7 +141,9 @@ class TestCreateExternalTable extends QueryTest with BeforeAndAfterAll {
     sql(
       "Alter table rstest1 add columns(c4 string) TBLPROPERTIES('DICTIONARY_EXCLUDE'='c4', " +
       "'DEFAULT.VALUE.c4'='def')")
+    sql("describe formatted rstest1").show(100, false)
     sql(s"""CREATE EXTERNAL TABLE rsext STORED AS carbondata LOCATION '$storeLocation/rstest1'""")
+    sql("describe formatted rsext").show(100, false)
     sql("insert into rsext select 'shahid', 1")
     checkAnswer(sql("select * from rstest1"),  sql("select * from rsext"))
   }

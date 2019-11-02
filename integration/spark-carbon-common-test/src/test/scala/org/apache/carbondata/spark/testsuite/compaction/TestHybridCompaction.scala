@@ -135,7 +135,7 @@ class TestHybridCompaction extends QueryTest with BeforeAndAfterEach with Before
 
 
   def dropTable(): Unit = {
-    sql(s"DROP TABLE IF E XISTS $tableName")
+    sql(s"DROP TABLE IF EXISTS $tableName")
   }
 
   test("PREAGG") {

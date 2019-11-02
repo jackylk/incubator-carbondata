@@ -567,23 +567,23 @@ class StandardPartitionWithPreaggregateTestCase extends QueryTest with BeforeAnd
          |partitionallcompaction OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""".stripMargin)
     sql(
       s"""LOAD DATA local inpath '$resourcesPath/data.csv' OVERWRITE INTO TABLE
-         |partitionallcompaction PARTITION(deptname='Learning', doj, projectcode) OPTIONS
+         |partitionallcompaction PARTITION(deptname='Learning') OPTIONS
          |('DELIMITER'= ',', 'QUOTECHAR'= '"') """.stripMargin)
     sql(
       s"""LOAD DATA local inpath '$resourcesPath/data.csv' OVERWRITE INTO TABLE
-         |partitionallcompaction PARTITION(deptname='configManagement', doj, projectcode) OPTIONS
+         |partitionallcompaction PARTITION(deptname='configManagement') OPTIONS
          |('DELIMITER'= ',', 'QUOTECHAR'= '"')""".stripMargin)
     sql(
       s"""LOAD DATA local inpath '$resourcesPath/data.csv' OVERWRITE INTO TABLE
-         |partitionallcompaction PARTITION(deptname='network', doj, projectcode) OPTIONS
+         |partitionallcompaction PARTITION(deptname='network') OPTIONS
          |('DELIMITER'= ',', 'QUOTECHAR'= '"')""".stripMargin)
     sql(
       s"""LOAD DATA local inpath '$resourcesPath/data.csv' OVERWRITE INTO TABLE
-         |partitionallcompaction PARTITION(deptname='protocol', doj, projectcode) OPTIONS
+         |partitionallcompaction PARTITION(deptname='protocol') OPTIONS
          |('DELIMITER'= ',', 'QUOTECHAR'= '"')""".stripMargin)
     sql(
       s"""LOAD DATA local inpath '$resourcesPath/data.csv' OVERWRITE INTO TABLE
-         |partitionallcompaction PARTITION(deptname='security', doj, projectcode) OPTIONS
+         |partitionallcompaction PARTITION(deptname='security') OPTIONS
          |('DELIMITER'= ',', 'QUOTECHAR'= '"')""".stripMargin)
     sql("ALTER TABLE partitionallcompaction COMPACT 'MINOR'").collect()
     checkAnswer(sql("select count(empno) from partitionallcompaction where empno=14"),

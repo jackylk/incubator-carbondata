@@ -23,6 +23,7 @@ import org.apache.spark.sql.util.CarbonException
 
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.common.logging.LogServiceFactory
+import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.metadata.datatype.{DataTypes => CarbonType}
 import org.apache.carbondata.spark.CarbonOption
 
@@ -124,12 +125,14 @@ class CarbonDataFrameWriter(sqlContext: SQLContext, val dataFrame: DataFrame) {
 
     val dbName = CarbonEnv.getDatabaseName(options.dbName)(sqlContext.sparkSession)
 
+    val tablePath = options.tablePath.map(FileFactory.getUpdatedFilePath(_))
+
     s"""
        | CREATE TABLE IF NOT EXISTS $dbName.${options.tableName}
        | (${ carbonSchema.mkString(", ") })
        | ${ if (partition.nonEmpty) s"PARTITIONED BY (${partition.mkString(", ")})" else ""}
        | STORED AS carbondata
-       | ${ if (options.tablePath.nonEmpty) s"LOCATION '${options.tablePath.get}'" else ""}
+       | ${ if (tablePath.nonEmpty) s"LOCATION '${tablePath.get}'" else ""}
        |  ${ if (property.nonEmpty) "TBLPROPERTIES (" + property + ")" else "" }
        |
      """.stripMargin

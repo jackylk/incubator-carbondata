@@ -317,24 +317,41 @@ object CarbonSparkSqlParserUtil {
         CarbonEnv.getDatabaseName(tableIdentifier.database)(sparkSession).toLowerCase(),
         tableIdentifier.table.toLowerCase()
       )
-      val tableInfo = try {
-        val schemaPath = CarbonTablePath.getSchemaFilePath(identifier.getTablePath)
-        if (!FileFactory.isFileExist(schemaPath, FileFactory.getFileType(schemaPath))) {
-          if (provider.equalsIgnoreCase("'carbonfile'")) {
-            SchemaReader.inferSchema(identifier, true)
+      val tableInfo = {
+        try {
+          val schemaPath = CarbonTablePath.getSchemaFilePath(identifier.getTablePath)
+          if (!FileFactory.isFileExist(schemaPath, FileFactory.getFileType(schemaPath))) {
+            if (provider.equalsIgnoreCase("'carbonfile'")) {
+              SchemaReader.inferSchema(identifier, true)
+            } else {
+              isTransactionalTable = false
+              SchemaReader.inferSchema(identifier, false)
+            }
           } else {
-            isTransactionalTable = false
-            SchemaReader.inferSchema(identifier, false)
+            SchemaReader.getTableInfo(identifier)
           }
-        } else {
-          SchemaReader.getTableInfo(identifier)
+        } catch {
+          case e: Throwable =>
+            if (fields.nonEmpty) {
+              val tableModel: TableModel = CarbonParserUtil.prepareTableModel(
+                ifNotExists,
+                convertDbNameToLowerCase(tableIdentifier.database),
+                tableIdentifier.table.toLowerCase,
+                fields,
+                Seq.empty,
+                tblProperties,
+                bucketFields,
+                isAlterFlow = false,
+                false,
+                table.comment
+              )
+              TableNewProcessor(tableModel)
+            } else {
+              throw new MalformedCarbonCommandException(
+                s"Invalid table path provided: ${ identifier.getTablePath } ")
+            }
         }
-      } catch {
-        case e: Throwable =>
-          throw new MalformedCarbonCommandException(
-            s"Invalid table path provided: ${ identifier.getTablePath } ")
       }
-
       // set "_external" property, so that DROP TABLE will not delete the data
       if (provider.equalsIgnoreCase("'carbonfile'")) {
         tableInfo.getFactTable.getTableProperties.put("_filelevelformat", "true")
@@ -362,7 +379,6 @@ object CarbonSparkSqlParserUtil {
           if (cols.getDataType == DataTypes.STRING || cols.getDataType == DataTypes.VARCHAR) {
             cols.setLocalDictColumn(true)
           }
-          allcolumns.set(i, cols)
         }
         tableInfo.getFactTable.setListOfColumns(allcolumns)
       }

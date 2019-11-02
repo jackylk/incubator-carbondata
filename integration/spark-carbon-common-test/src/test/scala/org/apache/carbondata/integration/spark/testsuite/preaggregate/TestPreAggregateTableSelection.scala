@@ -329,7 +329,7 @@ class TestPreAggregateTableSelection extends CarbonSparkQueryTest with BeforeAnd
     sql("drop table if exists maintabletime")
     sql(
       "create table maintabletime(year int,month int,name string,salary int,dob timestamp) stored" +
-      " by carbondata tblproperties('sort_scope'='Global_sort','table_blocksize'='23'," +
+      " as carbondata tblproperties('sort_scope'='Global_sort','table_blocksize'='23'," +
       "'sort_columns'='month,year,name')")
     sql("insert into maintabletime select 10,11,'babu',12,'2014-01-01 00:00:00'")
     sql(
@@ -357,7 +357,7 @@ class TestPreAggregateTableSelection extends CarbonSparkQueryTest with BeforeAnd
     sql("DROP TABLE IF EXISTS maintabletime")
     sql(
       "create table maintabletime(year int,month int,name string,salary int,dob string) stored" +
-      " by carbondata tblproperties('sort_scope'='Global_sort','table_blocksize'='23'," +
+      " as carbondata tblproperties('sort_scope'='Global_sort','table_blocksize'='23'," +
       "'sort_columns'='month,year,name')")
     sql("insert into maintabletime select 10,11,'x',12,'2014-01-01 00:00:00'")
     sql(
@@ -375,7 +375,7 @@ class TestPreAggregateTableSelection extends CarbonSparkQueryTest with BeforeAnd
   test("test PreAggregate table selection for avg with maintable containing dictionary include for group by column") {
     sql(
       "create table maintabledict(year int,month int,name string,salary int,dob string) stored" +
-      " by carbondata tblproperties('DICTIONARY_INCLUDE'='year')")
+      " as carbondata tblproperties('DICTIONARY_INCLUDE'='year')")
     sql("insert into maintabledict select 10,11,'x',12,'2014-01-01 00:00:00'")
     sql("insert into maintabledict select 10,11,'x',12,'2014-01-01 00:00:00'")
     sql(
