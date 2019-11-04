@@ -47,7 +47,7 @@ class CarbonExtensions extends ((SparkSessionExtensions) => Unit) {
       .injectPostHocResolutionRule((_: SparkSession) => new CarbonPreOptimizerRule)
     // Carbon optimization rules
     extensions
-      .injectResolutionRule((sparkSession: SparkSession) => {
+      .injectPostHocResolutionRule((sparkSession: SparkSession) => {
         CarbonOptimizationRulesWrapper(sparkSession)
       })
 

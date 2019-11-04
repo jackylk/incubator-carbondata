@@ -51,7 +51,7 @@ class MVAnalyzerRule(sparkSession: SparkSession) extends Rule[LogicalPlan] {
 
   override def apply(plan: LogicalPlan): LogicalPlan = {
     var needAnalysis = true
-    plan.transformAllExpressions {
+    plan.resolveExpressions {
       // first check if any preAgg scala function is applied it is present is in plan
       // then call is from create preaggregate table class so no need to transform the query plan
       // TODO Add different UDF name
@@ -67,7 +67,7 @@ class MVAnalyzerRule(sparkSession: SparkSession) extends Rule[LogicalPlan] {
         needAnalysis = false
         attr
     }
-    plan.transform {
+    plan.resolveOperatorsDown {
       case aggregate@Aggregate(grp, aExp, child) =>
         // check for if plan is for dataload for preaggregate table, then skip applying mv
         val isPreAggLoad = aExp.exists { p =>

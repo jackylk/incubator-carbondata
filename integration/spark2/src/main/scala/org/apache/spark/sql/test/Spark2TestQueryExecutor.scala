@@ -62,6 +62,9 @@ object Spark2TestQueryExecutor {
       System.getProperty("spark.hadoop.hive.metastore.uris"))
   }
   val metaStoreDB = s"$integrationPath/spark-common-cluster-test/target"
+  val extensions = CarbonProperties
+    .getInstance()
+    .getProperty("spark.sql.extensions", "org.apache.spark.sql.CarbonExtensions")
   val spark = SparkSession
     .builder().config(conf)
     .master(TestQueryExecutor.masterUrl)
@@ -69,7 +72,7 @@ object Spark2TestQueryExecutor {
     .enableHiveSupport()
     .config("spark.sql.warehouse.dir", warehouse)
     .config("spark.sql.crossJoin.enabled", "true")
-    .config("spark.sql.extensions", "org.apache.spark.sql.CarbonExtensions")
+    .config("spark.sql.extensions", extensions)
     .getOrCreate()
 
   CarbonEnv.getInstance(spark)
