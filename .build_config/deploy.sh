@@ -3,9 +3,14 @@ set -xe
 
 export COMPONENT_NAME=${COMPONENT_NAME:-EI_CarbonData_Kernel_Component}
 export COMPONENT_VERSION=${COMPONENT_VERSION:-1.6.1.0100}
-export DP_VERSION=${DP_VERSION:-dplatform}
-if [[ $BUILD_PLATFORM = 'aarch64' ]]; then
-  DP_VERSION=${BUILD_PLATFORM}-${DP_VERSION}
+export DP_VERSION=${DP_VERSION:hw-dplatform}
+export IS_SNAPSHOT=${IS_SNAPSHOT:true}
+if [[ $CID_BUILD_PLATFORM = 'aarch64' ]]; then
+  DP_VERSION=${DP_VERSION}-${CID_BUILD_PLATFORM}
+fi
+# add SNAPSHOT postfix
+if [[ $IS_SNAPSHOT = 'true' ]]; then
+  DP_VERSION=${DP_VERSION}-SNAPSHOT
 fi
 CARBON_RELEASE_PACKAGE=${COMPONENT_NAME}_${COMPONENT_VERSION}-${DP_VERSION}_release.tar.gz
 JAR_VERSION=${COMPONENT_VERSION}-${DP_VERSION}
@@ -123,12 +128,13 @@ do
     pomFile=${artifact}-${JAR_VERSION}.pom
     jarFile=${artifact}-${JAR_VERSION}.jar
     testJarFile=${artifact}-${JAR_VERSION}-tests.jar
+    sourceJarFile=${artifact}-${JAR_VERSION}-sources.jar
 
     if [[ ! -f "${jarPath}/${pomFile}" ]]; then
         echo "error: ${jarPath}/${pomFile} not exists"
         exit 1
     fi
-
+    # deploy jar
     if [[ -f "${jarPath}/${jarFile}" ]]; then
         echo "deploy ${pomFile} ${jarFile}"
         mvn deploy:deploy-file -DgroupId=${GROUP_ID} -DartifactId=${artifact} -Dversion=${JAR_VERSION} -Dpackaging=jar -Dfile=${jarPath}/${jarFile} -DpomFile=${jarPath}/${pomFile} -Durl=http://wlg1.artifactory.cd-cloud-artifact.tools.huawei.com/artifactory/${repositoryId} -DrepositoryId=${repositoryId} -s ${SETTINGS_FILE}
@@ -136,9 +142,14 @@ do
         echo "warn: ${jarPath}/${jarFile} not exists, only upload ${jarPath}/${pomFile}"
         mvn deploy:deploy-file -DgroupId=${GROUP_ID} -DartifactId=${artifact} -Dversion=${JAR_VERSION} -Dpackaging=pom -Dfile=${jarPath}/${pomFile} -DpomFile=${jarPath}/${pomFile} -Durl=http://wlg1.artifactory.cd-cloud-artifact.tools.huawei.com/artifactory/${repositoryId} -DrepositoryId=${repositoryId} -s ${SETTINGS_FILE}
     fi
-
+    # deploy -tests jar
     if [[ -f "${jarPath}/${testJarFile}" ]]; then
         echo "deploy ${pomFile} ${testJarFile}"
         mvn deploy:deploy-file   -Dclassifier=tests -DgroupId=${GROUP_ID} -DartifactId=${artifact} -Dversion=${JAR_VERSION} -Dpackaging=jar -Dfile=${jarPath}/${testJarFile} -DpomFile=${jarPath}/${pomFile} -Durl=http://wlg1.artifactory.cd-cloud-artifact.tools.huawei.com/artifactory/${repositoryId} -DrepositoryId=${repositoryId} -s ${SETTINGS_FILE}
+    fi
+    # deploy -sources jar
+    if [[ -f "${jarPath}/${sourceJarFile}" ]]; then
+        echo "deploy ${pomFile} ${sourceJarFile}"
+        mvn deploy:deploy-file   -Dclassifier=sources -DgroupId=${GROUP_ID} -DartifactId=${artifact} -Dversion=${JAR_VERSION} -Dpackaging=jar -Dfile=${jarPath}/${sourceJarFile} -DpomFile=${jarPath}/${pomFile} -Durl=http://wlg1.artifactory.cd-cloud-artifact.tools.huawei.com/artifactory/${repositoryId} -DrepositoryId=${repositoryId} -s ${SETTINGS_FILE}
     fi
 done
