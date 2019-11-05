@@ -22,7 +22,7 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.util.CarbonReflectionUtils
 
-case class CarbonExtensionRulesForOnce(sparkSession: SparkSession) extends Rule[LogicalPlan] {
+case class CarbonMVRules(sparkSession: SparkSession) extends Rule[LogicalPlan] {
 
   val mvPlan = try {
     CarbonReflectionUtils.createObject(

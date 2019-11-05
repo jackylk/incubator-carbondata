@@ -33,7 +33,7 @@ class TestSecondaryIndexWithIndexOnFirstColumnAndSortColumns extends QueryTest w
     sql(s"""load data  inpath '${pluginResourcesPath}/secindex/firstunique.csv' into table seccust options('DELIMITER'='|','QUOTECHAR'='"','FILEHEADER'='id,c_custkey,c_name,c_address,c_nationkey,c_phone,c_acctbal,c_mktsegment,c_comment')""")
     sql(s"""load data  inpath '${pluginResourcesPath}/secindex/secondunique.csv' into table seccust options('DELIMITER'='|','QUOTECHAR'='\"','FILEHEADER'='id,c_custkey,c_name,c_address,c_nationkey,c_phone,c_acctbal,c_mktsegment,c_comment')""")
     count1BeforeIndex = sql("select * from seccust where id = '1' limit 1").collect()
-    sql("create index sc_indx1 on table seccust(id) as carbondata")
+    sql("create index sc_indx1 on table seccust(id) AS 'carbondata'")
   }
 
   test("Test secondry index on 1st column and with sort columns") {

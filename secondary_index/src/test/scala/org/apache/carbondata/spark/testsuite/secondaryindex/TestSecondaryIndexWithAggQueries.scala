@@ -29,18 +29,18 @@ class TestSecondaryIndexWithAggQueries extends QueryTest with BeforeAndAfterAll 
   test("test agg queries with secondary index") {
     sql("create table source (c1 string,c2 string,c3 string,c5 string) STORED AS CARBONDATA")
     sql(s"""LOAD DATA LOCAL INPATH '$pluginResourcesPath/secindex/dest.csv' INTO table source""")
-   /* sql("create index index_source1 on table source (c2) AS carbondata")
+   /* sql("create index index_source1 on table source (c2) AS 'carbondata'")
     checkAnswer(
       sql("select count(*) from source where c2='1' and c3 = 'aa' and c5 = 'aaa' "),
       Seq(Row(1))
     )
-   sql("create index index_source2 on table source (c3) AS carbondata")
+   sql("create index index_source2 on table source (c3) AS 'carbondata'")
 
     checkAnswer(
       sql("select count(*) from source where c2='zc' and c3 = 'gf' and c5 = 'fd' "),
       Seq(Row(0))
     )
-       sql("create index index_source3 on table source (c5) AS carbondata")
+       sql("create index index_source3 on table source (c5) AS 'carbondata'")
       checkAnswer(
         sql("select count(*) from source where c2='2' and c3 = 'bb' and c5 = 'bbb' "),
         Seq(Row(1))
@@ -112,7 +112,7 @@ class TestSecondaryIndexWithAggQueries extends QueryTest with BeforeAndAfterAll 
     sql(
       "CREATE DATAMAP dm_test_si_11 ON TABLE test_si_1 USING 'bloomfilter' DMPROPERTIES " +
       "('INDEX_COLUMNS' = 'address', 'BLOOM_SIZE'='640000', 'BLOOM_FPP'='0.00001')")
-    sql("create index si_test_si_1 on table test_si_1(address) as carbondata")
+    sql("create index si_test_si_1 on table test_si_1(address) AS 'carbondata'")
     val exceptionMessage = intercept[ErrorMessage] {
       sql(
         "CREATE DATAMAP dm_on_si ON TABLE si_test_si_1  USING 'bloomfilter' DMPROPERTIES " +
@@ -133,7 +133,7 @@ class TestSecondaryIndexWithAggQueries extends QueryTest with BeforeAndAfterAll 
       "CREATE DATAMAP dm_test_pre_agg1 ON TABLE test_pre_agg USING 'bloomfilter' DMPROPERTIES " +
       "('INDEX_COLUMNS' = 'address', 'BLOOM_SIZE'='640000', 'BLOOM_FPP'='0.00001')")
     sql(
-      "create index index5 on table test_pre_agg(address) as carbondata" +
+      "create index index5 on table test_pre_agg(address) AS 'carbondata'" +
       " tblproperties('table_blocksize' = '256')")
     val exceptionMessage = intercept[ErrorMessage] {
       sql("create datamap datamap_test_pre_agg  ON TABLE index5 USING 'preaggregate' as select " +
@@ -147,7 +147,7 @@ class TestSecondaryIndexWithAggQueries extends QueryTest with BeforeAndAfterAll 
     sql("drop index if exists index5 on cast_si")
     sql("create table if not exists cast_si (RECORD_ID bigint,CDR_ID string,LOCATION_CODE int,USER_NUM string) STORED AS carbondata " +
         "TBLPROPERTIES('table_blocksize'='256','dictionary_exclude'='CDR_ID','SORT_SCOPE'='NO_SORT')")
-    sql("create index index5 on table cast_si(USER_NUM) as carbondata tblproperties('table_blocksize' = '256')")
+    sql("create index index5 on table cast_si(USER_NUM) AS 'carbondata' tblproperties('table_blocksize' = '256')")
     sql("insert into cast_si select  1, 'gb3e5135-5533-4ee7-51b3-F61F1355b471', 2, '26557544541'")
     sql("create table ctas_cast select cast(location_code as string) as location_code from cast_si where ((user_num in ('26557544541')))")
     checkAnswer(sql("select count(*) from cast_si where ((user_num in ('26557544541')))"), sql("select count(*) from ctas_cast"))
@@ -156,7 +156,7 @@ class TestSecondaryIndexWithAggQueries extends QueryTest with BeforeAndAfterAll 
   test("test clean files for index for marked for delete segments") {
     sql("drop table if exists clean")
     sql("create table clean(name string, age int, add string) STORED AS carbondata")
-    sql("create index clean_index on table clean(add) as carbondata")
+    sql("create index clean_index on table clean(add) AS 'carbondata'")
     sql("insert into clean select 'ca',5,'de'")
     sql("insert into clean select 'ca',5,'de'")
     sql("delete from table clean where segment.id in (0)")

@@ -21,7 +21,7 @@ import org.apache.spark.sql.catalyst.parser.ParserInterface
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.execution.strategy.{CarbonLateDecodeStrategy, DDLStrategy, StreamingTableStrategy}
-import org.apache.spark.sql.hive.{CarbonExtensionRulesForOnce, CarbonIUDAnalysisRule, CarbonPreInsertionCasts, CarbonPreOptimizerRule}
+import org.apache.spark.sql.hive.{CarbonMVRules, CarbonIUDAnalysisRule, CarbonPreInsertionCasts, CarbonPreOptimizerRule}
 import org.apache.spark.sql.optimizer.{CarbonIUDRule, CarbonLateDecodeRule, CarbonUDFTransformRule}
 import org.apache.spark.sql.parser.CarbonExtensionSqlParser
 
@@ -39,17 +39,20 @@ class CarbonExtensions extends ((SparkSessionExtensions) => Unit) {
       .injectResolutionRule((session: SparkSession) => CarbonIUDAnalysisRule(session))
     extensions
       .injectResolutionRule((session: SparkSession) => CarbonPreInsertionCasts(session))
-
     extensions
-      .injectPostHocResolutionRule((session: SparkSession) => CarbonExtensionRulesForOnce(session))
+      .injectLastBatchResolutionRule((session: SparkSession) => CarbonMVRules(session))
+
     // Carbon Pre optimization rules
     extensions
-      .injectPostHocResolutionRule((_: SparkSession) => new CarbonPreOptimizerRule)
+      .injectFirstBatchOptimizerRule((_: SparkSession) => new CarbonPreOptimizerRule)
+
     // Carbon optimization rules
     extensions
-      .injectPostHocResolutionRule((sparkSession: SparkSession) => {
-        CarbonOptimizationRulesWrapper(sparkSession)
-      })
+      .injectLastBatchOptimizerRule((_: SparkSession) => new CarbonIUDRule)
+    extensions
+      .injectLastBatchOptimizerRule((_: SparkSession) => new CarbonUDFTransformRule)
+    extensions
+      .injectLastBatchOptimizerRule((_: SparkSession) => new CarbonLateDecodeRule)
 
     // carbon planner strategies
     extensions
@@ -63,19 +66,3 @@ class CarbonExtensions extends ((SparkSessionExtensions) => Unit) {
     CarbonEnv.init
   }
 }
-
-case class CarbonOptimizationRulesWrapper(session: SparkSession)
-  extends Rule[LogicalPlan] {
-
-  override def apply(plan: LogicalPlan): LogicalPlan = {
-    if (session.sessionState.experimentalMethods.extraOptimizations.isEmpty) {
-      session.sessionState.experimentalMethods.extraOptimizations = Seq(
-        new CarbonIUDRule,
-        new CarbonUDFTransformRule,
-        new CarbonLateDecodeRule)
-    }
-    plan
-  }
-}
-
-

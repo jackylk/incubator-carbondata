@@ -313,7 +313,7 @@ class CarbonACLInternalSessionStateBuilder(sparkSession: SparkSession,
 
   // Register all the required listeners using the singleton instance as the listeners
   // need to be registered only once
-  CarbonCommonInitializer.init
+  CarbonCommonInitializer.init()
 
   /**
    * Listener on session to handle clean during close session.

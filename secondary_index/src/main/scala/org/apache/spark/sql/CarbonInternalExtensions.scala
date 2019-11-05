@@ -22,7 +22,7 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.command.InternalDDLStrategy
 import org.apache.spark.sql.execution.strategy.{CarbonInternalLateDecodeStrategy, CarbonLateDecodeStrategy, DDLStrategy, StreamingTableStrategy}
-import org.apache.spark.sql.hive.{CarbonCommonInitializer, CarbonExtensionRulesForOnce, CarbonIUDAnalysisRule, CarbonPreInsertionCasts, CarbonPreOptimizerRule}
+import org.apache.spark.sql.hive.{CarbonCommonInitializer, CarbonMVRules, CarbonIUDAnalysisRule, CarbonPreInsertionCasts, CarbonPreOptimizerRule}
 import org.apache.spark.sql.optimizer.{CarbonIUDRule, CarbonLateDecodeRule, CarbonSITransformationRule, CarbonUDFTransformRule}
 import org.apache.spark.sql.parser.CarbonExtensionInternalSqlParser
 
@@ -40,18 +40,22 @@ class CarbonInternalExtensions extends ((SparkSessionExtensions) => Unit) {
       .injectResolutionRule((session: SparkSession) => CarbonIUDAnalysisRule(session))
     extensions
       .injectResolutionRule((session: SparkSession) => CarbonPreInsertionCasts(session))
-
     extensions
-      .injectPostHocResolutionRule((session: SparkSession) => CarbonExtensionRulesForOnce(session))
+      .injectLastBatchResolutionRule((session: SparkSession) => CarbonMVRules(session))
 
     // Carbon Pre optimization rules
     extensions
-      .injectPostHocResolutionRule((_: SparkSession) => new CarbonPreOptimizerRule)
+      .injectFirstBatchOptimizerRule((_: SparkSession) => new CarbonPreOptimizerRule)
+
     // Carbon optimization rules
     extensions
-      .injectPostHocResolutionRule((sparkSession: SparkSession) => {
-        CarbonInternalOptimizationRulesWrapper(sparkSession)
-      })
+      .injectLastBatchOptimizerRule((_: SparkSession) => new CarbonIUDRule)
+    extensions
+      .injectLastBatchOptimizerRule((_: SparkSession) => new CarbonUDFTransformRule)
+    extensions.injectLastBatchOptimizerRule(
+      (session: SparkSession) => new CarbonSITransformationRule(session))
+    extensions
+      .injectLastBatchOptimizerRule((_: SparkSession) => new CarbonLateDecodeRule)
 
     // carbon planner strategies
     extensions
@@ -69,21 +73,6 @@ class CarbonInternalExtensions extends ((SparkSessionExtensions) => Unit) {
     // TODO: CarbonPrivCheck
 
     // init Carbon
-    CarbonCommonInitializer.init
-  }
-}
-
-case class CarbonInternalOptimizationRulesWrapper(session: SparkSession)
-  extends Rule[LogicalPlan] {
-
-  override def apply(plan: LogicalPlan): LogicalPlan = {
-    if (session.sessionState.experimentalMethods.extraOptimizations.isEmpty) {
-      session.sessionState.experimentalMethods.extraOptimizations = Seq(
-        new CarbonIUDRule,
-        new CarbonUDFTransformRule,
-        new CarbonSITransformationRule(session),
-        new CarbonLateDecodeRule)
-    }
-    plan
+    CarbonCommonInitializer.init(false)
   }
 }

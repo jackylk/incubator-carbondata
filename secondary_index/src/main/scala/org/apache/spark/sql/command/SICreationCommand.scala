@@ -338,8 +338,7 @@ class ErrorMessage(message: String) extends Exception(message) {
       // modify the tableProperties of mainTable by adding "indexTableExists" property
       CarbonInternalScalaUtil
         .addOrModifyTableProperty(carbonTable,
-          Map("indexTableExists" -> "true"), schema, false)(sparkSession,
-          sparkSession.sessionState.catalog.asInstanceOf[CarbonSessionCatalog])
+          Map("indexTableExists" -> "true"), schema, false)(sparkSession)
 
       CarbonInternalHiveMetadataUtil.refreshTable(databaseName, tableName, sparkSession)
 

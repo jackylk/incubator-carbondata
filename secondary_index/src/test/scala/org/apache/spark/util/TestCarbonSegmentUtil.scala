@@ -19,7 +19,7 @@ import scala.collection.JavaConverters._
 import org.apache.spark.sql.CarbonEnv
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.execution.strategy.CarbonDataSourceScan
-import org.apache.spark.sql.test.{Spark2TestQueryExecutor, TestQueryExecutor}
+import org.apache.spark.sql.test.{Spark2TestQueryExecutor, TestInternalQueryExecutor}
 import org.apache.spark.sql.test.util.QueryTest
 
 import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatusManager}
@@ -212,8 +212,8 @@ class TestCarbonSegmentUtil extends QueryTest {
     sql(s"INSERT INTO $tableName SELECT 'c1v2', '2', 'c3v2'")
     sql(s"INSERT INTO $tableName SELECT 'c1v1', '1', 'c3v1'")
     sql(s"INSERT INTO $tableName SELECT 'c1v2', '2', 'c3v2'")
-    sql(s"create index si_index_table on table $tableName(c3) as carbondata ")
-    sql(s"create index si_index_table1 on table $tableName(c2) as carbondata ")
+    sql(s"create index si_index_table on table $tableName(c3) AS 'carbondata' ")
+    sql(s"create index si_index_table1 on table $tableName(c2) AS 'carbondata' ")
     assert(CarbonSegmentUtil
              .getFilteredSegments(s"select * from $tableName where c3='c3v1'",
                Spark2TestQueryExecutor.spark).length == 2)
@@ -236,7 +236,7 @@ class TestCarbonSegmentUtil extends QueryTest {
   // Test get Filtered Segments with more than 100 columns
   def test_getFilteredSegments_with_more_than_100_columns(): Unit = {
     dropTables(tableName)
-    val csvPath = TestQueryExecutor.pluginResourcesPath.replaceAll("\\\\", "/")
+    val csvPath = TestInternalQueryExecutor.pluginResourcesPath.replaceAll("\\\\", "/")
     sql(
       s"create table $tableName (RECORD_ID string,CDR_ID string,LOCATION_CODE int,SYSTEM_ID " +
       s"string," +

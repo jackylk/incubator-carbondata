@@ -40,8 +40,8 @@ class TestNIQueryWithSecondaryIndex extends QueryTest with BeforeAndAfterAll{
     sql("drop index if exists sc_indx5 on seccust")
     sql("drop index if exists sc_indx6 on seccust")
 
-    sql("create index sc_indx6 on table seccust(c_phone,c_mktsegment) as carbondata")
-    sql("create index sc_indx5 on table seccust(c_phone) as carbondata")
+    sql("create index sc_indx6 on table seccust(c_phone,c_mktsegment) AS 'carbondata'")
+    sql("create index sc_indx5 on table seccust(c_phone) AS 'carbondata'")
     sql("set carbon.si.lookup.partialstring=true")
   }
 
@@ -214,8 +214,8 @@ class TestNIQueryWithSecondaryIndex extends QueryTest with BeforeAndAfterAll{
         s"deptname String, projectcode int, projectjoindate Timestamp, projectenddate Timestamp," +
         s"attendance int, utilization int, salary int) STORED AS carbondata")
     sql(s"LOAD DATA INPATH '$resourcesPath/data.csv' INTO TABLE testOrderBy")
-    sql("CREATE INDEX index_orderBy ON TABLE testOrderBy (workgroupcategoryname) AS carbondata")
-    sql("CREATE INDEX index1_orderBy ON TABLE testOrderBy (deptname) AS carbondata")
+    sql("CREATE INDEX index_orderBy ON TABLE testOrderBy (workgroupcategoryname) AS 'carbondata'")
+    sql("CREATE INDEX index1_orderBy ON TABLE testOrderBy (deptname) AS 'carbondata'")
     sql(
       "select designation from testOrderBy where deptname IN ('network', " +
       "'protocol','security') OR workgroupcategoryname IN ('developer','tester','manager') " +

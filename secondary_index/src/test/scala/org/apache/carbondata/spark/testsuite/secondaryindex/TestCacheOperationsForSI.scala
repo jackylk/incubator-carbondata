@@ -17,7 +17,7 @@ import scala.collection.JavaConverters._
 
 import org.apache.spark.sql.CarbonEnv
 import org.apache.spark.sql.catalyst.TableIdentifier
-import org.apache.spark.sql.test.util.QueryTest
+import org.apache.spark.sql.common.util.QueryTest
 import org.apache.spark.util.CarbonInternalScalaUtil
 
 import org.apache.carbondata.core.cache.CacheProvider
@@ -51,7 +51,7 @@ class TestCacheOperationsForSI extends QueryTest with BeforeAndAfterAll {
       s"TBLPROPERTIES('DICTIONARY_INCLUDE'='designation, workgroupcategoryname')")
     sql(s"LOAD DATA INPATH '$resourcesPath/data.csv' INTO TABLE $tableName")
     sql(s"CREATE INDEX $indexName ON TABLE $tableName (workgroupcategoryname, empname) " +
-      s"AS carbondata")
+      s"AS 'carbondata'")
     sql(s"SELECT * FROM $tableName WHERE empname='arvind'").collect()
 
     val droppedCacheKeys = clone(CacheProvider.getInstance().getCarbonCache.getCacheMap.keySet())
@@ -94,7 +94,7 @@ class TestCacheOperationsForSI extends QueryTest with BeforeAndAfterAll {
         s"TBLPROPERTIES('DICTIONARY_INCLUDE'='designation, workgroupcategoryname')")
     sql(s"LOAD DATA INPATH '$resourcesPath/data.csv' INTO TABLE $tableName")
     sql(s"CREATE INDEX $indexName ON TABLE $tableName (workgroupcategoryname, empname) " +
-        s"AS carbondata")
+        s"AS 'carbondata'")
     sql(s"SELECT * FROM $tableName WHERE empname='arvind'").collect()
 
     val result = sql(s"SHOW METACACHE ON TABLE $tableName").collectAsList()

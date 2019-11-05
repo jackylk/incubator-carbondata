@@ -17,7 +17,6 @@ import java.util.ServiceLoader
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
 
-import org.apache.spark.sql.{DataFrame, SQLContext}
 import org.apache.spark.util.Utils
 
 import org.apache.carbondata.common.logging.LogServiceFactory
@@ -25,7 +24,7 @@ import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.util.CarbonProperties
 
-object TestQueryExecutor {
+object TestInternalQueryExecutor {
 
   private val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
 

@@ -395,7 +395,7 @@ class AddSegmentTestCase extends QueryTest with BeforeAndAfterAll {
     sql(s"drop table $tableName")
   }
 
-  test("Test add segment and drop table should deletes all segments") {
+  ignore("Test add segment and drop table should deletes all segments") {
     val tableName = "add_segment_test"
     sql(s"drop table if exists $tableName")
     sql(

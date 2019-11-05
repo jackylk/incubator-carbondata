@@ -24,7 +24,7 @@ class TestSecondaryIndexWithLocalDictionary extends QueryTest with BeforeAndAfte
     sql("create table local_sec (a string,b string) STORED AS carbondata tblproperties('local_dictionary_enable'='true', 'local_dictionary_exclude'='b','local_dictionary_threshold'='20000')")
     val exception = intercept[Exception] {
       sql(
-        "create index index1 on table local_sec(b) as carbondata tblproperties('local_dictionary_enable'='true')")
+        "create index index1 on table local_sec(b) AS 'carbondata' tblproperties('local_dictionary_enable'='true')")
     }
     exception.getMessage.contains("Unsupported Table property in index creation: local_dictionary_enable")
   }
@@ -32,7 +32,7 @@ class TestSecondaryIndexWithLocalDictionary extends QueryTest with BeforeAndAfte
   test("test local dictionary for index when main table is disable"){
     sql("drop table if exists local_sec")
     sql("create table local_sec (a string,b string) STORED AS carbondata tblproperties('local_dictionary_enable'='false')")
-    sql("create index index1 on table local_sec(b) as carbondata")
+    sql("create index index1 on table local_sec(b) AS 'carbondata'")
     checkExistence(sql("DESC FORMATTED index1"), false,
       "Local Dictionary Include")
   }
@@ -40,7 +40,7 @@ class TestSecondaryIndexWithLocalDictionary extends QueryTest with BeforeAndAfte
   test("test local dictionary for index with default properties when enabled") {
     sql("drop table if exists local_sec")
     sql("create table local_sec (a string,b string) STORED AS carbondata tblproperties('local_dictionary_enable'='true')")
-    sql("create index index1 on table local_sec(b) as carbondata")
+    sql("create index index1 on table local_sec(b) AS 'carbondata'")
     val descLoc = sql("describe formatted index1").collect
     descLoc.find(_.get(0).toString.contains("Local Dictionary Enabled")) match {
       case Some(row) => assert(row.get(1).toString.contains("true"))
@@ -59,7 +59,7 @@ class TestSecondaryIndexWithLocalDictionary extends QueryTest with BeforeAndAfte
   test("test local dictionary for index when index column is dictionary excluded") {
     sql("drop table if exists local_sec")
     sql("create table local_sec (a string,b string) STORED AS carbondata tblproperties('local_dictionary_enable'='true','local_dictionary_exclude'='b','local_dictionary_threshold'='20000')")
-    sql("create index index1 on table local_sec(b) as carbondata")
+    sql("create index index1 on table local_sec(b) AS 'carbondata'")
     val descLoc = sql("describe formatted index1").collect
     descLoc.find(_.get(0).toString.contains("Local Dictionary Enabled")) match {
       case Some(row) => assert(row.get(1).toString.contains("true"))
@@ -78,7 +78,7 @@ class TestSecondaryIndexWithLocalDictionary extends QueryTest with BeforeAndAfte
   test("test local dictionary for index when index column is dictionary excluded, but dictionary is disabled") {
     sql("drop table if exists local_sec")
     sql("create table local_sec (a string,b string) STORED AS carbondata tblproperties('local_dictionary_exclude'='b','local_dictionary_enable'='false')")
-    sql("create index index1 on table local_sec(b) as carbondata")
+    sql("create index index1 on table local_sec(b) AS 'carbondata'")
     checkExistence(sql("DESC FORMATTED index1"), false,
       "Local Dictionary Include")
   }

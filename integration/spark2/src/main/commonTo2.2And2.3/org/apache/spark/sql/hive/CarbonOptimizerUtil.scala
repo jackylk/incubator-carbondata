@@ -9,11 +9,11 @@ object CarbonOptimizerUtil {
   def transformForScalarSubQuery(plan: LogicalPlan): LogicalPlan = {
     // In case scalar subquery add flag in relation to skip the decoder plan in optimizer rule, And
     // optimize whole plan at once.
-    val transFormedPlan = plan.resolveOperatorsDown {
+    val transFormedPlan = plan.transform {
       case filter: Filter =>
         filter.transformExpressions {
           case s: ScalarSubquery =>
-            val tPlan = s.plan.resolveOperatorsDown {
+            val tPlan = s.plan.transform {
               case lr: LogicalRelation
                 if lr.relation.isInstanceOf[CarbonDatasourceHadoopRelation] =>
                 lr.relation.asInstanceOf[CarbonDatasourceHadoopRelation].isSubquery += true
@@ -21,7 +21,7 @@ object CarbonOptimizerUtil {
             }
             ScalarSubquery(tPlan, s.children, s.exprId)
           case e: Exists =>
-            val tPlan = e.plan.resolveOperatorsDown {
+            val tPlan = e.plan.transform {
               case lr: LogicalRelation
                 if lr.relation.isInstanceOf[CarbonDatasourceHadoopRelation] =>
                 lr.relation.asInstanceOf[CarbonDatasourceHadoopRelation].isSubquery += true
@@ -30,7 +30,7 @@ object CarbonOptimizerUtil {
             Exists(tPlan, e.children.map(_.canonicalized), e.exprId)
 
           case In(value, Seq(l:ListQuery)) =>
-            val tPlan = l.plan.resolveOperatorsDown {
+            val tPlan = l.plan.transform {
               case lr: LogicalRelation
                 if lr.relation.isInstanceOf[CarbonDatasourceHadoopRelation] =>
                 lr.relation.asInstanceOf[CarbonDatasourceHadoopRelation].isSubquery += true

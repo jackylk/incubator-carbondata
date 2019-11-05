@@ -36,7 +36,7 @@ class TestLikeQueryWithSecondaryIndex extends QueryTest with BeforeAndAfterAll {
 
     )
 
-    sql("create index insert_index on table TCarbon (name) AS carbondata"
+    sql("create index insert_index on table TCarbon (name) AS 'carbondata'"
     )
   }
 

@@ -41,6 +41,7 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
   def dropTableByName(tableName: String) :Unit = {
     sql(s"drop table if exists $tableName")
     sql(s"drop table if exists ${tableName}_p")
+    sql(s"drop table if exists ${tableName}_ctas")
   }
 
   override def afterAll: Unit = {
@@ -63,6 +64,13 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
 
     sql(s"create table ${tableName}_p(key int, value string) using $provider partitioned by (value)")
     checkLoading(s"${tableName}_p")
+
+    sql(s"create table ${tableName}_ctas using $provider as select * from ${tableName}")
+    checkAnswer(sql(s"select * from ${tableName}_ctas"),
+      Seq(Row(123, "abc")))
+    sql(s"insert into ${tableName}_ctas select 123, 'abc'")
+    checkAnswer(sql(s"select * from ${tableName}_ctas"),
+      Seq(Row(123, "abc"), Row(123, "abc")))
   }
 
   def verifyHiveTable(provider: String, tableName: String): Unit = {
@@ -71,6 +79,13 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
 
     sql(s"create table ${tableName}_p(key int) partitioned by (value string) stored as $provider ")
     checkLoading(s"${tableName}_p")
+
+    sql(s"create table ${tableName}_ctas stored as $provider as select * from ${tableName}")
+    checkAnswer(sql(s"select * from ${tableName}_ctas"),
+      Seq(Row(123, "abc")))
+    sql(s"insert into ${tableName}_ctas select 123, 'abc'")
+    checkAnswer(sql(s"select * from ${tableName}_ctas"),
+      Seq(Row(123, "abc"), Row(123, "abc")))
   }
 
   def checkLoading(tableName: String): Unit = {

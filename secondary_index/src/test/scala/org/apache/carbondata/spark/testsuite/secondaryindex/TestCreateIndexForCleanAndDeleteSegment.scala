@@ -41,7 +41,7 @@ class TestCreateIndexForCleanAndDeleteSegment extends QueryTest with BeforeAndAf
     "TABLE delete_segment_by_id OPTIONS('DELIMITER'=',', 'BAD_RECORDS_LOGGER_ENABLE'='FALSE', 'BAD_RECORDS_ACTION'='FORCE')")
 
 
-    sql("create index index_no_dictionary on table delete_segment_by_id (empname) AS carbondata")
+    sql("create index index_no_dictionary on table delete_segment_by_id (empname) AS 'carbondata'")
 
     sql("delete from table delete_segment_by_id where segment.id IN(0)")
 
@@ -67,7 +67,7 @@ class TestCreateIndexForCleanAndDeleteSegment extends QueryTest with BeforeAndAf
 //
 //    sql("drop index if exists index_no_dictionary on clean_files_test")
 //
-//    sql("create index index_no_dictionary on table clean_files_test (empname) AS carbondata")
+//    sql("create index index_no_dictionary on table clean_files_test (empname) AS 'carbondata'")
 //
 //    sql("delete from table clean_files_test where segment.id IN(0)")
 //

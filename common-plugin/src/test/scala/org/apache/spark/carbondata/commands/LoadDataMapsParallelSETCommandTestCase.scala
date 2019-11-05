@@ -49,6 +49,8 @@ class LoadDataMapsParallelSETCommandTestCase extends QueryTest with BeforeAndAft
 
   test("test SET carbon.load.datamaps.parallel. after load") {
     sql("SET carbon.load.datamaps.parallel.set_command.carbon_table=true")
+    sql("SET carbon.load.datamaps.parallel.set_command.carbon_table")
+    sql("select * from carbon_table").show(100)
     checkAnswer(sql("select * from carbon_table"), sql("select * from carbon_table1"))
   }
 

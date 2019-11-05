@@ -236,7 +236,7 @@ case class CarbonDropTableCommand(
           !(carbonTable.isExternalTable || carbonTable.isFileLevelFormat)) {
 
         // if it is managed table, we should delete all external segment folders
-        deleteExternalSegments(carbonTable, sparkSession.sessionState.newHadoopConf())
+        // deleteExternalSegments(carbonTable, sparkSession.sessionState.newHadoopConf())
 
         val file = FileFactory.getCarbonFile(tablePath, fileType)
         CarbonUtil.deleteFoldersAndFilesSilent(file)

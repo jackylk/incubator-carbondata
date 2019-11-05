@@ -18,7 +18,7 @@ package org.apache.spark.sql.execution.strategy
 
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.catalog.CatalogTable
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, ReturnAnswer}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.execution.{SparkPlan, SparkStrategy}
 import org.apache.spark.sql.execution.command._
@@ -48,6 +48,7 @@ class DDLStrategy(sparkSession: SparkSession) extends SparkStrategy {
   val LOGGER = LogServiceFactory.getLogService(this.getClass.getName)
   def apply(plan: LogicalPlan): Seq[SparkPlan] = {
     plan match {
+      case _ : ReturnAnswer => Nil
       // load data / insert into
       case loadData: LoadDataCommand
         if isCarbonTable(loadData.table) =>

@@ -29,7 +29,7 @@ class TestSecondaryIndexWithUnsafeColumnPage extends QueryTest with BeforeAndAft
     sql("drop table if exists testSecondryIndex")
     sql("create table testSecondryIndex( a string,b string,c string) STORED AS carbondata")
     sql("insert into testSecondryIndex select 'babu','a','6'")
-    sql("create index testSecondryIndex_IndexTable on table testSecondryIndex(b) as carbondata")
+    sql("create index testSecondryIndex_IndexTable on table testSecondryIndex(b) AS 'carbondata'")
   }
 
   test("Test secondry index data count") {
