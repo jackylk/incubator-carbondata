@@ -5,8 +5,8 @@ export COMPONENT_NAME=${COMPONENT_NAME:-EI_CarbonData_Kernel_Component}
 export COMPONENT_VERSION=${COMPONENT_VERSION:-1.6.1.0100}
 export DP_VERSION=${DP_VERSION:hw-dplatform}
 export IS_SNAPSHOT=${IS_SNAPSHOT:true}
-if [[ $CID_BUILD_PLATFORM = 'aarch64' ]]; then
-  DP_VERSION=${DP_VERSION}-${CID_BUILD_PLATFORM}
+if [[ $BUILD_PLATFORM = 'aarch64' ]]; then
+  DP_VERSION=${DP_VERSION}-${BUILD_PLATFORM}
 fi
 # add SNAPSHOT postfix
 if [[ $IS_SNAPSHOT = 'true' ]]; then
@@ -108,6 +108,60 @@ cat << EOF > $SETTINGS_FILE
 
 EOF
 
+function deployJar() {
+    local artifact=$1
+    jarPath=${artifact}/${JAR_VERSION}
+    pomFile=${artifact}-${JAR_VERSION}.pom
+    jarFile=${artifact}-${JAR_VERSION}.jar
+    testsJarFile=${artifact}-${JAR_VERSION}-tests.jar
+    sourcesJarFile=${artifact}-${JAR_VERSION}-sources.jar
+    testJarFile=${artifact}-${JAR_VERSION}-test.jar
+    #-Dfiles=xx-sources.jar,xx-tests-jar -Dtypes=jar,jar -Dclassifiers=tests,sources
+    filesParams=
+    typesParams=
+    classifiersParams=
+    addDeployParams=
+   # -tests jar
+    if [[ -f "${jarPath}/${testsJarFile}" ]]; then
+        filesParams=${filesParams}${jarPath}/${testsJarFile},
+        typesParams=${typesParams}jar,
+        classifiersParams=${classifiersParams}tests,
+    fi
+    # -sources jar
+    if [[ -f "${jarPath}/${sourcesJarFile}" ]]; then
+        filesParams=${filesParams}${jarPath}/${sourcesJarFile},
+        typesParams=${typesParams}jar,
+        classifiersParams=${classifiersParams}sources,
+    fi
+    # -test jar
+    if [[ -f "${jarPath}/${testJarFile}" ]]; then
+        filesParams=${filesParams}${jarPath}/${testJarFile}
+        typesParams=${typesParams}jar,
+        classifiersParams=${classifiersParams}test,
+    fi
+    # build addDeployParams
+    if [[ -n "$filesParams" ]]; then
+        # remove the last comma
+        addDeployParams=`echo "-Dfiles=${filesParams%?} -Dtypes=${typesParams%?} -Dclassifiers=${classifiersParams%?}"`
+        echo "add mvn deploy params: $addDeployParams"
+    fi
+    # 0. don't upload when pom not exists
+    if [[ ! -f "${jarPath}/${pomFile}" ]]; then
+        echo "error: ${jarPath}/${pomFile} not exists"
+        exit 1
+    fi
+
+    if [[ -f "${jarPath}/${jarFile}" ]]; then
+        # 1. upload main jar, tests jar, sources jar, test jar,and so on
+        echo "deploy ${pomFile} ${jarFile}"
+        mvn deploy:deploy-file -DgroupId=${GROUP_ID} -DartifactId=${artifact} -Dversion=${JAR_VERSION} -Dpackaging=jar -Dfile=${jarPath}/${jarFile} -DpomFile=${jarPath}/${pomFile} ${addDeployParams} -Durl=http://wlg1.artifactory.cd-cloud-artifact.tools.huawei.com/artifactory/${repositoryId} -DrepositoryId=${repositoryId} -s ${SETTINGS_FILE}
+    else
+        # 2.only deploy pom
+        echo "warn: ${jarPath}/${jarFile} not exists, only deploy ${jarPath}/${pomFile}"
+        mvn deploy:deploy-file -DgroupId=${GROUP_ID} -DartifactId=${artifact} -Dversion=${JAR_VERSION} -Dpackaging=pom -Dfile=${jarPath}/${pomFile} -DpomFile=${jarPath}/${pomFile} -Durl=http://wlg1.artifactory.cd-cloud-artifact.tools.huawei.com/artifactory/${repositoryId} -DrepositoryId=${repositoryId} -s ${SETTINGS_FILE}
+    fi
+}
+
 cd ${WORK_DIR}
 tar -xzf ${CARBON_RELEASE_PACKAGE}
 tar -xzf ${JAR_PACKAGE}
@@ -124,32 +178,5 @@ cd org/apache/carbondata
 for artifact in `ls`
 do
     echo "artifact: ${artifact}"
-    jarPath=${artifact}/${JAR_VERSION}
-    pomFile=${artifact}-${JAR_VERSION}.pom
-    jarFile=${artifact}-${JAR_VERSION}.jar
-    testJarFile=${artifact}-${JAR_VERSION}-tests.jar
-    sourceJarFile=${artifact}-${JAR_VERSION}-sources.jar
-
-    if [[ ! -f "${jarPath}/${pomFile}" ]]; then
-        echo "error: ${jarPath}/${pomFile} not exists"
-        exit 1
-    fi
-    # deploy jar
-    if [[ -f "${jarPath}/${jarFile}" ]]; then
-        echo "deploy ${pomFile} ${jarFile}"
-        mvn deploy:deploy-file -DgroupId=${GROUP_ID} -DartifactId=${artifact} -Dversion=${JAR_VERSION} -Dpackaging=jar -Dfile=${jarPath}/${jarFile} -DpomFile=${jarPath}/${pomFile} -Durl=http://wlg1.artifactory.cd-cloud-artifact.tools.huawei.com/artifactory/${repositoryId} -DrepositoryId=${repositoryId} -s ${SETTINGS_FILE}
-    else
-        echo "warn: ${jarPath}/${jarFile} not exists, only upload ${jarPath}/${pomFile}"
-        mvn deploy:deploy-file -DgroupId=${GROUP_ID} -DartifactId=${artifact} -Dversion=${JAR_VERSION} -Dpackaging=pom -Dfile=${jarPath}/${pomFile} -DpomFile=${jarPath}/${pomFile} -Durl=http://wlg1.artifactory.cd-cloud-artifact.tools.huawei.com/artifactory/${repositoryId} -DrepositoryId=${repositoryId} -s ${SETTINGS_FILE}
-    fi
-    # deploy -tests jar
-    if [[ -f "${jarPath}/${testJarFile}" ]]; then
-        echo "deploy ${pomFile} ${testJarFile}"
-        mvn deploy:deploy-file   -Dclassifier=tests -DgroupId=${GROUP_ID} -DartifactId=${artifact} -Dversion=${JAR_VERSION} -Dpackaging=jar -Dfile=${jarPath}/${testJarFile} -DpomFile=${jarPath}/${pomFile} -Durl=http://wlg1.artifactory.cd-cloud-artifact.tools.huawei.com/artifactory/${repositoryId} -DrepositoryId=${repositoryId} -s ${SETTINGS_FILE}
-    fi
-    # deploy -sources jar
-    if [[ -f "${jarPath}/${sourceJarFile}" ]]; then
-        echo "deploy ${pomFile} ${sourceJarFile}"
-        mvn deploy:deploy-file   -Dclassifier=sources -DgroupId=${GROUP_ID} -DartifactId=${artifact} -Dversion=${JAR_VERSION} -Dpackaging=jar -Dfile=${jarPath}/${sourceJarFile} -DpomFile=${jarPath}/${pomFile} -Durl=http://wlg1.artifactory.cd-cloud-artifact.tools.huawei.com/artifactory/${repositoryId} -DrepositoryId=${repositoryId} -s ${SETTINGS_FILE}
-    fi
+    deployJar ${artifact}
 done
