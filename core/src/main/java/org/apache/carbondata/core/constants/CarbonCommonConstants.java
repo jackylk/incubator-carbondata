@@ -1618,6 +1618,8 @@ public final class CarbonCommonConstants {
 
   public static final String OBS_PREFIX = "obs://";
 
+  public static final String LUXORFS_PREFIX = "luxorfs://";
+
   /**
    * Access Key for s3n
    */
