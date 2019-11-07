@@ -162,23 +162,34 @@ object DDLHelper {
       sparkSession: SparkSession
   ): CarbonAlterTableAddColumnCommand = {
     val table = addColumnsCommand.table
-    val fields = new CarbonSpark2SqlParser().getFields(addColumnsCommand.colsToAdd)
-    val tableModel = CarbonParserUtil.prepareTableModel(false,
+    val carbonTable = CarbonEnv.getCarbonTable(
       CarbonParserUtil.convertDbNameToLowerCase(table.database),
-      table.table.toLowerCase,
-      fields.map(CarbonParserUtil.convertFieldNamesToLowercase),
-      Seq.empty,
-      scala.collection.mutable.Map.empty[String, String],
-      None,
-      true)
-    val alterTableAddColumnsModel = AlterTableAddColumnsModel(
-      CarbonParserUtil.convertDbNameToLowerCase(table.database),
-      table.table.toLowerCase,
-      Map.empty[String, String],
-      tableModel.dimCols,
-      tableModel.msrCols,
-      tableModel.highcardinalitydims.getOrElse(Seq.empty))
-    CarbonAlterTableAddColumnCommand(alterTableAddColumnsModel)
+      table.table.toLowerCase)(sparkSession)
+    if (carbonTable != null && carbonTable.isFileLevelFormat) {
+      throw new MalformedCarbonCommandException(
+        "Unsupported alter operation on Carbon external fileformat table")
+    } else if (carbonTable != null && !carbonTable.getTableInfo.isTransactionalTable) {
+      throw new MalformedCarbonCommandException(
+        "Unsupported operation on non transactional table")
+    } else {
+      val fields = new CarbonSpark2SqlParser().getFields(addColumnsCommand.colsToAdd)
+      val tableModel = CarbonParserUtil.prepareTableModel(false,
+        CarbonParserUtil.convertDbNameToLowerCase(table.database),
+        table.table.toLowerCase,
+        fields.map(CarbonParserUtil.convertFieldNamesToLowercase),
+        Seq.empty,
+        scala.collection.mutable.Map.empty[String, String],
+        None,
+        true)
+      val alterTableAddColumnsModel = AlterTableAddColumnsModel(
+        CarbonParserUtil.convertDbNameToLowerCase(table.database),
+        table.table.toLowerCase,
+        Map.empty[String, String],
+        tableModel.dimCols,
+        tableModel.msrCols,
+        tableModel.highcardinalitydims.getOrElse(Seq.empty))
+      CarbonAlterTableAddColumnCommand(alterTableAddColumnsModel)
+    }
   }
 
   def changeColumn(
@@ -186,30 +197,41 @@ object DDLHelper {
       sparkSession: SparkSession
   ): CarbonAlterTableColRenameDataTypeChangeCommand = {
     val tableName = changeColumnCommand.tableName
-    val columnName = changeColumnCommand.columnName
-    val newColumn = changeColumnCommand.newColumn
-    var isColumnRename = false
-    // If both the column name are not same, then its a call for column rename
-    if (!columnName.equalsIgnoreCase(newColumn.name)) {
-      isColumnRename = true
-    }
-    val alterTableColRenameAndDataTypeChangeModel =
-      AlterTableDataTypeChangeModel(
-        DataTypeInfo(
-          DataTypeConverterUtil
-            .convertToCarbonType(newColumn.dataType.typeName)
-            .getName
-            .toLowerCase
-        ),
-        tableName.database.map(_.toLowerCase),
-        tableName.table.toLowerCase,
-        columnName.toLowerCase,
-        newColumn.name.toLowerCase,
-        isColumnRename)
+    val carbonTable = CarbonEnv.getCarbonTable(
+      CarbonParserUtil.convertDbNameToLowerCase(tableName.database),
+      tableName.table.toLowerCase)(sparkSession)
+    if (carbonTable != null && carbonTable.isFileLevelFormat) {
+      throw new MalformedCarbonCommandException(
+        "Unsupported alter operation on Carbon external fileformat table")
+    } else if (carbonTable != null && !carbonTable.getTableInfo.isTransactionalTable) {
+      throw new MalformedCarbonCommandException(
+        "Unsupported operation on non transactional table")
+    } else {
+      val columnName = changeColumnCommand.columnName
+      val newColumn = changeColumnCommand.newColumn
+      var isColumnRename = false
+      // If both the column name are not same, then its a call for column rename
+      if (!columnName.equalsIgnoreCase(newColumn.name)) {
+        isColumnRename = true
+      }
+      val alterTableColRenameAndDataTypeChangeModel =
+        AlterTableDataTypeChangeModel(
+          DataTypeInfo(
+            DataTypeConverterUtil
+              .convertToCarbonType(newColumn.dataType.typeName)
+              .getName
+              .toLowerCase
+          ),
+          tableName.database.map(_.toLowerCase),
+          tableName.table.toLowerCase,
+          columnName.toLowerCase,
+          newColumn.name.toLowerCase,
+          isColumnRename)
 
-    CarbonAlterTableColRenameDataTypeChangeCommand(
-      alterTableColRenameAndDataTypeChangeModel
-    )
+      CarbonAlterTableColRenameDataTypeChangeCommand(
+        alterTableColRenameAndDataTypeChangeModel
+      )
+    }
   }
 
   def describeTable(

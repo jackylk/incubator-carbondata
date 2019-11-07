@@ -463,7 +463,7 @@ class TestNonTransactionalCarbonTable extends QueryTest with BeforeAndAfterAll {
            |'$writerPath' """.stripMargin)
     }
     assert(exception.getMessage()
-      .contains("Invalid table path provided"))
+      .contains("Unable to infer the schema"))
     cleanTestData()
   }
 
@@ -784,7 +784,7 @@ class TestNonTransactionalCarbonTable extends QueryTest with BeforeAndAfterAll {
            |'$writerPath' """.stripMargin)
     }
     assert(exception.getMessage()
-      .contains("Operation not allowed: Invalid table path provided:"))
+      .contains("Unable to infer the schema"))
 
     cleanTestData()
   }
@@ -805,7 +805,7 @@ class TestNonTransactionalCarbonTable extends QueryTest with BeforeAndAfterAll {
 
     }
     assert(exception.getMessage()
-      .contains("Operation not allowed: Invalid table path provided:"))
+      .contains("Unable to infer the schema"))
 
     cleanTestData()
   }

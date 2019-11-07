@@ -1600,7 +1600,6 @@ class TestBinaryDataType extends QueryTest with BeforeAndAfterAll {
             s"""
                | LOAD DATA LOCAL INPATH '$resourcesPath/binarystringdatawithHead.csv'
                | INTO TABLE binaryTable
-               | partition(binaryfield)
                | OPTIONS('header'='true','DELIMITER'='|')
              """.stripMargin)
 

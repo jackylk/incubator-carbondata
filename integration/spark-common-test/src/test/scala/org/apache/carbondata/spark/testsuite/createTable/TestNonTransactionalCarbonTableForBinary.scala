@@ -70,7 +70,7 @@ class TestNonTransactionalCarbonTableForBinary extends QueryTest with BeforeAndA
         sql("DROP TABLE IF EXISTS sdkOutputTable")
     }
 
-    test("test read image carbon with external table, generate by sdk, CTAS") {
+    ignore("test read image carbon with external table, generate by sdk, CTAS") {
         sql("DROP TABLE IF EXISTS binaryCarbon")
         sql("DROP TABLE IF EXISTS binaryCarbon3")
         if (SparkUtil.isSparkVersionXandAbove("2.2")) {

@@ -45,7 +45,6 @@ class CarbonExtensionSqlParser(
       plan
     } catch {
       case ce: MalformedCarbonCommandException =>
-        CarbonScalaUtil.cleanParserThreadLocals
         throw ce
       case ex: Throwable =>
         try {
@@ -56,6 +55,7 @@ class CarbonExtensionSqlParser(
           case mce: MalformedCarbonCommandException =>
             throw mce
           case e: Throwable =>
+            CarbonScalaUtil.cleanParserThreadLocals
             CarbonException.analysisException(
               s"""== Parse1 ==
                  |${ex.getMessage}

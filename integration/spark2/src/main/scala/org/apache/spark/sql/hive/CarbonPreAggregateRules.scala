@@ -172,7 +172,6 @@ case class CarbonPreAggregateQueryRules(sparkSession: SparkSession) extends Rule
     isValidPlan
   }
   override def apply(plan: LogicalPlan): LogicalPlan = {
-    updatedExpression.clear()
     var needAnalysis = true
     plan.transformExpressions {
       // first check if any preAgg scala function is applied it is present is in plan
@@ -1825,7 +1824,6 @@ case class CarbonPreAggregateQueryRules(sparkSession: SparkSession) extends Rule
  */
 case class CarbonPreAggregateDataLoadingRules(sparkSession: SparkSession)
   extends Rule[LogicalPlan] {
-  lazy val parser = new CarbonSpark2SqlParser
   override def apply(plan: LogicalPlan): LogicalPlan = {
     val validExpressionsMap = scala.collection.mutable.HashSet.empty[AggExpToColumnMappingModel]
     val namedExpressionList = scala.collection.mutable.LinkedHashSet.empty[NamedExpression]

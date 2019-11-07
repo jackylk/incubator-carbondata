@@ -718,7 +718,7 @@ class TestLoadDataWithHiveSyntaxDefaultFormat extends QueryTest with BeforeAndAf
     assert(new File(path).exists())
     checkAnswer(sql("select salary from table_path_test where empno =\"'abc'\" limit 1"),Row(7.756787654567891E23))
     sql("drop table table_path_test")
-    assert(! new File(path).exists())
+    assert(new File(path).exists())
     assert(intercept[AnalysisException](
       sql("select salary from table_path_test limit 1"))
       .message
@@ -730,15 +730,14 @@ class TestLoadDataWithHiveSyntaxDefaultFormat extends QueryTest with BeforeAndAf
     sql("drop database if exists test cascade")
     sql("create database if not exists test")
     sql("CREATE table test.table_path_test (empno string, salary double) " +
-        "STORED AS carbondata" +
-        s"LOCATION '$path'")
+        s"STORED AS carbondata LOCATION '$path'")
     sql(
       s"load data local inpath '$resourcesPath/double.csv' into table test.table_path_test options" +
       "('FILEHEADER'='empno,salary')")
     assert(new File(path).exists())
     checkAnswer(sql("select salary from test.table_path_test where empno =\"'abc'\" limit 1"),Row(7.756787654567891E23))
     sql("drop table test.table_path_test")
-    assert(! new File(path).exists())
+    assert(new File(path).exists())
     assert(intercept[AnalysisException](
       sql("select salary from test.table_path_test limit 1"))
       .message

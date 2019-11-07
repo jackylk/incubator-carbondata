@@ -118,6 +118,10 @@ class DDLStrategy(sparkSession: SparkSession) extends SparkStrategy {
         if isCarbonTable(createLikeTable.sourceTable)=>
         throw new MalformedCarbonCommandException(
           "Operation not allowed, when source table is carbon table")
+      case truncateTable: TruncateTableCommand
+        if isCarbonTable(truncateTable.tableName) =>
+        throw new MalformedCarbonCommandException(
+          "Operation not allowed, when source table is carbon table")
       case createTable@org.apache.spark.sql.execution.datasources.CreateTable(tableDesc, _, None)
         if tableDesc.provider.get != DDLUtils.HIVE_PROVIDER
           && (tableDesc.provider.get.equals("org.apache.spark.sql.CarbonSource")

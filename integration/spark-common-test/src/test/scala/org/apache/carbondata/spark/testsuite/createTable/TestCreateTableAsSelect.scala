@@ -141,7 +141,7 @@ class TestCreateTableAsSelect extends QueryTest with BeforeAndAfterAll {
 
   test("test create table as select with select directly having the data") {
     sql("DROP TABLE IF EXISTS ctas_select_direct_data")
-    sql("create table ctas_select_direct_data STORED AS carbondata as select 300,carbondata")
+    sql("create table ctas_select_direct_data STORED AS carbondata as select 300,'carbondata'")
     checkAnswer(sql("select * from ctas_select_direct_data"), Seq(Row(300, "carbondata")))
   }
 

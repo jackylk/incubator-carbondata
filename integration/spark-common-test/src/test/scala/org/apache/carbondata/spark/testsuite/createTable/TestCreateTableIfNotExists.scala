@@ -19,6 +19,7 @@ package org.apache.carbondata.spark.testsuite.createTable
 
 import java.util.concurrent.{Callable, ExecutorService, Executors, Future, TimeUnit}
 
+import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
 
@@ -87,10 +88,10 @@ class TestCreateTableIfNotExists extends QueryTest with BeforeAndAfterAll {
   }
 
   test("test create table without column specified") {
-    val exception = intercept[MalformedCarbonCommandException] {
+    val exception = intercept[AnalysisException] {
       sql("create table TableWithoutColumn STORED AS carbondata tblproperties('sort_columns'='')")
     }
-    assert(exception.getMessage.contains("Creating table without column(s) is not supported"))
+    assert(exception.getMessage.contains("Unable to infer the schema"))
   }
 
   override def afterAll {
