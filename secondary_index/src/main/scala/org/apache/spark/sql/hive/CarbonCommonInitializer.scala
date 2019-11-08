@@ -104,6 +104,11 @@ object CarbonCommonInitializer {
       .addListener(classOf[ShowTableCacheEvent], ShowCacheSIEventListener)
     if (enableACL) {
       initACL1()
+    } else {
+      operationListenerBus
+        .addListener(classOf[CreateDataMapPreExecutionEvent],
+          new ACLDataMapEventListener.PreDataMapEventListener
+        )
     }
   }
 

@@ -103,29 +103,29 @@ class TestPreAggregateExpressions extends QueryTest with BeforeAndAfterAll {
 
   test("test pre agg table selection with expression 1") {
     val df = sql("select name as NewName, count(age) as sum from mainTable group by name order by name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg0")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg0")
   }
 
   test("test pre agg table selection with expression 2") {
     val df = sql("select name as NewName, sum(case when age=35 then id else 0 end) as sum from mainTable group by name order by name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg1")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg1")
   }
 
   test("test pre agg table selection with expression 3") {
     val df = sql("select sum(case when age=35 then id else 0 end) from maintable")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg1")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg1")
     checkAnswer(df, Seq(Row(6.0)))
   }
 
   test("test pre agg table selection with expression 4") {
     val df = sql("select sum(case when age=27 then id else 0 end) from maintable")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg3")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg3")
     checkAnswer(df, Seq(Row(2.0)))
   }
 
   test("test pre agg table selection with expression 5") {
     val df = sql("select sum(case when age=27 then id else 0 end), sum(case when age=35 then id else 0 end) from maintable")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg4")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg4")
     checkAnswer(df, Seq(Row(2.0,6.0)))
   }
 

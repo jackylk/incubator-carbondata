@@ -95,7 +95,7 @@ class TestPartitionWithMV extends QueryTest with BeforeAndAfterAll {
     checkAnswer(sql("select * from p1_table"), Seq(Row("v",2014,2014,1,1)))
     checkAnswer(sql("select empname, sum(year) from partitionone group by empname, year, month,day"), Seq(Row("v", 2014)))
     val df1 = sql(s"select empname, sum(year) from partitionone group by empname, year, month,day")
-    val analyzed1 = df1.queryExecution.analyzed
+    val analyzed1 = df1.queryExecution.optimizedPlan
     assert(TestUtil.verifyMVDataMap(analyzed1, "p1"))
     assert(CarbonEnv.getCarbonTable(Some("partition_mv"), "p1_table")(sqlContext.sparkSession).isHivePartitionTable)
   }
@@ -114,7 +114,7 @@ class TestPartitionWithMV extends QueryTest with BeforeAndAfterAll {
     sql("insert overwrite table partitionone values('v',2,2015,1,1)")
     checkAnswer(sql("select * from partitionone"), Seq(Row("k",2,2014,1,1), Row("v",2,2015,1,1)))
     val df1 = sql(s"select empname, sum(year) from partitionone group by empname, year, month,day")
-    val analyzed1 = df1.queryExecution.analyzed
+    val analyzed1 = df1.queryExecution.optimizedPlan
     assert(TestUtil.verifyMVDataMap(analyzed1, "p1"))
     checkAnswer(sql("select * from p1_table"), Seq(Row("k",2014,2014,1,1), Row("v",2015,2015,1,1)))
   }
@@ -591,23 +591,23 @@ class TestPartitionWithMV extends QueryTest with BeforeAndAfterAll {
          |partitionallcompaction OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""".stripMargin)
     sql(
       s"""LOAD DATA local inpath '$resourcesPath/data.csv' OVERWRITE INTO TABLE
-         |partitionallcompaction PARTITION(deptname='Learning', doj, projectcode) OPTIONS
+         |partitionallcompaction PARTITION(deptname='Learning') OPTIONS
          |('DELIMITER'= ',', 'QUOTECHAR'= '"') """.stripMargin)
     sql(
       s"""LOAD DATA local inpath '$resourcesPath/data.csv' OVERWRITE INTO TABLE
-         |partitionallcompaction PARTITION(deptname='configManagement', doj, projectcode) OPTIONS
+         |partitionallcompaction PARTITION(deptname='configManagement') OPTIONS
          |('DELIMITER'= ',', 'QUOTECHAR'= '"')""".stripMargin)
     sql(
       s"""LOAD DATA local inpath '$resourcesPath/data.csv' OVERWRITE INTO TABLE
-         |partitionallcompaction PARTITION(deptname='network', doj, projectcode) OPTIONS
+         |partitionallcompaction PARTITION(deptname='network') OPTIONS
          |('DELIMITER'= ',', 'QUOTECHAR'= '"')""".stripMargin)
     sql(
       s"""LOAD DATA local inpath '$resourcesPath/data.csv' OVERWRITE INTO TABLE
-         |partitionallcompaction PARTITION(deptname='protocol', doj, projectcode) OPTIONS
+         |partitionallcompaction PARTITION(deptname='protocol') OPTIONS
          |('DELIMITER'= ',', 'QUOTECHAR'= '"')""".stripMargin)
     sql(
       s"""LOAD DATA local inpath '$resourcesPath/data.csv' OVERWRITE INTO TABLE
-         |partitionallcompaction PARTITION(deptname='security', doj, projectcode) OPTIONS
+         |partitionallcompaction PARTITION(deptname='security') OPTIONS
          |('DELIMITER'= ',', 'QUOTECHAR'= '"')""".stripMargin)
     sql("ALTER TABLE partitionallcompaction COMPACT 'MINOR'").collect()
     checkAnswer(sql("select count(empno) from partitionallcompaction where empno=14"),

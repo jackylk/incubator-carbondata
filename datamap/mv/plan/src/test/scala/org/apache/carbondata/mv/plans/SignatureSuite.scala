@@ -59,7 +59,7 @@ class SignatureSuite extends ModularPlanTest with BeforeAndAfterAll {
         )   
         
     testSQLBatch.foreach { query =>
-      val analyzed = testHive.sql(query).queryExecution.analyzed
+      val analyzed = testHive.sql(query).queryExecution.optimizedPlan
       val modularPlan = analyzed.optimize.modularize
       val sig = ModularPlanSignatureGenerator.generate(modularPlan)
       sig match {

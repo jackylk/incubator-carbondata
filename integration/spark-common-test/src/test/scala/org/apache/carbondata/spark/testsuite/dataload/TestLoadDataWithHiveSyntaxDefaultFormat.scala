@@ -712,6 +712,7 @@ class TestLoadDataWithHiveSyntaxDefaultFormat extends QueryTest with BeforeAndAf
       "CREATE table table_path_test (empno string, salary double) STORED AS carbondata " +
       s"LOCATION '$path'"
     )
+    sql("describe formatted table_path_test").show(100, false)
     sql(
       s"load data local inpath '$resourcesPath/double.csv' into table table_path_test options" +
       "('FILEHEADER'='empno,salary')")

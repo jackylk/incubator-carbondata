@@ -58,7 +58,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
       "from test_table")
     val query: String = "select empname from test_table"
     val df1 = sql(s"$query")
-    val analyzed1 = df1.queryExecution.analyzed
+    val analyzed1 = df1.queryExecution.optimizedPlan
     assert(!TestUtil.verifyMVDataMap(analyzed1, "datamap1"))
     sql(s"rebuild datamap datamap1")
     val dataMapTable = CarbonMetadata.getInstance().getCarbonTable(
@@ -71,7 +71,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     segmentList.add("0")
     assert(segmentList.containsAll( segmentMap.get("default.test_table")))
     val df2 = sql(s"$query")
-    val analyzed2 = df2.queryExecution.analyzed
+    val analyzed2 = df2.queryExecution.optimizedPlan
     assert(TestUtil.verifyMVDataMap(analyzed2, "datamap1"))
     loadDataToFactTable("test_table")
     loadDataToFactTable("test_table1")
@@ -84,12 +84,12 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     checkAnswer(sql("select empname, designation from test_table"),
       sql("select empname, designation from test_table1"))
     val df3 = sql(s"$query")
-    val analyzed3 = df3.queryExecution.analyzed
+    val analyzed3 = df3.queryExecution.optimizedPlan
     assert(TestUtil.verifyMVDataMap(analyzed3, "datamap1"))
     loadDataToFactTable("test_table")
     loadDataToFactTable("test_table1")
     val df4 = sql(s"$query")
-    val analyzed4 = df4.queryExecution.analyzed
+    val analyzed4 = df4.queryExecution.optimizedPlan
     assert(!TestUtil.verifyMVDataMap(analyzed4, "datamap1"))
     checkAnswer(sql("select empname, designation from test_table"),
       sql("select empname, designation from test_table1"))
@@ -139,7 +139,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     sql(s"rebuild datamap datamap1")
     var df = sql(
       s"""select a, sum(b) from main_table group by a""".stripMargin)
-    var analyzed = df.queryExecution.analyzed
+    var analyzed = df.queryExecution.optimizedPlan
     assert(TestUtil.verifyMVDataMap(analyzed, "datamap1"))
     checkAnswer(sql(" select a, sum(b) from testtable group by a"),
       sql(" select a, sum(b) from main_table group by a"))
@@ -160,7 +160,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     segmentList.add("1")
     assert(segmentList.containsAll( segmentMap.get("default.main_table")))
     df = sql(s""" select a, sum(b) from main_table group by a""".stripMargin)
-    analyzed = df.queryExecution.analyzed
+    analyzed = df.queryExecution.optimizedPlan
     assert(TestUtil.verifyMVDataMap(analyzed, "datamap1"))
     checkAnswer(sql(" select a, sum(b) from testtable group by a"),
       sql(" select a, sum(b) from main_table group by a"))
@@ -325,12 +325,12 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     sql("SET carbon.input.segments.default.main_table=1")
     sql(s"rebuild datamap datamap1")
     val df = sql("select a, sum(c) from main_table  group by a")
-    val analyzed = df.queryExecution.analyzed
+    val analyzed = df.queryExecution.optimizedPlan
     assert(!TestUtil.verifyMVDataMap(analyzed, "datamap1"))
     sql("reset")
     checkAnswer(sql("select a, sum(c) from main_table  group by a"), Seq(Row("a", 1), Row("b", 2)))
     val df1= sql("select a, sum(c) from main_table  group by a")
-    val analyzed1 = df1.queryExecution.analyzed
+    val analyzed1 = df1.queryExecution.optimizedPlan
     assert(TestUtil.verifyMVDataMap(analyzed1, "datamap1"))
     sql("drop table IF EXISTS main_table")
   }
@@ -404,7 +404,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     segmentList.add("0")
     assert(segmentList.containsAll( segmentMap.get("default.test_table")))
     val df2 = sql(s"$query")
-    val analyzed2 = df2.queryExecution.analyzed
+    val analyzed2 = df2.queryExecution.optimizedPlan
     assert(TestUtil.verifyMVDataMap(analyzed2, "datamap1"))
     loadDataToFactTable("test_table")
     loadDataToFactTable("test_table1")
@@ -416,12 +416,12 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     checkAnswer(sql("select empname, designation from test_table"),
       sql("select empname, designation from test_table1"))
     val df3 = sql(s"$query")
-    val analyzed3 = df3.queryExecution.analyzed
+    val analyzed3 = df3.queryExecution.optimizedPlan
     assert(TestUtil.verifyMVDataMap(analyzed3, "datamap1"))
     loadDataToFactTable("test_table")
     loadDataToFactTable("test_table1")
     val df4 = sql(s"$query")
-    val analyzed4 = df4.queryExecution.analyzed
+    val analyzed4 = df4.queryExecution.optimizedPlan
     assert(TestUtil.verifyMVDataMap(analyzed4, "datamap1"))
     checkAnswer(sql("select empname, designation from test_table"),
       sql("select empname, designation from test_table1"))
@@ -439,7 +439,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     sql("drop datamap if exists datamap1")
     sql("create datamap datamap1 using 'mv' as select a, sum(b) from main_table group by a")
     var df = sql(s"""select a, sum(b) from main_table group by a""".stripMargin)
-    var analyzed = df.queryExecution.analyzed
+    var analyzed = df.queryExecution.optimizedPlan
     assert(TestUtil.verifyMVDataMap(analyzed, "datamap1"))
     checkAnswer(sql(" select a, sum(b) from testtable group by a"),
       sql(" select a, sum(b) from main_table group by a"))
@@ -456,7 +456,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     segmentList.add("1")
     assert(segmentList.containsAll(segmentMap.get("default.main_table")))
     df = sql(s""" select a, sum(b) from main_table group by a""".stripMargin)
-    analyzed = df.queryExecution.analyzed
+    analyzed = df.queryExecution.optimizedPlan
     assert(TestUtil.verifyMVDataMap(analyzed, "datamap1"))
     checkAnswer(sql(" select a, sum(b) from testtable group by a"),
       sql(" select a, sum(b) from main_table group by a"))
@@ -476,7 +476,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     sql("drop datamap if exists datamap1")
     sql("create datamap datamap1 using 'mv' as select a, sum(b) from main_table group by a")
     var df = sql(s"""select a, sum(b) from main_table group by a""".stripMargin)
-    var analyzed = df.queryExecution.analyzed
+    var analyzed = df.queryExecution.optimizedPlan
     assert(TestUtil.verifyMVDataMap(analyzed, "datamap1"))
     checkAnswer(sql(" select a, sum(b) from testtable group by a"),
       sql(" select a, sum(b) from main_table group by a"))
@@ -493,7 +493,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     segmentList.add("1")
     assert(segmentList.containsAll(segmentMap.get("default.main_table")))
     df = sql(s""" select a, sum(b) from main_table group by a""".stripMargin)
-    analyzed = df.queryExecution.analyzed
+    analyzed = df.queryExecution.optimizedPlan
     assert(TestUtil.verifyMVDataMap(analyzed, "datamap1"))
     checkAnswer(sql(" select a, sum(b) from testtable group by a"),
       sql(" select a, sum(b) from main_table group by a"))
@@ -539,7 +539,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     sql("create datamap datamap1 using 'mv' as select a,b from main_table")
     sql("insert into main_table values('b','abcd',1)")
     sql("SET carbon.input.segments.default.datamap1_table=0")
-    assert(sql("select a,b from main_table").count() == 1)
+    assert(sql("select a,b from main_table").collect().length == 1)
     sql("drop table IF EXISTS main_table")
   }
 
@@ -591,7 +591,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     val result = sql("show datamap on table test_table").collectAsList()
     assert(result.get(0).get(5).toString.contains("\"default.test_table\":\"12.1\""))
     val df = sql(s""" select empname, designation from test_table""".stripMargin)
-    val analyzed = df.queryExecution.analyzed
+    val analyzed = df.queryExecution.optimizedPlan
     assert(TestUtil.verifyMVDataMap(analyzed, "datamap_com"))
   }
 

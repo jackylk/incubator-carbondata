@@ -22,12 +22,13 @@ import java.util.UUID
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{Dataset, SparkSession}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.execution.command.AlterTableModel
 import org.apache.spark.sql.execution.command.management.{CarbonAlterTableCompactionCommand, CarbonLoadDataCommand}
 import org.apache.spark.sql.execution.command.partition.CarbonAlterTableDropHivePartitionCommand
-import org.apache.spark.sql.parser.CarbonSpark2SqlParser
+import org.apache.spark.sql.hive.CarbonMVRules
+import org.apache.spark.sql.parser.{CarbonSpark2SqlParser, CarbonSparkSqlParserUtil}
 
 import org.apache.carbondata.common.exceptions.MetadataProcessException
 import org.apache.carbondata.common.logging.{LogService, LogServiceFactory}
@@ -338,12 +339,11 @@ object CompactionProcessMetaListener extends OperationEventListener {
         // select * from preaggtable1
         // The following code will generate the select query with a load UDF that will be used to
         // apply DataLoadingRules
-        val childDataFrame = sparkSession.sql(new CarbonSpark2SqlParser()
-          // adding the aggregation load UDF
-          .addPreAggLoadFunction(
-          // creating the select query on the bases on table schema
+        val childDataFrame = CarbonSparkSqlParserUtil.getPreAggLoadQuery(
           PreAggregateUtil.createChildSelectQuery(
-            dataMapSchema.getChildSchema, table.getDatabaseName))).drop("preAggLoad")
+            dataMapSchema.getChildSchema, table.getDatabaseName),
+          sparkSession
+        )
         val loadCommand = PreAggregateUtil.createLoadCommandForChild(
           dataMapSchema.getChildSchema.getListOfColumns,
           TableIdentifier(childTableName, Some(childDatabaseName)),
@@ -367,12 +367,12 @@ object CompactionProcessMetaListener extends OperationEventListener {
       // select * from preaggtable1
       // The following code will generate the select query with a load UDF that will be used to
       // apply DataLoadingRules
-      val childDataFrame = sparkSession.sql(new CarbonSpark2SqlParser()
-        // adding the aggregation load UDF
-        .addPreAggLoadFunction(
-        // creating the select query on the bases on table schema
+
+      val childDataFrame = CarbonSparkSqlParserUtil.getPreAggLoadQuery(
         PreAggregateUtil.createChildSelectQuery(
-          table.getTableInfo.getFactTable, table.getDatabaseName))).drop("preAggLoad")
+          table.getTableInfo.getFactTable, table.getDatabaseName),
+        sparkSession
+      )
       val loadCommand = PreAggregateUtil.createLoadCommandForChild(
         table.getTableInfo.getFactTable.getListOfColumns,
         TableIdentifier(childTableName, Some(childDatabaseName)),
@@ -445,8 +445,9 @@ object LoadProcessMetaListener extends OperationEventListener {
                 s"$databaseName.${tableSelectedForRollup.get.getChildSchema.getTableName}")
             }
           }
-          val childDataFrame = sparkSession.sql(new CarbonSpark2SqlParser().addPreAggLoadFunction(
-            childSelectQuery._1)).drop("preAggLoad")
+          val childDataFrame =
+            CarbonSparkSqlParserUtil.getPreAggLoadQuery(childSelectQuery._1, sparkSession)
+
           val isOverwrite =
             operationContext.getProperty("isOverwrite").asInstanceOf[Boolean]
           val loadCommand = PreAggregateUtil.createLoadCommandForChild(

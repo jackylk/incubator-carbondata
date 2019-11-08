@@ -31,7 +31,8 @@ import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, Join, Limit, Logi
 import org.apache.spark.sql.execution.command.{Field, PartitionerField, TableModel, TableNewProcessor}
 import org.apache.spark.sql.execution.command.table.{CarbonCreateTableCommand, CarbonDropTableCommand}
 import org.apache.spark.sql.execution.datasources.LogicalRelation
-import org.apache.spark.sql.parser.CarbonSpark2SqlParser
+import org.apache.spark.sql.hive.CarbonMVRules
+import org.apache.spark.sql.parser.{CarbonSpark2SqlParser, CarbonSparkSqlParserUtil}
 import org.apache.spark.sql.types.{ArrayType, MapType, StructType}
 import org.apache.spark.util.{DataMapUtil, PartitionUtils}
 
@@ -63,9 +64,8 @@ object MVHelper {
     }
     val mvUtil = new MVUtil
     mvUtil.validateDMProperty(dmProperties)
-    val updatedQuery = new CarbonSpark2SqlParser().addPreAggFunction(queryString)
-    val query = sparkSession.sql(updatedQuery)
-    val logicalPlan = MVHelper.dropDummFuc(query.queryExecution.analyzed)
+    val logicalPlan =  MVHelper.dropDummFuc(
+      CarbonSparkSqlParserUtil.getPreAggPlan(queryString, sparkSession))
     // if there is limit in MV ctas query string, throw exception, as its not a valid usecase
     logicalPlan match {
       case Limit(_, _) =>

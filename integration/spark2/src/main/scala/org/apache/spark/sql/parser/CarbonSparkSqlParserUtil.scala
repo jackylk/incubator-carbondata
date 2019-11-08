@@ -21,7 +21,7 @@ import scala.collection.mutable
 
 import org.antlr.v4.runtime.tree.TerminalNode
 import org.apache.spark.sql.catalyst.catalog.{CatalogTable, CatalogTableType, CatalogUtils}
-import org.apache.spark.sql.{CarbonEnv, SparkSession}
+import org.apache.spark.sql.{CarbonEnv, DataFrame, Dataset, SparkSession}
 import org.apache.spark.sql.catalyst.{CarbonParserUtil, TableIdentifier}
 import org.apache.spark.sql.catalyst.parser.ParseException
 import org.apache.spark.sql.catalyst.parser.ParserUtils.operationNotAllowed
@@ -29,7 +29,9 @@ import org.apache.spark.sql.catalyst.parser.SqlBaseParser._
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.command.{Field, PartitionerField, TableModel, TableNewProcessor}
 import org.apache.spark.sql.execution.command.table.{CarbonCreateTableAsSelectCommand, CarbonCreateTableCommand}
+import org.apache.spark.sql.hive.CarbonMVRules
 import org.apache.spark.sql.types.StructField
+import org.apache.spark.sql.util.SparkSQLUtil
 
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.core.constants.CarbonCommonConstants
@@ -275,7 +277,7 @@ object CarbonSparkSqlParserUtil {
         // external table is not allow
         if (external) {
           throw new MalformedCarbonCommandException(
-            "Create external table as select")
+            "Create external table as select is not allowed")
         }
         fields = parser
           .getFields(CarbonEnv.getInstance(sparkSession).carbonMetaStore
@@ -575,5 +577,29 @@ object CarbonSparkSqlParserUtil {
         }
       case _ => ""
     }
+  }
+
+  def getPreAggQuery(query: String, sparkSession: SparkSession): DataFrame = {
+    SparkSQLUtil
+      .execute(getPreAggPlan(query, sparkSession), sparkSession)
+      .drop("preAgg")
+  }
+
+  def getPreAggPlan(query: String, sparkSession: SparkSession): LogicalPlan = {
+    val updatedQuery = new CarbonSpark2SqlParser().addPreAggFunction(query)
+    val analyzed = sparkSession.sql(updatedQuery).queryExecution.analyzed
+    CarbonMVRules(sparkSession).apply(analyzed)
+  }
+
+  def getPreAggLoadQuery(query: String, sparkSession: SparkSession): DataFrame = {
+    SparkSQLUtil
+      .execute(getPreAggLoadPlan(query, sparkSession), sparkSession)
+      .drop("preAggLoad")
+  }
+
+  def getPreAggLoadPlan(query: String, sparkSession: SparkSession): LogicalPlan = {
+    val updatedQuery = new CarbonSpark2SqlParser().addPreAggLoadFunction(query)
+    val analyzed = sparkSession.sql(updatedQuery).queryExecution.analyzed
+    CarbonMVRules(sparkSession).apply(analyzed)
   }
 }

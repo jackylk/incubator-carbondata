@@ -66,102 +66,102 @@ class TestPreAggregateTableSelection extends CarbonSparkQueryTest with BeforeAnd
 
   test("test PreAggregate table selection 1") {
     val df = sql("select name from mainTable group by name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg0")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg0")
   }
 
   test("test PreAggregate table selection with count(*)") {
     val df = sql("select name, count(*) from mainTable group by name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg9")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg9")
   }
 
   test("test PreAggregate table selection 2") {
     val df = sql("select name from mainTable where name in (select name from mainTable) group by name")
-    preAggTableValidator(df.queryExecution.analyzed, "mainTable")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "mainTable")
   }
 
   test("test PreAggregate table selection 3") {
     val df = sql("select name from mainTable where name in (select name from mainTable group by name) group by name")
-    preAggTableValidator(df.queryExecution.analyzed, "mainTable")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "mainTable")
   }
 
   test("test PreAggregate table selection 4") {
     val df = sql("select name from mainTable where name in('vishal') group by name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg0")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg0")
   }
 
   test("test PreAggregate table selection 5") {
     val df = sql("select name, sum(age) from mainTable group by name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg1")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg1")
   }
 
   test("test PreAggregate table selection with table alias") {
     val df = sql("select name, sum(age) from mainTable as t1 group by name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg1")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg1")
   }
 
   test("test PreAggregate table selection 6") {
     val df = sql("select sum(age) from mainTable group by name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg1")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg1")
   }
 
   test("test PreAggregate table selection 7") {
     val df = sql("select sum(id) from mainTable group by name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg2")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg2")
   }
 
   test("test PreAggregate table selection 8") {
     val df = sql("select count(id) from mainTable group by name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg3")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg3")
   }
 
   test("test PreAggregate table selection 9") {
     val df = sql("select sum(age), count(id) from mainTable group by name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg4")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg4")
   }
 
   test("test PreAggregate table selection 10") {
     val df = sql("select avg(age) from mainTable group by name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg5")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg5")
   }
 
   test("test PreAggregate table selection 11") {
     val df = sql("select max(age) from mainTable group by name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg7")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg7")
   }
 
   test("test PreAggregate table selection 12") {
     val df = sql("select min(age) from mainTable group by name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg6")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg6")
   }
 
   test("test PreAggregate table selection 13") {
     val df = sql("select name, sum(age) from mainTable where city = 'Bangalore' group by name")
-    preAggTableValidator(df.queryExecution.analyzed, "mainTable")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "mainTable")
   }
 
   test("test PreAggregate table selection 14") {
     val df = sql("select sum(age) from mainTable")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg1")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg1")
   }
 
   test("test PreAggregate table selection 15") {
     val df = sql("select avg(age) from mainTable")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg5")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg5")
   }
 
   test("test PreAggregate table selection 16") {
     val df = sql("select max(age) from mainTable")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg7")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg7")
   }
 
   test("test PreAggregate table selection 17") {
     val df = sql("select min(age) from mainTable")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg6")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg6")
   }
 
   test("test PreAggregate table selection 18") {
     val df = sql("select count(id) from mainTable")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg3")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg3")
   }
 
   test("test PreAggregate table selection 19: test sum and avg on same column should give proper results") {
@@ -173,47 +173,47 @@ class TestPreAggregateTableSelection extends CarbonSparkQueryTest with BeforeAnd
 
   test("test PreAggregate table selection 20") {
     val df = sql("select name from mainTable group by name order by name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg0")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg0")
   }
 
   test("test PreAggregate table selection 21") {
     val df = sql("select name as NewName from mainTable group by name order by name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg0")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg0")
   }
 
   test("test PreAggregate table selection 22") {
     val df = sql("select name, sum(age) from mainTable group by name order by name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg1")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg1")
   }
 
   test("test PreAggregate table selection 23") {
     val df = sql("select name as NewName, sum(age) as sum from mainTable group by name order by name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg1")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg1")
   }
 
   test("test PreAggregate table selection 24") {
     val df = sql("select name as NewName, sum(age) as sum from mainTable where name='vishal' group by name order by name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg1")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg1")
   }
 
   test("test PreAggregate table selection 25") {
     val df = sql("select name as NewName, sum(age) as sum from mainTable where city = 'Bangalore' group by name order by name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable")
   }
 
   test("test PreAggregate table selection 26") {
     val df = sql("select name from mainTable where name='vishal' group by name order by name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg0")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg0")
   }
 
   test("test PreAggregate table selection 27") {
     val df = sql("select name as NewName from mainTable where name='vishal' group by name order by name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg0")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg0")
   }
 
   test("test PreAggregate table selection 28") {
     val df = sql("select name as NewName, sum(case when age=2016 then 1 else 0 end) as sum from mainTable group by name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable")
   }
 
   def preAggTableValidator(plan: LogicalPlan, actualTableName: String) : Unit ={
@@ -248,27 +248,27 @@ class TestPreAggregateTableSelection extends CarbonSparkQueryTest with BeforeAnd
 
   test("test PreAggregate table selection 29") {
     val df = sql("select sum(id) from mainTable group by name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg2")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg2")
   }
 
   test("test PreAggregate table selection 30") {
     val df = sql("select a.name from mainTable a group by a.name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg0")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg0")
   }
 
   test("test PreAggregate table selection 31") {
     val df = sql("select a.name as newName from mainTable a group by a.name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg0")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg0")
   }
 
   test("test PreAggregate table selection 32") {
     val df = sql("select a.name as newName from mainTable a  where a.name='vishal' group by a.name")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable_agg0")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable_agg0")
   }
 
  test("test PreAggregate table selection 33: Test query with math operation hitting fact table") {
     val df =  sql("select sum(id)+count(id) from maintable")
-    preAggTableValidator(df.queryExecution.analyzed, "maintable")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "maintable")
   }
 
   test("test PreAggregate table selection 34: test if pre-agg table is hit with filter condition") {
@@ -294,7 +294,7 @@ class TestPreAggregateTableSelection extends CarbonSparkQueryTest with BeforeAnd
         |     GROUP BY name, age
       """.stripMargin)
     val df = sql("SELECT name, SUM(age) FROM filtertable WHERE age = '29' GROUP BY name, age")
-    preAggTableValidator(df.queryExecution.analyzed, "filtertable_agg9")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "filtertable_agg9")
     checkAnswer(df, Row("vishal", 29))
   }
 
@@ -321,7 +321,7 @@ class TestPreAggregateTableSelection extends CarbonSparkQueryTest with BeforeAnd
         |     GROUP BY city
       """.stripMargin)
     val df = sql("SELECT SUM(id) FROM grouptable GROUP BY city")
-    preAggTableValidator(df.queryExecution.analyzed, "grouptable_agg9")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "grouptable_agg9")
     checkAnswer(df, Seq(Row(3), Row(3), Row(4), Row(7)))
   }
 
@@ -348,7 +348,7 @@ class TestPreAggregateTableSelection extends CarbonSparkQueryTest with BeforeAnd
        """.stripMargin)
 
   val df = sql("SELECT timeseries(dob,'year') FROM maintabletime GROUP BY timeseries(dob,'year')")
-  preAggTableValidator(df.queryExecution.analyzed, "maintabletime_agg1_year")
+  preAggTableValidator(df.queryExecution.optimizedPlan, "maintabletime_agg1_year")
   sql("DROP TABLE IF EXISTS maintabletime")
 
   }
@@ -369,7 +369,7 @@ class TestPreAggregateTableSelection extends CarbonSparkQueryTest with BeforeAnd
 
   test("test PreAggregate table selection 38: for sum and avg in aggregate table with bigint") {
     val df = sql("select avg(age) from mainTableavg")
-    preAggTableValidator(df.queryExecution.analyzed, "mainTableavg_agg0")
+    preAggTableValidator(df.queryExecution.optimizedPlan, "mainTableavg_agg0")
   }
 
   test("test PreAggregate table selection for avg with maintable containing dictionary include for group by column") {

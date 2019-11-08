@@ -82,7 +82,7 @@ class TestSQLSuite extends ModularPlanTest with BeforeAndAfter {
         mvSession.registerSummaryDataset(summary)
         val rewrittenSQL =
           mvSession.mvSession.rewrite(mvSession.mvSession.sparkSession.sql(
-            testcase._3).queryExecution.analyzed).toCompactSQL.trim
+            testcase._3).queryExecution.optimizedPlan).toCompactSQL.trim
 
         if (!rewrittenSQL.trim.equals(testcase._4)) {
           fail(

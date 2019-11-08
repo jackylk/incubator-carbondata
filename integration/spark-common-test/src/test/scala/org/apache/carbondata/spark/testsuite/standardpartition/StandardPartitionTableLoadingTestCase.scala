@@ -29,6 +29,7 @@ import org.apache.spark.sql.test.util.QueryTest
 import org.apache.spark.sql.{AnalysisException, CarbonEnv, Row}
 import org.scalatest.BeforeAndAfterAll
 
+import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.metadata.{CarbonMetadata, SegmentFileStore}
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager
@@ -282,7 +283,7 @@ class StandardPartitionTableLoadingTestCase extends QueryTest with BeforeAndAfte
   }
 
   test("Restrict streaming on partitioned table") {
-    intercept[AnalysisException] {
+    intercept[MalformedCarbonCommandException] {
       sql(
         """
           | CREATE TABLE streamingpartitionedtable (empname String, designation String, doj

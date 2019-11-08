@@ -123,7 +123,7 @@ class ModularToSQLSuite extends ModularPlanTest with BeforeAndAfter {
     testHive.udf.register("my_fun", (s: Integer) => s)
     
     testSQLBatch.foreach { query =>
-      val analyzed = testHive.sql(query).queryExecution.analyzed
+      val analyzed = testHive.sql(query).queryExecution.optimizedPlan
       val optimized = analyzed.optimize
       val modularPlan = analyzed.optimize.modularize
 
@@ -134,7 +134,7 @@ class ModularToSQLSuite extends ModularPlanTest with BeforeAndAfter {
 
       LOGGER.info(s"\n\n===== CONVERTED SQL =====\n\n$compactSql \n")
       
-      val analyzed1 = testHive.sql(convertedSql).queryExecution.analyzed
+      val analyzed1 = testHive.sql(convertedSql).queryExecution.optimizedPlan
       val modularPlan1 = analyzed1.optimize.modularize
 
       LOGGER.info(s"\n\n===== CONVERTED SQL =====\n\n$compactSql \n")

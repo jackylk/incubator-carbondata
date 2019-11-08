@@ -67,6 +67,7 @@ class TestAlterTableColumnRenameWithSecondaryIndex extends QueryTest with Before
     val query1 = sql("select c,d from si_rename where d = 'pqr' or c = 'def'").count()
     sql("alter table si_rename change c test string")
     sql("alter table si_rename change d testSI string")
+    sql("show indexes on si_rename").collect
     val query2 = sql("select test,testsi from si_rename where testsi = 'pqr' or test = 'def'").count()
     assert(query1 == query2)
     val df = sql("select test,testsi from si_rename where testsi = 'pqr' or test = 'def'").queryExecution.sparkPlan

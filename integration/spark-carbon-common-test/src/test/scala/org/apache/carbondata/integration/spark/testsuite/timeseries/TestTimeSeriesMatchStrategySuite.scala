@@ -91,7 +91,7 @@ class TestTimeSeriesMatchStrategySuite extends QueryTest with BeforeAndAfterAll 
 
     checkAnswer(df1, Seq(Row(Timestamp.valueOf("2016-02-23 09:01:00"), 60)))
 
-    preAggTableValidator(df1.queryExecution.analyzed, "maintable_big_agg")
+    preAggTableValidator(df1.queryExecution.optimizedPlan, "maintable_big_agg")
 
     sql(
       s"""
@@ -122,7 +122,7 @@ class TestTimeSeriesMatchStrategySuite extends QueryTest with BeforeAndAfterAll 
 
     checkAnswer(df2, Seq(Row(Timestamp.valueOf("2016-02-23 09:01:00"), 60)))
 
-    preAggTableValidator(df2.queryExecution.analyzed, "maintable_small_agg")
+    preAggTableValidator(df2.queryExecution.optimizedPlan, "maintable_small_agg")
   }
 
   test("test timeseries match 2: select small one when create small_agg and then create big_agg") {
@@ -156,7 +156,7 @@ class TestTimeSeriesMatchStrategySuite extends QueryTest with BeforeAndAfterAll 
       """.stripMargin)
 
     checkAnswer(df2, Seq(Row(Timestamp.valueOf("2016-02-23 09:01:00"), 60)))
-    preAggTableValidator(df2.queryExecution.analyzed, "maintable_small_agg")
+    preAggTableValidator(df2.queryExecution.optimizedPlan, "maintable_small_agg")
 
     sql(
       s"""
@@ -188,9 +188,9 @@ class TestTimeSeriesMatchStrategySuite extends QueryTest with BeforeAndAfterAll 
     checkAnswer(df1, Seq(Row(Timestamp.valueOf("2016-02-23 09:01:00"), 60)))
 
     intercept[Exception]{
-      preAggTableValidator(df1.queryExecution.analyzed, "maintable_big_agg")
+      preAggTableValidator(df1.queryExecution.optimizedPlan, "maintable_big_agg")
     }
-    preAggTableValidator(df1.queryExecution.analyzed, "maintable_small_agg")
+    preAggTableValidator(df1.queryExecution.optimizedPlan, "maintable_small_agg")
   }
 
   test("test timeseries match 3: select small one when create big_agg and then create small_agg") {
@@ -225,7 +225,7 @@ class TestTimeSeriesMatchStrategySuite extends QueryTest with BeforeAndAfterAll 
 
     checkAnswer(df1, Seq(Row(Timestamp.valueOf("2016-02-23 09:01:00"), 60)))
 
-    preAggTableValidator(df1.queryExecution.analyzed, "maintable_big_agg")
+    preAggTableValidator(df1.queryExecution.optimizedPlan, "maintable_big_agg")
 
     sql(
       s"""
@@ -256,11 +256,11 @@ class TestTimeSeriesMatchStrategySuite extends QueryTest with BeforeAndAfterAll 
 
     checkAnswer(df2, Seq(Row(Timestamp.valueOf("2016-02-23 09:01:00"), 60)))
 
-    preAggTableValidator(df2.queryExecution.analyzed, "maintable_small_agg")
+    preAggTableValidator(df2.queryExecution.optimizedPlan, "maintable_small_agg")
     intercept[Exception] {
-      preAggTableValidator(df1.queryExecution.analyzed, "maintable_small_agg")
+      preAggTableValidator(df1.queryExecution.optimizedPlan, "maintable_small_agg")
     }
-    preAggTableValidator(df1.queryExecution.analyzed, "maintable_big_agg")
+    preAggTableValidator(df1.queryExecution.optimizedPlan, "maintable_big_agg")
   }
 
   test("test timeseries match 4: select small one when create big_agg, small_agg, and middle_agg") {
@@ -295,7 +295,7 @@ class TestTimeSeriesMatchStrategySuite extends QueryTest with BeforeAndAfterAll 
 
     checkAnswer(df1, Seq(Row(Timestamp.valueOf("2016-02-23 09:01:00"), 60)))
 
-    preAggTableValidator(df1.queryExecution.analyzed, "maintable_big_agg")
+    preAggTableValidator(df1.queryExecution.optimizedPlan, "maintable_big_agg")
 
     sql(
       s"""
@@ -326,11 +326,11 @@ class TestTimeSeriesMatchStrategySuite extends QueryTest with BeforeAndAfterAll 
 
     checkAnswer(df2, Seq(Row(Timestamp.valueOf("2016-02-23 09:01:00"), 60)))
 
-    preAggTableValidator(df2.queryExecution.analyzed, "maintable_small_agg")
+    preAggTableValidator(df2.queryExecution.optimizedPlan, "maintable_small_agg")
     intercept[Exception] {
-      preAggTableValidator(df1.queryExecution.analyzed, "maintable_small_agg")
+      preAggTableValidator(df1.queryExecution.optimizedPlan, "maintable_small_agg")
     }
-    preAggTableValidator(df1.queryExecution.analyzed, "maintable_big_agg")
+    preAggTableValidator(df1.queryExecution.optimizedPlan, "maintable_big_agg")
 
     sql(
       s"""
@@ -359,7 +359,7 @@ class TestTimeSeriesMatchStrategySuite extends QueryTest with BeforeAndAfterAll 
         |   timeseries(mytime,'minute')
       """.stripMargin)
 
-    preAggTableValidator(df3.queryExecution.analyzed, "maintable_small_agg")
+    preAggTableValidator(df3.queryExecution.optimizedPlan, "maintable_small_agg")
   }
 
   def preAggTableValidator(plan: LogicalPlan, actualTableName: String) : Unit ={

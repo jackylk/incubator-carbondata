@@ -18,7 +18,7 @@
 package org.apache.spark.sql.hive
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.catalyst.plans.logical.{Command, LogicalPlan}
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.util.CarbonReflectionUtils
 
@@ -34,12 +34,16 @@ case class CarbonMVRules(sparkSession: SparkSession) extends Rule[LogicalPlan] {
   }
 
   override def apply(plan: LogicalPlan): LogicalPlan = {
-    var logicalPlan = CarbonPreAggregateDataLoadingRules(sparkSession).apply(plan)
-    logicalPlan = CarbonPreAggregateQueryRules(sparkSession).apply(logicalPlan)
-    if (mvPlan != null) {
-      mvPlan.apply(logicalPlan)
-    } else {
-      logicalPlan
+    plan match {
+      case command: Command => plan
+      case _ =>
+        var logicalPlan = CarbonPreAggregateDataLoadingRules(sparkSession).apply(plan)
+        logicalPlan = CarbonPreAggregateQueryRules(sparkSession).apply(logicalPlan)
+        if (mvPlan != null) {
+          mvPlan.apply(logicalPlan)
+        } else {
+          logicalPlan
+        }
     }
   }
 }

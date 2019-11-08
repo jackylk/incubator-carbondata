@@ -49,22 +49,22 @@ class TestPreAggregateWithSubQuery extends QueryTest with BeforeAndAfterAll {
         | ON t1.name = t2.newnewname
         | GROUP BY t2.newnewname
       """.stripMargin)
-    matchTable(collectLogicalRelation(df.queryExecution.analyzed), "maintable_agg0")
+    matchTable(collectLogicalRelation(df.queryExecution.optimizedPlan), "maintable_agg0")
   }
 
   test("test sub query PreAggregate table selection 2") {
     val df = sql("select t1.name,t1.city from mainTable1 t1 join (select name as newnewname,sum(age) as sum from mainTable group by name )t2 on t1.name=t2.newnewname")
-    matchTable(collectLogicalRelation(df.queryExecution.analyzed), "maintable_agg0")
+    matchTable(collectLogicalRelation(df.queryExecution.optimizedPlan), "maintable_agg0")
   }
 
   test("test sub query PreAggregate table selection 3") {
     val df = sql("select t1.name,t2.sum from mainTable1 t1 join (select name as newnewname,sum(age) as sum from mainTable group by name )t2 on t1.name=t2.newnewname")
-    matchTable(collectLogicalRelation(df.queryExecution.analyzed), "maintable_agg0")
+    matchTable(collectLogicalRelation(df.queryExecution.optimizedPlan), "maintable_agg0")
   }
 
   test("test sub query PreAggregate table selection 4") {
     val df = sql("select t1.name,t2.sum from mainTable1 t1 join (select name,sum(age) as sum from mainTable group by name )t2 on t1.name=t2.name group by t1.name, t2.sum")
-    matchTable(collectLogicalRelation(df.queryExecution.analyzed), "maintable_agg0")
+    matchTable(collectLogicalRelation(df.queryExecution.optimizedPlan), "maintable_agg0")
   }
 
   /**

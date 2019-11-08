@@ -46,62 +46,62 @@ class TestPreAggStreaming extends QueryTest with BeforeAndAfterAll {
 
   test("Test Pre Agg Streaming with project column and group by") {
     val df = sql("select name from maintable group by name")
-    assert(validateStreamingTablePlan(df.queryExecution.analyzed))
+    assert(validateStreamingTablePlan(df.queryExecution.optimizedPlan))
     checkAnswer(df, sql("select name from origin group by name"))
   }
 
   test("Test binary with stream and preaggregate") {
     val df = sql("select name from binary_stream group by name")
     df.collect()
-    assert(validateStreamingTablePlan(df.queryExecution.analyzed))
+    assert(validateStreamingTablePlan(df.queryExecution.optimizedPlan))
     checkAnswer(df, sql("select name from binary_stream group by name"))
   }
 
   test("Test Pre Agg Streaming table Agg Sum Aggregation") {
     val df = sql("select name, sum(age) from maintable group by name")
-    assert(validateStreamingTablePlan(df.queryExecution.analyzed))
+    assert(validateStreamingTablePlan(df.queryExecution.optimizedPlan))
     checkAnswer(df, sql("select name, sum(age) from origin group by name"))
   }
 
   test("Test Pre Agg Streaming table with UDF") {
     val df = sql("select substring(name,1,1), sum(age) from maintable group by substring(name,1,1)")
-    assert(validateStreamingTablePlan(df.queryExecution.analyzed))
+    assert(validateStreamingTablePlan(df.queryExecution.optimizedPlan))
     checkAnswer(df, sql("select substring(name,1,1), sum(age) from origin group by substring(name,1,1)"))
   }
 
   test("Test Pre Agg Streaming table with UDF Only in group by") {
     val df = sql("select sum(age) from maintable group by substring(name,1,1)")
-    assert(validateStreamingTablePlan(df.queryExecution.analyzed))
+    assert(validateStreamingTablePlan(df.queryExecution.optimizedPlan))
     checkAnswer(df, sql("select sum(age) from origin group by substring(name,1,1)"))
   }
 
   test("Test Pre Agg Streaming table With Sum Aggregation And Order by") {
     val df = sql("select name, sum(age) from maintable group by name order by name")
-    assert(validateStreamingTablePlan(df.queryExecution.analyzed))
+    assert(validateStreamingTablePlan(df.queryExecution.optimizedPlan))
     checkAnswer(df, sql("select name, sum(age) from origin group by name order by name"))
   }
 
   test("Test Pre Agg Streaming table With Avg Aggregation") {
     val df = sql("select name, avg(age) from maintable group by name order by name")
-    assert(validateStreamingTablePlan(df.queryExecution.analyzed))
+    assert(validateStreamingTablePlan(df.queryExecution.optimizedPlan))
     checkAnswer(df, sql("select name, avg(age) from origin group by name order by name"))
   }
 
   test("Test Pre Agg Streaming table With Expression Aggregation") {
     val df = sql("select name, sum(CASE WHEN age=35 THEN id ELSE 0 END) from maintable group by name order by name")
-    assert(validateStreamingTablePlan(df.queryExecution.analyzed))
+    assert(validateStreamingTablePlan(df.queryExecution.optimizedPlan))
     checkAnswer(df, sql("select name, sum(CASE WHEN age=35 THEN id ELSE 0 END) from origin group by name order by name"))
   }
 
   test("Test Pre Agg Streaming table With only aggregate expression and group by") {
     val df = sql("select sum(age) from maintable group by name")
-    assert(validateStreamingTablePlan(df.queryExecution.analyzed))
+    assert(validateStreamingTablePlan(df.queryExecution.optimizedPlan))
     checkAnswer(df, sql("select sum(age) from origin group by name"))
   }
 
   test("Test Pre Agg Streaming table With small int and avg") {
     val df = sql("select name, avg(age) from mainTableStreamingOne group by name")
-    assert(validateStreamingTablePlan(df.queryExecution.analyzed))
+    assert(validateStreamingTablePlan(df.queryExecution.optimizedPlan))
     checkAnswer(df, sql("select name, avg(age) from origin group by name"))
   }
 

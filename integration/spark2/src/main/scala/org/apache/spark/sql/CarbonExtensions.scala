@@ -40,7 +40,7 @@ class CarbonExtensions extends ((SparkSessionExtensions) => Unit) {
     extensions
       .injectResolutionRule((session: SparkSession) => CarbonPreInsertionCasts(session))
     extensions
-      .injectLastBatchAnalyzerRule((session: SparkSession) => CarbonMVRules(session))
+      .injectFirstBatchOptimizerRule((session: SparkSession) => CarbonMVRules(session))
 
     // Carbon Pre optimization rules
     extensions

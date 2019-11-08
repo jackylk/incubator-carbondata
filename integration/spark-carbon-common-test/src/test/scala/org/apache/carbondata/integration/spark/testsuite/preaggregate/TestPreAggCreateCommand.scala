@@ -17,7 +17,6 @@
 
 package org.apache.carbondata.integration.spark.testsuite.preaggregate
 
-import java.io.File
 import java.util
 import java.util.concurrent.{Callable, ExecutorService, Executors, TimeUnit}
 
@@ -178,7 +177,7 @@ class TestPreAggCreateCommand extends QueryTest with BeforeAndAfterAll {
   test("test pre agg create table 16") {
     sql("create datamap agg0 on table mainTable using 'preaggregate' as select column4, sum(column4) from maintable group by column4")
     val df = sql("select * from maintable_agg0")
-    val carbontable = getCarbonTable(df.queryExecution.analyzed)
+    val carbontable = getCarbonTable(df.queryExecution.optimizedPlan)
     assert(carbontable.getAllMeasures.size()==2)
     assert(carbontable.getAllDimensions.size()==0)
     sql("drop datamap agg0 on table maintable")
@@ -187,7 +186,7 @@ class TestPreAggCreateCommand extends QueryTest with BeforeAndAfterAll {
   test("test pre agg create table 17") {
     sql("create datamap agg0 on table mainTable using 'preaggregate' as select column1, sum(column1),column6, sum(column6) from maintable group by column6,column1")
     val df = sql("select * from maintable_agg0")
-    val carbontable = getCarbonTable(df.queryExecution.analyzed)
+    val carbontable = getCarbonTable(df.queryExecution.optimizedPlan)
     assert(carbontable.getAllMeasures.size()==2)
     assert(carbontable.getAllDimensions.size()==2)
     carbontable.getAllDimensions.asScala.foreach{ f =>
@@ -199,7 +198,7 @@ class TestPreAggCreateCommand extends QueryTest with BeforeAndAfterAll {
   test("test pre agg create table 18") {
     sql("create datamap agg0 on table mainTable using 'preaggregate' as select column1, count(column1),column6, count(column6) from maintable group by column6,column1")
     val df = sql("select * from maintable_agg0")
-    val carbontable = getCarbonTable(df.queryExecution.analyzed)
+    val carbontable = getCarbonTable(df.queryExecution.optimizedPlan)
     assert(carbontable.getAllMeasures.size()==2)
     assert(carbontable.getAllDimensions.size()==2)
     carbontable.getAllDimensions.asScala.foreach{ f =>
@@ -211,7 +210,7 @@ class TestPreAggCreateCommand extends QueryTest with BeforeAndAfterAll {
   test("test pre agg create table 19") {
     sql("create datamap agg0 on table mainTable using 'preaggregate' as select column3, sum(column3),column5, sum(column5) from maintable group by column3,column5")
     val df = sql("select * from maintable_agg0")
-    val carbontable = getCarbonTable(df.queryExecution.analyzed)
+    val carbontable = getCarbonTable(df.queryExecution.optimizedPlan)
     assert(carbontable.getAllMeasures.size()==2)
     assert(carbontable.getAllDimensions.size()==2)
     carbontable.getAllDimensions.asScala.foreach{ f =>
@@ -223,7 +222,7 @@ class TestPreAggCreateCommand extends QueryTest with BeforeAndAfterAll {
   test("test pre agg create table 20") {
     sql("create datamap agg0 on table mainTable using 'preaggregate' as select column3, sum(column3),column5, sum(column5) from maintable group by column3,column5,column2")
     val df = sql("select * from maintable_agg0")
-    val carbontable = getCarbonTable(df.queryExecution.analyzed)
+    val carbontable = getCarbonTable(df.queryExecution.optimizedPlan)
     assert(carbontable.getAllMeasures.size()==2)
     assert(carbontable.getAllDimensions.size()==3)
     carbontable.getAllDimensions.asScala.foreach{ f =>

@@ -31,7 +31,7 @@ import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.execution.command.preaaggregate.PreAggregateUtil
 import org.apache.spark.sql.execution.datasources.{FindDataSourceTable, LogicalRelation}
-import org.apache.spark.sql.parser.CarbonSpark2SqlParser
+import org.apache.spark.sql.parser.{CarbonSpark2SqlParser, CarbonSparkSqlParserUtil}
 import org.apache.spark.sql.types._
 import org.apache.spark.util.CarbonReflectionUtils
 
@@ -160,7 +160,7 @@ case class CarbonPreAggregateQueryRules(sparkSession: SparkSession) extends Rule
    */
   private def isValidPlan(logicalPlan: LogicalPlan) : Boolean = {
     var isValidPlan = true
-    logicalPlan.resolveOperatorsDown {
+    logicalPlan.transform {
       case aggregate@Aggregate(grp, aExp, child) =>
         isValidPlan = !aExp.exists { p =>
           if (p.isInstanceOf[UnresolvedAlias]) return false
@@ -219,7 +219,7 @@ case class CarbonPreAggregateQueryRules(sparkSession: SparkSession) extends Rule
    */
   def validateStreamingTablePlan(logicalPlan: LogicalPlan) : Boolean = {
     var needTransformation: Boolean = true
-    logicalPlan.resolveOperatorsDown {
+    logicalPlan.transform {
       case union @ Union(Seq(plan1, plan2)) =>
         plan2.collect{
           case logicalRelation: LogicalRelation if
@@ -241,7 +241,7 @@ case class CarbonPreAggregateQueryRules(sparkSession: SparkSession) extends Rule
    * @return updated plan
    */
   def updatePlan(plan: LogicalPlan) : LogicalPlan = {
-    val updatedPlan = plan resolveOperatorsDown {
+    val updatedPlan = plan transform {
       case Aggregate(grp, aggExp, child) =>
         Aggregate(
           updateExpression(grp),
@@ -361,7 +361,7 @@ case class CarbonPreAggregateQueryRules(sparkSession: SparkSession) extends Rule
    */
   def transformPreAggQueryPlan(logicalPlan: LogicalPlan): LogicalPlan = {
     var isPlanUpdated = false
-    val updatedPlan = logicalPlan.resolveOperatorsDown {
+    val updatedPlan = logicalPlan.transform {
       case agg@Aggregate(
         grExp,
         aggExp,
@@ -831,7 +831,7 @@ case class CarbonPreAggregateQueryRules(sparkSession: SparkSession) extends Rule
    */
   private def updateFactTablePlanForStreaming(logicalPlan: LogicalPlan) : LogicalPlan = {
     // only aggregate expression needs to be updated
-    logicalPlan.resolveOperatorsDown {
+    logicalPlan.transform {
       case agg@Aggregate(grpExp, aggExp, _) =>
         agg
           .copy(aggregateExpressions = updateAggExpInFactForStreaming(aggExp, grpExp, agg)
@@ -847,7 +847,7 @@ case class CarbonPreAggregateQueryRules(sparkSession: SparkSession) extends Rule
    */
   private def updateAggTablePlanForStreaming(logicalPlan: LogicalPlan) : LogicalPlan = {
     // only aggregate expression needs to be updated
-    logicalPlan.resolveOperatorsDown {
+    logicalPlan.transform {
       case agg@Aggregate(grpExp, aggExp, _) =>
         agg
           .copy(aggregateExpressions = updateAggExpInAggForStreaming(aggExp, grpExp, agg)
@@ -1165,10 +1165,11 @@ case class CarbonPreAggregateQueryRules(sparkSession: SparkSession) extends Rule
     val aggDataMapSchema = selectedDataMap.asInstanceOf[AggregationDataMapSchema]
     if(null == aggDataMapSchema.getAggExpToColumnMapping) {
       // add preAGG UDF to avoid all the PreAggregate rule
-      val childDataMapQueryString = parser.addPreAggFunction(
-        PreAggregateUtil.getChildQuery(aggDataMapSchema))
       // get the logical plan
-      val aggPlan = sparkSession.sql(childDataMapQueryString).logicalPlan
+      val aggPlan = CarbonSparkSqlParserUtil.getPreAggPlan(
+        PreAggregateUtil.getChildQuery(aggDataMapSchema),
+        sparkSession
+      )
       // getting all aggregate expression from query
       val dataMapAggExp = getAggregateExpFromChildDataMap(aggPlan)
       // in case of average child table will have two columns which will be stored in sequence
@@ -1533,7 +1534,7 @@ case class CarbonPreAggregateQueryRules(sparkSession: SparkSession) extends Rule
           alias.qualifier).asInstanceOf[NamedExpression])
     }
     // transforming the logical relation
-    val newChild = child.resolveOperatorsDown {
+    val newChild = child.transform {
       case _: LogicalRelation =>
         aggPlan
       case _: SubqueryAlias =>
@@ -1827,7 +1828,7 @@ case class CarbonPreAggregateDataLoadingRules(sparkSession: SparkSession)
   override def apply(plan: LogicalPlan): LogicalPlan = {
     val validExpressionsMap = scala.collection.mutable.HashSet.empty[AggExpToColumnMappingModel]
     val namedExpressionList = scala.collection.mutable.LinkedHashSet.empty[NamedExpression]
-    plan resolveOperatorsDown {
+    plan transform {
       case aggregate@Aggregate(groupingExpressions,
       aExp,
       CarbonSubqueryAlias(_, logicalRelation: LogicalRelation))

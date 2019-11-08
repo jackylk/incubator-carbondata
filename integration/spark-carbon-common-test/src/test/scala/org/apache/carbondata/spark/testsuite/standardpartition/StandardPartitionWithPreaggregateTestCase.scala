@@ -86,7 +86,7 @@ class StandardPartitionWithPreaggregateTestCase extends QueryTest with BeforeAnd
         Row(3,70,35),
         Row(4,26,26),
         Row(4,29,29)))
-    preAggTableValidator(sql("select id, sum(age) from maintable group by id, age").queryExecution.analyzed, "maintable_p1")
+    preAggTableValidator(sql("select id, sum(age) from maintable group by id, age").queryExecution.optimizedPlan, "maintable_p1")
     sql("drop datamap p1 on table maintable")
   }
 
@@ -97,7 +97,7 @@ class StandardPartitionWithPreaggregateTestCase extends QueryTest with BeforeAnd
         Row(2,27),
         Row(3,35),
         Row(4,29)))
-    preAggTableValidator(sql("select id, max(age) from maintable group by id").queryExecution.analyzed, "maintable_p2")
+    preAggTableValidator(sql("select id, max(age) from maintable group by id").queryExecution.optimizedPlan, "maintable_p2")
     sql("drop datamap p2 on table maintable")
   }
 

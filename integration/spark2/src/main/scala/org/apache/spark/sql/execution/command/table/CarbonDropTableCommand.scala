@@ -259,12 +259,5 @@ case class CarbonDropTableCommand(
     Seq.empty
   }
 
-  private def deleteExternalSegments(table: CarbonTable, conf: Configuration): Unit = {
-    val externalSegmentFolders = table.getAllExternalSegmentFolders
-    externalSegmentFolders.asScala.foreach { folder =>
-      CarbonUtil.deleteFoldersAndFilesSilent(FileFactory.getCarbonFile(folder, conf))
-    }
-  }
-
   override protected def opName: String = "DROP TABLE"
 }

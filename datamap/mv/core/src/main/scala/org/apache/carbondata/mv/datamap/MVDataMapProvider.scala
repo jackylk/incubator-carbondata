@@ -26,7 +26,7 @@ import org.apache.spark.sql.catalyst.plans.logical.SubqueryAlias
 import org.apache.spark.sql.execution.command.management.CarbonLoadDataCommand
 import org.apache.spark.sql.execution.command.table.CarbonDropTableCommand
 import org.apache.spark.sql.execution.datasources.FindDataSourceTable
-import org.apache.spark.sql.parser.CarbonSpark2SqlParser
+import org.apache.spark.sql.parser.{CarbonSpark2SqlParser, CarbonSparkSqlParserUtil}
 import org.apache.spark.sql.util.SparkSQLUtil
 
 import org.apache.carbondata.common.annotations.InterfaceAudience
@@ -116,10 +116,7 @@ class MVDataMapProvider(
           case s: SubqueryAlias => s.child
           case other => other
         }
-      val updatedQuery = new CarbonSpark2SqlParser().addPreAggFunction(ctasQuery)
-      val queryPlan = SparkSQLUtil.execute(
-        sparkSession.sql(updatedQuery).queryExecution.analyzed,
-        sparkSession).drop("preAgg")
+      val updatedQuery = CarbonSparkSqlParserUtil.getPreAggQuery(ctasQuery, sparkSession)
       var isOverwriteTable = false
       val isFullRefresh =
         if (null != dataMapSchema.getProperties.get("full_refresh")) {
@@ -149,7 +146,7 @@ class MVDataMapProvider(
         options = scala.collection.immutable.Map("fileheader" -> header),
         isOverwriteTable,
         inputSqlString = null,
-        dataFrame = Some(queryPlan),
+        dataFrame = Some(updatedQuery),
         updateModel = None,
         tableInfoOp = None,
         internalOptions = Map("mergedSegmentName" -> newLoadName,

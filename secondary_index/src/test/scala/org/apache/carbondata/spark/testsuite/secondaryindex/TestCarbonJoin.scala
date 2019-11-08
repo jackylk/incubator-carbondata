@@ -35,10 +35,9 @@ class TestCarbonJoin extends QueryTest with BeforeAndAfterAll {
     sql("insert into table ptable values('person')")
 
     val carbonTable = CarbonEnv.getCarbonTable(Option("default"), "table1")(sqlContext.sparkSession)
-    val carbonSession = SparkSession.builder.getOrCreateCarbonSession(carbonTable.getTablePath)
-    val df2 = carbonSession.sql("select id as f91 from table1")
+    val df2 = sql("select id as f91 from table1")
     df2.createOrReplaceTempView("tempTable_2")
-    carbonSession.sql("select t1.f91 from tempTable_2 t1, ptable t2 where t1.f91 = t2.pid ").write.saveAsTable("result")
+    sql("select t1.f91 from tempTable_2 t1, ptable t2 where t1.f91 = t2.pid ").write.saveAsTable("result")
     checkAnswer(sql("select count(*) from result"), Seq(Row(1)))
     checkAnswer(sql("select * from result"), Seq(Row("person")))
 
@@ -60,10 +59,9 @@ class TestCarbonJoin extends QueryTest with BeforeAndAfterAll {
     sql("create table ptable(pid string) stored as parquet")
     sql("insert into table ptable values('person')")
     val carbonTable = CarbonEnv.getCarbonTable(Option("default"), "ctable")(sqlContext.sparkSession)
-    val carbonSession = SparkSession.builder.getOrCreateCarbonSession(carbonTable.getTablePath)
-    val df2 = carbonSession.sql("select id as f91 from ctable")
+    val df2 = sql("select id as f91 from ctable")
     df2.createOrReplaceTempView("tempTable_2")
-    carbonSession.sql("select t1.f91 from tempTable_2 t1, ptable t2 where t1.f91 = t2.pid ").write
+    sql("select t1.f91 from tempTable_2 t1, ptable t2 where t1.f91 = t2.pid ").write
       .saveAsTable("result")
     checkAnswer(sql("select count(*) from result"), Seq(Row(1)))
     checkAnswer(sql("select * from result"), Seq(Row("person")))

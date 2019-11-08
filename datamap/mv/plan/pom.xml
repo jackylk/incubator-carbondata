@@ -44,6 +44,10 @@
       <artifactId>spark-core_${scala.binary.version}</artifactId>
       <exclusions>
         <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-huaweicloud</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>com.huawei.storage</groupId>
           <artifactId>esdk-obs-java</artifactId>
         </exclusion>

@@ -32,7 +32,7 @@ import org.apache.spark.sql.execution.command.{ColumnTableRelation, DataMapField
 import org.apache.spark.sql.execution.command.management.CarbonLoadDataCommand
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.hive.{CarbonMetaStore, CarbonRelation}
-import org.apache.spark.sql.parser.CarbonSpark2SqlParser
+import org.apache.spark.sql.parser.{CarbonSpark2SqlParser, CarbonSparkSqlParserUtil}
 import org.apache.spark.sql.types.DataType
 
 import org.apache.carbondata.common.exceptions.MetadataProcessException
@@ -820,10 +820,13 @@ object PreAggregateUtil {
       parser: CarbonSpark2SqlParser): LogicalPlan = {
     // adding the preAGG UDF, so pre aggregate data loading rule and query rule will not
     // be applied
-    val query = parser.addPreAggFunction(s"Select ${ aggExp.sql } from $databaseName.$tableName")
+    val query = CarbonSparkSqlParserUtil.getPreAggPlan(
+      s"Select ${ aggExp.sql } from $databaseName.$tableName",
+      sparkSession
+    )
     // updating the logical relation of logical plan to so when two logical plan
     // will be compared it will not consider relation
-    updateLogicalRelation(sparkSession.sql(query).logicalPlan, logicalRelation)
+    updateLogicalRelation(query, logicalRelation)
   }
 
   /**

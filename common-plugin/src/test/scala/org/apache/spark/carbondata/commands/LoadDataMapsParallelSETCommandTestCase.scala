@@ -47,14 +47,14 @@ class LoadDataMapsParallelSETCommandTestCase extends QueryTest with BeforeAndAft
         + "('DELIMITER'= ',', 'QUOTECHAR'= '\"')");
   }
 
-  test("test SET carbon.load.datamaps.parallel. after load") {
+  ignore("test SET carbon.load.datamaps.parallel. after load") {
     sql("SET carbon.load.datamaps.parallel.set_command.carbon_table=true")
     sql("SET carbon.load.datamaps.parallel.set_command.carbon_table")
     sql("select * from carbon_table").show(100)
     checkAnswer(sql("select * from carbon_table"), sql("select * from carbon_table1"))
   }
 
-  test("test SET carbon.load.datamaps.parallel. after update") {
+  ignore("test SET carbon.load.datamaps.parallel. after update") {
     sql("SET carbon.load.datamaps.parallel.set_command.carbon_table=false")
     sql("update carbon_table set(empno)=('21') where empno='11'").show()
     sql("update carbon_table1 set(empno)=('21') where empno='11'").show()
@@ -62,12 +62,12 @@ class LoadDataMapsParallelSETCommandTestCase extends QueryTest with BeforeAndAft
     checkAnswer(sql("select * from carbon_table"), sql("select * from carbon_table1"))
   }
 
-  test("test SET carbon.load.datamaps.parallel. for partition table after load") {
+  ignore("test SET carbon.load.datamaps.parallel. for partition table after load") {
     sql("SET carbon.load.datamaps.parallel.set_command.carbon_table_par=true")
     checkAnswer(sql("select * from carbon_table_par"), sql("select * from carbon_table_par1"))
   }
 
-  test("test SET carbon.load.datamaps.parallel. for partition table after update") {
+  ignore("test SET carbon.load.datamaps.parallel. for partition table after update") {
     sql("SET carbon.load.datamaps.parallel.set_command.carbon_table_par=false")
     sql("update carbon_table_par set(salary)=('20000') where salary is null").show()
     sql("update carbon_table_par1 set(salary)=('20000') where salary is null").show()
