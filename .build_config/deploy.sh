@@ -135,7 +135,7 @@ function deployJar() {
     fi
     # -test jar
     if [[ -f "${jarPath}/${testJarFile}" ]]; then
-        filesParams=${filesParams}${jarPath}/${testJarFile}
+        filesParams=${filesParams}${jarPath}/${testJarFile},
         typesParams=${typesParams}jar,
         classifiersParams=${classifiersParams}test,
     fi
