@@ -452,7 +452,7 @@ class TestCreateIndexTable extends QueryTest with BeforeAndAfterAll {
     assert(!sql("describe formatted index1").collect()(0).get(2).toString.contains("DICTIONARY"))
     sql("describe formatted index1").show(100, false)
     val tableInfo: org.apache.carbondata.format.TableInfo = CarbonMetastore
-      .readSchemaFileToThriftTable(s"$storeLocation/index1/Metadata/schema")
+      .readSchemaFileToThriftTable(s"$warehouse/index1/Metadata/schema")
     val column = tableInfo.getFact_table.getTable_columns.asScala.filter(_.getColumn_name == "b").head
     CarbonProperties.getInstance()
       .addProperty(CarbonInternalCommonConstants.HIGH_CARDINALITY_THRESHOLD,

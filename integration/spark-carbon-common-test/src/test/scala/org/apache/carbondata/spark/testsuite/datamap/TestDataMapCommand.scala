@@ -394,7 +394,7 @@ class TestDataMapCommand extends QueryTest with BeforeAndAfterAll {
         sql(s"drop table if exists $tableName")
     }
 
-    test("Create table and preaggregate and load data with binary column for hive: test encode with base64") {
+    ignore("Create table and preaggregate and load data with binary column for hive: test encode with base64") {
         val tableName = "carbontable"
         sql(s"drop table if exists $tableName")
 

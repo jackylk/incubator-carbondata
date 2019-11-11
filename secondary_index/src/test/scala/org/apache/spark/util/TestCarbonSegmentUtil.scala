@@ -19,7 +19,7 @@ import scala.collection.JavaConverters._
 import org.apache.spark.sql.CarbonEnv
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.execution.strategy.CarbonDataSourceScan
-import org.apache.spark.sql.test.{Spark2TestQueryExecutor, TestInternalQueryExecutor}
+import org.apache.spark.sql.test.{Spark2TestQueryExecutor, TestQueryExecutor}
 import org.apache.spark.sql.test.util.QueryTest
 
 import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatusManager}
@@ -236,7 +236,7 @@ class TestCarbonSegmentUtil extends QueryTest {
   // Test get Filtered Segments with more than 100 columns
   def test_getFilteredSegments_with_more_than_100_columns(): Unit = {
     dropTables(tableName)
-    val csvPath = TestInternalQueryExecutor.pluginResourcesPath.replaceAll("\\\\", "/")
+    val csvPath = TestQueryExecutor.pluginResourcesPath.replaceAll("\\\\", "/")
     sql(
       s"create table $tableName (RECORD_ID string,CDR_ID string,LOCATION_CODE int,SYSTEM_ID " +
       s"string," +

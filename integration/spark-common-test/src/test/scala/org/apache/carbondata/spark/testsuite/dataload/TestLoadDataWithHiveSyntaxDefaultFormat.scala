@@ -706,7 +706,7 @@ class TestLoadDataWithHiveSyntaxDefaultFormat extends QueryTest with BeforeAndAf
   }
 
   test("test table with specified table path") {
-    val path = "./source"
+    val path = new File("./source").getCanonicalPath
     sql("drop table if exists table_path_test")
     sql(
       "CREATE table table_path_test (empno string, salary double) STORED AS carbondata " +
@@ -727,7 +727,7 @@ class TestLoadDataWithHiveSyntaxDefaultFormat extends QueryTest with BeforeAndAf
   }
 
   test("test table with specified database and table path") {
-    val path = "./source"
+    val path = new File("./source").getCanonicalPath
     sql("drop database if exists test cascade")
     sql("create database if not exists test")
     sql("CREATE table test.table_path_test (empno string, salary double) " +

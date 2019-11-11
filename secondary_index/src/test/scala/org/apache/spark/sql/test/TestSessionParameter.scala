@@ -15,14 +15,14 @@ package org.apache.spark.sql.test
 import java.io.File
 
 import org.apache.spark.sql.SparkSession
-import org.junit.Test
+import org.junit.Ignore
 
 /**
  * test cases for creating carbon session with different parameters
  */
 class TestSessionParameter {
 
-  @Test
+  @Ignore
   //test getorCreateCarbonSession with spark-conf 'spark.carbon.sessionstate.classname'
   def test_Sparkconf_Classname() {
     val sparkSession = TestSessionParameter
@@ -36,7 +36,7 @@ class TestSessionParameter {
     sparkSession.close()
   }
 
-  @Test
+  @Ignore
   //test getorCreateCarbonSession with spark-conf 'spark.sql.session.state.builder'
   def test_Sparkconf_Builder() {
     val sparkSession = TestSessionParameter

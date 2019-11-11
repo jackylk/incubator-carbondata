@@ -273,7 +273,7 @@ class TestDDLForPartitionTable  extends QueryTest with BeforeAndAfterAll {
           | TBLPROPERTIES('PARTITION_TYPE'='LIST', 'LIST_INFO'='23.23111,2.32')
         """.stripMargin)
     }
-    assert(exception_test_list_decimal.getMessage.contains("Invalid Partition Values"))
+    assert(exception_test_list_decimal.getMessage.contains("UnSupported partition type"))
   }
 
   test("test exception when values in range_info can not match partition column type") {

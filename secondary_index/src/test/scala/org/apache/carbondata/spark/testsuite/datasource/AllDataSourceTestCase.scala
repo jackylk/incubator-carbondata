@@ -58,8 +58,13 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
     verifyHiveTable("carbondata", "ds_hive_carbondata")
   }
 
-  test("test external table") {
-    
+  def verifyHiveExternalTable(provider: String, tableName: String): Unit = {
+
+  }
+
+  def verifyDataSourceExternalTable(provider: String, tableName: String, path: String): Unit = {
+    sql(s"create table ${tableName}_ext(key int, value string) using $provider LOCATION $path")
+    sql(s"create table ${tableName}_ext(key int, value string) using $provider LOCATION $path")
   }
 
   def verifyDataSourceTable(provider: String, tableName: String): Unit = {

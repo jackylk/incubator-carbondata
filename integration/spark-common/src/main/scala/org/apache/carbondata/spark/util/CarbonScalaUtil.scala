@@ -172,7 +172,18 @@ object CarbonScalaUtil {
       return forwardDictionaryCache.get(
         dictionaryColumnUniqueIdentifier).getDictionaryValueForKey(value.toInt)
     }
-    value
+    try {
+      column.getDataType match {
+        case CarbonDataTypes.TIMESTAMP =>
+          DateTimeUtils.timestampToString(value.toLong * 1000)
+        case CarbonDataTypes.DATE =>
+          DateTimeUtils.dateToString(DateTimeUtils.millisToDays(value.toLong))
+        case _ => value
+      }
+    } catch {
+      case e: Exception =>
+        value
+    }
   }
 
   /**
