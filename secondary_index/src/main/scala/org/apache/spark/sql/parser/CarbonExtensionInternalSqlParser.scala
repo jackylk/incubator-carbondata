@@ -17,12 +17,14 @@
 
 package org.apache.spark.sql.parser
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 import org.apache.spark.sql.catalyst.parser.ParserInterface
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.SparkSqlParser
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.util.CarbonException
-import org.apache.spark.sql.{CarbonUtils, SparkSession}
+import org.apache.spark.sql.{CarbonEnv, CarbonUtils, SparkSession}
 
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.spark.util.CarbonScalaUtil
@@ -39,6 +41,9 @@ class CarbonExtensionInternalSqlParser(
   val parser = new CarbonExtensionInternalSpark2SqlParser
 
   override def parsePlan(sqlText: String): LogicalPlan = {
+    parser.synchronized {
+      CarbonEnv.getInstance(sparkSession)
+    }
     CarbonUtils.updateSessionInfoToCurrentThread(sparkSession)
     try {
       val plan = parser.parse(sqlText)

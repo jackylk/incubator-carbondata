@@ -23,8 +23,9 @@ import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.execution.{SparkPlan, SparkStrategy}
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.command.management.{CarbonAlterTableCompactionCommand, CarbonInsertIntoCommand, CarbonLoadDataCommand, RefreshCarbonTableCommand}
+import org.apache.spark.sql.execution.command.mutation.CarbonTruncateCommand
 import org.apache.spark.sql.execution.command.schema._
-import org.apache.spark.sql.execution.command.table.CarbonDropTableCommand
+import org.apache.spark.sql.execution.command.table.{CarbonDropTableCommand, CarbonShowCreateTableCommand}
 import org.apache.spark.sql.hive.execution.command.{CarbonDropDatabaseCommand, CarbonResetCommand, CarbonSetCommand, MatchResetCommand}
 import org.apache.spark.sql.execution.datasources.{RefreshResource, RefreshTable}
 import org.apache.spark.sql.hive.execution.CreateHiveTableAsSelectCommand
@@ -114,14 +115,16 @@ class DDLStrategy(sparkSession: SparkSession) extends SparkStrategy {
         ExecutedCommandExec(
           DDLHelper.createHiveTableAsSelect(ctas, sparkSession)
         ) :: Nil
+      case showCreateTable: ShowCreateTableCommand
+        if isCarbonTable(showCreateTable.table) =>
+        ExecutedCommandExec(CarbonShowCreateTableCommand(showCreateTable)) :: Nil
       case createLikeTable: CreateTableLikeCommand
         if isCarbonTable(createLikeTable.sourceTable)=>
         throw new MalformedCarbonCommandException(
           "Operation not allowed, when source table is carbon table")
       case truncateTable: TruncateTableCommand
         if isCarbonTable(truncateTable.tableName) =>
-        throw new MalformedCarbonCommandException(
-          "Operation not allowed, when source table is carbon table")
+        ExecutedCommandExec(CarbonTruncateCommand(truncateTable)) :: Nil
       case createTable@org.apache.spark.sql.execution.datasources.CreateTable(tableDesc, _, None)
         if tableDesc.provider.get != DDLUtils.HIVE_PROVIDER
           && (tableDesc.provider.get.equals("org.apache.spark.sql.CarbonSource")

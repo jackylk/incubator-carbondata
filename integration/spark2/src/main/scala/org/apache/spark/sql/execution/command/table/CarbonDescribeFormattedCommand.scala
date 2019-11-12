@@ -100,7 +100,7 @@ private[sql] case class CarbonDescribeFormattedCommand(
       ("Owner", catalogTable.owner, ""),
       ("Created", new Date(catalogTable.createTime).toString, ""))
 
-    if (!CarbonEnv.getInstance(sparkSession).isLeo) {
+    if (!CarbonEnv.isPrivacy(sparkSession, carbonTable.isExternalTable)) {
       results ++= Seq(
         ("Location ", carbonTable.getTablePath, "")
       )

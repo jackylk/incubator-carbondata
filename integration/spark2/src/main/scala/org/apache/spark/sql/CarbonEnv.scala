@@ -439,4 +439,10 @@ object CarbonEnv {
     getInstance(sparkSession).carbonMetaStore.tableExists(tableName, dbNameOp)(sparkSession)
   }
 
+  def isPrivacy(sparkSession: SparkSession, isExternal: Boolean): Boolean = {
+    (!isExternal) && (
+      CarbonEnv.getInstance(sparkSession).isLeo ||
+      sparkSession.sqlContext.conf.luxorEnabled
+      )
+  }
 }

@@ -116,9 +116,11 @@ object DDLHelper {
       createTable: org.apache.spark.sql.execution.datasources.CreateTable,
       sparkSession: SparkSession
   ): CreateDataSourceTableCommand = {
-    new CreateDataSourceTableCommand(
-      CarbonSource.updateCatalogTableWithCarbonSchema(createTable.tableDesc, sparkSession),
-      ignoreIfExists = createTable.mode == SaveMode.Ignore)
+    createDataSourceTable(
+      createTable.tableDesc,
+      createTable.mode == SaveMode.Ignore,
+      sparkSession
+    )
   }
 
   /**
@@ -128,9 +130,22 @@ object DDLHelper {
       createTable: CreateDataSourceTableCommand,
       sparkSession: SparkSession
   ): CreateDataSourceTableCommand = {
+    createDataSourceTable(
+      createTable.table,
+      createTable.ignoreIfExists,
+      sparkSession
+    )
+  }
+
+  private def createDataSourceTable(
+      table: CatalogTable,
+      ignoreIfExists: Boolean,
+      sparkSession: SparkSession
+  ): CreateDataSourceTableCommand = {
     new CreateDataSourceTableCommand(
-      CarbonSource.updateCatalogTableWithCarbonSchema(createTable.table, sparkSession),
-      createTable.ignoreIfExists)
+      CarbonSource.updateCatalogTableWithCarbonSchema(table, sparkSession),
+      ignoreIfExists
+    )
   }
 
   /**
@@ -141,6 +156,19 @@ object DDLHelper {
       query: LogicalPlan,
       sparkSession: SparkSession
   ) : CreateCarbonSourceTableAsSelectCommand = {
+    if (table.partitionColumnNames.nonEmpty) {
+      throw new MalformedCarbonCommandException(
+        "A Create Table As Select (CTAS) statement is not allowed to " +
+        "create a partitioned table using Carbondata file formats.")
+    }
+    if (table.schema.fields.nonEmpty) {
+      throw new MalformedCarbonCommandException(
+        "Schema can not be specified in a Create Table As Select (CTAS) statement")
+    }
+    if (table.tableType == CatalogTableType.EXTERNAL) {
+      throw new MalformedCarbonCommandException(
+        "Create external table as select is not allowed")
+    }
     CreateCarbonSourceTableAsSelectCommand(
       CarbonSource.updateCatalogTableWithCarbonSchema(table, sparkSession, Option(query)),
       SaveMode.Ignore,
