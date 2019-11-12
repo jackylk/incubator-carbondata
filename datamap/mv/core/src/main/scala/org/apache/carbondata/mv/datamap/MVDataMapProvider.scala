@@ -154,7 +154,7 @@ class MVDataMapProvider(
         partition = Map.empty)
 
       try {
-        SparkSQLUtil.execute(loadCommand, sparkSession)
+        SparkSQLUtil.execute(loadCommand, sparkSession).collect()
       } catch {
         case ex: Exception =>
           // If load to dataMap table fails, disable the dataMap and if newLoad is still

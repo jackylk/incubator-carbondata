@@ -846,7 +846,7 @@ case class CarbonLoadDataCommand(
           overwrite = false,
           ifPartitionNotExists = false)
       SparkUtil.setNullExecutionId(sparkSession)
-      Dataset.ofRows(sparkSession, convertedPlan)
+      Dataset.ofRows(sparkSession, convertedPlan).collect()
     } catch {
       case ex: Throwable =>
         val (executorMessage, errorMessage) = CarbonScalaUtil.retrieveAndLogErrorMsg(ex, LOGGER)

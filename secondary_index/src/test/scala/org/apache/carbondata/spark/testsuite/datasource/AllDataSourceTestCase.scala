@@ -125,6 +125,7 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
     sql(s"describe formatted ${tableName}").show(100, false)
     sql(s"show partitions ${tableName}").show(100, false)
     sql(s"show create table ${tableName}").show(100, false)
+    sql(s"alter table ${tableName} add partition(col2='dd')").show(100, false)
   }
 
   def createHivePartitionTable(provider: String, tableName: String): Unit = {
@@ -133,6 +134,7 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
     checkLoading(s"${tableName}")
     sql(s"describe formatted ${tableName}").show(100, false)
     sql(s"show partitions ${tableName}").show(100, false)
+    sql(s"alter table ${tableName} add partition(col2='dd')").show(100, false)
   }
 
   def verifyDataSourceTable(provider: String, tableName: String): Unit = {
