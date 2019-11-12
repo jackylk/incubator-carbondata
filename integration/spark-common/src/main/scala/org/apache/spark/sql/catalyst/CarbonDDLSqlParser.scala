@@ -1185,7 +1185,12 @@ abstract class CarbonDDLSqlParser extends AbstractCarbonSparkSQLParser {
       "LOAD_MIN_SIZE_INMB",
       "SCALE_FACTOR",
       "BINARY_DECODER",
-      "SORT_SCOPE"
+      "SORT_SCOPE",
+      "SORT_ALGORITHM",
+      "NUMBER_OF_SORTDATAROWS",
+      "PARTITION_ALGORITHM",
+      "NUMBER_OF_PARTITIONS",
+      "SAMPLING_GAP"
     )
     var isSupported = true
     val invalidOptions = StringBuilder.newBuilder

@@ -199,7 +199,13 @@ public class CarbonWriterBuilder {
           !option.equalsIgnoreCase("complex_delimiter_level_3") &&
           !option.equalsIgnoreCase("quotechar") &&
           !option.equalsIgnoreCase("escapechar") &&
-          !option.equalsIgnoreCase("binary_decoder")) {
+          !option.equalsIgnoreCase("binary_decoder") &&
+          !option.equalsIgnoreCase("fileheader") &&
+          !option.equalsIgnoreCase("sort_column_bounds") &&
+          !option.equalsIgnoreCase("sort_algorithm") &&
+          !option.equalsIgnoreCase("number_of_sortdatarows") &&
+          !option.equalsIgnoreCase("partition_algorithm") &&
+          !option.equalsIgnoreCase("number_of_partitions")) {
         throw new IllegalArgumentException("Unsupported option:" + option
             + ". Refer method header or documentation");
       }

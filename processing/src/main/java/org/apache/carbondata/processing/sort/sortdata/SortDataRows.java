@@ -36,6 +36,8 @@ import org.apache.carbondata.core.util.CarbonThreadFactory;
 import org.apache.carbondata.core.util.CarbonUtil;
 import org.apache.carbondata.core.util.ReUsableByteArrayDataOutputStream;
 import org.apache.carbondata.processing.loading.sort.SortStepRowHandler;
+import org.apache.carbondata.processing.loading.sort.learned.LearnedArrays;
+import org.apache.carbondata.processing.loading.sort.learned.LearnedGetArraysValue;
 import org.apache.carbondata.processing.sort.exception.CarbonSortKeyAndGroupByException;
 import org.apache.carbondata.processing.util.CarbonDataProcessorUtil;
 
@@ -317,13 +319,29 @@ public class SortDataRows {
     public void run() {
       try {
         long startTime = System.currentTimeMillis();
-        if (parameters.getNumberOfNoDictSortColumns() > 0) {
-          Arrays.sort(recordHolderArray,
-              new NewRowComparator(parameters.getNoDictionarySortColumn(),
-                  parameters.getNoDictDataType()));
+        if ("LEARNEDSORT".equalsIgnoreCase(parameters.getSortAlgorithm())) {
+          if (parameters.getNumberOfNoDictSortColumns() > 0) {
+            LearnedArrays.sort(recordHolderArray,
+                new NewRowComparator(parameters.getNoDictionarySortColumn(),
+                    parameters.getNoDictDataType()),
+                new LearnedGetArraysValue(parameters.getNoDictionarySortColumn(),
+                    parameters.getNoDictDataType()));
+          } else {
+            LearnedArrays.sort(recordHolderArray,
+                new NewRowComparator(parameters.getNoDictionarySortColumn(),
+                    parameters.getNoDictDataType()),
+                new LearnedGetArraysValue(parameters.getNoDictionarySortColumn(),
+                    parameters.getNoDictDataType()));
+          }
         } else {
-          Arrays.sort(recordHolderArray,
-              new NewRowComparatorForNormalDims(parameters.getNumberOfSortColumns()));
+          if (parameters.getNumberOfNoDictSortColumns() > 0) {
+            Arrays.sort(recordHolderArray,
+                new NewRowComparator(parameters.getNoDictionarySortColumn(),
+                    parameters.getNoDictDataType()));
+          } else {
+            Arrays.sort(recordHolderArray,
+                new NewRowComparatorForNormalDims(parameters.getNumberOfSortColumns()));
+          }
         }
 
         // create a new file and choose folder randomly every time

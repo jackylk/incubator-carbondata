@@ -38,8 +38,10 @@ import org.apache.carbondata.processing.loading.converter.FieldConverter;
 import org.apache.carbondata.processing.loading.converter.RowConverter;
 import org.apache.carbondata.processing.loading.converter.impl.RowConverterImpl;
 import org.apache.carbondata.processing.loading.exception.CarbonDataLoadingException;
+import org.apache.carbondata.processing.loading.model.learned.LearnedPartitionModel;
 import org.apache.carbondata.processing.loading.partition.Partitioner;
 import org.apache.carbondata.processing.loading.partition.impl.HashPartitionerImpl;
+import org.apache.carbondata.processing.loading.partition.impl.LearnedPartitionerImpl;
 import org.apache.carbondata.processing.loading.partition.impl.RangePartitionerImpl;
 import org.apache.carbondata.processing.loading.partition.impl.RawRowComparator;
 import org.apache.carbondata.processing.loading.row.CarbonRowBatch;
@@ -58,6 +60,7 @@ public class DataConverterProcessorStepImpl extends AbstractDataLoadProcessorSte
   private Partitioner<CarbonRow> partitioner;
   private BadRecordsLogger badRecordLogger;
   private boolean isSortColumnRangeEnabled = false;
+  private boolean isSortColumnLearnedRangeEnabled = false;
   private boolean isBucketColumnEnabled = false;
 
   public DataConverterProcessorStepImpl(CarbonDataLoadConfiguration configuration,
@@ -80,6 +83,9 @@ public class DataConverterProcessorStepImpl extends AbstractDataLoadProcessorSte
     if (null != configuration.getBucketingInfo()) {
       this.isBucketColumnEnabled = true;
       initializeBucketColumnPartitioner();
+    } else if (null != configuration.getLearnedPartitionModel()) {
+      this.isSortColumnLearnedRangeEnabled = true;
+      initializeLearnedPartitioner();
     } else if (null != configuration.getSortColumnRangeInfo()) {
       this.isSortColumnRangeEnabled = true;
       initializeSortColumnRangesPartitioner();
@@ -153,6 +159,18 @@ public class DataConverterProcessorStepImpl extends AbstractDataLoadProcessorSte
     for (int colIdx : sortColumnRangeInfo.getSortColumnIndex()) {
       fieldConverters[colIdx].convert(fakeRow, logHolder);
     }
+  }
+
+  /**
+   * initialize learned partitioner for sort column ranges
+   */
+  private void initializeLearnedPartitioner() {
+    SortColumnRangeInfo sortColumnRangeInfo = configuration.getSortColumnRangeInfo();
+    LearnedPartitionModel learnedPartitionModel = configuration.getLearnedPartitionModel();
+    this.partitioner =
+        new LearnedPartitionerImpl(learnedPartitionModel, sortColumnRangeInfo.getSortColumnIndex(),
+            CarbonDataProcessorUtil
+                .getNoDictDataTypes(configuration.getTableSpec().getCarbonTable()));
   }
 
   @Override public Iterator<CarbonRowBatch>[] execute() throws CarbonDataLoadingException {
@@ -236,6 +254,8 @@ public class DataConverterProcessorStepImpl extends AbstractDataLoadProcessorSte
   @Override protected String getStepName() {
     if (isBucketColumnEnabled) {
       return "Data Converter with Bucketing";
+    } else if (isSortColumnLearnedRangeEnabled) {
+      return "Data Converter with sort column learned range";
     } else if (isSortColumnRangeEnabled) {
       return "Data Converter with sort column range";
     } else {

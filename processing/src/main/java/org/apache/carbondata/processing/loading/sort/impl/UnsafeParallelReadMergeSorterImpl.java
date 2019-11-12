@@ -77,29 +77,38 @@ public class UnsafeParallelReadMergeSorterImpl extends AbstractMergeSorter {
   @Override public Iterator<CarbonRowBatch>[] sort(Iterator<CarbonRowBatch>[] iterators)
       throws CarbonDataLoadingException {
     int inMemoryChunkSizeInMB = CarbonProperties.getInstance().getSortMemoryChunkSizeInMB();
-    UnsafeSortDataRows sortDataRow =
-        new UnsafeSortDataRows(sortParameters, unsafeIntermediateFileMerger, inMemoryChunkSizeInMB);
     final int batchSize = CarbonProperties.getInstance().getBatchSize();
-    try {
-      sortDataRow.initialize();
-    } catch (Exception e) {
-      throw new CarbonDataLoadingException(e);
+
+    int numberOfSortDataRows = sortParameters.getNumberOfSortDataRows();
+    if (numberOfSortDataRows > iterators.length)
+    {
+      numberOfSortDataRows = iterators.length;
     }
+    UnsafeSortDataRows[] sortDataRows = new UnsafeSortDataRows[numberOfSortDataRows];
+    for (int i = 0; i < numberOfSortDataRows; i++) {
+      sortDataRows[i] = new UnsafeSortDataRows(sortParameters, unsafeIntermediateFileMerger,
+          inMemoryChunkSizeInMB);
+      try {
+        sortDataRows[i].initialize();
+      } catch (Exception e) {
+        throw new CarbonDataLoadingException(e);
+      }
+    }
+
     this.executorService = Executors.newFixedThreadPool(iterators.length,
-        new CarbonThreadFactory("UnsafeParallelSorterPool:" + sortParameters.getTableName(),
-                true));
+        new CarbonThreadFactory("UnsafeParallelSorterPool:" + sortParameters.getTableName()));
     this.threadStatusObserver = new ThreadStatusObserver(executorService);
 
     try {
       for (int i = 0; i < iterators.length; i++) {
         executorService.execute(
-            new SortIteratorThread(iterators[i], sortDataRow, batchSize, rowCounter,
-                this.threadStatusObserver));
+            new SortIteratorThread(iterators[i], sortDataRows[i % numberOfSortDataRows], batchSize,
+                rowCounter, this.threadStatusObserver));
       }
       executorService.shutdown();
       executorService.awaitTermination(2, TimeUnit.DAYS);
       if (!sortParameters.getObserver().isFailed()) {
-        processRowToNextStep(sortDataRow, sortParameters);
+        processRowToNextStep(sortDataRows, sortParameters);
       }
     } catch (Exception e) {
       checkError();
@@ -148,11 +157,16 @@ public class UnsafeParallelReadMergeSorterImpl extends AbstractMergeSorter {
   /**
    * Below method will be used to process data to next step
    */
-  private boolean processRowToNextStep(UnsafeSortDataRows sortDataRows, SortParameters parameters)
+  private boolean processRowToNextStep(UnsafeSortDataRows[] sortDataRows, SortParameters parameters)
       throws CarbonDataLoadingException {
     try {
       // start sorting
-      sortDataRows.startSorting();
+      for (UnsafeSortDataRows sortDataRow : sortDataRows) {
+        sortDataRow.startSorting();
+      }
+      for (UnsafeSortDataRows sortDataRow : sortDataRows) {
+        sortDataRow.startFileBasedMerge();
+      }
 
       // check any more rows are present
       LOGGER.info("Record Processed For table: " + parameters.getTableName());

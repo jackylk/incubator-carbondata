@@ -320,6 +320,11 @@ public final class DataLoadProcessBuilder {
     configuration.setNumberOfLoadingCores(CarbonProperties.getInstance().getNumberOfLoadingCores());
 
     configuration.setColumnCompressor(loadModel.getColumnCompressor());
+    configuration.setSortAlgorithm(loadModel.getSortAlgorithm());
+    configuration.setNumberOfSortDataRows(loadModel.getNumberOfSortDataRows());
+    configuration.setPartitionAlgorithm(loadModel.getPartitionAlgorithm());
+    configuration.setLearnedPartitionModel(loadModel.getLearnedPartitionModel());
+    configuration.setNumberOfRangePartition(loadModel.getNumberOfRangePartition());
     return configuration;
   }
 
@@ -333,9 +338,9 @@ public final class DataLoadProcessBuilder {
       CarbonDataLoadConfiguration configuration) {
     List<String> sortCols = carbonTable.getSortColumns(carbonTable.getTableName());
     SortScopeOptions.SortScope sortScope = SortScopeOptions.getSortScope(loadModel.getSortScope());
-    if (!SortScopeOptions.SortScope.LOCAL_SORT.equals(sortScope)
-        || sortCols.size() == 0
-        || StringUtils.isBlank(loadModel.getSortColumnsBoundsStr())) {
+    if (!SortScopeOptions.SortScope.LOCAL_SORT.equals(sortScope) || sortCols.size() == 0 || (
+        StringUtils.isBlank(loadModel.getSortColumnsBoundsStr()) && StringUtils
+            .isBlank(loadModel.getPartitionAlgorithm()))) {
       if (!StringUtils.isBlank(loadModel.getSortColumnsBoundsStr())) {
         LOGGER.warn("sort column bounds will be ignored");
       }
@@ -368,20 +373,29 @@ public final class DataLoadProcessBuilder {
       }
     }
 
-    String[] sortColumnBounds = StringUtils.splitPreserveAllTokens(
-        loadModel.getSortColumnsBoundsStr(),
-        CarbonLoadOptionConstants.SORT_COLUMN_BOUNDS_ROW_DELIMITER, -1);
-    for (String bound : sortColumnBounds) {
-      String[] fieldInBounds = StringUtils.splitPreserveAllTokens(bound,
-          CarbonLoadOptionConstants.SORT_COLUMN_BOUNDS_FIELD_DELIMITER, -1);
-      if (fieldInBounds.length != sortCols.size()) {
-        String msg = new StringBuilder(
-            "The number of field in bounds should be equal to that in sort columns.")
-            .append(" Expected ").append(sortCols.size())
-            .append(", actual ").append(String.valueOf(fieldInBounds.length)).append(".")
-            .append(" The illegal bound is '").append(bound).append("'.").toString();
-        throw new CarbonDataLoadingException(msg);
+    String[] sortColumnBounds;
+    if (!StringUtils.isBlank(loadModel.getSortColumnsBoundsStr()))
+    {
+      sortColumnBounds = StringUtils.splitPreserveAllTokens(
+          loadModel.getSortColumnsBoundsStr(),
+          CarbonLoadOptionConstants.SORT_COLUMN_BOUNDS_ROW_DELIMITER, -1);
+      for (String bound : sortColumnBounds) {
+        String[] fieldInBounds = StringUtils.splitPreserveAllTokens(bound,
+            CarbonLoadOptionConstants.SORT_COLUMN_BOUNDS_FIELD_DELIMITER, -1);
+        if (fieldInBounds.length != sortCols.size()) {
+          String msg = new StringBuilder(
+              "The number of field in bounds should be equal to that in sort columns.")
+              .append(" Expected ").append(sortCols.size())
+              .append(", actual ").append(String.valueOf(fieldInBounds.length)).append(".")
+              .append(" The illegal bound is '").append(bound).append("'.").toString();
+          throw new CarbonDataLoadingException(msg);
+        }
       }
+    }
+    else
+    {
+      int NumberOfRangePartition = loadModel.getNumberOfRangePartition();
+      sortColumnBounds = new String[NumberOfRangePartition - 1];
     }
 
     SortColumnRangeInfo sortColumnRangeInfo = new SortColumnRangeInfo(sortColIndex,

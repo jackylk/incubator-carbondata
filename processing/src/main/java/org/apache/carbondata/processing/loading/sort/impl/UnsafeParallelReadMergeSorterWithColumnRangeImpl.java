@@ -90,7 +90,12 @@ public class UnsafeParallelReadMergeSorterWithColumnRangeImpl extends AbstractMe
 
   @Override public Iterator<CarbonRowBatch>[] sort(Iterator<CarbonRowBatch>[] iterators)
       throws CarbonDataLoadingException {
-    UnsafeSortDataRows[] sortDataRows = new UnsafeSortDataRows[columnRangeInfo.getNumOfRanges()];
+    int numberOfSortDataRows = originSortParameters.getNumberOfSortDataRows();
+    if (numberOfSortDataRows > iterators.length) {
+      numberOfSortDataRows = iterators.length;
+    }
+    UnsafeSortDataRows[][] sortDataRowsList =
+        new UnsafeSortDataRows[numberOfSortDataRows][columnRangeInfo.getNumOfRanges()];
     intermediateFileMergers = new UnsafeIntermediateMerger[columnRangeInfo.getNumOfRanges()];
     SortParameters[] sortParameterArray = new SortParameters[columnRangeInfo.getNumOfRanges()];
     try {
@@ -101,9 +106,11 @@ public class UnsafeParallelReadMergeSorterWithColumnRangeImpl extends AbstractMe
         sortParameterArray[i] = parameters;
         setTempLocation(parameters);
         intermediateFileMergers[i] = new UnsafeIntermediateMerger(parameters);
-        sortDataRows[i] =
-            new UnsafeSortDataRows(parameters, intermediateFileMergers[i], inMemoryChunkSizeInMB);
-        sortDataRows[i].initialize();
+        for (int j = 0; j < numberOfSortDataRows; j++) {
+          sortDataRowsList[j][i] =
+              new UnsafeSortDataRows(parameters, intermediateFileMergers[i], inMemoryChunkSizeInMB);
+          sortDataRowsList[j][i].initialize();
+        }
       }
     } catch (Exception e) {
       throw new CarbonDataLoadingException(e);
@@ -113,12 +120,13 @@ public class UnsafeParallelReadMergeSorterWithColumnRangeImpl extends AbstractMe
     final int batchSize = CarbonProperties.getInstance().getBatchSize();
     try {
       for (int i = 0; i < iterators.length; i++) {
-        executorService.execute(new SortIteratorThread(iterators[i], sortDataRows, rowCounter,
-            this.insideRowCounterList, this.threadStatusObserver));
+        executorService.execute(
+            new SortIteratorThread(iterators[i], sortDataRowsList[i % numberOfSortDataRows],
+                rowCounter, this.insideRowCounterList, this.threadStatusObserver));
       }
       executorService.shutdown();
       executorService.awaitTermination(2, TimeUnit.DAYS);
-      processRowToNextStep(sortDataRows, originSortParameters);
+      processRowToNextStep(sortDataRowsList, originSortParameters);
     } catch (Exception e) {
       checkError();
       throw new CarbonDataLoadingException("Problem while shutdown the server ", e);
@@ -133,7 +141,7 @@ public class UnsafeParallelReadMergeSorterWithColumnRangeImpl extends AbstractMe
     }
 
     Iterator<CarbonRowBatch>[] batchIterator = new Iterator[columnRangeInfo.getNumOfRanges()];
-    for (int i = 0; i < sortDataRows.length; i++) {
+    for (int i = 0; i < columnRangeInfo.getNumOfRanges(); i++) {
       batchIterator[i] =
           new MergedDataIterator(sortParameterArray[i], batchSize, intermediateFileMergers[i]);
     }
@@ -161,13 +169,22 @@ public class UnsafeParallelReadMergeSorterWithColumnRangeImpl extends AbstractMe
   /**
    * Below method will be used to process data to next step
    */
-  private boolean processRowToNextStep(UnsafeSortDataRows[] sortDataRows, SortParameters parameters)
-      throws CarbonDataLoadingException {
+  private boolean processRowToNextStep(UnsafeSortDataRows[][] sortDataRowsList,
+      SortParameters parameters) throws CarbonDataLoadingException {
     try {
-      for (int i = 0; i < sortDataRows.length; i++) {
-        // start sorting
-        sortDataRows[i].startSorting();
+      for (UnsafeSortDataRows[] sortDataRows : sortDataRowsList) {
+        for (UnsafeSortDataRows sortDataRow : sortDataRows) {
+          // start sorting
+          sortDataRow.startSorting();
+        }
       }
+      for (UnsafeSortDataRows[] sortDataRows : sortDataRowsList) {
+        for (UnsafeSortDataRows sortDataRow : sortDataRows) {
+          // start sorting
+          sortDataRow.startFileBasedMerge();
+        }
+      }
+
       // check any more rows are present
       LOGGER.info("Record Processed For table: " + parameters.getTableName());
       CarbonTimeStatisticsFactory.getLoadStatisticsInstance()

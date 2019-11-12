@@ -45,7 +45,9 @@ import org.apache.carbondata.processing.loading.sort.unsafe.comparator.UnsafeRow
 import org.apache.carbondata.processing.loading.sort.unsafe.comparator.UnsafeRowComparatorForNormalDims;
 import org.apache.carbondata.processing.loading.sort.unsafe.holder.UnsafeCarbonRow;
 import org.apache.carbondata.processing.loading.sort.unsafe.merger.UnsafeIntermediateMerger;
+import org.apache.carbondata.processing.loading.sort.unsafe.sort.LearnedSort;
 import org.apache.carbondata.processing.loading.sort.unsafe.sort.TimSort;
+import org.apache.carbondata.processing.loading.sort.unsafe.sort.UnsafeGetSortValue;
 import org.apache.carbondata.processing.loading.sort.unsafe.sort.UnsafeIntSortDataFormat;
 import org.apache.carbondata.processing.sort.exception.CarbonSortKeyAndGroupByException;
 import org.apache.carbondata.processing.sort.sortdata.SortParameters;
@@ -269,7 +271,6 @@ public class UnsafeSortDataRows {
     } else {
       rowPage.freeMemory();
     }
-    startFileBasedMerge();
   }
 
   /**
@@ -327,7 +328,7 @@ public class UnsafeSortDataRows {
    *
    * @throws InterruptedException
    */
-  private void startFileBasedMerge() throws InterruptedException {
+  public void startFileBasedMerge() throws InterruptedException {
     dataSorterAndWriterExecutorService.shutdown();
     dataSorterAndWriterExecutorService.awaitTermination(2, TimeUnit.DAYS);
   }
@@ -368,15 +369,29 @@ public class UnsafeSortDataRows {
     public void run() {
       try {
         long startTime = System.currentTimeMillis();
-        TimSort<UnsafeCarbonRow, IntPointerBuffer> timSort = new TimSort<>(
-            new UnsafeIntSortDataFormat(page));
-        // if sort_columns is not none, sort by sort_columns
-        if (parameters.getNumberOfNoDictSortColumns() > 0) {
-          timSort.sort(page.getBuffer(), 0, page.getBuffer().getActualSize(),
-              new UnsafeRowComparator(page));
+
+        if ("LEARNEDSORT".equalsIgnoreCase(parameters.getSortAlgorithm())) {
+          LearnedSort<UnsafeCarbonRow, IntPointerBuffer> learnedSort =
+              new LearnedSort<>(new UnsafeIntSortDataFormat(page));
+          // if sort_columns is not none, sort by sort_columns
+          if (parameters.getNumberOfNoDictSortColumns() > 0) {
+            learnedSort.sort(page.getBuffer(), 0, page.getBuffer().getActualSize(),
+                new UnsafeGetSortValue(page), new UnsafeRowComparator(page));
+          } else {
+            learnedSort.sort(page.getBuffer(), 0, page.getBuffer().getActualSize(),
+                new UnsafeGetSortValue(page), new UnsafeRowComparatorForNormalDims(page));
+          }
         } else {
-          timSort.sort(page.getBuffer(), 0, page.getBuffer().getActualSize(),
-              new UnsafeRowComparatorForNormalDims(page));
+          TimSort<UnsafeCarbonRow, IntPointerBuffer> timSort =
+              new TimSort<>(new UnsafeIntSortDataFormat(page));
+          // if sort_columns is not none, sort by sort_columns
+          if (parameters.getNumberOfNoDictSortColumns() > 0) {
+            timSort.sort(page.getBuffer(), 0, page.getBuffer().getActualSize(),
+                new UnsafeRowComparator(page));
+          } else {
+            timSort.sort(page.getBuffer(), 0, page.getBuffer().getActualSize(),
+                new UnsafeRowComparatorForNormalDims(page));
+          }
         }
         // get sort storage memory block if memory is available in sort storage manager
         // if space is available then store it in memory, if memory is not available

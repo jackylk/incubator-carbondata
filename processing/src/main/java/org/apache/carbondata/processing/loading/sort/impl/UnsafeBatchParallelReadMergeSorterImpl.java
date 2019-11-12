@@ -324,6 +324,7 @@ public class UnsafeBatchParallelReadMergeSorterImpl extends AbstractMergeSorter 
       try {
         // start sorting
         sortDataRows.startSorting();
+        sortDataRows.startFileBasedMerge();
 
         // check any more rows are present
         LOGGER.info("Record Processed For table: " + parameters.getTableName());

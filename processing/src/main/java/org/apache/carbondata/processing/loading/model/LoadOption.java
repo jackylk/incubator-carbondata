@@ -196,6 +196,8 @@ public class LoadOption {
 
     optionsFinal.put("range_column", Maps.getOrDefault(options, "range_column", null));
     optionsFinal.put("scale_factor", Maps.getOrDefault(options, "scale_factor", null));
+    optionsFinal.put("sort_algorithm", Maps.getOrDefault(options, "sort_algorithm", "TIMSORT"));
+    optionsFinal.put("partition_algorithm", Maps.getOrDefault(options, "partition_algorithm", null));
     return optionsFinal;
   }
 

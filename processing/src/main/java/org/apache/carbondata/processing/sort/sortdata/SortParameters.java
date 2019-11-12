@@ -152,6 +152,10 @@ public class SortParameters implements Serializable {
   private int[] dictDimActualPosition;
 
   private int[] noDictActualPosition;
+  
+  private String sortAlgorithm;
+
+  private int numberOfSortDataRows;
 
   public SortParameters getCopy() {
     SortParameters parameters = new SortParameters();
@@ -191,6 +195,8 @@ public class SortParameters implements Serializable {
     parameters.isUpdateNonDictDims = isUpdateNonDictDims;
     parameters.dictDimActualPosition = dictDimActualPosition;
     parameters.noDictActualPosition = noDictActualPosition;
+	parameters.sortAlgorithm = sortAlgorithm;
+    parameters.numberOfSortDataRows = numberOfSortDataRows;
     return parameters;
   }
 
@@ -490,6 +496,8 @@ public class SortParameters implements Serializable {
     parameters.setDictDimActualPosition(configuration.getTableSpec().getDictDimActualPosition());
     parameters.setUpdateDictDims(configuration.getTableSpec().isUpdateDictDim());
     parameters.setUpdateNonDictDims(configuration.getTableSpec().isUpdateNoDictDims());
+	parameters.setSortAlgorithm(configuration.getSortAlgorithm());
+    parameters.setNumberOfSortDataRows(configuration.getNumberOfSortDataRows());
     return parameters;
   }
 
@@ -505,7 +513,7 @@ public class SortParameters implements Serializable {
       String tableName, int dimColCount, int complexDimColCount, int measureColCount,
       int noDictionaryCount, String segmentId, String taskNo, boolean[] noDictionaryColMaping,
       boolean[] sortColumnMapping, boolean[] isVarcharDimensionColumn, boolean isCompactionFlow,
-      int numberOfCores) {
+      int numberOfCores, String sortAlgorithm, int numberOfSortDataRows) {
     SortParameters parameters = new SortParameters();
     CarbonProperties carbonProperties = CarbonProperties.getInstance();
     parameters.setCarbonTable(carbonTable);
@@ -578,6 +586,8 @@ public class SortParameters implements Serializable {
     parameters.setDictDimActualPosition(tableSpec.getDictDimActualPosition());
     parameters.setUpdateDictDims(tableSpec.isUpdateDictDim());
     parameters.setUpdateNonDictDims(tableSpec.isUpdateNoDictDims());
+	parameters.setSortAlgorithm(sortAlgorithm);
+    parameters.setNumberOfSortDataRows(numberOfSortDataRows);
     return parameters;
   }
 
@@ -643,5 +653,21 @@ public class SortParameters implements Serializable {
 
   public void setNoDictActualPosition(int[] noDictActualPosition) {
     this.noDictActualPosition = noDictActualPosition;
+  }
+  
+  public String getSortAlgorithm() {
+    return sortAlgorithm;
+  }
+
+  public void setSortAlgorithm(String sortAlgorithm) {
+    this.sortAlgorithm = sortAlgorithm;
+  }
+
+  public int getNumberOfSortDataRows() {
+    return numberOfSortDataRows;
+  }
+
+  public void setNumberOfSortDataRows(int numberOfSortDataRows) {
+    this.numberOfSortDataRows = numberOfSortDataRows;
   }
 }

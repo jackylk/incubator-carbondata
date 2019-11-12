@@ -270,7 +270,7 @@ public class CarbonTableOutputFormat extends FileOutputFormat<NullWritable, Obje
         ThreadLocalSessionInfo.setConfigurationToCurrentThread(taskAttemptContext
             .getConfiguration());
         try {
-          if ("PREPROCESSOR".equalsIgnoreCase(loadModel.getPartitionAlgorithm())) {
+          if ("LEARNED".equalsIgnoreCase(loadModel.getPartitionAlgorithm())) {
             dataLoadExecutor.execute(loadModel, tempStoreLocations, iterators);
             for (CarbonOutputIteratorWrapper iterator : iterators) {
               iterator.closeWriter(true);
