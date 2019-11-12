@@ -22,6 +22,7 @@ import org.scalatest.BeforeAndAfterAll
 
 import org.apache.carbondata.core.datastore.filesystem.{CarbonFile, CarbonFileFilter}
 import org.apache.carbondata.core.datastore.impl.FileFactory
+import org.apache.carbondata.core.metadata.DatabaseNameProvider
 
 /**
  * Test Class for SetParameterTestcase to verify all scenarios
@@ -244,7 +245,8 @@ class SetParameterTestCase extends QueryTest with BeforeAndAfterAll {
   }
 
   private def getLogFileCount(dbName: String, tableName: String, segment: String): Int = {
-    var path = resourcesPath + "/" + dbName + "/" + tableName + "/" + segment + "/" + segment
+    var path = resourcesPath + "/" + DatabaseNameProvider.get().provide(dbName) + "/" + 
+               tableName + "/" + segment + "/" + segment
     val carbonFiles = FileFactory.getCarbonFile(path).listFiles(new CarbonFileFilter {
       override def accept(file: CarbonFile): Boolean = {
         file.getName.endsWith(".log")
