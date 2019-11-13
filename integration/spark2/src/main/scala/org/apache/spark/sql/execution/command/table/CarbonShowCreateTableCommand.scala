@@ -19,7 +19,7 @@ package org.apache.spark.sql.execution.command.table
 
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
-import org.apache.spark.sql.{CarbonEnv, Row, SparkSession}
+import org.apache.spark.sql.{CarbonEnv, EnvHelper, Row, SparkSession}
 import org.apache.spark.sql.execution.command.{MetadataCommand, ShowCreateTableCommand}
 import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.sql.types.StringType
@@ -49,7 +49,7 @@ case class CarbonShowCreateTableCommand(
       LOGGER.error(s"Show create table failed. table not found: $dbName.$child.tableName.table")
       throw new NoSuchTableException(dbName, child.table.table)
     }
-    if (!CarbonEnv.isPrivacy(sparkSession, relation.carbonTable.isExternalTable)) {
+    if (!EnvHelper.isPrivacy(sparkSession, relation.carbonTable.isExternalTable)) {
       child.run(sparkSession)
     } else {
       var inOptions = false

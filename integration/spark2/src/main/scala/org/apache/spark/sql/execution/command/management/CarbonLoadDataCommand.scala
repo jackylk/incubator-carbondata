@@ -191,6 +191,7 @@ case class CarbonLoadDataCommand(
     val carbonLoadModel = new CarbonLoadModel()
     val tableProperties = table.getTableInfo.getFactTable.getTableProperties
     val optionsFinal = LoadOption.fillOptionWithDefaultValue(options.asJava)
+    EnvHelper.setDefaultHeader(sparkSession, optionsFinal)
     optionsFinal
       .put("complex_delimiter_level_4",
         ComplexDelimitersEnum.COMPLEX_DELIMITERS_LEVEL_4.value())

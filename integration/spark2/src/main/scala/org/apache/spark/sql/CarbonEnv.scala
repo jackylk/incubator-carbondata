@@ -436,13 +436,4 @@ object CarbonEnv {
     (sparkSession: SparkSession): Boolean = {
     getInstance(sparkSession).carbonMetaStore.tableExists(tableName, dbNameOp)(sparkSession)
   }
-
-  def isLuxor(sparkSession: SparkSession): Boolean = {
-    sparkSession.sqlContext.conf.luxorEnabled
-  }
-
-  def isPrivacy(sparkSession: SparkSession, isExternal: Boolean): Boolean = {
-    (!isExternal) && (
-      CarbonEnv.getInstance(sparkSession).isLeo || isLuxor(sparkSession))
-  }
 }
