@@ -36,7 +36,7 @@ import org.apache.spark.sql.optimizer.CarbonLateDecodeRule
 import org.apache.spark.sql.parser.{CarbonSpark2SqlParser, CarbonSparkSqlParserUtil}
 import org.apache.spark.sql.sources._
 import org.apache.spark.sql.streaming.OutputMode
-import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.types.{DataTypes, FloatType, StructType}
 import org.apache.spark.sql.util.CarbonException
 
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
@@ -347,7 +347,17 @@ object CarbonSource {
       // updating params
       val updatedFormat = CarbonToSparkAdapter
         .getUpdatedStorageFormat(storageFormat, map, tablePath)
-      tableDesc.copy(storage = updatedFormat)
+      val updatedSchema = tableDesc
+        .schema
+        .fields
+        .map { field =>
+          field.dataType match {
+            case _ :FloatType  =>
+              field.copy(dataType = DataTypes.DoubleType)
+            case _ => field
+          }
+        }
+      tableDesc.copy(storage = updatedFormat, schema = StructType(updatedSchema))
     } else {
       val tableInfo = CarbonUtil.convertGsonToTableInfo(properties.asJava)
       val isTransactionalTable = properties.getOrElse("isTransactional", "true").contains("true")

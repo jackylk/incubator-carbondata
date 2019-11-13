@@ -54,6 +54,8 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
 
     sql(s"drop table if exists tbl_truncate")
     sql(s"drop table if exists origin_csv")
+    sql(s"drop table if exists tbl_float1")
+    sql(s"drop table if exists tbl_float2")
   }
 
   def dropTableByName(tableName: String) :Unit = {
@@ -114,6 +116,18 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
     checkAnswer(sql(s"select count(*) from ${tableName}"), Seq(Row(3)))
     sql(s"truncate table ${tableName}")
     checkAnswer(sql(s"select count(*) from ${tableName}"), Seq(Row(0)))
+  }
+
+  test("test float") {
+    val tableName = "tbl_float"
+    sql(s"create table ${tableName}1 (col1 string, col2 float, col3 char(10), col4 varchar(20), col5 decimal(10,2)) using carbondata")
+    sql(s"describe formatted ${tableName}1").show(100, false)
+    sql(s"insert into table ${tableName}1 select 'abc', 1.0, 'a3','b3', 12.34")
+    checkAnswer(sql(s"select * from ${tableName}1"), Seq(Row("abc", 1.0f, "a3", "b3", 12.34)))
+    sql(s"create table ${tableName}2 (col1 string, col2 float, col3 char(10), col4 varchar(20), col5 decimal(10,2)) stored as carbondata")
+    sql(s"describe formatted ${tableName}2").show(100, false)
+    sql(s"insert into table ${tableName}2 select 'abc', 1.0, 'a3','b3', 12.34")
+    checkAnswer(sql(s"select * from ${tableName}2"), Seq(Row("abc", 1.0f, "a3", "b3", 12.34)))
   }
 
   def createDataSourcePartitionTable(provider: String, tableName: String): Unit = {
