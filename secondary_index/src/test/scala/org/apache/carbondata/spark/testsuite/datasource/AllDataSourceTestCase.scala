@@ -41,9 +41,9 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
          | using csv
          | options('dateFormat'='yyyy-MM-dd', 'timestampFormat'='yyyy-MM-dd HH:mm:ss')
          | """.stripMargin)
-    sql("insert into origin_csv select 1, 'aa', to_date('2019-11-11')")
-    sql("insert into origin_csv select 2, 'bb', to_date('2019-11-12')")
-    sql("insert into origin_csv select 3, 'cc', to_date('2019-11-13')")
+    sql("insert into origin_csv select 1, '3aa', to_date('2019-11-11')")
+    sql("insert into origin_csv select 2, '2bb', to_date('2019-11-12')")
+    sql("insert into origin_csv select 3, '1cc', to_date('2019-11-13')")
   }
 
   def dropTable {
@@ -56,6 +56,8 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
     sql(s"drop table if exists origin_csv")
     sql(s"drop table if exists tbl_float1")
     sql(s"drop table if exists tbl_float2")
+    sql(s"drop table if exists ds_options")
+    sql(s"drop table if exists hive_options")
   }
 
   def dropTableByName(tableName: String) :Unit = {
@@ -83,6 +85,53 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
   test("test partition table") {
     createDataSourcePartitionTable("carbondata", "ds_carbondata_p")
     createHivePartitionTable("carbondata", "hive_carbondata_p")
+  }
+
+  test("test table properties of datasource table") {
+    val tableName = "ds_options"
+    sql(
+      s"""
+         |create table ${ tableName } (
+         | col1 int, col2 string, col3 date
+         |)
+         | using carbondata
+         | options("sort_sCope"="global_Sort", "sort_Columns"="coL2", 'global_Sort_partitions'='1')
+         | """.stripMargin)
+
+    checkExistence(sql(s"describe formatted ${ tableName }"), true, "global_sort")
+    sql(s"insert into table ${ tableName } select * from origin_csv")
+    checkAnswer(
+      sql(s"select * from ${ tableName }"),
+      Seq(
+        Row(3, "1cc", java.sql.Date.valueOf("2019-11-13")),
+        Row(2, "2bb", java.sql.Date.valueOf("2019-11-12")),
+        Row(1, "3aa", java.sql.Date.valueOf("2019-11-11"))
+      )
+    )
+  }
+
+  test("test table properties of hive table") {
+    val tableName = "hive_options"
+    sql(
+      s"""
+         |create table ${ tableName } (
+         | col1 int, col2 string, col3 date
+         |)
+         | stored as carbondata
+         | tblproperties("sort_sCope"="global_Sort", "sort_Columns"="coL2",
+         | 'global_Sort_partitions'='1')
+         | """.stripMargin)
+
+    checkExistence(sql(s"describe formatted ${ tableName }"), true, "global_sort")
+    sql(s"insert into table ${ tableName } select * from origin_csv")
+    checkAnswer(
+      sql(s"select * from ${ tableName }"),
+      Seq(
+        Row(3, "1cc", java.sql.Date.valueOf("2019-11-13")),
+        Row(2, "2bb", java.sql.Date.valueOf("2019-11-12")),
+        Row(1, "3aa", java.sql.Date.valueOf("2019-11-11"))
+      )
+    )
   }
 
   test("test external table") {

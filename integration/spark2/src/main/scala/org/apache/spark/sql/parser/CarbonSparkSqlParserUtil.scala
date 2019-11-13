@@ -243,7 +243,15 @@ object CarbonSparkSqlParserUtil {
       ifNotExists: Boolean,
       sparkSession: SparkSession,
       selectQuery: Option[LogicalPlan]): TableInfo = {
-    val tableProperties = table.properties.map { entry =>
+    val storageFormat = table.storage
+    val properties = if (storageFormat.properties.nonEmpty) {
+      // for carbon session, properties get from storage.
+      storageFormat.properties
+    } else {
+      // for leo session, properties can not get from storageFormat, should use tableDesc.
+      table.properties
+    }
+    val tableProperties = properties.map { entry =>
       if (needToConvertToLowerCase(entry._1)) {
         (entry._1.toLowerCase, entry._2.toLowerCase)
       } else {

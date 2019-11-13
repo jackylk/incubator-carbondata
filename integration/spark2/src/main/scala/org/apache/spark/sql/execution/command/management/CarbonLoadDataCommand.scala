@@ -234,6 +234,13 @@ case class CarbonLoadDataCommand(
               carbonProperty.getProperty(CarbonLoadOptionConstants.CARBON_OPTIONS_SORT_SCOPE,
                 carbonProperty.getProperty(CarbonCommonConstants.LOAD_SORT_SCOPE,
                   CarbonCommonConstants.LOAD_SORT_SCOPE_DEFAULT))))))
+      if (!StringUtils.isBlank(tableProperties.get("global_sort_partitions"))) {
+        if (options.get("global_sort_partitions").isEmpty) {
+          optionsFinal.put(
+            "global_sort_partitions",
+            tableProperties.get("global_sort_partitions"))
+        }
+      }
     }
 
     optionsFinal
