@@ -22,17 +22,15 @@ import java.util.UUID
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
-
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.util.CarbonException
-
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datamap.Segment
 import org.apache.carbondata.core.indexstore.PartitionSpec
-import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier
+import org.apache.carbondata.core.metadata.{AbsoluteTableIdentifier, DatabaseLocationProvider}
 import org.apache.carbondata.core.metadata.datatype.{DataType, DataTypes, DecimalType}
 import org.apache.carbondata.core.metadata.encoder.Encoding
 import org.apache.carbondata.core.metadata.schema._
@@ -926,8 +924,9 @@ class TableNewProcessor(cm: TableModel) {
     if (badRecordsPath == null || badRecordsPath.isEmpty) {
       CarbonCommonConstants.CARBON_BADRECORDS_LOC_DEFAULT_VAL
     } else {
-      badRecordsPath + CarbonCommonConstants.FILE_SEPARATOR + databaseName +
-      CarbonCommonConstants.FILE_SEPARATOR + s"${tableName}_$tableId"
+      badRecordsPath + CarbonCommonConstants.FILE_SEPARATOR +
+        DatabaseLocationProvider.get().provide(databaseName) +
+        CarbonCommonConstants.FILE_SEPARATOR + s"${tableName}_$tableId"
     }
   }
 

@@ -22,12 +22,11 @@ import java.io.{File, FileFilter}
 import org.apache.commons.io.FileUtils
 import org.apache.spark.sql.Row
 import org.scalatest.BeforeAndAfterAll
-
-import org.apache.carbondata.core.constants.{CarbonCommonConstants}
+import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.spark.sql.test.util.QueryTest
-
 import org.apache.carbondata.core.datastore.impl.FileFactory
+import org.apache.carbondata.core.metadata.DatabaseLocationProvider
 
 /**
  * Test Class for detailed query on timestamp datatypes
@@ -305,8 +304,8 @@ class BadRecordLoggerTest extends QueryTest with BeforeAndAfterAll {
   def getRedirectCsvPath(dbName: String, tableName: String, segment: String, task: String) = {
     var badRecordLocation = CarbonProperties.getInstance()
       .getProperty(CarbonCommonConstants.CARBON_BADRECORDS_LOC)
-    badRecordLocation = badRecordLocation + "/" + dbName + "/" + tableName + "/" + segment + "/" +
-                        task
+    badRecordLocation = badRecordLocation + "/" + dbName +
+                        "/" + tableName + "/" + segment + "/" + task
     val listFiles = new File(badRecordLocation).listFiles(new FileFilter {
       override def accept(pathname: File): Boolean = {
         pathname.getPath.endsWith(".csv")

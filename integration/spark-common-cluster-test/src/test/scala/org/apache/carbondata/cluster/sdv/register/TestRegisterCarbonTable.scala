@@ -26,6 +26,7 @@ import org.apache.spark.sql.{AnalysisException, CarbonEnv, Row}
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.impl.FileFactory
+import org.apache.carbondata.core.metadata.DatabaseNameProvider
 import org.apache.carbondata.spark.exception.ProcessMetaDataException
 
 /**
@@ -33,7 +34,7 @@ import org.apache.carbondata.spark.exception.ProcessMetaDataException
  */
 class TestRegisterCarbonTable extends QueryTest with BeforeAndAfterAll {
   var dbLocationCustom = TestQueryExecutor.warehouse +
-                         CarbonCommonConstants.FILE_SEPARATOR + "dbName"
+                         CarbonCommonConstants.FILE_SEPARATOR + DatabaseNameProvider.get().provide("dbName")
   override def beforeAll {
     sql("drop database if exists carbon cascade")
   }

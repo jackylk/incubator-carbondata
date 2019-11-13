@@ -2283,4 +2283,7 @@ public final class CarbonCommonConstants {
 
   public static final String ASYNC_QUERY_RESULT_LIMIT = "carbon.async.query.result.limit";
   public static final String ASYNC_QUERY_RESULT_LIMIT_DEFAULT = "5000";
+
+  public static final String DATABASE_LOCATION_PROVIDER = "org.apache.carbondata.database.location.provider";
+
 }

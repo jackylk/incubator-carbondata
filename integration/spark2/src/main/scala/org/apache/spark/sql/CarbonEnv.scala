@@ -20,7 +20,6 @@ package org.apache.spark.sql
 import java.util.concurrent.ConcurrentHashMap
 
 import scala.util.matching.Regex
-
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.{NoSuchDatabaseException, NoSuchTableException}
 import org.apache.spark.sql.catalyst.catalog.SessionCatalog
@@ -33,13 +32,12 @@ import org.apache.spark.sql.execution.command.timeseries.TimeSeriesFunction
 import org.apache.spark.sql.hive._
 import org.apache.spark.sql.profiler.Profiler
 import org.apache.spark.util.CarbonReflectionUtils
-
 import org.apache.carbondata.cloud.CloudUdfRegister
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datamap.DataMapStoreManager
 import org.apache.carbondata.core.datastore.impl.FileFactory
-import org.apache.carbondata.core.metadata.{AbsoluteTableIdentifier, CarbonMetadata}
+import org.apache.carbondata.core.metadata.{AbsoluteTableIdentifier, CarbonMetadata, DatabaseLocationProvider}
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.util._
 import org.apache.carbondata.datamap.{TextMatchMaxDocUDF, TextMatchUDF}
@@ -378,7 +376,7 @@ object CarbonEnv {
       if (!hiveStorePath.equals(carbonStorePath)) {
         databaseLocation = CarbonProperties.getStorePath +
                            CarbonCommonConstants.FILE_SEPARATOR +
-                           dbName
+                           DatabaseLocationProvider.get().provide(dbName)
       }
     }
 
