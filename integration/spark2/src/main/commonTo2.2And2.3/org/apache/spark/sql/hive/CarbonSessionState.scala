@@ -31,6 +31,8 @@ import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema
 import org.apache.carbondata.spark.util.CarbonScalaUtil
 import org.apache.spark.sql.catalyst.optimizer.Optimizer
 import org.apache.spark.sql.catalyst.rules.Rule
+import org.apache.spark.sql.execution.command.{AlterTableSetPropertiesCommand, AlterTableUnsetPropertiesCommand}
+import org.apache.spark.sql.parser.CarbonSparkSqlParserUtil
 
 object CarbonSessionCatalogUtil {
 
@@ -81,6 +83,27 @@ object CarbonSessionCatalogUtil {
         s"SET TBLPROPERTIES(${ schemaParts })")
   }
 
+  def alterTableProperties(
+      sparkSession: SparkSession,
+      tableIdentifier: TableIdentifier,
+      properties: Map[String, String],
+      propKeys: Seq[String]
+  ): Unit = {
+    val catalog = sparkSession.sessionState.catalog
+    val table = catalog.getTableMetadata(tableIdentifier)
+    var newProperties = table.storage.properties
+    if (!propKeys.isEmpty) {
+      val updatedPropKeys = propKeys.map(_.toLowerCase)
+      newProperties = newProperties.filter { case (k, _) => !updatedPropKeys.contains(k) }
+    }
+    if (!properties.isEmpty) {
+      newProperties = newProperties ++ CarbonSparkSqlParserUtil.normalizeProperties(properties)
+    }
+    val newTable = table.copy(
+      storage = table.storage.copy(properties = newProperties)
+    )
+    catalog.alterTable(newTable)
+  }
 
   def getCachedPlan(t: QualifiedTableName,
       c: Callable[LogicalPlan], sparkSession: SparkSession): LogicalPlan = {

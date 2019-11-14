@@ -238,26 +238,32 @@ object CarbonSparkSqlParserUtil {
     }
   }
 
-  def buildTableInfoFromCatalogTable(
-      table: CatalogTable,
-      ifNotExists: Boolean,
-      sparkSession: SparkSession,
-      selectQuery: Option[LogicalPlan]): TableInfo = {
-    val storageFormat = table.storage
-    val properties = if (storageFormat.properties.nonEmpty) {
+  def getProperties(table: CatalogTable): Map[String, String] = {
+    if (table.storage.properties.nonEmpty) {
       // for carbon session, properties get from storage.
-      storageFormat.properties
+      table.storage.properties
     } else {
       // for leo session, properties can not get from storageFormat, should use tableDesc.
       table.properties
     }
-    val tableProperties = properties.map { entry =>
+  }
+
+  def normalizeProperties(properties: Map[String, String]): Map[String, String] = {
+    properties.map { entry =>
       if (needToConvertToLowerCase(entry._1)) {
         (entry._1.toLowerCase, entry._2.toLowerCase)
       } else {
         (entry._1.toLowerCase, entry._2)
       }
     }
+  }
+
+  def buildTableInfoFromCatalogTable(
+      table: CatalogTable,
+      ifNotExists: Boolean,
+      sparkSession: SparkSession,
+      selectQuery: Option[LogicalPlan]): TableInfo = {
+    val tableProperties = normalizeProperties(getProperties(table))
     val options = new CarbonOption(tableProperties)
     // validate streaming property
     validateStreamingProperty(options)

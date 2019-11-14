@@ -2032,6 +2032,7 @@ public final class CarbonUtil {
     for (int i = 0; i < no; i++) {
       newMap.remove("carbonSchema" + i);
     }
+    newMap.remove("carbonSchemaPartsNo");
     return newMap;
   }
 

@@ -108,6 +108,26 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
         Row(1, "3aa", java.sql.Date.valueOf("2019-11-11"))
       )
     )
+    checkExistence(sql(s"show create table ${ tableName }"), true, "sort_columns")
+    sql(s"alter table ${ tableName } set tblproperties('sort_Columns'='col2,col1', 'LOAD_MIN_SIZE_INMB'='256')")
+    checkExistence(sql(s"show create table ${ tableName }"), true, "load_min_size_inmb")
+    sql(s"alter table ${ tableName } unset tblproperties('LOAD_MIN_SIZE_INMB')")
+    checkExistence(sql(s"show create table ${ tableName }"), false, "load_min_size_inmb")
+    val rows = sql(s"show create table ${ tableName }").collect()
+    // drop table
+    sql(s"drop table ${ tableName }")
+    // create again
+    sql(rows(0).getString(0))
+    checkExistence(sql(s"describe formatted ${ tableName }"), true, "global_sort")
+    sql(s"insert into table ${ tableName } select * from origin_csv")
+    checkAnswer(
+      sql(s"select * from ${ tableName }"),
+      Seq(
+        Row(3, "1cc", java.sql.Date.valueOf("2019-11-13")),
+        Row(2, "2bb", java.sql.Date.valueOf("2019-11-12")),
+        Row(1, "3aa", java.sql.Date.valueOf("2019-11-11"))
+      )
+    )
   }
 
   test("test table properties of hive table") {
@@ -118,10 +138,29 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
          | col1 int, col2 string, col3 date
          |)
          | stored as carbondata
-         | tblproperties("sort_sCope"="global_Sort", "sort_Columns"="coL2",
-         | 'global_Sort_partitions'='1')
+         | tblproperties("sort_sCope"="global_Sort", "sort_Columns"="coL2", 'global_Sort_partitions'='1')
          | """.stripMargin)
 
+    checkExistence(sql(s"describe formatted ${ tableName }"), true, "global_sort")
+    sql(s"insert into table ${ tableName } select * from origin_csv")
+    checkAnswer(
+      sql(s"select * from ${ tableName }"),
+      Seq(
+        Row(3, "1cc", java.sql.Date.valueOf("2019-11-13")),
+        Row(2, "2bb", java.sql.Date.valueOf("2019-11-12")),
+        Row(1, "3aa", java.sql.Date.valueOf("2019-11-11"))
+      )
+    )
+    checkExistence(sql(s"show create table ${ tableName }"), true, "sort_columns")
+    sql(s"alter table ${ tableName } set tblproperties('sort_Columns'='col2,col1', 'LOAD_MIN_SIZE_INMB'='256')")
+    checkExistence(sql(s"show create table ${ tableName }"), true, "load_min_size_inmb")
+    sql(s"alter table ${ tableName } unset tblproperties('LOAD_MIN_SIZE_INMB')")
+    checkExistence(sql(s"show create table ${ tableName }"), false, "load_min_size_inmb")
+    val rows = sql(s"show create table ${ tableName }").collect()
+    // drop table
+    sql(s"drop table ${ tableName }")
+    // create again
+    sql(rows(0).getString(0))
     checkExistence(sql(s"describe formatted ${ tableName }"), true, "global_sort")
     sql(s"insert into table ${ tableName } select * from origin_csv")
     checkAnswer(

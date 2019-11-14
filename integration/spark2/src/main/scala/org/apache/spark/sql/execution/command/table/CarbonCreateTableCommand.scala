@@ -145,7 +145,15 @@ case class CarbonCreateTableCommand(
             } else {
               ""
             }
-
+          val tableProperties =
+            tableInfo
+              .getFactTable
+              .getTableProperties
+              .asScala
+              .map { property =>
+                s"""  ${ property._1 }  "${ property._2 }","""
+              }
+              .mkString("\n", "\n", "")
           // synchronized to prevent concurrently creation of table with same name
           CarbonCreateTableCommand.synchronized {
             // isVisible property is added to hive table properties to differentiate between main
@@ -154,12 +162,11 @@ case class CarbonCreateTableCommand(
             sparkSession.sql(
               s"""CREATE TABLE $dbName.$tableName
                  |(${ rawSchema })
-                 |USING org.apache.spark.sql.CarbonSource
-                 |OPTIONS (
+                 |USING carbondata
+                 |OPTIONS (${tableProperties}
                  |  tableName "$tableName",
                  |  dbName "$dbName",
                  |  tablePath "$tablePath",
-                 |  path "${FileFactory.addSchemeIfNotExists(tablePath)}",
                  |  isExternal "$isExternal",
                  |  isTransactional "$isTransactionalTable",
                  |  isVisible "$isVisible"

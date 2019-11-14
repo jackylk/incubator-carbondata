@@ -468,9 +468,13 @@ object AlterTableUtil {
             if (propKey.equalsIgnoreCase(CarbonCommonConstants.LOCAL_DICTIONARY_ENABLE)) {
               tblPropertiesMap
                 .put(propKey.toLowerCase, CarbonCommonConstants.LOCAL_DICTIONARY_ENABLE_DEFAULT)
+              lowerCasePropertiesMap
+                .put(propKey.toLowerCase, CarbonCommonConstants.LOCAL_DICTIONARY_ENABLE_DEFAULT)
             } else if (propKey.equalsIgnoreCase(CarbonCommonConstants.SORT_SCOPE)) {
               tblPropertiesMap
                 .put(propKey.toLowerCase, CarbonCommonConstants.LOAD_SORT_SCOPE_DEFAULT)
+              lowerCasePropertiesMap
+                .put(propKey.toLowerCase, CarbonCommonConstants.LOCAL_DICTIONARY_ENABLE_DEFAULT)
             } else if (propKey.equalsIgnoreCase(CarbonCommonConstants.SORT_COLUMNS)) {
               val errorMessage = "Error: Invalid option(s): " + propKey +
                                  ", please set SORT_COLUMNS as empty instead of unset"
@@ -490,6 +494,8 @@ object AlterTableUtil {
         carbonTable = carbonTable,
         thriftTable = thriftTable)(sparkSession)
       CarbonSessionCatalogUtil.alterTable(tableIdentifier, schemParts, None, sparkSession)
+      CarbonSessionCatalogUtil.alterTableProperties(
+        sparkSession, tableIdentifier, lowerCasePropertiesMap.toMap, propKeys)
       sparkSession.catalog.refreshTable(tableIdentifier.quotedString)
       // check and clear the block/blocklet cache
       checkAndClearBlockletCache(carbonTable,
