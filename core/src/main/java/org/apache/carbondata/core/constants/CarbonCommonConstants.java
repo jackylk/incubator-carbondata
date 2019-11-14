@@ -168,6 +168,12 @@ public final class CarbonCommonConstants {
   public static final String LOCK_PATH_DEFAULT = "";
 
   /**
+   * Specifies the lock implement class.
+   */
+  @CarbonProperty
+  public static final String LOCK_CLASS = "carbon.lock.class";
+
+  /**
    * ZOOKEEPER_LOCATION this is the location in zookeeper file system where locks are created.
    * mechanism of carbon
    */
@@ -1881,6 +1887,11 @@ public final class CarbonCommonConstants {
    * 256 mb size
    */
   public static final long CARBON_256MB = 256 * 1024 * 1024;
+
+  /**
+   * CUSTOM TYPE
+   */
+  public static final String CARBON_LOCK_TYPE_CUSTOM = "CUSTOM";
 
   /**
    * ZOOKEEPERLOCK TYPE
