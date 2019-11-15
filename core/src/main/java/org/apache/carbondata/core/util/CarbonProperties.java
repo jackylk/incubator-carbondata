@@ -394,6 +394,8 @@ public final class CarbonProperties {
         // CARBON_LOCK_TYPE_LOCAL and for the distributed one CARBON_LOCK_TYPE_HDFS
         case CarbonCommonConstants.CARBON_LOCK_TYPE_ZOOKEEPER:
           break;
+        case  CarbonCommonConstants.CARBON_LOCK_TYPE_CUSTOM:
+          break;
         case CarbonCommonConstants.CARBON_LOCK_TYPE_LOCAL:
         case CarbonCommonConstants.CARBON_LOCK_TYPE_HDFS:
         default:
