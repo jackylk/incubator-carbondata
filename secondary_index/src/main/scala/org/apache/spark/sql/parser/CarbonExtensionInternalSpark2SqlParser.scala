@@ -35,7 +35,7 @@ import org.apache.carbondata.core.constants.CarbonCommonConstants
 class CarbonExtensionInternalSpark2SqlParser extends CarbonInternalSpark2SqlParser {
 
   override protected lazy val extendedSparkSyntax: Parser[LogicalPlan] =
-    alterDropPartition | alterTableColumnRenameAndModifyDataType | alterTableAddColumns
+    explainPlan | alterDropPartition | alterTableColumnRenameAndModifyDataType | alterTableAddColumns
 
   override protected lazy val alterDropPartition: Parser[LogicalPlan] =
     ALTER ~> TABLE ~> (ident <~ ".").? ~ ident ~ (DROP ~> PARTITION ~>

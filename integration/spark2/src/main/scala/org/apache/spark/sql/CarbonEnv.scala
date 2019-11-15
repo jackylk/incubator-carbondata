@@ -365,21 +365,22 @@ object CarbonEnv {
         .locationUri.toString
     // for default database and db ends with .db
     // check whether the carbon store and hive store is same or different.
-    if (dbName.equals("default") || databaseLocation.endsWith(".db")) {
-      val properties = CarbonProperties.getInstance()
-      val carbonStorePath =
-        FileFactory.getUpdatedFilePath(properties.getProperty(CarbonCommonConstants.STORE_LOCATION))
-      val hiveStorePath =
-        FileFactory.getUpdatedFilePath(sparkSession.conf.get("spark.sql.warehouse.dir"))
-      // if carbon.store does not point to spark.sql.warehouse.dir then follow the old table path
-      // format
-      if (!hiveStorePath.equals(carbonStorePath)) {
-        databaseLocation = CarbonProperties.getStorePath +
-                           CarbonCommonConstants.FILE_SEPARATOR +
-                           DatabaseLocationProvider.get().provide(dbName)
+    if (!EnvHelper.isLuxor(sparkSession)) {
+      if (dbName.equals("default") || databaseLocation.endsWith(".db")) {
+        val properties = CarbonProperties.getInstance()
+        val carbonStorePath =
+          FileFactory.getUpdatedFilePath(properties.getProperty(CarbonCommonConstants.STORE_LOCATION))
+        val hiveStorePath =
+          FileFactory.getUpdatedFilePath(sparkSession.conf.get("spark.sql.warehouse.dir"))
+        // if carbon.store does not point to spark.sql.warehouse.dir then follow the old table path
+        // format
+        if (!hiveStorePath.equals(carbonStorePath)) {
+          databaseLocation = CarbonProperties.getStorePath +
+                             CarbonCommonConstants.FILE_SEPARATOR +
+                             DatabaseLocationProvider.get().provide(dbName)
+        }
       }
     }
-
     FileFactory.getUpdatedFilePath(databaseLocation)
   }
 

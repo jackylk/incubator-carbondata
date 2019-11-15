@@ -59,6 +59,7 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
     sql(s"drop table if exists tbl_float2")
     sql(s"drop table if exists ds_options")
     sql(s"drop table if exists hive_options")
+    sql(s"drop table if exists tbl_update")
   }
 
   def dropTableByName(tableName: String) :Unit = {
@@ -197,6 +198,23 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
     sql(s"describe formatted ${tableName}2").show(100, false)
     sql(s"insert into table ${tableName}2 select 'abc', 1.0, 'a3','b3', 12.34")
     checkAnswer(sql(s"select * from ${tableName}2"), Seq(Row("abc", 1.0f, "a3", "b3", 12.34)))
+  }
+
+  test("test explain") {
+    val tableName = "tbl_update"
+    sql(s"create table ${tableName} using carbondata as select * from origin_csv")
+    checkExistence(
+      sql(s"explain select * from ${tableName} where col1 = 1"),
+      true,
+      "FileScan")
+    checkExistence(
+      sql(s"explain update ${tableName} set (col2) = ('4aa') where col1 = 1"),
+      true,
+      "OneRowRelation")
+    checkExistence(
+      sql(s"explain delete from ${tableName}"),
+      true,
+      "OneRowRelation")
   }
 
   def createDataSourcePartitionTable(provider: String, tableName: String): Unit = {
