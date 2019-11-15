@@ -23,7 +23,8 @@ import java.net.URI
 import org.apache.spark.SparkContext
 import org.apache.spark.scheduler.{SparkListener, SparkListenerApplicationEnd}
 import org.apache.spark.sql.catalyst.catalog.CatalogStorageFormat
-import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, AttributeSet, ExprId, Expression, ExpressionSet, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.codegen.ExprCode
+import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, AttributeSet, ExprId, Expression, ExpressionSet, NamedExpression, ScalaUDF}
 import org.apache.spark.sql.catalyst.optimizer.OptimizeCodegen
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, OneRowRelation}
 import org.apache.spark.sql.catalyst.rules.Rule
@@ -44,12 +45,21 @@ object CarbonToSparkAdapter {
 
   def createAttributeReference(name: String, dataType: DataType, nullable: Boolean,
                                metadata: Metadata,exprId: ExprId, qualifier: Option[String],
-                               attrRef : NamedExpression): AttributeReference = {
+                               attrRef : NamedExpression = null): AttributeReference = {
     AttributeReference(
       name,
       dataType,
       nullable,
-      metadata)(exprId, qualifier,attrRef.isGenerated)
+      metadata)(exprId, qualifier, if (attrRef == null) false else attrRef.isGenerated)
+  }
+
+  def createScalaUDF(s: ScalaUDF, reference: AttributeReference): ScalaUDF = {
+    ScalaUDF(s.function, s.dataType, Seq(reference), s.inputTypes)
+  }
+
+  def createExprCode(code: String, isNull: String, value: String, dataType: DataType = null
+  ): ExprCode = {
+    ExprCode(code, isNull, value)
   }
 
   def createAliasRef(child: Expression,

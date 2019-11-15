@@ -61,8 +61,8 @@ class CarbonHiveSessionCatalog(
     parser: ParserInterface,
     functionResourceLoader: FunctionResourceLoader)
   extends HiveSessionCatalog (
-    externalCatalog,
-    globalTempViewManager,
+    SparkAdapter.getExternalCatalogCatalog(externalCatalog),
+    SparkAdapter.getGlobalTempViewManager(globalTempViewManager),
     new HiveMetastoreCatalog(sparkSession),
     functionRegistry,
     conf,
@@ -111,8 +111,9 @@ class CarbonHiveSessionCatalog(
    * @return
    */
   override def getClient(): org.apache.spark.sql.hive.client.HiveClient = {
-    sparkSession.asInstanceOf[CarbonSession].sharedState.externalCatalog
-      .asInstanceOf[HiveExternalCatalog].client
+    SparkAdapter.getHiveExternalCatalog(
+      sparkSession.asInstanceOf[CarbonSession].sharedState.externalCatalog
+    ).client
   }
 
   override def alterAddColumns(tableIdentifier: TableIdentifier,
@@ -233,14 +234,14 @@ class CarbonSessionStateBuilder(sparkSession: SparkSession,
   }
 
   private def externalCatalog: HiveExternalCatalog =
-    session.sharedState.externalCatalog.asInstanceOf[HiveExternalCatalog]
+    SparkAdapter.getHiveExternalCatalog(session.sharedState.externalCatalog)
 
   /**
    * Create a Hive aware resource loader.
    */
   override protected lazy val resourceLoader: HiveSessionResourceLoader = {
     val client: HiveClient = externalCatalog.client.newSession()
-    new HiveSessionResourceLoader(session, client)
+    new HiveSessionResourceLoader(session, SparkAdapter.getHiveClient(client))
   }
 
   override lazy val optimizer: Optimizer = new CarbonOptimizer(catalog, conf, experimentalMethods)

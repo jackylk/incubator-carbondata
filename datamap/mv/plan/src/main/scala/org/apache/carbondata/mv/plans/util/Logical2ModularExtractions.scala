@@ -167,7 +167,9 @@ object ExtractSelectModule extends PredicateHelper {
     val aq = attributeSet.filter(_.qualifier.nonEmpty)
     children.zipWithIndex.flatMap {
       case (child, i) =>
-        aq.find(child.outputSet.contains(_)).map(_.qualifier).flatten.map((i, _))
+        aq.find(child.outputSet.contains(_))
+          .flatMap(_.qualifier.headOption)
+          .map((i, _))
     }.toMap
   }
 

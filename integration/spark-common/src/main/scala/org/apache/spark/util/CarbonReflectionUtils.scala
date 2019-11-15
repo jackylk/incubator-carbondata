@@ -148,7 +148,7 @@ object CarbonReflectionUtils {
         relation,
         expectedOutputAttributes,
         catalogTable)._1.asInstanceOf[LogicalRelation]
-    } else if (SparkUtil.isSparkVersionEqualTo("2.3")) {
+    } else if (SparkUtil.isSparkVersionXandAbove("2.3")) {
       createObject(
         className,
         relation,

@@ -133,9 +133,10 @@ class MVUtil {
             }
           }
           fieldToDataMapFieldMap +=
-          getFieldToDataMapFields(attr.name,
+          getFieldToDataMapFields(
+            attr.name,
             attr.dataType,
-            qualifier,
+            qualifier.headOption,
             "",
             arrayBuffer,
             carbonTable.getTableName)
@@ -313,7 +314,7 @@ class MVUtil {
     val updatedOutList = outputList.map { col =>
       val duplicateColumn = duplicateNameCols
         .find(a => a.semanticEquals(col))
-      val qualifiedName = col.qualifier.getOrElse(s"${ col.exprId.id }") + "_" + col.name
+      val qualifiedName = col.qualifier.headOption.getOrElse(s"${ col.exprId.id }") + "_" + col.name
       if (duplicateColumn.isDefined) {
         val attributesOfDuplicateCol = duplicateColumn.get.collect {
           case a: AttributeReference => a
@@ -329,7 +330,7 @@ class MVUtil {
           attributeOfCol.exists(a => a.semanticEquals(expr)))
         if (!isStrictDuplicate) {
           Alias(col, qualifiedName)(exprId = col.exprId)
-        } else if (col.qualifier.isDefined) {
+        } else if (col.qualifier.nonEmpty) {
           Alias(col, qualifiedName)(exprId = col.exprId)
           // this check is added in scenario where the column is direct Attribute reference and
           // since duplicate columns select is allowed, we should just put alias for those columns
