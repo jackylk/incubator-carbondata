@@ -22,12 +22,12 @@ import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, ReturnAnswer}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.execution.{SparkPlan, SparkStrategy}
 import org.apache.spark.sql.execution.command._
-import org.apache.spark.sql.execution.command.management.{CarbonAlterTableCompactionCommand, CarbonInsertIntoCommand, CarbonLoadDataCommand, RefreshCarbonTableCommand}
+import org.apache.spark.sql.execution.command.management.{CarbonAlterTableCompactionCommand, CarbonInsertIntoCommand, CarbonInsertIntoHadoopFsRelationCommand, CarbonLoadDataCommand, RefreshCarbonTableCommand}
 import org.apache.spark.sql.execution.command.mutation.CarbonTruncateCommand
 import org.apache.spark.sql.execution.command.schema._
 import org.apache.spark.sql.execution.command.table.{CarbonDropTableCommand, CarbonShowCreateTableCommand}
 import org.apache.spark.sql.hive.execution.command.{CarbonDropDatabaseCommand, CarbonResetCommand, CarbonSetCommand, MatchResetCommand}
-import org.apache.spark.sql.execution.datasources.{RefreshResource, RefreshTable}
+import org.apache.spark.sql.execution.datasources.{InsertIntoHadoopFsRelationCommand, RefreshResource, RefreshTable}
 import org.apache.spark.sql.hive.execution.CreateHiveTableAsSelectCommand
 
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
@@ -57,6 +57,16 @@ class DDLStrategy(sparkSession: SparkSession) extends SparkStrategy {
       case InsertIntoCarbonTable(relation: CarbonDatasourceHadoopRelation,
       partition, child: LogicalPlan, overwrite, _) =>
         ExecutedCommandExec(CarbonInsertIntoCommand(relation, child, overwrite, partition)) :: Nil
+      case InsertIntoHadoopFsRelationCommand(
+      outputPath, staticPartitions, ifPartitionNotExists, partitionColumns,
+      bucketSpec, fileFormat, options, query, mode, catalogTable, fileIndex, outputColumnNames)
+        if catalogTable.isDefined && isCarbonTable(catalogTable.get.identifier) =>
+        DataWritingCommandExec(
+          CarbonInsertIntoHadoopFsRelationCommand(
+            outputPath, staticPartitions, ifPartitionNotExists, partitionColumns,
+            bucketSpec, fileFormat, options, query, mode, catalogTable, fileIndex,
+            outputColumnNames),
+          planLater(query)) :: Nil
       // alter table
       case renameTable: AlterTableRenameCommand
         if isCarbonTable(renameTable.oldName) =>
