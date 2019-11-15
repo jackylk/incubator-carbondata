@@ -140,19 +140,19 @@ class DDLStrategy(sparkSession: SparkSession) extends SparkStrategy {
           && (tableDesc.provider.get.equals("org.apache.spark.sql.CarbonSource")
           || tableDesc.provider.get.equalsIgnoreCase("carbondata")) =>
         ExecutedCommandExec(DDLHelper.createDataSourceTable(createTable, sparkSession)) :: Nil
-      case MatchCreateDataSourceTable(tableDesc, _, query)
+      case MatchCreateDataSourceTable(tableDesc, mode, query)
         if tableDesc.provider.get != DDLUtils.HIVE_PROVIDER
            && (tableDesc.provider.get.equals("org.apache.spark.sql.CarbonSource")
                || tableDesc.provider.get.equalsIgnoreCase("carbondata")) =>
         ExecutedCommandExec(
-          DDLHelper.createDataSourceTableAsSelect(tableDesc, query, sparkSession)
+          DDLHelper.createDataSourceTableAsSelect(tableDesc, query, mode, sparkSession)
         ) :: Nil
-      case org.apache.spark.sql.execution.datasources.CreateTable(tableDesc, _, query)
+      case org.apache.spark.sql.execution.datasources.CreateTable(tableDesc, mode, query)
         if tableDesc.provider.get != DDLUtils.HIVE_PROVIDER
            && (tableDesc.provider.get.equals("org.apache.spark.sql.CarbonSource")
                || tableDesc.provider.get.equalsIgnoreCase("carbondata")) =>
         ExecutedCommandExec(
-          DDLHelper.createDataSourceTableAsSelect(tableDesc, query.get, sparkSession)
+          DDLHelper.createDataSourceTableAsSelect(tableDesc, query.get, mode, sparkSession)
         ) :: Nil
       case createTable@CreateDataSourceTableCommand(table, _)
         if table.provider.get != DDLUtils.HIVE_PROVIDER

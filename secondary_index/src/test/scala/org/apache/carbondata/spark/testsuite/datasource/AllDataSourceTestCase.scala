@@ -19,8 +19,9 @@ package org.apache.carbondata.spark.testsuite.datasource
 
 import java.io.File
 
+import org.apache.spark.sql.{CarbonEnv, Row}
 import org.apache.spark.sql.catalyst.TableIdentifier
-import org.apache.spark.sql.{CarbonEnv, Row, SparkSession}
+import org.apache.spark.sql.catalyst.catalog.CatalogTableType
 import org.apache.spark.sql.common.util.QueryTest
 import org.apache.spark.sql.execution.strategy.CarbonPlanHelper
 import org.scalatest.BeforeAndAfterAll
@@ -174,28 +175,8 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
   }
 
   test("test external table") {
-    val tableName = "ds_carbondata"
-    val path  = s"${warehouse}/ds_external"
-    val ex = intercept[MalformedCarbonCommandException](
-      sql(
-        s"""
-           |create table ${ tableName }_s
-           | using carbondata
-           | LOCATION '$path'
-           | as select col1, col2 from origin_csv
-           | """.stripMargin))
-    assert(ex.getMessage.contains("Create external table as select is not allowed"))
-
-    sql(s"create table ${tableName}_s using carbondata as select * from origin_csv")
-    val carbonTable =
-      CarbonEnv.getCarbonTable(Option("default"), s"${tableName}_s")(sqlContext.sparkSession)
-    val tablePath = carbonTable.getTablePath
-    sql(s"create table  ${tableName}_e using carbondata location '${tablePath}'")
-    checkAnswer(sql(s"select count(*) from ${tableName}_e"), Seq(Row(3)))
-    sql(s"drop table if exists ${tableName}_e")
-    assert(!CarbonPlanHelper.isCarbonTable(
-      TableIdentifier(s"${tableName}_e", Option("default")), sqlContext.sparkSession))
-    assert(new File(tablePath).exists())
+    verifyExternalDataSourceTable("carbondata",  "ds_carbondata")
+    verifyExternalHiveTable("carbondata",  "hive_carbondata")
   }
 
   test("test truncate table") {
@@ -242,23 +223,89 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
   def verifyDataSourceTable(provider: String, tableName: String): Unit = {
     sql(s"create table ${tableName}(col1 int, col2 string) using $provider")
     checkLoading(tableName)
+    val table1 = sqlContext.sparkSession.sessionState.catalog.getTableMetadata(
+      TableIdentifier(s"${tableName}",Option("default")))
+    assert(table1.tableType == CatalogTableType.MANAGED)
     sql(s"create table ${tableName}_ctas using $provider as select * from ${tableName}")
     checkAnswer(sql(s"select * from ${tableName}_ctas"),
       Seq(Row(123, "abc")))
     sql(s"insert into ${tableName}_ctas select 123, 'abc'")
     checkAnswer(sql(s"select * from ${tableName}_ctas"),
       Seq(Row(123, "abc"), Row(123, "abc")))
+    val table2 = sqlContext.sparkSession.sessionState.catalog.getTableMetadata(
+      TableIdentifier(s"${tableName}_ctas",Option("default")))
+    assert(table2.tableType == CatalogTableType.MANAGED)
   }
 
   def verifyHiveTable(provider: String, tableName: String): Unit = {
     sql(s"create table ${tableName}(col1 int, col2 string) stored as $provider")
     checkLoading(tableName)
+    val table1 = sqlContext.sparkSession.sessionState.catalog.getTableMetadata(
+      TableIdentifier(s"${tableName}",Option("default")))
+    assert(table1.tableType == CatalogTableType.MANAGED)
     sql(s"create table ${tableName}_ctas stored as $provider as select * from ${tableName}")
     checkAnswer(sql(s"select * from ${tableName}_ctas"),
       Seq(Row(123, "abc")))
     sql(s"insert into ${tableName}_ctas select 123, 'abc'")
     checkAnswer(sql(s"select * from ${tableName}_ctas"),
       Seq(Row(123, "abc"), Row(123, "abc")))
+    val table2 = sqlContext.sparkSession.sessionState.catalog.getTableMetadata(
+      TableIdentifier(s"${tableName}_ctas",Option("default")))
+    assert(table2.tableType == CatalogTableType.MANAGED)
+  }
+
+  def verifyExternalDataSourceTable(provider: String, tableName: String): Unit = {
+    val path  = s"${warehouse}/ds_external"
+    val ex = intercept[MalformedCarbonCommandException](
+      sql(
+        s"""
+           |create table ${ tableName }_s
+           | using ${provider}
+           | LOCATION '$path'
+           | as select col1, col2 from origin_csv
+           | """.stripMargin))
+    assert(ex.getMessage.contains("Create external table as select is not allowed"))
+
+    sql(s"create table ${tableName}_s using ${provider} as select * from origin_csv")
+    val carbonTable =
+      CarbonEnv.getCarbonTable(Option("default"), s"${tableName}_s")(sqlContext.sparkSession)
+    val tablePath = carbonTable.getTablePath
+    sql(s"create table  ${tableName}_e using ${provider} location '${tablePath}'")
+    checkAnswer(sql(s"select count(*) from ${tableName}_e"), Seq(Row(3)))
+    val table2 = sqlContext.sparkSession.sessionState.catalog.getTableMetadata(
+      TableIdentifier(s"${tableName}_e",Option("default")))
+    assert(table2.tableType == CatalogTableType.EXTERNAL)
+    sql(s"drop table if exists ${tableName}_e")
+    assert(!CarbonPlanHelper.isCarbonTable(
+      TableIdentifier(s"${tableName}_e", Option("default")), sqlContext.sparkSession))
+    assert(new File(tablePath).exists())
+  }
+
+  def verifyExternalHiveTable(provider: String, tableName: String): Unit = {
+    val path  = s"${warehouse}/hive_external"
+    val ex = intercept[MalformedCarbonCommandException](
+      sql(
+        s"""
+           |create table ${ tableName }_s
+           | stored as ${provider}
+           | LOCATION '$path'
+           | as select col1, col2 from origin_csv
+           | """.stripMargin))
+    assert(ex.getMessage.contains("Create external table as select is not allowed"))
+
+    sql(s"create table ${tableName}_s stored as ${provider} as select * from origin_csv")
+    val carbonTable =
+      CarbonEnv.getCarbonTable(Option("default"), s"${tableName}_s")(sqlContext.sparkSession)
+    val tablePath = carbonTable.getTablePath
+    sql(s"create table  ${tableName}_e stored as ${provider} location '${tablePath}'")
+    checkAnswer(sql(s"select count(*) from ${tableName}_e"), Seq(Row(3)))
+    val table2 = sqlContext.sparkSession.sessionState.catalog.getTableMetadata(
+      TableIdentifier(s"${tableName}_e",Option("default")))
+    assert(table2.tableType == CatalogTableType.EXTERNAL)
+    sql(s"drop table if exists ${tableName}_e")
+    assert(!CarbonPlanHelper.isCarbonTable(
+      TableIdentifier(s"${tableName}_e", Option("default")), sqlContext.sparkSession))
+    assert(new File(tablePath).exists())
   }
 
   def checkLoading(tableName: String): Unit = {

@@ -30,8 +30,8 @@ import org.apache.spark.sql.execution.command.management.RefreshCarbonTableComma
 import org.apache.spark.sql.execution.command.partition.{CarbonAlterTableAddHivePartitionCommand, CarbonAlterTableDropHivePartitionCommand, CarbonShowCarbonPartitionsCommand}
 import org.apache.spark.sql.execution.command.schema.{CarbonAlterTableAddColumnCommand, CarbonAlterTableColRenameDataTypeChangeCommand, CarbonAlterTableRenameCommand, CarbonAlterTableSetCommand, CarbonAlterTableUnsetCommand}
 import org.apache.spark.sql.execution.datasources.{LogicalRelation, RefreshResource, RefreshTable}
+import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.sql.hive.execution.CreateHiveTableAsSelectCommand
-import org.apache.spark.sql.hive.{CarbonRelation, CreateCarbonSourceTableAsSelectCommand}
 import org.apache.spark.util.{CarbonReflectionUtils, DataMapUtil, FileUtils}
 
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
@@ -87,29 +87,6 @@ object DDLHelper {
   }
 
   /**
-   * create table stored as carbondata as select from table
-   */
-  def createHiveTableAsSelect(
-      ctas: CreateHiveTableAsSelectCommand,
-      sparkSession: SparkSession
-  ): CarbonCreateTableAsSelectCommand = {
-    val table = ctas.tableDesc
-    val tableInfo: TableInfo =
-      CarbonSparkSqlParserUtil
-        .buildTableInfoFromCatalogTable(
-          table,
-          ctas.mode == SaveMode.Ignore,
-          sparkSession,
-          Some(ctas.query)
-        )
-    CarbonCreateTableAsSelectCommand(
-      tableInfo,
-      ctas.query,
-      ctas.mode == SaveMode.Ignore,
-      table.storage.locationUri.map(CatalogUtils.URIToString))
-  }
-
-  /**
    * create table using carbondata
    */
   def createDataSourceTable(
@@ -148,31 +125,58 @@ object DDLHelper {
     )
   }
 
+  def createTableAsSelect(
+      tableDesc: CatalogTable,
+      query: LogicalPlan,
+      mode: SaveMode,
+      sparkSession: SparkSession
+  ): CarbonCreateTableAsSelectCommand = {
+    val tableInfo: TableInfo =
+      CarbonSparkSqlParserUtil
+        .buildTableInfoFromCatalogTable(
+          tableDesc,
+          mode == SaveMode.Ignore,
+          sparkSession,
+          Some(query)
+        )
+    CarbonCreateTableAsSelectCommand(
+      tableInfo,
+      query,
+      mode == SaveMode.Ignore,
+      tableDesc.storage.locationUri.map(CatalogUtils.URIToString)
+    )
+  }
+
+  /**
+   * create table stored as carbondata as select from table
+   */
+  def createHiveTableAsSelect(
+      ctas: CreateHiveTableAsSelectCommand,
+      sparkSession: SparkSession
+  ): CarbonCreateTableAsSelectCommand = {
+    createTableAsSelect(
+      ctas.tableDesc,
+      ctas.query,
+      ctas.mode,
+      sparkSession
+    )
+  }
+
   /**
    * create table using carbondata as select from table
    */
   def createDataSourceTableAsSelect(
       table: CatalogTable,
       query: LogicalPlan,
+      mode: SaveMode,
       sparkSession: SparkSession
-  ) : CreateCarbonSourceTableAsSelectCommand = {
-    if (table.partitionColumnNames.nonEmpty) {
-      throw new MalformedCarbonCommandException(
-        "A Create Table As Select (CTAS) statement is not allowed to " +
-        "create a partitioned table using Carbondata file formats.")
-    }
-    if (table.schema.fields.nonEmpty) {
-      throw new MalformedCarbonCommandException(
-        "Schema can not be specified in a Create Table As Select (CTAS) statement")
-    }
-    if (table.tableType == CatalogTableType.EXTERNAL) {
-      throw new MalformedCarbonCommandException(
-        "Create external table as select is not allowed")
-    }
-    CreateCarbonSourceTableAsSelectCommand(
-      CarbonSource.updateCatalogTableWithCarbonSchema(table, sparkSession, Option(query)),
-      SaveMode.Ignore,
-      query)
+  ) : CarbonCreateTableAsSelectCommand = {
+    createTableAsSelect(
+      table,
+      query,
+      mode,
+      sparkSession
+    )
   }
 
   def renameTable(
