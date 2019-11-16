@@ -26,7 +26,7 @@ import scala.language.implicitConversions
 import org.apache.commons.lang.StringUtils
 import org.apache.spark.sql.catalyst.CarbonParserUtil
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
-import org.apache.spark.sql.catalyst.catalog.CatalogTable
+import org.apache.spark.sql.catalyst.catalog.{CatalogTable, CatalogTableType}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.command.{TableModel, TableNewProcessor}
 import org.apache.spark.sql.execution.strategy.CarbonLateDecodeStrategy
@@ -356,15 +356,21 @@ object CarbonSource {
       val tableInfo = CarbonUtil.convertGsonToTableInfo(properties.asJava)
       val isTransactionalTable = properties.getOrElse("isTransactional", "true").contains("true")
       tableInfo.setTransactionalTable(isTransactionalTable)
+      val isExternal = properties.getOrElse("isExternal", "true").contains("true")
+      val updatedTableType = if (isExternal) {
+        tableDesc.tableType
+      } else {
+        CatalogTableType.MANAGED
+      }
       if (isTransactionalTable && !metaStore.isReadFromHiveMetaStore) {
         // save to disk
         metaStore.saveToDisk(tableInfo, properties("tablePath"))
         // remove schema string from map as we don't store carbon schema to hive metastore
         val map = CarbonUtil.removeSchemaFromMap(properties.asJava)
         val updatedFormat = storageFormat.copy(properties = map.asScala.toMap)
-        tableDesc.copy(storage = updatedFormat)
+        tableDesc.copy(storage = updatedFormat, tableType = updatedTableType)
       } else {
-        tableDesc
+        tableDesc.copy(tableType = updatedTableType)
       }
     }
   }

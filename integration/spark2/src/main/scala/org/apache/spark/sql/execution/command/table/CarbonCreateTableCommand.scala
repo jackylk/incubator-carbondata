@@ -154,10 +154,6 @@ case class CarbonCreateTableCommand(
                 s"""  ${ property._1 }  "${ property._2 }","""
               }
               .mkString("\n", "\n", "")
-          val pathString = isExternal match {
-            case true => s"""  path "${path}","""
-            case false => ""
-          }
           // synchronized to prevent concurrently creation of table with same name
           CarbonCreateTableCommand.synchronized {
             // isVisible property is added to hive table properties to differentiate between main
@@ -172,7 +168,7 @@ case class CarbonCreateTableCommand(
                  |  dbName "$dbName",
                  |  tablePath "$tablePath",
                  |  isExternal "$isExternal",
-                 |  ${pathString}
+                 |  path "${tablePath}",
                  |  isTransactional "$isTransactionalTable",
                  |  isVisible "$isVisible"
                  |  $carbonSchemaString)
