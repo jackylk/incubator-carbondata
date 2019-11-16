@@ -61,6 +61,8 @@ public abstract class AbstractDFSCarbonFile implements CarbonFile {
   protected FileStatus fileStatus;
   protected FileSystem fs;
   protected Configuration hadoopConf;
+  // record the filePath for exception message
+  protected String filePath;
 
   public AbstractDFSCarbonFile(String filePath) {
     this(filePath, FileFactory.getConfiguration());
@@ -68,6 +70,7 @@ public abstract class AbstractDFSCarbonFile implements CarbonFile {
 
   public AbstractDFSCarbonFile(String filePath, Configuration hadoopConf) {
     this.hadoopConf = hadoopConf;
+    this.filePath = filePath;
     filePath = filePath.replace("\\", "/");
     Path path = new Path(filePath);
     try {
@@ -168,7 +171,8 @@ public abstract class AbstractDFSCarbonFile implements CarbonFile {
 
   @Override public long getSize() {
     if (fileStatus == null) {
-      throw new RuntimeException("Unable to get file status, Please check logs for details.");
+      throw new RuntimeException("Unable to get file status for " + this.filePath +
+              ", Please check logs for details.");
     }
     return fileStatus.getLen();
   }
