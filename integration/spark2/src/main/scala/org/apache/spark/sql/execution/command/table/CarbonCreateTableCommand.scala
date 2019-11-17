@@ -145,11 +145,21 @@ case class CarbonCreateTableCommand(
             } else {
               ""
             }
+          val repeatedPropKeys =
+            Seq("tablename",
+              "dbname",
+              "tablePath",
+              "isExternal",
+              "path",
+              "isTransactional",
+              "isVisible",
+              "carbonSchemaPartsNo")
           val tableProperties =
             tableInfo
               .getFactTable
               .getTableProperties
               .asScala
+              .filter(prop => !repeatedPropKeys.exists(_.equalsIgnoreCase(prop._1)))
               .map { property =>
                 s"""  ${ property._1 }  "${ property._2 }","""
               }

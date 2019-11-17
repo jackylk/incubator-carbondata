@@ -54,18 +54,31 @@ object CarbonSessionCatalogUtil {
    * @param newTableIdentifier new table identifier
    * @param newTablePath new table path
    */
-  def alterTableRename(oldTableIdentifier: TableIdentifier,
-                       newTableIdentifier: TableIdentifier,
-                       newTablePath: String,
-                       sparkSession: SparkSession): Unit = {
+  def alterTableRename(
+      oldTableIdentifier: TableIdentifier,
+      newTableIdentifier: TableIdentifier,
+      newTablePath: String,
+      sparkSession: SparkSession,
+      isExternal: Boolean
+  ): Unit = {
+    if (!isExternal) {
+      getClient(sparkSession).runSqlHive(
+        s"ALTER TABLE ${ oldTableIdentifier.database.get }.${ oldTableIdentifier.table } " +
+        s"SET TBLPROPERTIES('EXTERNAL'='TRUE')")
+    }
     getClient(sparkSession).runSqlHive(
       s"ALTER TABLE ${ oldTableIdentifier.database.get }.${ oldTableIdentifier.table } " +
-        s"RENAME TO ${ oldTableIdentifier.database.get }.${ newTableIdentifier.table }")
+        s"RENAME TO ${ newTableIdentifier.database.get }.${ newTableIdentifier.table }")
+    if (!isExternal) {
+      getClient(sparkSession).runSqlHive(
+        s"ALTER TABLE ${ newTableIdentifier.database.get }.${ newTableIdentifier.table } " +
+        s"SET TBLPROPERTIES('EXTERNAL'='FALSE')")
+    }
     getClient(sparkSession).runSqlHive(
-      s"ALTER TABLE ${ oldTableIdentifier.database.get }.${ newTableIdentifier.table } " +
+      s"ALTER TABLE ${ newTableIdentifier.database.get }.${ newTableIdentifier.table } " +
         s"SET SERDEPROPERTIES" +
         s"('tableName'='${ newTableIdentifier.table }', " +
-        s"'dbName'='${ oldTableIdentifier.database.get }', 'tablePath'='${ newTablePath }')")
+        s"'dbName'='${ newTableIdentifier.database.get }', 'tablePath'='${ newTablePath }')")
   }
 
   /**
