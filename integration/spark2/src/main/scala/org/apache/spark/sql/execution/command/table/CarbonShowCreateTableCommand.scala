@@ -60,7 +60,7 @@ case class CarbonShowCreateTableCommand(
         .split("\n", -1)
         .map { row =>
           if (inOptions) {
-            if (row.startsWith("  `tablepath`")) {
+            if (row.startsWith("  `tablepath`") || row.startsWith("  `tablePath`")) {
               null
             } else {
               if (row.equals(")")) {
