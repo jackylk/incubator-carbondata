@@ -406,6 +406,10 @@ test("Creation of partition table should fail if the colname in table schema and
         | STORED AS carbondata
       """.stripMargin)
     val location = metaStoreDB +"/" +"ravi1"
+    val file1 = FileFactory.getCarbonFile(location)
+    if(file1.exists()) {
+      FileFactory.deleteAllCarbonFilesOfDir(file1)
+    }
     sql(s"""alter table staticpartitionlocloadother_new add partition (empname='ravi') location '$location'""")
     sql(s"""LOAD DATA local inpath '$resourcesPath/data.csv' INTO TABLE staticpartitionlocloadother_new partition(empname='ravi') OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
     sql(s"""LOAD DATA local inpath '$resourcesPath/data.csv' INTO TABLE staticpartitionlocloadother_new partition(empname='indra') OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")

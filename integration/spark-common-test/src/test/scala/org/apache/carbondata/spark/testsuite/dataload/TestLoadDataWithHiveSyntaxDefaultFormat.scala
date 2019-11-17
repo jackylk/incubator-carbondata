@@ -27,6 +27,7 @@ import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.spark.sql.test.util.QueryTest
 
 import org.apache.carbondata.common.constants.LoggerAction
+import org.apache.carbondata.core.datastore.impl.FileFactory
 
 /**
   * Test Class for data loading with hive syntax and old syntax
@@ -706,7 +707,11 @@ class TestLoadDataWithHiveSyntaxDefaultFormat extends QueryTest with BeforeAndAf
   }
 
   test("test table with specified table path") {
-    val path = new File("./source").getCanonicalPath
+    val file = new File("./source")
+    val path = file.getCanonicalPath
+    if (file.exists()) {
+      FileFactory.deleteAllFilesOfDir(file)
+    }
     sql("drop table if exists table_path_test")
     sql(
       "CREATE table table_path_test (empno string, salary double) STORED AS carbondata " +
@@ -727,7 +732,11 @@ class TestLoadDataWithHiveSyntaxDefaultFormat extends QueryTest with BeforeAndAf
   }
 
   test("test table with specified database and table path") {
-    val path = new File("./source").getCanonicalPath
+    val file = new File("./source")
+    val path = file.getCanonicalPath
+    if (file.exists()) {
+      FileFactory.deleteAllFilesOfDir(file)
+    }
     sql("drop database if exists test cascade")
     sql("create database if not exists test")
     sql("CREATE table test.table_path_test (empno string, salary double) " +

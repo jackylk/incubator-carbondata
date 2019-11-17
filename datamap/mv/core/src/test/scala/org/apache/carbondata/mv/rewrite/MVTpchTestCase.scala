@@ -208,7 +208,7 @@ class MVTpchTestCase extends QueryTest with BeforeAndAfterAll {
 
   def verifyAgg(logicalPlan: LogicalPlan): Boolean = {
     var aggExpExists = false
-    logicalPlan transformExpressions {
+    logicalPlan transformAllExpressions {
       case a:AggregateExpression =>
         aggExpExists = true
         a

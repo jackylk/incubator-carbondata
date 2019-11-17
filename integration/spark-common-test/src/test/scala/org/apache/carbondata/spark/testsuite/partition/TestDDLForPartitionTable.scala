@@ -363,7 +363,7 @@ class TestDDLForPartitionTable  extends QueryTest with BeforeAndAfterAll {
           | TBLPROPERTIES('PARTITION_TYPE'='RANGE', 'RANGE_INFO'='abc,def')
         """.stripMargin)
     }
-    assert(exception_test_range_decimal.getMessage.contains("Invalid Partition Values"))
+    assert(exception_test_range_decimal.getMessage.contains("UnSupported partition type"))
   }
 
   test("Invalid Partition Range") {
