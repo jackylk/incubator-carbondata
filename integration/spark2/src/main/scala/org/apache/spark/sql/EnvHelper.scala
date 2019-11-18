@@ -48,4 +48,12 @@ object EnvHelper {
       }
     }
   }
+
+  def isRetainData(sparkSession: SparkSession, retainData: Boolean): Boolean = {
+    if (isLuxor(sparkSession)) {
+      retainData
+    } else {
+      true
+    }
+  }
 }

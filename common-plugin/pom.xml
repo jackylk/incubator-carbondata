@@ -24,7 +24,7 @@
 
   <properties>
     <dev.path>${basedir}/../dev</dev.path>
-    <spark.version>2.3.2.0202001-dplatform-SNAPSHOT</spark.version>
+    <spark.version>2.3.2.0101-hw-2.0.0.dli-SNAPSHOT</spark.version>
   </properties>
 
   <dependencies>

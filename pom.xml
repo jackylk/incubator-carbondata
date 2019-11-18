@@ -130,7 +130,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <snappy.version>1.1.2.6</snappy.version>
-    <hadoop.version>2.7.2.0100</hadoop.version>
+    <hadoop.version>2.7.2.0100-dplatform</hadoop.version>
     <httpclient.version>4.3.4</httpclient.version>
     <httpcore.version>4.3-alpha1</httpcore.version>
     <scala.binary.version>2.11</scala.binary.version>
@@ -788,8 +788,8 @@
         <activeByDefault>true</activeByDefault>
       </activation>
       <properties>
-        <spark.version>2.3.2.0202001-dplatform-SNAPSHOT</spark.version>
-        <hadoop.version>2.7.2.0100</hadoop.version>
+        <spark.version>2.3.2.0101-hw-2.0.0.dli-SNAPSHOT</spark.version>
+        <hadoop.version>2.7.2.0100-dplatform</hadoop.version>
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11.8</scala.version>
       </properties>

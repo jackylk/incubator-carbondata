@@ -23,7 +23,7 @@ import org.apache.spark.sql.catalyst.plans.logical.{Command, LogicalPlan, Union}
 import org.apache.spark.sql.execution.command.{AlterTableAddPartitionCommand, AlterTableChangeColumnCommand, AlterTableDropPartitionCommand, AlterTableUnsetPropertiesCommand, DescribeTableCommand, ShowPartitionsCommand, _}
 import org.apache.spark.sql.execution.command.table.{CarbonCreateTableAsSelectCommand, CarbonCreateTableCommand, CarbonDescribeFormattedCommand, CarbonInternalExplainCommand, CarbonShowTablesCommand}
 import org.apache.spark.sql.parser.{CarbonSpark2SqlParser, CarbonSparkSqlParserUtil}
-import org.apache.spark.sql.{CarbonDatasourceHadoopRelation, CarbonEnv, CarbonSource, SaveMode, SparkSession}
+import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.{CarbonParserUtil, TableIdentifier}
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.execution.command.management.RefreshCarbonTableCommand
@@ -325,14 +325,15 @@ object DDLHelper {
   }
 
   def dropPartition(
-      dropPartitionCommand: AlterTableDropPartitionCommand
+      dropPartitionCommand: AlterTableDropPartitionCommand,
+      sparkSession: SparkSession
   ): CarbonAlterTableDropHivePartitionCommand = {
     CarbonAlterTableDropHivePartitionCommand(
       dropPartitionCommand.tableName,
       dropPartitionCommand.specs,
       dropPartitionCommand.ifExists,
       dropPartitionCommand.purge,
-      true)
+      EnvHelper.isRetainData(sparkSession, dropPartitionCommand.retainData))
   }
 
   def setProperties(

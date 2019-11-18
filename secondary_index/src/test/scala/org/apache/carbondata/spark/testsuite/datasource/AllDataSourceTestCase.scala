@@ -53,13 +53,15 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
     dropTableByName("hive_carbon")
     dropTableByName("hive_carbondata")
 
-    sql(s"drop table if exists tbl_truncate")
-    sql(s"drop table if exists origin_csv")
-    sql(s"drop table if exists tbl_float1")
-    sql(s"drop table if exists tbl_float2")
-    sql(s"drop table if exists ds_options")
-    sql(s"drop table if exists hive_options")
-    sql(s"drop table if exists tbl_update")
+    sql("drop table if exists tbl_truncate")
+    sql("drop table if exists origin_csv")
+    sql("drop table if exists tbl_float1")
+    sql("drop table if exists tbl_float2")
+    sql("drop table if exists ds_options")
+    sql("drop table if exists hive_options")
+    sql("drop table if exists tbl_update")
+    sql("drop table if exists tbl_oldName")
+    sql("drop table if exists tbl_newName")
   }
 
   def dropTableByName(tableName: String) :Unit = {
@@ -217,12 +219,31 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
       "OneRowRelation")
   }
 
+  test("test rename table") {
+    val oldName = "tbl_oldName"
+    val newName = "tbl_newName"
+    sql(s"create table ${oldName}(id int,name string) stored as carbondata")
+    sql(s"insert into table ${oldName} select 2,'aa'")
+    sql(s"ALTER TABLE ${oldName} RENAME TO ${newName}")
+    sql(s"create table ${oldName}(id int,name string) stored as carbondata")
+    sql(s"describe formatted ${oldName}").show(100, false)
+    sql(s"describe formatted ${newName}").show(100, false)
+    checkAnswer(
+      sql(s"select count(*) from ${newName}"),
+      Seq(Row(1))
+    )
+    checkAnswer(
+      sql(s"select count(*) from ${oldName}"),
+      Seq(Row(0))
+    )
+  }
+
   def createDataSourcePartitionTable(provider: String, tableName: String): Unit = {
     sql(s"drop table if exists ${tableName}")
     sql(s"create table ${tableName}(col1 int, col2 string) using $provider partitioned by (col2)")
     checkLoading(s"${tableName}")
     val carbonTable = CarbonEnv.getCarbonTable(Option("default"),tableName)(sqlContext.sparkSession)
-    val isHivePartitionTable = carbonTable.isHivePartitionTable
+    assert(carbonTable.isHivePartitionTable)
     sql(s"describe formatted ${tableName}").show(100, false)
     sql(s"show partitions ${tableName}").show(100, false)
     sql(s"show create table ${tableName}").show(100, false)

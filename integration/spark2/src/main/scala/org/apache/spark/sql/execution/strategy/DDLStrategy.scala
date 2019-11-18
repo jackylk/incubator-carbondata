@@ -94,7 +94,7 @@ class DDLStrategy(sparkSession: SparkSession) extends SparkStrategy {
         ExecutedCommandExec(DDLHelper.showPartitions(showPartitions, sparkSession)) :: Nil
       case dropPartition: AlterTableDropPartitionCommand
         if isCarbonTable(dropPartition.tableName) =>
-        ExecutedCommandExec(DDLHelper.dropPartition(dropPartition)) :: Nil
+        ExecutedCommandExec(DDLHelper.dropPartition(dropPartition, sparkSession)) :: Nil
       case renamePartition: AlterTableRenamePartitionCommand
         if isCarbonTable(renamePartition.tableName) =>
         throw new UnsupportedOperationException("Renaming partition on table is not supported")
