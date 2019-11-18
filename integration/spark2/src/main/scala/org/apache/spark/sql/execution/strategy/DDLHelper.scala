@@ -332,7 +332,7 @@ object DDLHelper {
       dropPartitionCommand.specs,
       dropPartitionCommand.ifExists,
       dropPartitionCommand.purge,
-      dropPartitionCommand.retainData)
+      true)
   }
 
   def setProperties(
