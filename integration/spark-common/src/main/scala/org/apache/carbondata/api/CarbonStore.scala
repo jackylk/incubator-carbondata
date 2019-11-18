@@ -120,8 +120,6 @@ object CarbonStore {
               if (load.getIndexSize == null) -1L else load.getIndexSize.toLong)
           }
 
-          val segmentLocation = CarbonTablePath.getSegmentPath(tablePath, load)
-
           var values = ArrayBuffer(
             load.getLoadName,
             load.getSegmentStatus.getMessage,
@@ -137,6 +135,7 @@ object CarbonStore {
           }
 
           values = if (extended) {
+            val segmentLocation = CarbonTablePath.getSegmentPath(tablePath, load)
             values ++= Seq(
               mergedTo,
               load.getFileFormat.toString,
