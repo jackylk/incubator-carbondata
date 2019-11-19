@@ -222,15 +222,17 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
   test("test rename table") {
     val oldName = "tbl_oldName"
     val newName = "tbl_newName"
-    sql(s"create table ${oldName}(id int,name string) stored as carbondata")
+    sql(s"create table ${oldName}(id int,name string) using carbondata")
     sql(s"insert into table ${oldName} select 2,'aa'")
     sql(s"ALTER TABLE ${oldName} RENAME TO ${newName}")
-    sql(s"create table ${oldName}(id int,name string) stored as carbondata")
-    sql(s"describe formatted ${oldName}").show(100, false)
-    sql(s"describe formatted ${newName}").show(100, false)
+    sql(s"create table ${oldName}(id int,name string) using carbondata")
     checkAnswer(
       sql(s"select count(*) from ${newName}"),
       Seq(Row(1))
+    )
+    checkAnswer(
+      sql(s"select * from ${newName}"),
+      Seq(Row(2, "aa"))
     )
     checkAnswer(
       sql(s"select count(*) from ${oldName}"),
