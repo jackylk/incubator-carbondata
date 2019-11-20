@@ -187,4 +187,13 @@ public interface CarbonFile {
    * @return the length of this file, in bytes.
    */
   long getLength();
+
+  /**
+   * Copy this file to specified location
+   *
+   * @param destLocation destination location
+   * @return true if copy success
+   * @throws IOException if error occurs
+   */
+  boolean copyTo(String destLocation) throws IOException;
 }

@@ -108,7 +108,7 @@ case class CarbonAddLoadCommand(
 
     // If in the given location no carbon index files are found then we should throw an exception
     if (isCarbonFormat && SegmentFileStore.getListOfCarbonIndexFiles(inputPath).isEmpty) {
-      throw new AnalysisException("CarbonIndex files not present in the location")
+      throw new AnalysisException(s"CarbonIndex files not present in the location: $inputPath")
     }
 
     // infer schema and collect FileStatus for all partitions

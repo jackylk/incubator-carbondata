@@ -48,7 +48,9 @@ import net.jpountz.lz4.LZ4BlockOutputStream;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -532,5 +534,12 @@ public class LocalCarbonFile implements CarbonFile {
   @Override
   public long getLength() {
     return file.length();
+  }
+
+  @Override
+  public boolean copyTo(String destLocation) throws IOException {
+    String newFilePath = destLocation + CarbonCommonConstants.FILE_SEPARATOR + file.getName();
+    FileUtils.copyFile(file, new File(newFilePath));
+    return true;
   }
 }

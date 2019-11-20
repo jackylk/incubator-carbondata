@@ -37,12 +37,14 @@ import org.apache.carbondata.sdk.file.{CarbonReader, CarbonWriter}
 import org.junit.Assert
 import scala.io.Source
 
+import org.apache.hadoop.fs.Path
+
 import org.apache.carbondata.common.Strings
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.core.datastore.filesystem.{CarbonFile, CarbonFileFilter}
 import org.apache.carbondata.core.metadata.datatype.DataTypes
 
-class AddSegmentTestCase extends QueryTest with BeforeAndAfterAll {
+class Add extends QueryTest with BeforeAndAfterAll {
 
   override def beforeAll {
     dropTable
@@ -386,7 +388,7 @@ class AddSegmentTestCase extends QueryTest with BeforeAndAfterAll {
     assert(res1.collect().length == 6)
     assert(res2.collect().length == 6)
     assert(sql("select empname, deptname, deptno from addsegment1 where empname = 'arvind'")
-      .collect().length == 2)
+             .collect().length == 2)
 
     // For testing filter columns not in projection list
     assert(sql("select deptname, deptno from addsegment1 where empname = 'arvind'")
@@ -617,12 +619,12 @@ class AddSegmentTestCase extends QueryTest with BeforeAndAfterAll {
     sql(s"drop table if exists $tableName")
     sql(
       s"""
-        | CREATE TABLE $tableName (empno int, empname string, designation String, doj Timestamp,
-        | workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
-        | projectcode int, projectjoindate Timestamp, projectenddate Date,attendance int,
-        | utilization int,salary int)
-        | STORED AS carbondata
-        |""".stripMargin)
+         | CREATE TABLE $tableName (empno int, empname string, designation String, doj Timestamp,
+         | workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
+         | projectcode int, projectjoindate Timestamp, projectenddate Date,attendance int,
+         | utilization int,salary int)
+         | STORED AS carbondata
+         |""".stripMargin)
 
     val externalSegmentPath = storeLocation + "/" + "external_segment"
     FileFactory.deleteAllFilesOfDir(new File(externalSegmentPath))
@@ -732,9 +734,9 @@ class AddSegmentTestCase extends QueryTest with BeforeAndAfterAll {
 
     sql(
       s"""
-        |LOAD DATA LOCAL INPATH '$resourcesPath/data.csv' INTO TABLE $tableName
-        |OPTIONS('DELIMITER'=',', 'QUOTECHAR'='"')
-        |""".stripMargin)
+         |LOAD DATA LOCAL INPATH '$resourcesPath/data.csv' INTO TABLE $tableName
+         |OPTIONS('DELIMITER'=',', 'QUOTECHAR'='"')
+         |""".stripMargin)
 
     val externalSegmentPath = storeLocation + "/" + "external_segment"
     FileFactory.deleteAllFilesOfDir(new File(externalSegmentPath))
@@ -911,7 +913,7 @@ class AddSegmentTestCase extends QueryTest with BeforeAndAfterAll {
 
 
   override def afterAll = {
-//    dropTable
+    //    dropTable
   }
 
   def dropTable = {

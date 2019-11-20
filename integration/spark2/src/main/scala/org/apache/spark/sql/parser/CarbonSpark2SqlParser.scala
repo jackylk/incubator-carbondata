@@ -81,7 +81,8 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
     cacheManagement | alterDataMap
 
   protected lazy val loadManagement: Parser[LogicalPlan] =
-    deleteLoadsByID | deleteLoadsByLoadDate | cleanFiles | loadDataNew | addLoad
+    deleteLoadsByID | deleteLoadsByLoadDate | cleanFiles | loadDataNew | addLoad |
+  moveLoad
 
   protected lazy val restructure: Parser[LogicalPlan] =
     alterTableColumnRenameAndModifyDataType | alterTableDropColumn | alterTableAddColumns
@@ -494,6 +495,17 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
     (OPTIONS ~> "(" ~> repsep(loadOptions, ",") <~ ")") <~ opt(";") ^^ {
       case dbName ~ tableName ~ segment ~ optionsList =>
         CarbonAddLoadCommand(dbName, tableName, optionsList.toMap)
+    }
+
+  /**
+   * ALTER TABLE [dbName.][tableName] MOVE SEGMENTS
+   * OPTIONS('start_from'='segment_id', 'number'='number_of_segment')'
+   */
+  protected lazy val moveLoad: Parser[LogicalPlan] =
+    ALTER ~ TABLE ~> (ident <~ ".").? ~ ident ~ (MOVE ~ SEGMENTS) ~
+      (OPTIONS ~> "(" ~> repsep(loadOptions, ",") <~ ")") <~ opt(";") ^^ {
+      case dbNameOp ~ tableName ~ ignored ~ optionsList =>
+        CarbonMoveExternalLoadCommand(dbNameOp, tableName, optionsList.toMap)
     }
 
   protected lazy val cleanFiles: Parser[LogicalPlan] =
