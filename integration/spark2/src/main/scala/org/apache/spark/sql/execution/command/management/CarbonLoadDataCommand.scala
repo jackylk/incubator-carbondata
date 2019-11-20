@@ -741,7 +741,8 @@ case class CarbonLoadDataCommand(
 
         val expectedColumns = {
           val staticPartCols = finalPartition.filter(_._2.isDefined).keySet
-          attributes.filterNot(a => staticPartCols.contains(a.name))
+            .map(columnName => columnName.toLowerCase())
+          attributes.filterNot(a => staticPartCols.contains(a.name.toLowerCase))
         }
         if (expectedColumns.length != dfAttributes.length) {
           throw new AnalysisException(
