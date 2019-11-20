@@ -26,6 +26,8 @@ import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.scalatest.BeforeAndAfterAll
 
+import org.apache.carbondata.core.datastore.impl.FileFactory
+
 class TestLoadDataFrame extends QueryTest with BeforeAndAfterAll {
   var df: DataFrame = _
   var dataFrame: DataFrame = _
@@ -238,23 +240,30 @@ class TestLoadDataFrame extends QueryTest with BeforeAndAfterAll {
   }
 
   test("test datasource table with specified table path") {
-    val path = "./source"
+    val file = new File("./source")
+    if (file.exists()) {
+      FileFactory.deleteAllFilesOfDir(file)
+    }
+    val path = file.getCanonicalPath
     df2.write
       .format("carbondata")
       .option("tableName", "carbon10")
       .option("tablePath", path)
       .mode(SaveMode.Overwrite)
       .save()
-    assert(new File(path).exists())
+    assert(file.exists())
     checkAnswer(
       sql("select count(*) from carbon10 where c3 > 500"), Row(500)
     )
     sql("drop table carbon10")
-    assert(new File(path).exists())
+    assert(file.exists())
     assert(intercept[AnalysisException](
       sql("select count(*) from carbon10 where c3 > 500"))
       .message
       .contains("not found"))
+    if (file.exists()) {
+      FileFactory.deleteAllFilesOfDir(file)
+    }
   }
   test("test streaming Table") {
     dataFrame.write
