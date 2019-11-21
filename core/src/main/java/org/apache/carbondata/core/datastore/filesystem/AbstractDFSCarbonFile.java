@@ -17,13 +17,7 @@
 
 package org.apache.carbondata.core.datastore.filesystem;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,16 +26,9 @@ import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.util.CarbonUtil;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.BlockLocation;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocatedFileStatus;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.compress.BZip2Codec;
@@ -631,5 +618,12 @@ public abstract class AbstractDFSCarbonFile implements CarbonFile {
   @Override
   public long getLength() {
     return fileStatus.getLen();
+  }
+
+  @Override
+  public boolean copyTo(String destLocation) throws IOException {
+    String newFilePath = destLocation + CarbonCommonConstants.FILE_SEPARATOR + fileStatus.getPath().getName();
+    FileUtil.copy(fs, fileStatus.getPath(), fs, new Path(newFilePath), false, FileFactory.getConfiguration());
+    return true;
   }
 }

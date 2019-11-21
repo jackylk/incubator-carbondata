@@ -780,6 +780,71 @@ class AddSegmentTestCase extends QueryTest with BeforeAndAfterAll {
     sql(s"drop table $tableName")
   }
 
+  test("Test move segment after add segment") {
+    sql("drop table if exists dest")
+
+    sql(
+      """
+        | CREATE TABLE dest (empno int, empname String, designation String, doj Timestamp,
+        |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
+        |  projectcode int, projectjoindate Timestamp, projectenddate Date,attendance int,
+        |  utilization int,salary int)
+        | STORED AS carbondata
+      """.stripMargin)
+
+    // write into external segment folder
+    val externalSegmentLocation = storeLocation + "/sdkwrite"
+    FileFactory.deleteAllFilesOfDir(new File(externalSegmentLocation))
+    val dest = CarbonEnv.getCarbonTable(None, "dest")(sqlContext.sparkSession)
+
+    (1 to 3).foreach { i =>
+      val location = externalSegmentLocation + s"/$i"
+      FileFactory.mkdirs(location, FileFactory.getFileType(location))
+      val writer = CarbonWriter.builder
+        .outputPath(location)
+        .writtenBy("AddSegmentTestCase")
+        .withSchemaFile(CarbonTablePath.getSchemaFilePath(dest.getTablePath))
+        .withCsvInput()
+        .build()
+      val source = Source.fromFile(s"$resourcesPath/data.csv")
+      var count = 0
+      for (line <- source.getLines()) {
+        if (count != 0) {
+          writer.write(line.split(","))
+        }
+        count = count + 1
+      }
+      writer.close()
+      sql(s"alter table dest add segment options('path'='${storeLocation + s"/sdkwrite/$i"}')")
+    }
+
+    checkAnswer(sql("select count(*) from dest"), Seq(Row(30)))
+    sql("show segments for table dest").show()
+
+    sql("alter table dest move segments options ('start_from'='0', 'number'='3')")
+    checkAnswer(sql("select count(*) from source"), Seq(Row(30)))
+    sql("show segments for table dest").show()
+
+    // validate segment status
+    val segments = sql("show segments for table dest").collectAsList()
+    assert(segments.size == 4)
+    assert(segments.get(3).getString(1).equals("Compacted"))
+    assert(segments.get(2).getString(1).equals("Compacted"))
+    assert(segments.get(1).getString(1).equals("Compacted"))
+    assert(segments.get(0).getString(1).equals("Success"))
+
+    // validate mergeindex file exist
+    val segmentPath = CarbonTablePath.getSegmentPath(dest.getTablePath, "3")
+    assert(FileFactory.getCarbonFile(segmentPath).listFiles().exists(_.getName.contains(".carbonindexmerge")))
+    assert(FileFactory.getCarbonFile(segmentPath).listFiles().length == 4)
+
+    // validate old file should still exist
+    assert(FileFactory.getCarbonFile(externalSegmentLocation + "/1").listFiles.length > 0)
+
+    FileFactory.deleteAllFilesOfDir(new File(externalSegmentLocation))
+    sql("drop table if exists dest")
+  }
+
   def copy(oldLoc: String, newLoc: String): Unit = {
     val oldFolder = FileFactory.getCarbonFile(oldLoc)
     FileFactory.mkdirs(newLoc, FileFactory.getConfiguration)
@@ -846,7 +911,7 @@ class AddSegmentTestCase extends QueryTest with BeforeAndAfterAll {
 
 
   override def afterAll = {
-    dropTable
+//    dropTable
   }
 
   def dropTable = {
