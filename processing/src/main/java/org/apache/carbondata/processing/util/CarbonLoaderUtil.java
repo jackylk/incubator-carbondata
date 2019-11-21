@@ -45,6 +45,7 @@ import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.datastore.impl.FileFactory.FileType;
 import org.apache.carbondata.core.locks.CarbonLockUtil;
 import org.apache.carbondata.core.locks.ICarbonLock;
+import org.apache.carbondata.core.locks.LockUsage;
 import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier;
 import org.apache.carbondata.core.metadata.ColumnIdentifier;
 import org.apache.carbondata.core.metadata.datatype.DataType;
@@ -247,6 +248,8 @@ public final class CarbonLoaderUtil {
     int maxTimeout = CarbonLockUtil
         .getLockProperty(CarbonCommonConstants.MAX_TIMEOUT_FOR_CONCURRENT_LOCK,
             CarbonCommonConstants.MAX_TIMEOUT_FOR_CONCURRENT_LOCK_DEFAULT);
+	// TODO only for overwrite scene
+    final List<LoadMetadataDetails> staleLoadMetadataDetails = new ArrayList<>();
     try {
       if (carbonLock.lockWithRetries(retryCount, maxTimeout)) {
         LOGGER.info(
@@ -325,6 +328,7 @@ public final class CarbonLoaderUtil {
                 // So collect the old segments here
                 addToStaleFolders(identifier, staleFolders, entry);
               }
+              staleLoadMetadataDetails.add(entry);
             }
           }
           if (!found) {
@@ -368,6 +372,32 @@ public final class CarbonLoaderUtil {
             CarbonUtil.deleteFoldersAndFiles(staleFolder);
           } catch (IOException | InterruptedException e) {
             LOGGER.error("Failed to delete stale folder: " + e.getMessage(), e);
+          }
+        }
+        if (!staleLoadMetadataDetails.isEmpty()) {
+          final String segmentFileLocation
+              = CarbonTablePath.getSegmentFilesLocation(identifier.getTablePath());
+          final String segmentLockFileLocation
+              = CarbonTablePath.getLockFilesDirPath(identifier.getTablePath())
+              + CarbonCommonConstants.FILE_SEPARATOR;
+          for (LoadMetadataDetails staleLoadMetadataDetail : staleLoadMetadataDetails) {
+            try {
+              CarbonUtil.deleteFoldersAndFiles(
+                  FileFactory.getCarbonFile(segmentFileLocation
+                      + staleLoadMetadataDetail.getSegmentFile())
+              );
+            } catch (IOException | InterruptedException e) {
+              LOGGER.error("Failed to delete segment file: " + e.getMessage(), e);
+            }
+            try {
+              CarbonUtil.deleteFoldersAndFiles(
+                  FileFactory.getCarbonFile(segmentLockFileLocation
+                      + CarbonTablePath.addSegmentPrefix(staleLoadMetadataDetail.getLoadName())
+                      + LockUsage.LOCK)
+              );
+            } catch (IOException | InterruptedException e) {
+              LOGGER.error("Failed to delete segment lock file: " + e.getMessage(), e);
+            }
           }
         }
         status = true;
