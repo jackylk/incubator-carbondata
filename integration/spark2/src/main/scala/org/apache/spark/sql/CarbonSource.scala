@@ -337,11 +337,12 @@ object CarbonSource {
         .map { field =>
           field.dataType match {
             case _ :FloatType  =>
-              field.copy(dataType = DataTypes.DoubleType)
-            case _ => field
+              field.copy(name = field.name.toLowerCase, dataType = DataTypes.DoubleType)
+            case _ => field.copy(name = field.name.toLowerCase)
           }
         }
-      tableDesc.copy(storage = updatedFormat, schema = StructType(updatedSchema))
+      tableDesc.copy(storage = updatedFormat, schema = StructType(updatedSchema),
+        partitionColumnNames = tableDesc.partitionColumnNames.map(_.toLowerCase))
     } else {
       val tableInfo = CarbonUtil.convertGsonToTableInfo(properties.asJava)
       val isTransactionalTable = properties.getOrElse("isTransactional", "true").contains("true")

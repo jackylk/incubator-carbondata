@@ -29,9 +29,9 @@ import org.apache.spark.sql.execution.command.table.{CarbonDropTableCommand, Car
 import org.apache.spark.sql.hive.execution.command.{CarbonDropDatabaseCommand, CarbonResetCommand, CarbonSetCommand, MatchResetCommand}
 import org.apache.spark.sql.execution.datasources.{InsertIntoHadoopFsRelationCommand, RefreshResource, RefreshTable}
 import org.apache.spark.sql.hive.execution.CreateHiveTableAsSelectCommand
-
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.common.logging.LogServiceFactory
+import org.apache.spark.sql.parser.CarbonSparkSqlParserUtil
 
   /**
    * Carbon strategies for ddl commands
@@ -63,7 +63,8 @@ class DDLStrategy(sparkSession: SparkSession) extends SparkStrategy {
         if catalogTable.isDefined && isCarbonTable(catalogTable.get.identifier) =>
         DataWritingCommandExec(
           CarbonInsertIntoHadoopFsRelationCommand(
-            outputPath, staticPartitions, ifPartitionNotExists, partitionColumns,
+            outputPath, CarbonSparkSqlParserUtil.copyTablePartition(staticPartitions),
+            ifPartitionNotExists, partitionColumns,
             bucketSpec, fileFormat, options, query, mode, catalogTable, fileIndex,
             outputColumnNames),
           planLater(query)) :: Nil

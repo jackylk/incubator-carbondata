@@ -141,7 +141,7 @@ case class CarbonCreateTableCommand(
                   s"Dictionary include cannot be applied on partition columns")
               }
               s" PARTITIONED BY (${partitionInfo.getColumnSchemaList.asScala.map(
-                _.getColumnName).mkString(",")})"
+                _.getColumnName.toLowerCase).mkString(",")})"
             } else {
               ""
             }
