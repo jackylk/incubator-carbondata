@@ -72,24 +72,42 @@ object CarbonMergeFilesRDD {
       mergeIndexProperty: Boolean,
       readFileFooterFromCarbonDataFile: Boolean = false): Unit = {
     if (mergeIndexProperty) {
-      new CarbonMergeFilesRDD(
+      val mergeFilesRDD = new CarbonMergeFilesRDD(
         sparkSession,
         carbonTable,
         segmentIds,
         segmentFileNameToSegmentIdMap,
         carbonTable.isHivePartitionTable,
-        readFileFooterFromCarbonDataFile).collect()
+        readFileFooterFromCarbonDataFile)
+      if (segmentIds.size == 1) {
+        // Sync
+        mergeFilesRDD.internalGetPartitions.foreach(
+          partition => mergeFilesRDD.internalCompute(partition, null)
+        )
+      } else {
+        // Async, distribute.
+        mergeFilesRDD.collect()
+      }
     } else {
       try {
         if (isPropertySet(CarbonCommonConstants.CARBON_MERGE_INDEX_IN_SEGMENT,
           CarbonCommonConstants.CARBON_MERGE_INDEX_IN_SEGMENT_DEFAULT)) {
-          new CarbonMergeFilesRDD(
+          val mergeFilesRDD = new CarbonMergeFilesRDD(
             sparkSession,
             carbonTable,
             segmentIds,
             segmentFileNameToSegmentIdMap,
             carbonTable.isHivePartitionTable,
-            readFileFooterFromCarbonDataFile).collect()
+            readFileFooterFromCarbonDataFile)
+          if (segmentIds.size == 1) {
+            // Sync
+            mergeFilesRDD.internalGetPartitions.foreach(
+              partition => mergeFilesRDD.internalCompute(partition, null)
+            )
+          } else {
+	    // Async, distribute.
+            mergeFilesRDD.collect()
+          }
         }
       } catch {
         case ex: Exception =>
