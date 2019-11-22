@@ -311,7 +311,12 @@ object DDLHelper {
     if (!carbonTable.isHivePartitionTable) {
       CarbonShowCarbonPartitionsCommand(tableName)
     } else {
-      ShowPartitionsCommand(tableName, cols)
+      if (cols.isDefined) {
+        ShowPartitionsCommand(tableName,
+          Option(CarbonSparkSqlParserUtil.copyTablePartition(cols.get)))
+      } else {
+        ShowPartitionsCommand(tableName, None)
+      }
     }
   }
 

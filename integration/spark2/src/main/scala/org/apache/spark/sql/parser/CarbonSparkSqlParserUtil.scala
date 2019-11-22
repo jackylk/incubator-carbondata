@@ -18,7 +18,6 @@
 package org.apache.spark.sql.parser
 
 import scala.collection.mutable
-
 import org.antlr.v4.runtime.tree.TerminalNode
 import org.apache.spark.sql.catalyst.catalog.{CatalogTable, CatalogTableType, CatalogUtils}
 import org.apache.spark.sql.{CarbonEnv, DataFrame, Dataset, SparkSession}
@@ -32,7 +31,6 @@ import org.apache.spark.sql.execution.command.table.{CarbonCreateTableAsSelectCo
 import org.apache.spark.sql.hive.CarbonMVRules
 import org.apache.spark.sql.types.StructField
 import org.apache.spark.sql.util.SparkSQLUtil
-
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.impl.FileFactory
@@ -44,6 +42,7 @@ import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.spark.CarbonOption
 import org.apache.carbondata.spark.util.{CarbonScalaUtil, CommonUtil}
+import org.apache.spark.sql.catalyst.catalog.CatalogTypes.TablePartitionSpec
 
 /**
  * Utility class to validate the create table and CTAS command,
@@ -615,5 +614,10 @@ object CarbonSparkSqlParserUtil {
     val updatedQuery = new CarbonSpark2SqlParser().addPreAggLoadFunction(query)
     val analyzed = sparkSession.sql(updatedQuery).queryExecution.analyzed
     CarbonMVRules(sparkSession).apply(analyzed)
+  }
+
+  def copyTablePartition(source: TablePartitionSpec): TablePartitionSpec = {
+    val target:TablePartitionSpec = source.map(entry => (entry._1.toLowerCase, entry._2))
+    target
   }
 }

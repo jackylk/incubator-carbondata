@@ -226,9 +226,9 @@ case class CarbonInsertIntoHadoopFsRelationCommand(
       committer: FileCommitProtocol): Unit = {
     val staticPartitionPrefix = if (staticPartitions.nonEmpty) {
       "/" + partitionColumns.flatMap { p =>
-        staticPartitions.get(p.name) match {
+        staticPartitions.get(p.name.toLowerCase) match {
           case Some(value) =>
-            Some(escapePathName(p.name) + "=" + escapePathName(value))
+            Some(escapePathName(p.name.toLowerCase) + "=" + escapePathName(value))
           case None =>
             None
         }
