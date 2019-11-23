@@ -455,7 +455,7 @@ class ErrorMessage(message: String) extends Exception(message) {
     }
     tableSchema.setTableProperties(tablePropertiesMap)
     tableInfo.setDatabaseName(databaseName)
-    tableInfo.setTableUniqueName(databaseName + "_" + indexTableName)
+    tableInfo.setTableUniqueName(CarbonTable.buildUniqueName(databaseName, indexTableName))
     tableInfo.setLastUpdatedTime(System.currentTimeMillis())
     tableInfo.setFactTable(tableSchema)
     tableInfo.setTablePath(absoluteTableIdentifier.getTablePath)

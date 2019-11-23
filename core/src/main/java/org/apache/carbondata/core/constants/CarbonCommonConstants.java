@@ -341,6 +341,14 @@ public final class CarbonCommonConstants {
   @CarbonProperty
   public static final String CARBON_SYSTEM_FOLDER_LOCATION = "carbon.system.folder.location";
 
+  @CarbonProperty
+  public static final String CARBON_DATAMAP_SCHEMA_STORAGE = "carbon.datamap.schema.storage";
+
+  public static final String CARBON_DATAMAP_SCHEMA_STORAGE_DEFAULT = "DISK";
+
+  public static final String CARBON_DATAMAP_SCHEMA_STORAGE_DISK = "DISK";
+
+  public static final String CARBON_DATAMAP_SCHEMA_STORAGE_DATABASE = "DATABASE";
   /**
    * It is internal configuration and used only for test purpose.
    * It will merge the carbon index files with in the segment to single segment.
