@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.{FileStatus, Path}
 import org.apache.hadoop.io.NullWritable
 import org.apache.hadoop.mapreduce.{Job, TaskAttemptContext}
 import org.apache.spark.internal.Logging
+import org.apache.spark.internal.io.FileCommitProtocol
 import org.apache.spark.sql.{CarbonEnv, Row, SparkSession}
 import org.apache.spark.sql.catalyst.{InternalRow, TableIdentifier}
 import org.apache.spark.sql.catalyst.catalog.ExternalCatalogUtils
@@ -42,7 +43,7 @@ import org.apache.carbondata.core.metadata.SegmentFileStore
 import org.apache.carbondata.core.metadata.datatype.DataTypes
 import org.apache.carbondata.core.metadata.encoder.Encoding
 import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatusManager}
-import org.apache.carbondata.core.util.{CarbonProperties, DataTypeConverterImpl, DataTypeUtil, ObjectSerializationUtil}
+import org.apache.carbondata.core.util.{CarbonProperties, DataTypeConverterImpl, DataTypeUtil, ObjectSerializationUtil, ThreadLocalSessionInfo}
 import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.hadoop.api.{CarbonOutputCommitter, CarbonTableOutputFormat}
 import org.apache.carbondata.hadoop.api.CarbonTableOutputFormat.CarbonRecordWriter
@@ -206,15 +207,43 @@ with Serializable {
 
 case class CarbonSQLHadoopMapReduceCommitProtocol(jobId: String, path: String, isAppend: Boolean)
   extends SQLHadoopMapReduceCommitProtocol(jobId, path, isAppend) {
+
+  override def setupTask(taskContext: TaskAttemptContext): Unit = {
+    if (isCarbonFlow(taskContext)) {
+      ThreadLocalSessionInfo.setConfigurationToCurrentThread(taskContext.getConfiguration)
+    }
+    super.setupTask(taskContext)
+  }
+
+  override def commitTask(
+      taskContext: TaskAttemptContext
+  ): FileCommitProtocol.TaskCommitMessage = {
+    val taskMsg =  super.commitTask(taskContext)
+    if (isCarbonFlow(taskContext)) {
+      ThreadLocalSessionInfo.unsetAll()
+    }
+    taskMsg
+  }
+
+  override def abortTask(taskContext: TaskAttemptContext): Unit = {
+    super.abortTask(taskContext)
+    if (isCarbonFlow(taskContext)) {
+      ThreadLocalSessionInfo.unsetAll()
+    }
+  }
+
   override def newTaskTempFileAbsPath(taskContext: TaskAttemptContext,
       absoluteDir: String,
       ext: String): String = {
-    val carbonFlow = taskContext.getConfiguration.get("carbon.commit.protocol")
-    if (carbonFlow != null) {
+    if (isCarbonFlow(taskContext)) {
       super.newTaskTempFile(taskContext, Some(absoluteDir), ext)
     } else {
       super.newTaskTempFileAbsPath(taskContext, absoluteDir, ext)
     }
+  }
+
+  private def isCarbonFlow(taskContext: TaskAttemptContext): Boolean = {
+    taskContext.getConfiguration.get("carbon.commit.protocol") != null
   }
 }
 
