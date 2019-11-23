@@ -262,6 +262,35 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
     )
   }
 
+  test("output size: insert into partition table") {
+
+    val tableName = "tbl_insert_p_nosort"
+    sql(s"drop table if exists $tableName")
+    sql(
+      s"""
+         | create table $tableName (
+         | col1 int,
+         | col2 string,
+         | col3 date,
+         | col4 timestamp,
+         | col5 float
+         | )
+         | using carbondata
+         | options('dateFormat'='yyyy-MM-dd', 'timestampFormat'='yyyy-MM-dd HH:mm:ss',
+         | 'sort_scope'='local_sort', 'sort_columns'='col2')
+       """.stripMargin)
+    sql(
+      s"""
+         | insert into $tableName (
+         |  select col1, col2, col3, to_timestamp('2019-02-02 13:01:01'), 1.2 from origin_csv
+         |  union all
+         |  select 123,'abc',  to_date('2019-01-01'), to_timestamp('2019-02-02 13:01:01'), 1.2)
+         |  """.stripMargin
+    ).show(100, false)
+
+    sql(s"select * from $tableName").show(100, false)
+  }
+
   def createDataSourcePartitionTable(provider: String, tableName: String): Unit = {
     sql(s"drop table if exists ${tableName}")
     sql(s"create table ${tableName}(col1 int, col2 string) using $provider partitioned by (col2)")

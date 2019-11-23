@@ -73,6 +73,7 @@ object Spark2TestQueryExecutor {
     .config("spark.sql.warehouse.dir", warehouse)
     .config("spark.sql.crossJoin.enabled", "true")
     .config("spark.sql.extensions", extensions)
+    .config("spark.network.timeout", "600s")
     .getOrCreate()
 
   CarbonEnv.getInstance(spark)
