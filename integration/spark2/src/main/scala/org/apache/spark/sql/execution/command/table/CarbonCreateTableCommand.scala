@@ -76,6 +76,8 @@ case class CarbonCreateTableCommand(
       val tablePath = if (FileFactory.getCarbonFile(path).exists() && !isExternal &&
                           isTransactionalTable && tableLocation.isEmpty) {
         path + "_" + tableInfo.getFactTable.getTableId
+      } else if (EnvHelper.isLuxor(sparkSession) && !isExternal && tableLocation.isEmpty) {
+        path + "_" + tableInfo.getFactTable.getTableId
       } else {
         path
       }

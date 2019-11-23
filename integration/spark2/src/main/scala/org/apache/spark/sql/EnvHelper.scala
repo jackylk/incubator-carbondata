@@ -19,6 +19,8 @@ package org.apache.spark.sql
 
 import org.apache.commons.lang3.StringUtils
 
+import org.apache.carbondata.core.metadata.DatabaseLocationProvider
+
 /**
  * environment related code
  */
@@ -55,5 +57,9 @@ object EnvHelper {
     } else {
       true
     }
+  }
+
+  def getDatabase(database: String): String = {
+    DatabaseLocationProvider.get().provide(database)
   }
 }

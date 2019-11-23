@@ -166,24 +166,24 @@ class CarbonSource extends CreatableRelationProvider with RelationProvider
       tableName: String,
       parameters: Map[String, String],
       dataSchema: StructType): (String, Map[String, String]) = {
-
-    val dbName: String = CarbonEnv.getDatabaseName(parameters.get("dbName"))(sparkSession)
-    val tableName: String = parameters.getOrElse("tableName", "").toLowerCase
+    val newParameters =
+      CaseInsensitiveMap[String](CarbonScalaUtil.getDeserializedParameters(parameters))
+    val dbName: String = CarbonEnv.getDatabaseName(newParameters.get("dbName"))(sparkSession)
+    val tableName: String = newParameters.getOrElse("tableName", "").toLowerCase
 
     try {
-      if (!(parameters.contains("carbonSchemaPartsNo")
-        || parameters.contains("carbonschemapartsno"))) {
+      if (!newParameters.contains("carbonSchemaPartsNo")) {
         val carbonTable = CarbonEnv.getCarbonTable(Some(dbName), tableName)(sparkSession)
         (carbonTable.getTablePath, parameters)
       } else {
-        (getPathForTable(sparkSession, dbName, tableName, parameters))
+        (getPathForTable(sparkSession, dbName, tableName, newParameters))
       }
 
     } catch {
       case _: NoSuchTableException =>
         LOGGER.warn("Carbon Table [" +dbName +"] [" +tableName +"] is not found, " +
           "Now existing Schema will use default properties")
-        (CarbonEnv.getTablePath(Some(dbName), tableName)(sparkSession), parameters)
+        (CarbonEnv.getTablePath(Some(dbName), tableName)(sparkSession), newParameters)
       case ex: Exception =>
         throw new Exception("do not have dbname and tablename for carbon table", ex)
     }
@@ -208,6 +208,8 @@ class CarbonSource extends CreatableRelationProvider with RelationProvider
     }
     try {
       if (parameters.contains("tablePath")) {
+        (parameters("tablePath"), parameters)
+      } else if (parameters.contains("tablepath")) {
         (parameters("tablePath"), parameters)
       } else {
         if ("default".equalsIgnoreCase(dbName)) {

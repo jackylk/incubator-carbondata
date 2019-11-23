@@ -49,17 +49,19 @@ object DDLHelper {
       createDatabaseCommand: CreateDatabaseCommand,
       sparkSession: SparkSession
   ): CreateDatabaseCommand = {
-    val databaseName = createDatabaseCommand.databaseName
-    val dbLocation = try {
-      CarbonEnv.getDatabaseLocation(databaseName, sparkSession)
-    } catch {
-      case _: NoSuchDatabaseException =>
-        CarbonProperties.getStorePath
-    }
     ThreadLocalSessionInfo
       .setConfigurationToCurrentThread(sparkSession.sessionState.newHadoopConf())
-    FileUtils
-      .createDatabaseDirectory(databaseName, dbLocation, sparkSession.sparkContext)
+    if (!EnvHelper.isLuxor(sparkSession)) {
+      val databaseName = createDatabaseCommand.databaseName
+      val dbLocation = try {
+        CarbonEnv.getDatabaseLocation(databaseName, sparkSession)
+      } catch {
+        case _: NoSuchDatabaseException =>
+          CarbonProperties.getStorePath
+      }
+      FileUtils
+        .createDatabaseDirectory(databaseName, dbLocation, sparkSession.sparkContext)
+    }
     createDatabaseCommand
   }
 

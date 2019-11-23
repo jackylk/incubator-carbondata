@@ -19,11 +19,12 @@ package org.apache.carbondata.core.metadata;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class DatabaseLocationProviderTest {
 
-  @Test
+  @Ignore
   public void testCustomProvider() {
     System.setProperty(
         CarbonCommonConstants.DATABASE_LOCATION_PROVIDER,

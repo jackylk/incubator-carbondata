@@ -27,6 +27,9 @@ import org.apache.spark.sql.execution.strategy.CarbonPlanHelper
 import org.scalatest.BeforeAndAfterAll
 
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
+import org.apache.carbondata.core.constants.CarbonCommonConstants
+import org.apache.carbondata.core.metadata.DatabaseLocationProvider
+import org.apache.carbondata.core.util.CarbonProperties
 
 /**
   * Test Class for all data source
@@ -35,7 +38,18 @@ import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandExcepti
 class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
 
   override def beforeAll: Unit = {
-    dropTable
+    // TODO these properties only work when running in idea.
+    CarbonProperties.getInstance()
+        .addProperty(
+          CarbonCommonConstants.CARBON_DATAMAP_SCHEMA_STORAGE,
+          CarbonCommonConstants.CARBON_DATAMAP_SCHEMA_STORAGE_DATABASE
+        )
+    System.setProperty(
+      CarbonCommonConstants.DATABASE_LOCATION_PROVIDER,
+      "org.apache.carbondata.spark.testsuite.datasource.TestProvider")
+    dropAll
+    sql("create database alldatasource")
+    sql("use alldatasource")
     sql(
       s"""
          | create table origin_csv(col1 int, col2 string, col3 date)
@@ -47,7 +61,7 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
     sql("insert into origin_csv select 3, '1cc', to_date('2019-11-13')")
   }
 
-  def dropTable {
+  def dropAll {
     dropTableByName("ds_carbon")
     dropTableByName("ds_carbondata")
     dropTableByName("hive_carbon")
@@ -62,6 +76,7 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
     sql("drop table if exists tbl_update")
     sql("drop table if exists tbl_oldName")
     sql("drop table if exists tbl_newName")
+    sql("drop database if exists alldatasource cascade")
   }
 
   def dropTableByName(tableName: String) :Unit = {
@@ -73,7 +88,14 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
   }
 
   override def afterAll: Unit = {
-    dropTable
+    dropAll
+    CarbonProperties.getInstance()
+      .addProperty(
+        CarbonCommonConstants.CARBON_DATAMAP_SCHEMA_STORAGE,
+        CarbonCommonConstants.CARBON_DATAMAP_SCHEMA_STORAGE_DEFAULT
+      )
+    System.clearProperty(CarbonCommonConstants.DATABASE_LOCATION_PROVIDER)
+    sql("use default")
   }
 
   test("test carbon"){
@@ -244,7 +266,7 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
     sql(s"drop table if exists ${tableName}")
     sql(s"create table ${tableName}(col1 int, col2 string) using $provider partitioned by (col2)")
     checkLoading(s"${tableName}")
-    val carbonTable = CarbonEnv.getCarbonTable(Option("default"),tableName)(sqlContext.sparkSession)
+    val carbonTable = CarbonEnv.getCarbonTable(Option("alldatasource"),tableName)(sqlContext.sparkSession)
     assert(carbonTable.isHivePartitionTable)
     sql(s"describe formatted ${tableName}").show(100, false)
     sql(s"show partitions ${tableName}").show(100, false)
@@ -265,7 +287,7 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
     sql(s"create table ${tableName}(col1 int, col2 string) using $provider")
     checkLoading(tableName)
     val table1 = sqlContext.sparkSession.sessionState.catalog.getTableMetadata(
-      TableIdentifier(s"${tableName}",Option("default")))
+      TableIdentifier(s"${tableName}",Option("alldatasource")))
     assert(table1.tableType == CatalogTableType.MANAGED)
     sql(s"create table ${tableName}_ctas using $provider as select * from ${tableName}")
     checkAnswer(sql(s"select * from ${tableName}_ctas"),
@@ -274,7 +296,7 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
     checkAnswer(sql(s"select * from ${tableName}_ctas"),
       Seq(Row(123, "abc"), Row(123, "abc")))
     val table2 = sqlContext.sparkSession.sessionState.catalog.getTableMetadata(
-      TableIdentifier(s"${tableName}_ctas",Option("default")))
+      TableIdentifier(s"${tableName}_ctas",Option("alldatasource")))
     assert(table2.tableType == CatalogTableType.MANAGED)
   }
 
@@ -282,7 +304,7 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
     sql(s"create table ${tableName}(col1 int, col2 string) stored as $provider")
     checkLoading(tableName)
     val table1 = sqlContext.sparkSession.sessionState.catalog.getTableMetadata(
-      TableIdentifier(s"${tableName}",Option("default")))
+      TableIdentifier(s"${tableName}",Option("alldatasource")))
     assert(table1.tableType == CatalogTableType.MANAGED)
     sql(s"create table ${tableName}_ctas stored as $provider as select * from ${tableName}")
     checkAnswer(sql(s"select * from ${tableName}_ctas"),
@@ -291,7 +313,7 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
     checkAnswer(sql(s"select * from ${tableName}_ctas"),
       Seq(Row(123, "abc"), Row(123, "abc")))
     val table2 = sqlContext.sparkSession.sessionState.catalog.getTableMetadata(
-      TableIdentifier(s"${tableName}_ctas",Option("default")))
+      TableIdentifier(s"${tableName}_ctas",Option("alldatasource")))
     assert(table2.tableType == CatalogTableType.MANAGED)
   }
 
@@ -309,16 +331,16 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
 
     sql(s"create table ${tableName}_s using ${provider} as select * from origin_csv")
     val carbonTable =
-      CarbonEnv.getCarbonTable(Option("default"), s"${tableName}_s")(sqlContext.sparkSession)
+      CarbonEnv.getCarbonTable(Option("alldatasource"), s"${tableName}_s")(sqlContext.sparkSession)
     val tablePath = carbonTable.getTablePath
     sql(s"create table  ${tableName}_e using ${provider} location '${tablePath}'")
     checkAnswer(sql(s"select count(*) from ${tableName}_e"), Seq(Row(3)))
     val table2 = sqlContext.sparkSession.sessionState.catalog.getTableMetadata(
-      TableIdentifier(s"${tableName}_e",Option("default")))
+      TableIdentifier(s"${tableName}_e",Option("alldatasource")))
     assert(table2.tableType == CatalogTableType.EXTERNAL)
     sql(s"drop table if exists ${tableName}_e")
     assert(!CarbonPlanHelper.isCarbonTable(
-      TableIdentifier(s"${tableName}_e", Option("default")), sqlContext.sparkSession))
+      TableIdentifier(s"${tableName}_e", Option("alldatasource")), sqlContext.sparkSession))
     assert(new File(tablePath).exists())
   }
 
@@ -336,16 +358,16 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
 
     sql(s"create table ${tableName}_s stored as ${provider} as select * from origin_csv")
     val carbonTable =
-      CarbonEnv.getCarbonTable(Option("default"), s"${tableName}_s")(sqlContext.sparkSession)
+      CarbonEnv.getCarbonTable(Option("alldatasource"), s"${tableName}_s")(sqlContext.sparkSession)
     val tablePath = carbonTable.getTablePath
     sql(s"create table  ${tableName}_e stored as ${provider} location '${tablePath}'")
     checkAnswer(sql(s"select count(*) from ${tableName}_e"), Seq(Row(3)))
     val table2 = sqlContext.sparkSession.sessionState.catalog.getTableMetadata(
-      TableIdentifier(s"${tableName}_e",Option("default")))
+      TableIdentifier(s"${tableName}_e",Option("alldatasource")))
     assert(table2.tableType == CatalogTableType.EXTERNAL)
     sql(s"drop table if exists ${tableName}_e")
     assert(!CarbonPlanHelper.isCarbonTable(
-      TableIdentifier(s"${tableName}_e", Option("default")), sqlContext.sparkSession))
+      TableIdentifier(s"${tableName}_e", Option("alldatasource")), sqlContext.sparkSession))
     assert(new File(tablePath).exists())
   }
 
@@ -355,4 +377,10 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
       Seq(Row(123, "abc")))
   }
 
+}
+
+class TestProvider extends DatabaseLocationProvider {
+  override def provide(originalDatabaseName: String): String = {
+    return "projectid." + originalDatabaseName;
+  }
 }
