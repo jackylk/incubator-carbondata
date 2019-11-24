@@ -316,9 +316,11 @@ public final class CarbonUtil {
 
       @Override public Void run() throws Exception {
         for (int i = 0; i < file.length; i++) {
-          boolean delete = file[i].delete();
-          if (!delete) {
-            throw new IOException("Error while deleting file: " + file[i].getAbsolutePath());
+          if (file[i].exists()) {
+            boolean delete = file[i].delete();
+            if (!delete) {
+              throw new IOException("Error while deleting file: " + file[i].getAbsolutePath());
+            }
           }
         }
         return null;
@@ -332,9 +334,11 @@ public final class CarbonUtil {
 
       @Override public Void run() throws Exception {
         for (int i = 0; i < file.length; i++) {
-          boolean delete = file[i].delete();
-          if (!delete) {
-            LOGGER.warn("Unable to delete file: " + file[i].getCanonicalPath());
+          if (file[i].exists()) {
+            boolean delete = file[i].delete();
+            if (!delete) {
+              LOGGER.warn("Unable to delete file: " + file[i].getCanonicalPath());
+            }
           }
         }
         return null;

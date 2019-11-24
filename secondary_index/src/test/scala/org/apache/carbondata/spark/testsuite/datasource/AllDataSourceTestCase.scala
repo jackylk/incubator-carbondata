@@ -76,6 +76,9 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
     sql("drop table if exists tbl_update")
     sql("drop table if exists tbl_oldName")
     sql("drop table if exists tbl_newName")
+    sql("drop table if exists tbl_insert_p_nosort")
+    sql("drop table if exists tbl_insert_overwrite")
+    sql("drop table if exists tbl_insert_overwrite_p")
     sql("drop database if exists alldatasource cascade")
   }
 
@@ -263,7 +266,6 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
   }
 
   test("output size: insert into partition table") {
-
     val tableName = "tbl_insert_p_nosort"
     sql(s"drop table if exists $tableName")
     sql(
@@ -289,6 +291,83 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
     ).show(100, false)
 
     sql(s"select * from $tableName").show(100, false)
+  }
+
+  test("insert overwrite table") {
+    val tableName = "tbl_insert_overwrite"
+    sql(s"drop table if exists $tableName")
+    sql(
+      s"""
+         | create table $tableName (
+         | col1 int,
+         | col2 string
+         | )
+         | using carbondata
+       """.stripMargin)
+    sql(
+      s"""
+         | insert into $tableName
+         |  select 123,'abc'
+         |  """.stripMargin
+    ).show(100, false)
+    sql(
+      s"""
+         | insert overwrite table $tableName
+         |  select 321,'cba'
+         |  """.stripMargin
+    ).show(100, false)
+
+    checkAnswer(
+      sql(s"select * from $tableName"),
+      Seq(Row(321, "cba"))
+    )
+  }
+
+  test("insert overwrite partition table") {
+    val tableName = "tbl_insert_overwrite_p"
+    sql(s"drop table if exists $tableName")
+    sql(
+      s"""
+         | create table $tableName (
+         | col1 int,
+         | col2 string
+         | )
+         | using carbondata
+         | partitioned by (col2)
+       """.stripMargin)
+    sql(
+      s"""
+         | insert into $tableName
+         |  select 123,'abc'
+         |  """.stripMargin
+    ).show(100, false)
+    sql(
+      s"""
+         | insert into $tableName (
+         |  select 234,'abc'
+         |  union all
+         |  select 789, 'edf'
+         |  )""".stripMargin
+    ).show(100, false)
+    sql(
+      s"""
+         | insert into $tableName
+         |  select 345,'cba'
+         |  """.stripMargin
+    ).show(100, false)
+    sql(
+      s"""
+         | insert overwrite table $tableName
+         |  select 321,'abc'
+         |  """.stripMargin
+    ).show(100, false)
+
+    sql(s"clean files for table $tableName").show(100, false)
+
+    checkAnswer(
+      sql(s"select * from $tableName order by col1"),
+      Seq(Row(321, "abc"), Row(345, "cba"), Row(789, "edf"))
+    )
   }
 
   def createDataSourcePartitionTable(provider: String, tableName: String): Unit = {
