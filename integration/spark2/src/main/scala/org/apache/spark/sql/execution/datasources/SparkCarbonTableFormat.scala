@@ -419,6 +419,7 @@ private class CarbonOutputWriter(path: String,
 
   override def close(): Unit = {
     recordWriter.close(context)
+    ThreadLocalSessionInfo.setConfigurationToCurrentThread(context.getConfiguration)
     // write partition info to new file.
     val partitionList = new util.ArrayList[String]()
     val formattedPartitions =
