@@ -44,8 +44,7 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
           CarbonCommonConstants.CARBON_DATAMAP_SCHEMA_STORAGE,
           CarbonCommonConstants.CARBON_DATAMAP_SCHEMA_STORAGE_DATABASE
         )
-    System.setProperty(
-      CarbonCommonConstants.DATABASE_LOCATION_PROVIDER,
+    CarbonProperties.getInstance().addProperty(CarbonCommonConstants.DATABASE_LOCATION_PROVIDER,
       "org.apache.carbondata.spark.testsuite.datasource.TestProvider")
     dropAll
     sql("create database alldatasource")
@@ -97,7 +96,7 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
         CarbonCommonConstants.CARBON_DATAMAP_SCHEMA_STORAGE,
         CarbonCommonConstants.CARBON_DATAMAP_SCHEMA_STORAGE_DEFAULT
       )
-    System.clearProperty(CarbonCommonConstants.DATABASE_LOCATION_PROVIDER)
+    CarbonProperties.getInstance().removeProperty(CarbonCommonConstants.DATABASE_LOCATION_PROVIDER)
     sql("use default")
   }
 

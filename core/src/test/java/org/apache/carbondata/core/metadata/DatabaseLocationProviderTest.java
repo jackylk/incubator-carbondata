@@ -17,6 +17,7 @@
 package org.apache.carbondata.core.metadata;
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
+import org.apache.carbondata.core.util.CarbonProperties;
 
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -26,11 +27,10 @@ public class DatabaseLocationProviderTest {
 
   @Ignore
   public void testCustomProvider() {
-    System.setProperty(
-        CarbonCommonConstants.DATABASE_LOCATION_PROVIDER,
-        "org.apache.carbondata.core.metadata.DatabaseLocationProviderTest$TestProvider"
-    );
+    CarbonProperties.getInstance().addProperty(CarbonCommonConstants.DATABASE_LOCATION_PROVIDER,
+        "org.apache.carbondata.core.metadata.DatabaseLocationProviderTest$TestProvider");
     Assert.assertEquals("test", DatabaseLocationProvider.get().provide("databaseName"));
+    CarbonProperties.getInstance().removeProperty(CarbonCommonConstants.DATABASE_LOCATION_PROVIDER);
   }
 
   public static final class TestProvider extends DatabaseLocationProvider {

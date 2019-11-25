@@ -17,13 +17,15 @@
 package org.apache.carbondata.core.metadata;
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
+import org.apache.carbondata.core.util.CarbonProperties;
 
 public abstract class DatabaseLocationProvider {
 
   private static final DatabaseLocationProvider PROVIDER;
 
   static {
-    final String providerClassName = System.getProperty(CarbonCommonConstants.DATABASE_LOCATION_PROVIDER);
+    final String providerClassName =
+        CarbonProperties.getInstance().getProperty(CarbonCommonConstants.DATABASE_LOCATION_PROVIDER);
     final DatabaseLocationProvider provider;
     if (providerClassName == null) {
       provider = null;
