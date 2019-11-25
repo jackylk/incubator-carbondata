@@ -327,8 +327,8 @@ public final class CarbonLoaderUtil {
                 // For insert overwrite, we will delete the old segment folder immediately
                 // So collect the old segments here
                 addToStaleFolders(identifier, staleFolders, entry);
+                staleLoadMetadataDetails.add(entry);
               }
-              staleLoadMetadataDetails.add(entry);
             }
           }
           if (!found) {
@@ -376,7 +376,8 @@ public final class CarbonLoaderUtil {
         }
         if (!staleLoadMetadataDetails.isEmpty()) {
           final String segmentFileLocation
-              = CarbonTablePath.getSegmentFilesLocation(identifier.getTablePath());
+              = CarbonTablePath.getSegmentFilesLocation(identifier.getTablePath())
+              + CarbonCommonConstants.FILE_SEPARATOR;
           final String segmentLockFileLocation
               = CarbonTablePath.getLockFilesDirPath(identifier.getTablePath())
               + CarbonCommonConstants.FILE_SEPARATOR;
