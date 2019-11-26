@@ -311,6 +311,8 @@ public class CarbonLoadModelBuilder {
     validateAndSetBinaryDecoder(carbonLoadModel);
 
     validateRangeColumn(optionsFinal, carbonLoadModel);
+
+    carbonLoadModel.initLoadStats();
   }
 
   private void validateRangeColumn(Map<String, String> optionsFinal,

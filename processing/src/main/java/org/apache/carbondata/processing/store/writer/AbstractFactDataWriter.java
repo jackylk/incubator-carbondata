@@ -52,6 +52,7 @@ import org.apache.carbondata.format.BlockIndex;
 import org.apache.carbondata.format.BlockletInfo3;
 import org.apache.carbondata.format.IndexHeader;
 import org.apache.carbondata.processing.datamap.DataMapWriterListener;
+import org.apache.carbondata.core.stats.LoadStats;
 import org.apache.carbondata.processing.store.CarbonFactDataHandlerModel;
 
 import static org.apache.carbondata.core.constants.SortScopeOptions.SortScope.NO_SORT;
@@ -154,6 +155,8 @@ public abstract class AbstractFactDataWriter implements CarbonFactDataWriter {
 
   protected ExecutorService fallbackExecutorService;
 
+  protected LoadStats loadStats;
+
   public AbstractFactDataWriter(CarbonFactDataHandlerModel model) {
     this.model = model;
     blockIndexInfoList = new ArrayList<>();
@@ -212,6 +215,7 @@ public abstract class AbstractFactDataWriter implements CarbonFactDataWriter {
           "FallbackPool:" + model.getTableName() + ", range: " + model.getBucketId(),
               true));
     }
+    this.loadStats = this.model.getLoadStats();
   }
 
   /**
@@ -441,6 +445,10 @@ public abstract class AbstractFactDataWriter implements CarbonFactDataWriter {
       writer.writeThrift(blockIndex);
     }
     writer.close();
+    if (loadStats != null) {
+      loadStats.addOutputBytes(FileFactory.getCarbonFile(indexFileName).getSize());
+      loadStats.addFiles(1);
+    }
     if (!enableDirectlyWriteDataToStorePath) {
       CarbonUtil
           .copyCarbonDataFileToCarbonStorePath(indexFileName, model.getCarbonDataDirectoryPath(),

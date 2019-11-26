@@ -329,6 +329,7 @@ public final class DataLoadProcessBuilder {
     configuration.setNumberOfLoadingCores(CarbonProperties.getInstance().getNumberOfLoadingCores());
 
     configuration.setColumnCompressor(loadModel.getColumnCompressor());
+    configuration.setLoadStats(loadModel.getLoadStats());
     return configuration;
   }
 

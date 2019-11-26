@@ -28,6 +28,7 @@ import org.apache.carbondata.core.datamap.Segment;
 import org.apache.carbondata.core.dictionary.service.DictionaryServiceProvider;
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonColumn;
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonDimension;
+import org.apache.carbondata.core.stats.LoadStats;
 import org.apache.carbondata.core.statusmanager.LoadMetadataDetails;
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager;
 import org.apache.carbondata.core.statusmanager.SegmentUpdateStatusManager;
@@ -254,6 +255,8 @@ public class CarbonLoadModel implements Serializable {
    * input size = max(bockletSize, (blockSize - blocketSize)) * scaleFactor
    */
   private int scaleFactor;
+
+  private LoadStats loadStats;
 
   public boolean isAggLoadRequest() {
     return isAggLoadRequest;
@@ -497,6 +500,7 @@ public class CarbonLoadModel implements Serializable {
     copy.rangePartitionColumn = rangePartitionColumn;
     copy.scaleFactor = scaleFactor;
     copy.totalSize = totalSize;
+    copy.loadStats = loadStats;
     return copy;
   }
 
@@ -557,6 +561,7 @@ public class CarbonLoadModel implements Serializable {
     copyObj.rangePartitionColumn = rangePartitionColumn;
     copyObj.scaleFactor = scaleFactor;
     copyObj.totalSize = totalSize;
+    copyObj.loadStats = loadStats;
     return copyObj;
   }
 
@@ -997,5 +1002,17 @@ public class CarbonLoadModel implements Serializable {
 
   public int getScaleFactor() {
     return scaleFactor;
+  }
+
+  public LoadStats getLoadStats() {
+    return loadStats;
+  }
+
+  public void setLoadStats(LoadStats loadStats) {
+    this.loadStats = loadStats;
+  }
+
+  public void initLoadStats() {
+    this.loadStats = new LoadStats();
   }
 }

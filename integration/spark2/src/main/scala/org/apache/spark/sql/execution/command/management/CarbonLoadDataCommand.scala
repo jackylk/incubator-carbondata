@@ -1021,9 +1021,9 @@ case class CarbonLoadDataCommand(
       model.getCarbonDataLoadSchema.getCarbonTable.getTableInfo.getFactTable.getPartitionInfo
     info.setColumnSchemaList(new util.ArrayList[ColumnSchema](info.getColumnSchemaList))
     val modelBroadcast = sc.broadcast(model)
-    val partialSuccessAccum = sc.accumulator(0, "Partial Success Accumulator")
+    val partialSuccessAccum = sc.longAccumulator("Partial Success Accumulator")
 
-    val inputStepRowCounter = sc.accumulator(0, "Input Processor Accumulator")
+    val inputStepRowCounter = sc.longAccumulator("Input Processor Accumulator")
     // 1. Input
     val convertRDD =
       if (isDataFrame) {

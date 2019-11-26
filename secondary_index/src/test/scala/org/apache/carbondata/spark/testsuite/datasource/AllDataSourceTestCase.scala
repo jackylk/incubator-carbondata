@@ -78,6 +78,12 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
     sql("drop table if exists tbl_insert_p_nosort")
     sql("drop table if exists tbl_insert_overwrite")
     sql("drop table if exists tbl_insert_overwrite_p")
+    sql("drop table if exists tbl_metrics_ns")
+    sql("drop table if exists tbl_metrics_ls")
+    sql("drop table if exists tbl_metrics_gs")
+    sql("drop table if exists tbl_metrics_p_ns")
+    sql("drop table if exists tbl_metrics_p_ls")
+    sql("drop table if exists tbl_metrics_p_gs")
     sql("drop database if exists alldatasource cascade")
   }
 
@@ -265,7 +271,15 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
   }
 
   test("output size: insert into partition table") {
-    val tableName = "tbl_insert_p_nosort"
+    verifyMetrics("tbl_metrics_ns", "no_sort")
+    verifyMetrics("tbl_metrics_ls", "local_sort")
+    verifyMetrics("tbl_metrics_gs", "global_sort")
+    verifyMetricsForPartitionTable("tbl_metrics_p_ns", "no_sort")
+    verifyMetricsForPartitionTable("tbl_metrics_p_ls", "local_sort")
+    verifyMetricsForPartitionTable("tbl_metrics_p_gs", "global_sort")
+  }
+
+  def verifyMetrics(tableName: String, sort_scope: String): Unit = {
     sql(s"drop table if exists $tableName")
     sql(
       s"""
@@ -278,18 +292,44 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
          | )
          | using carbondata
          | options('dateFormat'='yyyy-MM-dd', 'timestampFormat'='yyyy-MM-dd HH:mm:ss',
-         | 'sort_scope'='local_sort', 'sort_columns'='col2')
+         | 'sort_scope'='${sort_scope}', 'sort_columns'='col2')
        """.stripMargin)
     sql(
       s"""
          | insert into $tableName (
          |  select col1, col2, col3, to_timestamp('2019-02-02 13:01:01'), 1.2 from origin_csv
          |  union all
-         |  select 123,'abc',  to_date('2019-01-01'), to_timestamp('2019-02-02 13:01:01'), 1.2)
+         |  select 123,'abc', to_date('2019-01-01'), to_timestamp('2019-02-02 13:01:01'), 1.2)
          |  """.stripMargin
-    ).show(100, false)
+    )
+    checkAnswer(sql(s"select count(*) from $tableName"), Seq(Row(4)))
+  }
 
-    sql(s"select * from $tableName").show(100, false)
+  def verifyMetricsForPartitionTable(tableName: String, sort_scope: String): Unit = {
+    sql(s"drop table if exists $tableName")
+    sql(
+      s"""
+         | create table $tableName (
+         | col1 int,
+         | col2 string,
+         | col3 date,
+         | col4 timestamp,
+         | col5 float
+         | )
+         | using carbondata
+         | options('dateFormat'='yyyy-MM-dd', 'timestampFormat'='yyyy-MM-dd HH:mm:ss',
+         | 'sort_scope'='${sort_scope}', 'sort_columns'='col2')
+         | partitioned by(col3, col4)
+       """.stripMargin)
+    sql(
+      s"""
+         | insert into $tableName (
+         |  select col1, col2, 1.2, col3, to_timestamp('2019-02-02 13:01:01') from origin_csv
+         |  union all
+         |  select 123,'abc', 1.2, to_date('2019-01-01'), to_timestamp('2019-02-02 13:01:01'))
+         |  """.stripMargin
+    )
+    checkAnswer(sql(s"select count(*) from $tableName"), Seq(Row(4)))
   }
 
   test("insert overwrite table") {
