@@ -17,8 +17,6 @@
 
 package org.apache.spark.rdd
 
-import java.util
-
 import scala.collection.JavaConverters._
 
 import org.apache.spark.{Partition, TaskContext}
@@ -72,22 +70,13 @@ object CarbonMergeFilesRDD {
       mergeIndexProperty: Boolean,
       readFileFooterFromCarbonDataFile: Boolean = false): Unit = {
     if (mergeIndexProperty) {
-      val mergeFilesRDD = new CarbonMergeFilesRDD(
+      new CarbonMergeFilesRDD(
         sparkSession,
         carbonTable,
         segmentIds,
         segmentFileNameToSegmentIdMap,
         carbonTable.isHivePartitionTable,
-        readFileFooterFromCarbonDataFile)
-      if (segmentIds.size == 1) {
-        // Sync
-        mergeFilesRDD.internalGetPartitions.foreach(
-          partition => mergeFilesRDD.internalCompute(partition, null)
-        )
-      } else {
-        // Async, distribute.
-        mergeFilesRDD.collect()
-      }
+        readFileFooterFromCarbonDataFile).collect()
     } else {
       try {
         if (isPropertySet(CarbonCommonConstants.CARBON_MERGE_INDEX_IN_SEGMENT,
@@ -99,14 +88,14 @@ object CarbonMergeFilesRDD {
             segmentFileNameToSegmentIdMap,
             carbonTable.isHivePartitionTable,
             readFileFooterFromCarbonDataFile)
-          if (segmentIds.size == 1) {
+          if (carbonTable.isHivePartitionTable || segmentIds.size > 1) {
+            // Async, distribute.
+            mergeFilesRDD.collect()
+          } else {
             // Sync
             mergeFilesRDD.internalGetPartitions.foreach(
               partition => mergeFilesRDD.internalCompute(partition, null)
             )
-          } else {
-	    // Async, distribute.
-            mergeFilesRDD.collect()
           }
         }
       } catch {
