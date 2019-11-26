@@ -84,6 +84,7 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
     sql("drop table if exists tbl_metrics_p_ns")
     sql("drop table if exists tbl_metrics_p_ls")
     sql("drop table if exists tbl_metrics_p_gs")
+    sql("drop table if exists ds_sct")
     sql("drop database if exists alldatasource cascade")
   }
 
@@ -205,6 +206,135 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
         Row(1, "3aa", java.sql.Date.valueOf("2019-11-11"))
       )
     )
+  }
+
+  test("test show create table") {
+    val tableName = "ds_sct"
+    sql(s"drop table if exists ${ tableName }")
+    sql(
+      s"""
+         | create table ${ tableName }
+         | using carbondata
+         | as select * from origin_csv
+         | """.stripMargin)
+    sql(s"show create table $tableName").show(100, false)
+    checkAnswer(sql(s"show create table $tableName"),
+      Seq(Row(
+        """CREATE TABLE `ds_sct` (`col1` INT, `col2` STRING, `col3` DATE)
+          |USING carbondata
+          |OPTIONS (
+          |  `bad_record_path` '',
+          |  `local_dictionary_enable` 'true',
+          |  `sort_columns` '',
+          |  `comment` ''
+          |)
+          |""".stripMargin)))
+
+    sql(s"drop table if exists ${ tableName }")
+    sql(
+      s"""
+         | create table ${ tableName }
+         | using carbondata
+         | options("global_sort_partitions"="1")
+         | as select * from origin_csv
+         | """.stripMargin)
+    sql(s"show create table $tableName").show(100, false)
+    checkAnswer(sql(s"show create table $tableName"),
+      Seq(Row(
+        """CREATE TABLE `ds_sct` (`col1` INT, `col2` STRING, `col3` DATE)
+          |USING carbondata
+          |OPTIONS (
+          |  `bad_record_path` '',
+          |  `local_dictionary_enable` 'true',
+          |  `sort_columns` '',
+          |  `comment` '',
+          |  `global_sort_partitions` '1'
+          |)
+          |""".stripMargin)))
+
+    sql(s"drop table if exists ${tableName}")
+    sql(
+      s"""
+         |create table ${ tableName } (
+         | col1 int, col2 string, col3 date
+         |)
+         | using carbondata
+         | """.stripMargin)
+    checkAnswer(sql(s"show create table $tableName"),
+      Seq(Row("""CREATE TABLE `ds_sct` (`col1` INT, `col2` STRING, `col3` DATE)
+                |USING carbondata
+                |""".stripMargin)))
+
+    sql(s"drop table if exists ${tableName}")
+    sql(
+      s"""
+         |create table ${ tableName } (
+         | col1 int, col2 string, col3 date
+         |)
+         | using carbondata
+         | options("global_sort_partitions"="1")
+         | """.stripMargin)
+    checkAnswer(sql(s"show create table $tableName"),
+      Seq(Row("""CREATE TABLE `ds_sct` (`col1` INT, `col2` STRING, `col3` DATE)
+                |USING carbondata
+                |OPTIONS (
+                |  `global_sort_partitions` '1'
+                |)
+                |""".stripMargin)))
+
+    sql(s"drop table if exists ${tableName}")
+    sql(
+      s"""
+         |create table ${ tableName } (
+         | col1 int, col2 string, col3 date
+         |)
+         | using carbondata
+         | options("sort_scope"="global_sort", "sort_columns"="col2")
+         | """.stripMargin)
+    checkAnswer(sql(s"show create table $tableName"),
+      Seq(Row("""CREATE TABLE `ds_sct` (`col1` INT, `col2` STRING, `col3` DATE)
+                |USING carbondata
+                |OPTIONS (
+                |  `sort_scope` 'global_sort',
+                |  `sort_columns` 'col2'
+                |)
+                |""".stripMargin)))
+
+    sql(s"drop table if exists ${tableName}")
+    sql(
+      s"""
+         |create table ${ tableName } (
+         | col1 int, col2 string, col3 date
+         |)
+         | using carbondata
+         | partitioned by (col2)
+         | """.stripMargin)
+    checkAnswer(sql(s"show create table $tableName"),
+      Seq(Row("""CREATE TABLE `ds_sct` (`col1` INT, `col3` DATE, `col2` STRING)
+                |USING carbondata
+                |PARTITIONED BY (col2)
+                |""".stripMargin)))
+
+    sql(s"drop table if exists ${tableName}")
+    sql(
+      s"""
+         |create table ${ tableName } (
+         | col1 int, col2 string, col3 date
+         |)
+         | using carbondata
+         | options("sort_scope"="global_sort", "sort_columns"="col2")
+         | partitioned by (col3)
+         | """.stripMargin)
+    sql(s"show create table $tableName").show(100, false)
+    checkAnswer(sql(s"show create table $tableName"),
+      Seq(Row("""CREATE TABLE `ds_sct` (`col1` INT, `col2` STRING, `col3` DATE)
+                |USING carbondata
+                |OPTIONS (
+                |  `sort_scope` 'global_sort',
+                |  `sort_columns` 'col2'
+                |)
+                |PARTITIONED BY (col3)
+                |""".stripMargin)))
   }
 
   test("test external table") {
