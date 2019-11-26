@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.execution.command.table
 
+import org.apache.spark.sql.{CarbonEnv, Row, SparkSession}
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
-import org.apache.spark.sql.{CarbonEnv, EnvHelper, Row, SparkSession}
 import org.apache.spark.sql.execution.command.{MetadataCommand, ShowCreateTableCommand}
 import org.apache.spark.sql.hive.CarbonRelation
 import org.apache.spark.sql.types.StringType
@@ -49,35 +49,71 @@ case class CarbonShowCreateTableCommand(
       LOGGER.error(s"Show create table failed. table not found: $dbName.$child.tableName.table")
       throw new NoSuchTableException(dbName, child.table.table)
     }
-    if (!EnvHelper.isPrivacy(sparkSession, relation.carbonTable.isExternalTable)) {
-      child.run(sparkSession)
-    } else {
-      var inOptions = false
-      val createSql = child
-        .run(sparkSession)
-        .head
-        .getString(0)
-        .split("\n", -1)
-        .map { row =>
-          if (inOptions) {
-            if (row.startsWith("  `tablepath`") || row.startsWith("  `tablePath`")) {
-              null
-            } else {
-              if (row.equals(")")) {
-                inOptions = false
-              }
-              row
-            }
+
+    val originSql = child
+      .run(sparkSession)
+      .head
+      .getString(0)
+    val rows = originSql
+      .split("\n", -1)
+
+    var inOptions = false
+    val indexs = rows
+      .zipWithIndex
+      .map { case (row, index) =>
+        if (inOptions) {
+          if (row.equals(")")) {
+            inOptions = false
+            index
           } else {
-            if (row.equals("OPTIONS (")) {
-              inOptions = true
-            }
-            row
+            -1
+          }
+        } else {
+          if (row.equals("OPTIONS (")) {
+            inOptions = true
+            index
+          } else {
+            -1
           }
         }
-        .filter(_ != null)
-        .mkString("\n")
-      Seq(Row(createSql))
+      }
+      .filter(_ != -1)
+    if (indexs.length == 2) {
+      val part1 = rows.take(indexs(0))
+      val part3 = if (indexs(1) < rows.length - 1) {
+        rows.takeRight(rows.length - 1 - indexs(1))
+      } else {
+        Array.empty[String]
+      }
+      val part2 = rows
+        .slice(indexs(0), indexs(1) + 1)
+        .filterNot(isInvisible(_))
+      val allParts = if (part2.length == 2) {
+        part1 ++ part3
+      } else {
+        val lastOption = part2(part2.length -2)
+        if (lastOption.endsWith(",")) {
+          part2(part2.length -2) = lastOption.substring(0, lastOption.length - 1 )
+        }
+        part1 ++ part2 ++ part3
+      }
+      Seq(Row(allParts.mkString("\n")))
+    } else {
+      Seq(Row(originSql))
     }
   }
+
+  private val startKeyWords =
+    Seq("`tablepath`", "`carbonschema", "`dbname`", "`tablename`", "`serialization.format`",
+    "`isexternal`", "`isvisible`", "`istransactional`")
+
+  private def isInvisible(row: String): Boolean = {
+    if (row != null) {
+      val tmpRow = row.trim.toLowerCase
+      startKeyWords.exists(tmpRow.startsWith(_))
+    } else {
+      false
+    }
+  }
+
 }
