@@ -50,7 +50,8 @@ object CarbonStore {
       limit: Option[String],
       tablePath: String,
       showHistory: Boolean,
-      extended: Boolean): Seq[Row] = {
+      extended: Boolean,
+      isPrivacy: Boolean = false): Seq[Row] = {
     val metaFolder = CarbonTablePath.getMetadataPath(tablePath)
     val loadMetadataDetailsArray = if (showHistory) {
       SegmentStatusManager.readLoadMetadata(metaFolder) ++
@@ -120,7 +121,10 @@ object CarbonStore {
               if (load.getIndexSize == null) -1L else load.getIndexSize.toLong)
           }
 
-          val segmentLocation = CarbonTablePath.getSegmentPath(tablePath, load)
+          val segmentLocation = isPrivacy match {
+            case true => ""
+            case false => CarbonTablePath.getSegmentPath(tablePath, load)
+          }
 
           var values = ArrayBuffer(
             load.getLoadName,
