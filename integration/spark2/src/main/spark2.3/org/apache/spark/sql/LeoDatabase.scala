@@ -444,7 +444,7 @@ object LeoDatabase {
       //               Data Management                //
       //////////////////////////////////////////////////
 
-      case cmd@CarbonCleanFilesCommand(databaseNameOp, _, _, _) =>
+      case cmd@CarbonCleanFilesCommand(databaseNameOp, _, _, _, _) =>
         requireDBNameNonEmpty(databaseNameOp) match {
           case Some(msg) => return (None, msg)
           case None =>
