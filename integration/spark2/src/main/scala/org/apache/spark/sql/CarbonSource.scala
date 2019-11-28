@@ -47,7 +47,7 @@ import org.apache.carbondata.core.metadata.schema.table.TableInfo
 import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
 import org.apache.carbondata.hadoop.util.CarbonInputFormatUtil
 import org.apache.carbondata.spark.CarbonOption
-import org.apache.carbondata.spark.util.CarbonScalaUtil
+import org.apache.carbondata.spark.util.{CarbonScalaUtil, CarbonSparkUtil}
 import org.apache.carbondata.streaming.{CarbonStreamException, CarbonStreamingQueryListener, StreamSinkFactory}
 
 /**
@@ -333,18 +333,11 @@ object CarbonSource {
       // updating params
       val updatedFormat = CarbonToSparkAdapter
         .getUpdatedStorageFormat(storageFormat, map, tablePath)
-      val updatedSchema = tableDesc
-        .schema
-        .fields
-        .map { field =>
-          field.dataType match {
-            case _ :FloatType  =>
-              field.copy(name = field.name.toLowerCase, dataType = DataTypes.DoubleType)
-            case _ => field.copy(name = field.name.toLowerCase)
-          }
-        }
-      tableDesc.copy(storage = updatedFormat, schema = StructType(updatedSchema),
-        partitionColumnNames = tableDesc.partitionColumnNames.map(_.toLowerCase))
+      tableDesc.copy(
+        storage = updatedFormat,
+        schema = CarbonSparkUtil.updateStruct(tableDesc.schema),
+        partitionColumnNames = tableDesc.partitionColumnNames.map(_.toLowerCase)
+      )
     } else {
       val tableInfo = CarbonUtil.convertGsonToTableInfo(properties.asJava)
       val isTransactionalTable = properties.getOrElse("isTransactional", "true").contains("true")
