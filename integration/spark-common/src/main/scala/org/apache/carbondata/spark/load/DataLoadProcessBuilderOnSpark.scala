@@ -19,13 +19,17 @@ package org.apache.carbondata.spark.load
 
 import java.util.Comparator
 
+import scala.collection.JavaConverters._
+
 import org.apache.hadoop.conf.Configuration
-import org.apache.spark.{Accumulator, DataSkewRangePartitioner, TaskContext}
+import org.apache.hadoop.mapreduce.InputSplit
+import org.apache.spark.{Accumulator, CarbonInputMetrics, DataSkewRangePartitioner, TaskContext}
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{DataFrame, Row, SparkSession}
+import org.apache.spark.sql.catalyst.expressions.GenericRow
 import org.apache.spark.sql.execution.command.ExecutionErrors
-import org.apache.spark.sql.util.SparkSQLUtil
+import org.apache.spark.sql.util.{SparkSQLUtil, SparkTypeConverter}
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.unsafe.types.UTF8String
 
@@ -38,12 +42,15 @@ import org.apache.carbondata.core.metadata.schema.table.column.{CarbonColumn, Ca
 import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatus}
 import org.apache.carbondata.core.util._
 import org.apache.carbondata.core.util.ByteUtil.UnsafeComparer
+import org.apache.carbondata.hadoop.CarbonProjection
 import org.apache.carbondata.processing.loading.{CarbonDataLoadConfiguration, DataField, DataLoadProcessBuilder, FailureCauses}
 import org.apache.carbondata.processing.loading.csvinput.CSVInputFormat
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 import org.apache.carbondata.processing.sort.sortdata.{NewRowComparator, NewRowComparatorForNormalDims, SortParameters}
 import org.apache.carbondata.processing.util.CarbonDataProcessorUtil
+import org.apache.carbondata.spark.rdd.CarbonScanRDD
 import org.apache.carbondata.spark.util.CommonUtil
+import org.apache.carbondata.store.CarbonRowReadSupport
 
 /**
  * Use sortBy operator in spark to load the data
@@ -368,6 +375,37 @@ object DataLoadProcessBuilderOnSpark {
     val carbonTaskInfo = new CarbonTaskInfo
     carbonTaskInfo.setTaskId(CarbonUtil.generateUUID())
     ThreadLocalTaskInfo.setCarbonTaskInfo(carbonTaskInfo)
+  }
+
+  /**
+   * create DataFrame basing on specified splits
+   */
+  def createInputDataFrame(
+      sparkSession: SparkSession,
+      carbonTable: CarbonTable,
+      splits: Seq[InputSplit]
+  ): DataFrame = {
+    val columns = carbonTable.getCreateOrderColumn(carbonTable.getTableName)
+      .asScala
+      .map(_.getColName)
+      .toArray
+    val schema = SparkTypeConverter.createSparkSchema(carbonTable, columns)
+    val rdd: RDD[Row] = new CarbonScanRDD[CarbonRow](
+      sparkSession,
+      columnProjection = new CarbonProjection(columns),
+      null,
+      carbonTable.getAbsoluteTableIdentifier,
+      carbonTable.getTableInfo.serialize,
+      carbonTable.getTableInfo,
+      new CarbonInputMetrics,
+      null,
+      null,
+      classOf[CarbonRowReadSupport],
+      splits.asJava)
+      .map { row =>
+        new GenericRow(row.getData.asInstanceOf[Array[Any]])
+      }
+    sparkSession.createDataFrame(rdd, schema)
   }
 }
 

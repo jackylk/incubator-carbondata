@@ -27,12 +27,12 @@ class TestCarbonWriter extends QueryTest {
     ).collect()
 
     try {
-      val rootPath = System.getProperty("user.dir") + "\\target\\test-classes"
+      val rootPath = System.getProperty("user.dir") + "/target/test-classes"
 
-      val dataTempPath = rootPath + "\\data\\temp\\"
-      val dataPath = rootPath + "\\data\\"
+      val dataTempPath = rootPath + "/data/temp/"
+      val dataPath = rootPath + "/data/"
 
-      val tablePath = storeLocation + "\\" + tableName + "\\"
+      val tablePath = storeLocation + "/" + tableName + "/"
 
       val writerProperties = newWriterProperties(dataTempPath, dataPath, storeLocation)
       val carbonProperties = newCarbonProperties(storeLocation)
@@ -46,13 +46,12 @@ class TestCarbonWriter extends QueryTest {
       val source = new TestSource(dataCount) {
         @throws[InterruptedException]
         override def get(index: Int): String = {
-          Thread.sleep(1L)
           "{\"stringField\": \"test" + index + "\", \"intField\": " + index + ", \"shortField\": 12345}"
         }
 
         @throws[InterruptedException]
         override def onFinish(): Unit = {
-          Thread.sleep(10000L)
+          Thread.sleep(5000L)
         }
       }
       val stream = environment.addSource(source)
@@ -78,6 +77,8 @@ class TestCarbonWriter extends QueryTest {
       checkAnswer(sql(s"select count(1) from $tableName"), Seq(Row(0)))
 
       sql(s"alter table $tableName collect segments").collect()
+
+      sql(s"show segments for table $tableName").show(false)
 
       checkAnswer(sql(s"select count(1) from $tableName"), Seq(Row(dataCount)))
     } finally {

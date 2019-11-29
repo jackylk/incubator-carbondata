@@ -19,16 +19,18 @@ package org.apache.spark.sql.execution.command.management
 
 import java.io.IOException
 import java.util
-import java.util.concurrent.{Executors, ExecutorService}
 import java.util.Collections
+import java.util.concurrent.{Executors, ExecutorService}
 
 import scala.collection.JavaConverters._
 
 import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.IOUtils
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{CarbonEnv, Row, SparkSession}
 import org.apache.spark.sql.execution.command.{Checker, MetadataCommand}
+import org.apache.spark.sql.util.SparkSQLUtil
 
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.common.logging.LogServiceFactory
@@ -37,10 +39,17 @@ import org.apache.carbondata.core.datastore.filesystem.CarbonFile
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.exception.ConcurrentOperationException
 import org.apache.carbondata.core.locks.{CarbonLockFactory, CarbonLockUtil, ICarbonLock}
+import org.apache.carbondata.core.metadata.SegmentFileStore
+import org.apache.carbondata.core.metadata.datatype.{StructField, StructType}
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
-import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatusManager}
-import org.apache.carbondata.core.util.CarbonUtil
+import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatusManager, StageInput}
+import org.apache.carbondata.core.util.{CarbonUtil, DataFileFooterConverterV3}
 import org.apache.carbondata.core.util.path.CarbonTablePath
+import org.apache.carbondata.hadoop.api.CarbonTableOutputFormat
+import org.apache.carbondata.processing.loading.constants.DataLoadProcessorConstants
+import org.apache.carbondata.processing.loading.model.CarbonLoadModel
+import org.apache.carbondata.processing.util.TableOptionConstant
+import org.apache.carbondata.spark.load.DataLoadProcessBuilderOnSpark
 
 /**
  * collect loads from load_details folder
@@ -76,7 +85,6 @@ case class CarbonCollectLoadsCommand(
     if (!backupFolder.exists()) {
       backupFolder.mkdirs(loadDetailsHistoryDir)
     }
-    var needRecovery = false
     try {
       val loadDetailsDir = CarbonTablePath.getLoadDetailsDir(tablePath)
       val detailFiles = listLoadDetails(loadDetailsDir, hadoopConf)
@@ -88,27 +96,128 @@ case class CarbonCollectLoadsCommand(
         val detailList = Collections.synchronizedList(new util.ArrayList[LoadMetadataDetails]())
         // 1.read load_details dir
         readLoadDetailDir(executorService, detailFiles, detailList)
-        // 2.backup load_details dir to load_details_history dir
-        backupLoadDetailDir(executorService, loadDetailsHistoryDir, detailFiles)
-        // 3.update tablestatus
-        updateTableStatus(carbonTable, tablePath, detailList)
-        needRecovery = true
-        // 4.delete load_detals dir
+
+        // 2. read all segment files and index files to get location of data files
+        //    then create stage input
+        val stageInputs = getStageInputs(carbonTable, executorService, detailList, hadoopConf)
+
+        // 3. perform data loading
+        startLoading(sparkSession, carbonTable, stageInputs)
+
+        // 4. delete load_detals dir
         deleteLoadDetailDir(executorService, detailFiles)
       }
       LOGGER.info("finished to collect segments, timestamp: " + timestamp)
       Seq.empty
     } catch {
-      case ex =>
-        LOGGER.error("failed to collect segments, timestamp:" + timestamp)
-        if (needRecovery) {
-          // TODO
-          LOGGER.error("need to recovery collect segments operation, timestamp: " + timestamp)
-        }
+      case ex: Throwable =>
+        LOGGER.error("failed to collect segments, timestamp:" + timestamp, ex)
         throw ex
     } finally {
       lock.unlock()
     }
+  }
+
+  private def getStageInputs(
+      table: CarbonTable,
+      executorService: ExecutorService,
+      detailList: util.List[LoadMetadataDetails],
+      conf: Configuration): Seq[StageInput] = {
+    val stageInputList = Collections.synchronizedList(new util.ArrayList[StageInput]())
+
+    detailList.asScala.map { detail =>
+      executorService.submit(new Runnable {
+        override def run(): Unit = {
+          // read segment file to get path of index file
+          val segmentFilePath =
+            CarbonTablePath.getSegmentFilePath(table.getTablePath, detail.getSegmentFile)
+          val segment = SegmentFileStore.readSegmentFile(segmentFilePath)
+          val entry = segment.getLocationMap.entrySet().iterator().next()
+          val indexFileBasePath = entry.getKey
+          val indexFiles = entry.getValue.getFiles.toArray
+          if (indexFiles.length > 1) {
+            throw new RuntimeException(s"invalid segment file: $segmentFilePath")
+          }
+          // read index file to get path and size of data file
+          val indexFilePath =
+            indexFileBasePath + CarbonCommonConstants.FILE_SEPARATOR + indexFiles(0)
+          val reader = new DataFileFooterConverterV3(conf)
+          val footers = reader.getIndexInfo(indexFilePath, null, true)
+          val dataFiles = footers.asScala.map { footer =>
+            val dataFileFullPath = footer.getBlockInfo.getTableBlockInfo.getFilePath
+            val dataFileName = new Path(dataFileFullPath).getName
+            val dataFileSize = footer.getBlockInfo.getTableBlockInfo.getBlockLength
+            (dataFileName, java.lang.Long.valueOf(dataFileSize))
+          }
+          val stageInput = new StageInput(indexFileBasePath, dataFiles.toMap.asJava)
+          stageInputList.add(stageInput)
+        }
+      })
+    }.map(_.get())
+    stageInputList.asScala
+  }
+
+  /**
+   * Start global sort loading
+   */
+  private def startLoading(
+      spark: SparkSession,
+      table: CarbonTable,
+      stageInput: Seq[StageInput]
+  ): Unit = {
+    val splits = stageInput.flatMap(_.createSplits().asScala)
+    LOGGER.info(s"start to load ${splits.size} files into " +
+                s"${table.getDatabaseName}.${table.getTableName}")
+    val start = System.currentTimeMillis()
+    val dataFrame = DataLoadProcessBuilderOnSpark.createInputDataFrame(spark, table, splits)
+    val header = dataFrame.schema.fields.map(_.name).mkString(",")
+    val loadCommand = CarbonLoadDataCommand(
+      databaseNameOp = Some(table.getDatabaseName),
+      tableName = table.getTableName,
+      factPathFromUser = null,
+      dimFilesPath = Seq(),
+      options = scala.collection.immutable.Map("fileheader" -> header),
+      isOverwriteTable = false,
+      inputSqlString = null,
+      dataFrame = Some(dataFrame),
+      updateModel = None,
+      tableInfoOp = None)
+    loadCommand.run(spark)
+    LOGGER.info(s"finish data loading, time taken ${System.currentTimeMillis() - start}ms")
+  }
+
+  /**
+   * create CarbonLoadModel for global_sort
+   */
+  def createLoadModelForGlobalSort(
+      sparkSession: SparkSession,
+      carbonTable: CarbonTable
+  ): CarbonLoadModel = {
+    val conf = SparkSQLUtil.sessionState(sparkSession).newHadoopConf()
+    CarbonTableOutputFormat.setDatabaseName(conf, carbonTable.getDatabaseName)
+    CarbonTableOutputFormat.setTableName(conf, carbonTable.getTableName)
+    CarbonTableOutputFormat.setCarbonTable(conf, carbonTable)
+    val fieldList = carbonTable.getCreateOrderColumn(carbonTable.getTableName)
+      .asScala
+      .map { column =>
+        new StructField(column.getColName, column.getDataType)
+      }
+    CarbonTableOutputFormat.setInputSchema(conf, new StructType(fieldList.asJava))
+    val loadModel = CarbonTableOutputFormat.getLoadModel(conf)
+    loadModel.setSerializationNullFormat(
+      TableOptionConstant.SERIALIZATION_NULL_FORMAT.getName + ",\\N")
+    loadModel.setBadRecordsLoggerEnable(
+      TableOptionConstant.BAD_RECORDS_LOGGER_ENABLE.getName + ",false")
+    loadModel.setBadRecordsAction(
+      TableOptionConstant.BAD_RECORDS_ACTION.getName + ",force")
+    loadModel.setIsEmptyDataBadRecord(
+      DataLoadProcessorConstants.IS_EMPTY_DATA_BAD_RECORD + ",false")
+    val globalSortPartitions =
+      carbonTable.getTableInfo.getFactTable.getTableProperties.get("global_sort_partitions")
+    if (globalSortPartitions != null) {
+      loadModel.setGlobalSortPartitions(globalSortPartitions)
+    }
+    loadModel
   }
 
   def readLoadDetailDir(
