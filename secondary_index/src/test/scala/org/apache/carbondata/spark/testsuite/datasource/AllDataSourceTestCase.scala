@@ -85,6 +85,10 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
     sql("drop table if exists tbl_metrics_p_ls")
     sql("drop table if exists tbl_metrics_p_gs")
     sql("drop table if exists ds_sct")
+    sql("drop table if exists tbl_complex")
+    sql("drop table if exists tbl_complex_carbondata")
+    sql("drop table if exists tbl_complex_p")
+    sql("drop table if exists tbl_complex_p_carbondata")
     sql("drop database if exists alldatasource cascade")
   }
 
@@ -577,6 +581,70 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
          | using carbondata """.stripMargin)
     sql(s"insert into table $tableName2 select * from $tableName1")
 
+    checkAnswer(
+      sql(
+        s"""
+           |select
+           |  cast(round(col4.ratio, 1) as float),
+           |  cast(round(col4.sub.ratio, 2) as float),
+           |  cast(round(col5[1].ratio, 1) as float),
+           |  cast(round(col6['l1'].ratio, 1) as float)
+           | from $tableName2
+           |""".stripMargin),
+      sql(
+        s"""
+           |select
+           |  col4.ratio, col4.sub.ratio,
+           |  col5[1].ratio,
+           |  col6['l1'].ratio
+           | from $tableName1
+           |""".stripMargin)
+    )
+  }
+
+  test("test complex datatype for partition table") {
+    val tableName1 = "tbl_complex_p"
+    sql(s"drop table if exists $tableName1")
+    sql(
+      s"""
+         | create table $tableName1 (
+         | col1 int,
+         | col2 string,
+         | col3 float,
+         | col4 struct<level: string, ratio: float, sub: struct<level: string, ratio: float>>,
+         | col5 array<struct<ratio: float>>,
+         | col6 map<string, struct<ratio: float>>,
+         | col7 date
+         | ) """.stripMargin)
+    sql(s"""
+           | insert into table $tableName1
+           | select
+           |   1,
+           |   'a',
+           |   1.1,
+           |   struct('b', 1.2, struct('bc', 1.21)),
+           |   array(struct(1.3), struct(1.4)),
+           |   map('l1', struct(1.5), 'l2', struct(1.6)),
+           |   to_date('2019-01-01')
+           | """.stripMargin)
+
+    val tableName2 = "tbl_complex_p_carbondata"
+    sql(s"drop table if exists $tableName2")
+    sql(
+      s"""
+         | create table $tableName2 (
+         | col1 int,
+         | col2 string,
+         | col3 float,
+         | col4 struct<level: string, ratio: float, sub: struct<level: string, ratio: float>>,
+         | col5 array<struct<ratio: float>>,
+         | col6 map<string, struct<ratio: float>>,
+         | col7 date
+         | )
+         | using carbondata
+         | partitioned by (col7)
+         | """.stripMargin)
+    sql(s"insert into table $tableName2 select * from $tableName1")
     checkAnswer(
       sql(
         s"""

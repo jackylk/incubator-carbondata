@@ -941,25 +941,19 @@ case class CarbonLoadDataCommand(
       // Update attribute datatypes in case of dictionary columns, in case of dictionary columns
       // datatype is always int
       val column = table.getColumnByName(table.getTableName, attr.name)
-      if (column.hasEncoding(Encoding.DICTIONARY)) {
-        CarbonToSparkAdapter.createAttributeReference(attr.name,
-          IntegerType,
-          attr.nullable,
-          attr.metadata,
-          attr.exprId,
-          attr.qualifier,
-          attr)
-      } else if (attr.dataType == TimestampType || attr.dataType == DateType) {
-        CarbonToSparkAdapter.createAttributeReference(attr.name,
-          LongType,
-          attr.nullable,
-          attr.metadata,
-          attr.exprId,
-          attr.qualifier,
-          attr)
+      val updatedDataType = if (column.hasEncoding(Encoding.DICTIONARY)) {
+        IntegerType
       } else {
-        attr
+        attr.dataType match {
+          case TimestampType | DateType =>
+            LongType
+          case _: StructType | _: ArrayType | _: MapType =>
+            BinaryType
+          case _ =>
+            attr.dataType
+        }
       }
+      attr.copy(dataType = updatedDataType)(attr.exprId, attr.qualifier)
     }
     // Only select the required columns
     var output = if (finalPartition.nonEmpty) {
@@ -1101,13 +1095,19 @@ case class CarbonLoadDataCommand(
     val table = loadModel.getCarbonDataLoadSchema.getCarbonTable
     val metastoreSchema = StructType(catalogTable.schema.fields.map{f =>
       val column = table.getColumnByName(table.getTableName, f.name)
-      if (column.hasEncoding(Encoding.DICTIONARY)) {
-        f.copy(dataType = IntegerType)
-      } else if (f.dataType == TimestampType || f.dataType == DateType) {
-        f.copy(dataType = LongType)
+      val updatedDataType = if (column.hasEncoding(Encoding.DICTIONARY)) {
+        IntegerType
       } else {
-        f
+        f.dataType match {
+          case TimestampType | DateType =>
+            LongType
+          case _: StructType | _: ArrayType | _: MapType =>
+            BinaryType
+          case _ =>
+            f.dataType
+        }
       }
+      f.copy(dataType = updatedDataType)
     })
     val lazyPruningEnabled = sparkSession.sqlContext.conf.manageFilesourcePartitions
     val catalog = new CatalogFileIndex(
