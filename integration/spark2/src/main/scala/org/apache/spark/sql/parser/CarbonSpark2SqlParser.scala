@@ -492,10 +492,14 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
         CarbonAddLoadCommand(dbName, tableName, optionsList.toMap)
     }
 
+  /**
+   * ALTER TABLE [dbName.]tableName COLLECT SEGMENTS OPTIONS ('batch'='10')
+   */
   protected lazy val collectLoads: Parser[LogicalPlan] =
-    ALTER ~ TABLE ~> (ident <~ ".").? ~ ident <~ COLLECT <~ SEGMENTS <~ opt(";") ^^ {
-      case dbName ~ tableName =>
-        CarbonCollectLoadsCommand(dbName, tableName)
+    ALTER ~ TABLE ~> (ident <~ ".").? ~ ident ~ (COLLECT ~> SEGMENTS) ~
+    (OPTIONS ~> "(" ~> repsep(loadOptions, ",") <~ ")") <~ opt(";") ^^ {
+      case dbName ~ tableName ~ segment ~ optionsList =>
+        CarbonCollectLoadsCommand(dbName, tableName, optionsList.toMap)
     }
 
   protected lazy val cleanFiles: Parser[LogicalPlan] =
