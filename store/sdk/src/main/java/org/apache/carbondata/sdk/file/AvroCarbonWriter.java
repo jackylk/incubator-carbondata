@@ -17,6 +17,8 @@
 
 package org.apache.carbondata.sdk.file;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -38,10 +40,19 @@ import org.apache.carbondata.core.metadata.datatype.MapType;
 import org.apache.carbondata.core.metadata.datatype.StructField;
 import org.apache.carbondata.core.metadata.datatype.StructType;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
+import org.apache.carbondata.core.metadata.schema.table.column.CarbonColumn;
 import org.apache.carbondata.hadoop.api.CarbonTableOutputFormat;
 import org.apache.carbondata.hadoop.internal.ObjectArrayWritable;
+import org.apache.carbondata.processing.datatypes.GenericDataType;
+import org.apache.carbondata.processing.loading.CarbonDataLoadConfiguration;
+import org.apache.carbondata.processing.loading.DataField;
+import org.apache.carbondata.processing.loading.DataLoadProcessBuilder;
 import org.apache.carbondata.processing.loading.complexobjects.ArrayObject;
 import org.apache.carbondata.processing.loading.complexobjects.StructObject;
+import org.apache.carbondata.processing.loading.constants.DataLoadProcessorConstants;
+import org.apache.carbondata.processing.loading.converter.BadRecordLogHolder;
+import org.apache.carbondata.processing.loading.converter.impl.FieldEncoderFactory;
+import org.apache.carbondata.processing.loading.exception.BadRecordFoundException;
 import org.apache.carbondata.processing.loading.exception.CarbonDataLoadingException;
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel;
 
@@ -71,8 +82,10 @@ public class AvroCarbonWriter extends CarbonWriter {
   private TaskAttemptContext context;
   private ObjectArrayWritable writable;
   private Schema avroSchema;
+  private GenericDataType[] complexDataType;
+  private BadRecordLogHolder logHolder = new BadRecordLogHolder();
   private static final Logger LOGGER =
-      LogServiceFactory.getLogService(CarbonTable.class.getName());
+      LogServiceFactory.getLogService(AvroCarbonWriter.class.getName());
 
   AvroCarbonWriter(CarbonLoadModel loadModel, Configuration hadoopConf) throws IOException {
     CarbonTableOutputFormat.setLoadModel(hadoopConf, loadModel);
@@ -85,6 +98,51 @@ public class AvroCarbonWriter extends CarbonWriter {
     this.recordWriter = format.getRecordWriter(context);
     this.context = context;
     this.writable = new ObjectArrayWritable();
+    convertComplexDataType(loadModel);
+  }
+
+  private void convertComplexDataType(CarbonLoadModel loadModel) {
+    CarbonDataLoadConfiguration configuration =
+        DataLoadProcessBuilder.createConfiguration(loadModel);
+    CarbonTable carbonTable = loadModel.getCarbonDataLoadSchema().getCarbonTable();
+    List<CarbonColumn> columns = carbonTable.getCreateOrderColumn(carbonTable.getTableName());
+    complexDataType = new GenericDataType[columns.size()];
+    String nullFormat =
+        configuration.getDataLoadProperty(DataLoadProcessorConstants.SERIALIZATION_NULL_FORMAT)
+            .toString();
+    boolean isEmptyBadRecord = Boolean.parseBoolean(
+        configuration.getDataLoadProperty(DataLoadProcessorConstants.IS_EMPTY_DATA_BAD_RECORD)
+            .toString());
+    for (int i = 0; i < columns.size(); i++) {
+      if (columns.get(i).isComplex()) {
+        // create a ComplexDataType
+        complexDataType[i] =  FieldEncoderFactory.getInstance().createComplexDataType(
+            new DataField(columns.get(i)), configuration.getTableIdentifier(), null,
+                false, null, i, nullFormat, isEmptyBadRecord);
+      }
+    }
+  }
+
+  private Object convertToBytes(Object data, int index){
+    if (data == null || index >= complexDataType.length) {
+      return data;
+    }
+    GenericDataType complexType = complexDataType[index];
+    if (complexType != null) {
+      ByteArrayOutputStream byteArray = new ByteArrayOutputStream();
+      DataOutputStream dataOutputStream = new DataOutputStream(byteArray);
+      try {
+        complexType.writeByteArray(data, dataOutputStream, logHolder);
+        dataOutputStream.close();
+        return byteArray.toByteArray();
+      } catch (BadRecordFoundException e) {
+        throw new CarbonDataLoadingException("Loading Exception: " + e.getMessage(), e);
+      } catch (Exception e) {
+        throw new CarbonDataLoadingException("Loading Exception", e);
+      }
+    } else {
+      return data;
+    }
   }
 
   private Object[] avroToCsv(GenericData.Record avroRecord) {
@@ -93,10 +151,14 @@ public class AvroCarbonWriter extends CarbonWriter {
     }
     List<Schema.Field> fields = avroSchema.getFields();
     List<Object> csvFields = new ArrayList<>();
+    int j = -1;
     for (int i = 0; i < fields.size(); i++) {
       Object field = avroFieldToObject(fields.get(i), avroRecord.get(i));
+      if (!Schema.Type.NULL.equals(fields.get(i).schema().getType())) {
+        j++;
+      }
       if (field != null) {
-        csvFields.add(field);
+        csvFields.add(convertToBytes(field, j));
       }
     }
     return csvFields.toArray();

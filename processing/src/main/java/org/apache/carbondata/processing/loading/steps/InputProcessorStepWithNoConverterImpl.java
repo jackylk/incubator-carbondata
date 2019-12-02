@@ -61,8 +61,6 @@ public class InputProcessorStepWithNoConverterImpl extends AbstractDataLoadProce
 
   private int[] orderOfData;
 
-  private Map<Integer, GenericDataType> dataFieldsWithComplexDataType;
-
   // cores used in SDK writer, set by the user
   private short sdkWriterCores;
 
@@ -87,9 +85,6 @@ public class InputProcessorStepWithNoConverterImpl extends AbstractDataLoadProce
     noDictionaryMapping =
         CarbonDataProcessorUtil.getNoDictionaryMapping(configuration.getDataFields());
 
-    dataFieldsWithComplexDataType = new HashMap<>();
-    convertComplexDataType(dataFieldsWithComplexDataType);
-
     dataTypes = new DataType[configuration.getDataFields().length];
     for (int i = 0; i < dataTypes.length; i++) {
       if (configuration.getDataFields()[i].getColumn().hasEncoding(Encoding.DICTIONARY)) {
@@ -99,26 +94,6 @@ public class InputProcessorStepWithNoConverterImpl extends AbstractDataLoadProce
       }
     }
     orderOfData = arrangeData(configuration.getDataFields(), configuration.getHeader());
-  }
-
-  private void convertComplexDataType(Map<Integer, GenericDataType> dataFieldsWithComplexDataType) {
-    DataField[] srcDataField = configuration.getDataFields();
-    FieldEncoderFactory fieldConverterFactory = FieldEncoderFactory.getInstance();
-    String nullFormat =
-        configuration.getDataLoadProperty(DataLoadProcessorConstants.SERIALIZATION_NULL_FORMAT)
-            .toString();
-    boolean isEmptyBadRecord = Boolean.parseBoolean(
-        configuration.getDataLoadProperty(DataLoadProcessorConstants.IS_EMPTY_DATA_BAD_RECORD)
-            .toString());
-    for (int i = 0; i < srcDataField.length; i++) {
-      if (srcDataField[i].getColumn().isComplex()) {
-        // create a ComplexDataType
-        dataFieldsWithComplexDataType.put(srcDataField[i].getColumn().getOrdinal(),
-            fieldConverterFactory
-                .createComplexDataType(srcDataField[i], configuration.getTableIdentifier(), null,
-                    false, null, i, nullFormat, isEmptyBadRecord));
-      }
-    }
   }
 
   private int[] arrangeData(DataField[] dataFields, String[] header) {
@@ -142,8 +117,7 @@ public class InputProcessorStepWithNoConverterImpl extends AbstractDataLoadProce
     for (int i = 0; i < outIterators.length; i++) {
       outIterators[i] =
           new InputProcessorIterator(readerIterators[i], batchSize, configuration.isPreFetch(),
-              rowCounter, orderOfData, noDictionaryMapping, dataTypes, configuration,
-              dataFieldsWithComplexDataType);
+              rowCounter, orderOfData, noDictionaryMapping, dataTypes, configuration);
     }
     return outIterators;
   }
@@ -189,18 +163,13 @@ public class InputProcessorStepWithNoConverterImpl extends AbstractDataLoadProce
 
     private int[] orderOfData;
 
-    private Map<Integer, GenericDataType> dataFieldsWithComplexDataType;
-
     private DirectDictionaryGenerator dateDictionaryGenerator;
 
     private DirectDictionaryGenerator timestampDictionaryGenerator;
 
-    private BadRecordLogHolder logHolder = new BadRecordLogHolder();
-
     public InputProcessorIterator(List<CarbonIterator<Object[]>> inputIterators, int batchSize,
         boolean preFetch, AtomicLong rowCounter, int[] orderOfData, boolean[] noDictionaryMapping,
-        DataType[] dataTypes, CarbonDataLoadConfiguration configuration,
-        Map<Integer, GenericDataType> dataFieldsWithComplexDataType) {
+        DataType[] dataTypes, CarbonDataLoadConfiguration configuration) {
       this.inputIterators = inputIterators;
       this.batchSize = batchSize;
       this.counter = 0;
@@ -213,7 +182,6 @@ public class InputProcessorStepWithNoConverterImpl extends AbstractDataLoadProce
       this.dataTypes = dataTypes;
       this.dataFields = configuration.getDataFields();
       this.orderOfData = orderOfData;
-      this.dataFieldsWithComplexDataType = dataFieldsWithComplexDataType;
     }
 
     @Override public boolean hasNext() {
@@ -276,19 +244,7 @@ public class InputProcessorStepWithNoConverterImpl extends AbstractDataLoadProce
         } else {
           // if this is a complex column then recursively comver the data into Byte Array.
           if (dataTypes[i].isComplexType()) {
-            ByteArrayOutputStream byteArray = new ByteArrayOutputStream();
-            DataOutputStream dataOutputStream = new DataOutputStream(byteArray);
-            try {
-              GenericDataType complextType =
-                  dataFieldsWithComplexDataType.get(dataFields[i].getColumn().getOrdinal());
-              complextType.writeByteArray(data[orderOfData[i]], dataOutputStream, logHolder);
-              dataOutputStream.close();
-              newData[i] = byteArray.toByteArray();
-            } catch (BadRecordFoundException e) {
-              throw new CarbonDataLoadingException("Loading Exception: " + e.getMessage(), e);
-            } catch (Exception e) {
-              throw new CarbonDataLoadingException("Loading Exception", e);
-            }
+              newData[i] = data[orderOfData[i]];
           } else {
             DataType dataType = dataFields[i].getColumn().getDataType();
             if (dataType == DataTypes.DATE && data[orderOfData[i]] instanceof Long) {
