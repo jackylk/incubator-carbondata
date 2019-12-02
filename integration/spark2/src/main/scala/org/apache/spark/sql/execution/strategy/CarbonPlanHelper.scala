@@ -18,6 +18,7 @@
 package org.apache.spark.sql.execution.strategy
 
 import org.apache.spark.sql.catalyst.TableIdentifier
+import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.execution.command.management.CarbonAlterTableCompactionCommand
 import org.apache.spark.sql.execution.command.{ExecutedCommandExec, RunnableCommand}
@@ -138,5 +139,27 @@ object CarbonPlanHelper {
       .getInstance(sparkSession)
       .carbonMetaStore
       .tableExists(tableIdentifier)(sparkSession)
+  }
+
+  def isTableExists(tableIdent: TableIdentifier, sparkSession: SparkSession): Boolean = {
+    val dbOption = tableIdent.database.map(_.toLowerCase)
+    val tableIdentifier = TableIdentifier(tableIdent.table.toLowerCase(), dbOption)
+    sparkSession.sessionState.catalog.tableExists(tableIdentifier)
+  }
+
+  def validateCarbonTable(
+      tableIdentifier: TableIdentifier,
+      sparkSession: SparkSession,
+      message: String
+  ): Unit = {
+    if (!CarbonPlanHelper.isTableExists(tableIdentifier, sparkSession)) {
+      throw new NoSuchTableException(
+        tableIdentifier.database.getOrElse(
+          CarbonEnv.getDatabaseName(tableIdentifier.database)(sparkSession)),
+        tableIdentifier.table)
+    }
+    if (!CarbonPlanHelper.isCarbonTable(tableIdentifier, sparkSession)) {
+      throw new UnsupportedOperationException(message)
+    }
   }
 }

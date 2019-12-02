@@ -21,6 +21,7 @@ import java.io.File
 
 import org.apache.spark.sql.{CarbonEnv, Row}
 import org.apache.spark.sql.catalyst.TableIdentifier
+import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.catalyst.catalog.CatalogTableType
 import org.apache.spark.sql.common.util.QueryTest
 import org.apache.spark.sql.execution.strategy.CarbonPlanHelper
@@ -684,6 +685,28 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
            | from $tableName1
            |""".stripMargin)
     )
+  }
+
+  test("update non-carbon table") {
+    var exception = intercept[UnsupportedOperationException]{
+      sql("update origin_csv set (col2)=(33aa) where col1 = 1")
+    }
+    assert(exception.getMessage.contains("only CarbonData table support update operation"))
+
+    exception = intercept[UnsupportedOperationException]{
+      sql("delete from origin_csv where col1 = 1")
+    }
+    assert(exception.getMessage.contains("only CarbonData table support delete operation"))
+
+    var exception2 = intercept[NoSuchTableException]{
+      sql("update origin_csv121 set (col2)=(33aa) where col1 = 1")
+    }
+    assert(exception2.getMessage.contains("Table or view 'origin_csv121' not found"))
+
+    exception2 = intercept[NoSuchTableException]{
+      sql("delete from origin_csv121 where col1 = 1")
+    }
+    assert(exception2.getMessage.contains("Table or view 'origin_csv121' not found"))
   }
 
   def createDataSourcePartitionTable(provider: String, tableName: String): Unit = {
