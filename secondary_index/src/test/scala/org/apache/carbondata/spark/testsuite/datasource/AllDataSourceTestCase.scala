@@ -341,6 +341,26 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
                 |""".stripMargin)))
   }
 
+  test("test add column with comment") {
+    val tableName = "tbl_comment"
+    sql(
+      s"""
+         | create table $tableName(
+         | id int comment 'id column',
+         | age int
+         | )
+         | using carbondata
+         | partitioned by (age)
+         | Comment 'test table'
+         | """.stripMargin)
+    checkExistence(sql(s"desc formatted $tableName"), true, "test table")
+    sql(s"alter table $tableName set tblProperties('comment'='new test table')")
+    sql(s"alter table $tableName add columns (name string comment 'test column')")
+    checkExistence(sql(s"desc $tableName"), true, "test column")
+    checkExistence(sql(s"desc formatted $tableName"), true, "new test table")
+    checkExistence(sql(s"desc formatted $tableName"), true, "test column")
+  }
+
   test("test external table") {
     verifyExternalDataSourceTable("carbondata",  "ds_carbondata")
     verifyExternalHiveTable("carbondata",  "hive_carbondata")

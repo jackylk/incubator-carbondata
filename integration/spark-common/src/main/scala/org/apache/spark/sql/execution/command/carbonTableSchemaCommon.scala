@@ -572,6 +572,14 @@ object TableNewProcessor {
     columnSchema.setSchemaOrdinal(schemaOrdinal)
     columnSchema.setSortColumn(isSortColumn)
     columnSchema.setPrimaryKeyColumn(isPrimaryKeyCol)
+    if (field.columnComment != null) {
+      var columnProperties = columnSchema.getColumnProperties()
+      if (columnProperties == null) {
+        columnProperties = new java.util.HashMap[String, String]()
+        columnSchema.setColumnProperties(columnProperties)
+      }
+      columnProperties.put("comment", field.columnComment)
+    }
     columnSchema
   }
 }
