@@ -198,10 +198,9 @@ object CarbonStore {
             .getLockObject(absoluteTableIdentifier, LockUsage.CLEAN_FILES_LOCK, errorMsg)
         if (truncateTable) {
           SegmentStatusManager.truncateTable(carbonTable)
-        } else {
-          SegmentStatusManager.deleteLoadsAndUpdateMetadata(
-            carbonTable,true, currentTablePartitions.map(_.asJava).orNull)
         }
+        SegmentStatusManager.deleteLoadsAndUpdateMetadata(
+          carbonTable,true, currentTablePartitions.map(_.asJava).orNull)
         CarbonUpdateUtil.cleanUpDeltaFiles(carbonTable, true)
         currentTablePartitions match {
           case Some(partitions) =>
