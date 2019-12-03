@@ -687,6 +687,64 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
     )
   }
 
+  test("set global_sort_partitions") {
+    val tableName = "tbl_gs_set"
+    sql(s"drop table if exists $tableName")
+    sql(
+      s"""
+         | create table $tableName (
+         | col1 int,
+         | col2 string,
+         | col5 float,
+         | col3 date,
+         | col4 timestamp
+         | )
+         | using carbondata
+         | options('dateFormat'='yyyy-MM-dd', 'timestampFormat'='yyyy-MM-dd HH:mm:ss',
+         | 'sort_scope'='global_sort', 'sort_columns'='col2', 'GLOBAL_sort_Partitions'='1')
+         | partitioned by (col3, col4)
+       """.stripMargin)
+
+    val exception = intercept[RuntimeException](
+      sql(s"""alter table $tableName set tblproperties('GLOBAL_sort_Partitions'='2s')"""))
+    assert(exception.getMessage.contains("Table property global_sort_partitions : 2s is invalid"))
+
+    var globalSortPartitions = CarbonEnv.getCarbonTable(
+      Option("alldatasource"), tableName)(sqlContext.sparkSession).getGlobalSortPartitions
+    assert("1".equals(globalSortPartitions))
+
+    sql(s"""alter table $tableName set tblproperties('GLOBAL_sort_Partitions'='1')""")
+    globalSortPartitions = CarbonEnv.getCarbonTable(
+      Option("alldatasource"), tableName)(sqlContext.sparkSession).getGlobalSortPartitions
+    assert("1".equals(globalSortPartitions))
+    sql(
+      s"""
+         | insert into $tableName (
+         |  select col1, col2, 1.2, col3, to_timestamp('2019-02-02 13:01:01') from origin_csv
+         |  union all
+         |  select 123,'abc', 1.2, to_date('2019-01-01'), to_timestamp('2019-02-02 13:01:01'))
+         |  """.stripMargin
+    )
+    sql(s"""alter table $tableName set tblproperties('GLOBAL_sort_Partitions'='2')""")
+    globalSortPartitions = CarbonEnv.getCarbonTable(
+      Option("alldatasource"), tableName)(sqlContext.sparkSession).getGlobalSortPartitions
+    assert("2".equals(globalSortPartitions))
+    sql(
+      s"""
+         | insert into $tableName (
+         |  select col1, col2, 1.2, col3, to_timestamp('2019-02-02 13:01:01') from origin_csv
+         |  union all
+         |  select 123,'abc', 1.2, to_date('2019-01-01'), to_timestamp('2019-02-02 13:01:01'))
+         |  """.stripMargin
+    )
+    checkAnswer(sql(s"select count(*) from $tableName"), Seq(Row(8)))
+    sql(s"describe formatted $tableName").show(100, false)
+    checkExistence(
+      sql(s"describe formatted $tableName"),
+      true,
+      "GLOBAL SORT PARTITIONS")
+  }
+
   test("update non-carbon table") {
     var exception = intercept[UnsupportedOperationException]{
       sql("update origin_csv set (col2)=(33aa) where col1 = 1")

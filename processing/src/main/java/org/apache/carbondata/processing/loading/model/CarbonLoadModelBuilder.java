@@ -262,6 +262,9 @@ public class CarbonLoadModelBuilder {
 
     carbonLoadModel.setSortScope(sort_scope);
     carbonLoadModel.setBatchSortSizeInMb(optionsFinal.get("batch_sort_size_inmb"));
+    if (global_sort_partitions == null) {
+      global_sort_partitions = table.getGlobalSortPartitions();
+    }
     carbonLoadModel.setGlobalSortPartitions(global_sort_partitions);
     carbonLoadModel.setUseOnePass(Boolean.parseBoolean(single_pass));
 

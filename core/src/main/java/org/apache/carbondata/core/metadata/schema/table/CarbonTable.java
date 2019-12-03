@@ -1392,6 +1392,10 @@ public class CarbonTable implements Serializable, Writable {
     }
   }
 
+  public String getGlobalSortPartitions() {
+    return tableInfo.getFactTable().getTableProperties().get("global_sort_partitions");
+  }
+
   public SegmentManager getSegmentManager() {
     return new SegmentManagerImpl(this);
   }
