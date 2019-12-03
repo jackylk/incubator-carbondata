@@ -29,6 +29,7 @@ import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.rules._
 import org.apache.spark.sql.execution.command.mutation.CarbonProjectForDeleteCommand
 import org.apache.spark.sql.execution.datasources.{CatalogFileIndex, FileFormat, HadoopFsRelation, LogicalRelation, SparkCarbonTableFormat}
+import org.apache.spark.sql.execution.strategy.CarbonPlanHelper
 import org.apache.spark.sql.util.CarbonException
 import org.apache.spark.util.{CarbonReflectionUtils, DataMapUtil, SparkUtil}
 
@@ -50,6 +51,12 @@ case class CarbonIUDAnalysisRule(sparkSession: SparkSession) extends Rule[Logica
     var includedDestColumns = false
     var includedDestRelation = false
     var addedTupleId = false
+
+    CarbonPlanHelper.validateCarbonTable(
+      table.tableIdentifier,
+      sparkSession,
+      "only CarbonData table support update operation"
+    )
 
     def prepareTargetReleation(relation: UnresolvedRelation): SubqueryAlias = {
       val tupleId = UnresolvedAlias(Alias(UnresolvedFunction("getTupleId",
@@ -188,6 +195,13 @@ case class CarbonIUDAnalysisRule(sparkSession: SparkSession) extends Rule[Logica
   def processDeleteRecordsQuery(selectStmt: String,
       alias: Option[String],
       table: UnresolvedRelation): LogicalPlan = {
+
+    CarbonPlanHelper.validateCarbonTable(
+      table.tableIdentifier,
+      sparkSession,
+      "only CarbonData table support delete operation"
+    )
+
     var addedTupleId = false
     val parsePlan = parser.parsePlan(selectStmt)
 
