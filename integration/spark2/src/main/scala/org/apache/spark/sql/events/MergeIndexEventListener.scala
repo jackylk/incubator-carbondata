@@ -58,11 +58,14 @@ class MergeIndexEventListener extends OperationEventListener with Logging {
 
             segmentFileNameMap
               .put(loadModel.getSegmentId, String.valueOf(loadModel.getFactTimeStamp))
+            val startTime = System.currentTimeMillis()
             CarbonMergeFilesRDD.mergeIndexFiles(sparkSession,
               Seq(loadModel.getSegmentId),
               segmentFileNameMap,
               carbonTable.getTablePath,
               carbonTable, false)
+            LOGGER.info("Total time taken for merge index " +
+                        (System.currentTimeMillis() - startTime))
             // clear Block dataMap Cache
             MergeIndexUtil.clearBlockDataMapCache(carbonTable, Seq(loadModel.getSegmentId))
           }
@@ -103,6 +106,7 @@ class MergeIndexEventListener extends OperationEventListener with Logging {
               // readFileFooterFromCarbonDataFile flag should be true. This flag is check for legacy
               // store (store <= 1.1 version) and create merge Index file as per new store so that
               // old store is also upgraded to new store
+              val startTime = System.currentTimeMillis()
               CarbonMergeFilesRDD.mergeIndexFiles(
                 sparkSession = sparkSession,
                 segmentIds = validSegmentIds,
@@ -111,6 +115,8 @@ class MergeIndexEventListener extends OperationEventListener with Logging {
                 carbonTable = carbonMainTable,
                 mergeIndexProperty = true,
                 readFileFooterFromCarbonDataFile = true)
+              LOGGER.info("Total time taken for merge index "
+                          + (System.currentTimeMillis() - startTime))
               // clear Block dataMap Cache
               MergeIndexUtil.clearBlockDataMapCache(carbonMainTable, validSegmentIds)
               val requestMessage = "Compaction request completed for table " +

@@ -140,6 +140,7 @@ public class CarbonIndexFileMergeWriter {
       CarbonFile[] indexFiles, String uuid, String partitionPath) throws IOException {
     SegmentIndexFileStore fileStore = new SegmentIndexFileStore();
     // in case of partition table, merge index file to be created for each partition
+    long startTime = System.currentTimeMillis();
     if (null != partitionPath) {
       for (CarbonFile indexFile : indexFiles) {
         fileStore.readIndexFile(indexFile);
@@ -148,6 +149,8 @@ public class CarbonIndexFileMergeWriter {
       fileStore.readAllIIndexOfSegment(segmentFileStore.getSegmentFile(),
           segmentFileStore.getTablePath(), SegmentStatus.SUCCESS, true);
     }
+    LOGGER.info("Time taken to read all Index Files & adding to map with count:" + indexFiles.length
+        + " is " + (System.currentTimeMillis() - startTime));
     Map<String, byte[]> indexMap = fileStore.getCarbonIndexMapWithFullPath();
     Map<String, Map<String, byte[]>> indexLocationMap = new HashMap<>();
     for (Map.Entry<String, byte[]> entry: indexMap.entrySet()) {
@@ -162,6 +165,7 @@ public class CarbonIndexFileMergeWriter {
     List<PartitionSpec> partitionSpecs = SegmentFileStore
         .getPartitionSpecs(segmentId, table.getTablePath(), SegmentStatusManager
             .readLoadMetadata(CarbonTablePath.getMetadataPath(table.getTablePath())));
+    startTime = System.currentTimeMillis();
     for (Map.Entry<String, Map<String, byte[]>> entry : indexLocationMap.entrySet()) {
       String mergeIndexFile =
           writeMergeIndexFile(indexFileNamesTobeAdded, entry.getKey(), entry.getValue(), segmentId);
@@ -187,6 +191,11 @@ public class CarbonIndexFileMergeWriter {
         }
       }
     }
+    if (table.isHivePartitionTable()) {
+      LOGGER.info("Time taken to write new merge index file for segment id: " + segmentId +
+          " and partition path: " + partitionPath + " is " + (System.currentTimeMillis()
+          - startTime));
+    }
     String newSegmentFileName = SegmentFileStore.genSegmentFileName(segmentId, uuid)
         + CarbonTablePath.SEGMENT_EXT;
     String path = CarbonTablePath.getSegmentFilesLocation(table.getTablePath())
@@ -196,10 +205,12 @@ public class CarbonIndexFileMergeWriter {
       SegmentFileStore.updateSegmentFile(table, segmentId, newSegmentFileName,
           table.getCarbonTableIdentifier().getTableId(), segmentFileStore);
     }
-
+    startTime = System.currentTimeMillis();
     for (CarbonFile file : indexFiles) {
       file.delete();
     }
+    LOGGER.info("Time taken to delete indexFiles for segment id: " + segmentId + " is " + (
+        System.currentTimeMillis() - startTime));
 
     return uuid;
   }
