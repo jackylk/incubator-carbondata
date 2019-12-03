@@ -37,6 +37,7 @@ import org.apache.carbondata.core.util.CarbonProperties;
 import org.apache.carbondata.core.util.CarbonThreadFactory;
 import org.apache.carbondata.core.util.DataTypeUtil;
 import org.apache.carbondata.core.util.ObjectSerializationUtil;
+import org.apache.carbondata.core.util.OutputFilesInfoHolder;
 import org.apache.carbondata.core.util.ThreadLocalSessionInfo;
 import org.apache.carbondata.hadoop.internal.ObjectArrayWritable;
 import org.apache.carbondata.processing.loading.ComplexDelimitersEnum;
@@ -241,6 +242,8 @@ public class CarbonTableOutputFormat extends FileOutputFormat<NullWritable, Obje
   public RecordWriter<NullWritable, ObjectArrayWritable> getRecordWriter(
       final TaskAttemptContext taskAttemptContext) throws IOException {
     final CarbonLoadModel loadModel = getLoadModel(taskAttemptContext.getConfiguration());
+    OutputFilesInfoHolder outputFilesInfoHolder = new OutputFilesInfoHolder();
+    loadModel.setOutputFilesInfoHolder(outputFilesInfoHolder);
     String appName =
         taskAttemptContext.getConfiguration().get(CarbonCommonConstants.CARBON_WRITTEN_BY_APPNAME);
     if (null != appName) {
@@ -483,6 +486,13 @@ public class CarbonTableOutputFormat extends FileOutputFormat<NullWritable, Obje
           ThreadLocalSessionInfo.unsetAll();
           // clean up the folders and files created locally for data load operation
           TableProcessingOperations.deleteLocalDataLoadFolderLocation(loadModel, false, false);
+        }
+        OutputFilesInfoHolder outputFilesInfoHolder = loadModel.getOutputFilesInfoHolder();
+        if (null != outputFilesInfoHolder) {
+          taskAttemptContext.getConfiguration()
+              .set("carbon.number.of.output.files", outputFilesInfoHolder.getFileCount() + "");
+          taskAttemptContext.getConfiguration()
+              .set("carbon.output.files.name", outputFilesInfoHolder.getOutputFiles());
         }
         LOG.info("Closed writer task " + taskAttemptContext.getTaskAttemptID());
       }

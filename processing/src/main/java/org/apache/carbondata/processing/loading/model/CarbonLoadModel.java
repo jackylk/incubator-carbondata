@@ -32,6 +32,7 @@ import org.apache.carbondata.core.stats.LoadStats;
 import org.apache.carbondata.core.statusmanager.LoadMetadataDetails;
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager;
 import org.apache.carbondata.core.statusmanager.SegmentUpdateStatusManager;
+import org.apache.carbondata.core.util.OutputFilesInfoHolder;
 import org.apache.carbondata.core.util.path.CarbonTablePath;
 
 public class CarbonLoadModel implements Serializable {
@@ -257,6 +258,8 @@ public class CarbonLoadModel implements Serializable {
   private int scaleFactor;
 
   private LoadStats loadStats;
+
+  private OutputFilesInfoHolder outputFilesInfoHolder;
 
   public boolean isAggLoadRequest() {
     return isAggLoadRequest;
@@ -501,6 +504,7 @@ public class CarbonLoadModel implements Serializable {
     copy.scaleFactor = scaleFactor;
     copy.totalSize = totalSize;
     copy.loadStats = loadStats;
+    copy.outputFilesInfoHolder = outputFilesInfoHolder;
     return copy;
   }
 
@@ -562,6 +566,7 @@ public class CarbonLoadModel implements Serializable {
     copyObj.scaleFactor = scaleFactor;
     copyObj.totalSize = totalSize;
     copyObj.loadStats = loadStats;
+    copyObj.outputFilesInfoHolder = outputFilesInfoHolder;
     return copyObj;
   }
 
@@ -1014,5 +1019,13 @@ public class CarbonLoadModel implements Serializable {
 
   public void initLoadStats() {
     this.loadStats = new LoadStats();
+  }
+
+  public OutputFilesInfoHolder getOutputFilesInfoHolder() {
+    return outputFilesInfoHolder;
+  }
+
+  public void setOutputFilesInfoHolder(OutputFilesInfoHolder outputFilesInfoHolder) {
+    this.outputFilesInfoHolder = outputFilesInfoHolder;
   }
 }

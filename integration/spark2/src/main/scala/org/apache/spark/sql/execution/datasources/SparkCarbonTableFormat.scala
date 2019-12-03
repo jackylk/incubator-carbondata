@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicLong
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
+import org.apache.commons.lang3.StringUtils
 import org.apache.hadoop.fs.{FileStatus, Path}
 import org.apache.hadoop.io.NullWritable
 import org.apache.hadoop.mapreduce.{Job, TaskAttemptContext}
@@ -232,6 +233,15 @@ case class CarbonSQLHadoopMapReduceCommitProtocol(jobId: String, path: String, i
     super.abortTask(taskContext)
     if (isCarbonDataFlow(taskContext)) {
       ThreadLocalSessionInfo.unsetAll()
+      val files = taskContext.getConfiguration.get("carbon.output.files.name", "")
+      if (StringUtils.isEmpty(files)) {
+        val filesList = files.split(",")
+        for (file <- filesList) {
+          FileFactory
+            .deleteAllCarbonFilesOfDir(FileFactory
+              .getCarbonFile(file, taskContext.getConfiguration))
+        }
+      }
     }
   }
 
@@ -286,7 +296,8 @@ case class CarbonSQLHadoopMapReduceCommitProtocol(jobId: String, path: String, i
       }
       val writePath =
           CarbonOutputWriter.getPartitionPath(path, taskContext, model, updatedPartitions)
-      writePath + "/" + model.getSegmentId + "_" + model.getFactTimeStamp + ".tmp"
+      //      writePath + "/" + model.getSegmentId + "_" + model.getFactTimeStamp + ".tmp"
+      writePath
     } else {
       super.newTaskTempFile(taskContext, dir, ext)
     }
@@ -431,7 +442,7 @@ private class CarbonOutputWriter(path: String,
     SegmentFileStore.writeSegmentFile(
       model.getTablePath,
       taskNo,
-      actualPath.substring(0, actualPath.lastIndexOf("/")),
+      actualPath,
       model.getSegmentId + "_" + model.getFactTimeStamp + "",
       partitionList)
   }
