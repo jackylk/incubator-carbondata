@@ -32,6 +32,7 @@ import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.datamap.Segment
 import org.apache.carbondata.core.locks.{CarbonLockFactory, LockUsage}
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager
+import org.apache.carbondata.core.util.{ObjectSerializationUtil, OutputFilesInfoHolder}
 import org.apache.carbondata.events._
 import org.apache.carbondata.processing.loading.events.LoadEvents.LoadTablePreStatusUpdateEvent
 import org.apache.carbondata.processing.merger.CarbonDataMergerUtil
@@ -47,6 +48,14 @@ class MergeIndexEventListener extends OperationEventListener with Logging {
         val carbonTable = loadModel.getCarbonDataLoadSchema.getCarbonTable
         val compactedSegments = loadModel.getMergedSegmentIds
         val sparkSession = SparkSession.getActiveSession.get
+        var partitionInfo: util.List[String] = null
+        val partitionPath = operationContext.getProperty("partitionPath")
+        if (partitionPath != null) {
+          partitionInfo = ObjectSerializationUtil
+            .convertStringToObject(partitionPath.asInstanceOf[String])
+            .asInstanceOf[util.List[String]]
+        }
+        val tempPath = operationContext.getProperty("tempPath")
         if(!carbonTable.isStreamingSink) {
           if (null != compactedSegments && !compactedSegments.isEmpty) {
             MergeIndexUtil.mergeIndexFilesForCompactedSegments(sparkSession,
@@ -59,11 +68,27 @@ class MergeIndexEventListener extends OperationEventListener with Logging {
             segmentFileNameMap
               .put(loadModel.getSegmentId, String.valueOf(loadModel.getFactTimeStamp))
             val startTime = System.currentTimeMillis()
-            CarbonMergeFilesRDD.mergeIndexFiles(sparkSession,
+            val currPartitionSpec = operationContext.getProperty("carbon.currentpartition")
+            val currPartitionSpecOption: Option[String] = if (currPartitionSpec == null) {
+              None
+            } else {
+              Option(currPartitionSpec.asInstanceOf[String])
+            }
+            val indexSize = CarbonMergeFilesRDD.mergeIndexFiles(sparkSession,
               Seq(loadModel.getSegmentId),
               segmentFileNameMap,
               carbonTable.getTablePath,
-              carbonTable, false)
+              carbonTable, false, partitionInfo,
+              if (tempPath == null) {
+                null
+              } else {
+                tempPath.toString
+              },
+              currPartitionSpec = currPartitionSpecOption
+            )
+            val outputFilesInfoHolder = new OutputFilesInfoHolder
+            loadModel.setOutputFilesInfoHolder(outputFilesInfoHolder)
+            loadModel.getOutputFilesInfoHolder.setMergeIndexSize(indexSize)
             LOGGER.info("Total time taken for merge index " +
                         (System.currentTimeMillis() - startTime))
             // clear Block dataMap Cache

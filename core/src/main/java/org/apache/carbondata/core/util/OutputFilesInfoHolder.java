@@ -17,6 +17,8 @@
 package org.apache.carbondata.core.util;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 public class OutputFilesInfoHolder implements Serializable {
 
@@ -25,9 +27,14 @@ public class OutputFilesInfoHolder implements Serializable {
   // stores the count of files written per task
   private int fileCount;
 
-  // stores the comma separated output files.
-  private String outputFiles;
+  // stores output files names with size.
+  // fileName1:size1,fileName2:size2
+  private List<String> outputFiles;
 
+  // partition path
+  private List<String> partitionPath ;
+
+  private long mergeIndexSize;
 
   public synchronized void incrementCount() {
     // can call in multiple threads in single task
@@ -36,17 +43,35 @@ public class OutputFilesInfoHolder implements Serializable {
 
   public synchronized void addToOutputFiles(String file) {
     if (outputFiles == null) {
-      outputFiles = file;
-    } else {
-      outputFiles = outputFiles + "," + file;
+      outputFiles = new ArrayList<>();
     }
+    outputFiles.add(file);
+  }
+
+  public synchronized void addToPartitionPath(String path) {
+    if (partitionPath == null) {
+      partitionPath = new ArrayList<>();
+    }
+    partitionPath.add(path);
   }
 
   public int getFileCount() {
     return fileCount;
   }
 
-  public String getOutputFiles() {
+  public List<String> getOutputFiles() {
     return outputFiles;
+  }
+
+  public List<String> getPartitionPath() {
+    return partitionPath;
+  }
+
+  public long getMergeIndexSize() {
+    return mergeIndexSize;
+  }
+
+  public void setMergeIndexSize(long mergeIndexSize) {
+    this.mergeIndexSize = mergeIndexSize;
   }
 }

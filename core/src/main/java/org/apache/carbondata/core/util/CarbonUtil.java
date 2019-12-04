@@ -2764,13 +2764,24 @@ public final class CarbonUtil {
   public static void copyCarbonDataFileToCarbonStorePath(String localFilePath,
       String carbonDataDirectoryPath, long fileSizeInBytes,
       OutputFilesInfoHolder outputFilesInfoHolder) throws CarbonDataWriterException {
-    copyCarbonDataFileToCarbonStorePath(localFilePath, carbonDataDirectoryPath, fileSizeInBytes);
+    if (carbonDataDirectoryPath.endsWith(".tmp") && localFilePath
+        .endsWith(CarbonCommonConstants.FACT_FILE_EXT)) {
+      // for partition case, write carbondata file directly to final path, keep index in temp path.
+      // This can improve the commit job performance on s3a.
+      carbonDataDirectoryPath =
+          carbonDataDirectoryPath.substring(0, carbonDataDirectoryPath.lastIndexOf("/"));
+      if (outputFilesInfoHolder != null) {
+        outputFilesInfoHolder.addToPartitionPath(carbonDataDirectoryPath);
+      }
+    }
+    long targetSize = copyCarbonDataFileToCarbonStorePath(localFilePath, carbonDataDirectoryPath,
+        fileSizeInBytes);
     if (outputFilesInfoHolder != null) {
       // Storing the number of files written by each task.
       outputFilesInfoHolder.incrementCount();
       // Storing the files written by each task.
       outputFilesInfoHolder.addToOutputFiles(carbonDataDirectoryPath + localFilePath
-          .substring(localFilePath.lastIndexOf(File.separator)));
+          .substring(localFilePath.lastIndexOf(File.separator)) + ":" + targetSize);
     }
   }
 
@@ -2780,16 +2791,18 @@ public final class CarbonUtil {
    * @param localFilePath local file name with full path
    * @throws CarbonDataWriterException
    */
-  public static void copyCarbonDataFileToCarbonStorePath(String localFilePath,
+  public static long copyCarbonDataFileToCarbonStorePath(String localFilePath,
       String carbonDataDirectoryPath, long fileSizeInBytes)
       throws CarbonDataWriterException {
     long copyStartTime = System.currentTimeMillis();
     LOGGER.info(String.format("Copying %s to %s, operation id %d", localFilePath,
         carbonDataDirectoryPath, copyStartTime));
+    long targetSize = 0;
     try {
       CarbonFile localCarbonFile = FileFactory.getCarbonFile(localFilePath);
+      long localFileSize = localCarbonFile.getSize();
       // the size of local carbon file must be greater than 0
-      if (localCarbonFile.getSize() == 0L) {
+      if (localFileSize == 0L) {
         LOGGER.error("The size of local carbon file: " + localFilePath + " is 0.");
         throw new CarbonDataWriterException("The size of local carbon file is 0.");
       }
@@ -2797,16 +2810,17 @@ public final class CarbonUtil {
           .substring(localFilePath.lastIndexOf(File.separator));
       copyLocalFileToCarbonStore(carbonFilePath, localFilePath,
           CarbonCommonConstants.BYTEBUFFER_SIZE,
-          getMaxOfBlockAndFileSize(fileSizeInBytes, localCarbonFile.getSize()));
+          getMaxOfBlockAndFileSize(fileSizeInBytes, localFileSize));
       CarbonFile targetCarbonFile = FileFactory.getCarbonFile(carbonFilePath);
       // the size of carbon file must be greater than 0
       // and the same as the size of local carbon file
-      if (targetCarbonFile.getSize() == 0L ||
-          (targetCarbonFile.getSize() != localCarbonFile.getSize())) {
+      targetSize = targetCarbonFile.getSize();
+      if (targetSize == 0L ||
+          (targetSize != localFileSize)) {
         LOGGER.error("The size of carbon file: " + carbonFilePath + " is 0 "
             + "or is not the same as the size of local carbon file: ("
-            + "carbon file size=" + targetCarbonFile.getSize()
-            + ", local carbon file size=" + localCarbonFile.getSize() + ")");
+            + "carbon file size=" + targetSize
+            + ", local carbon file size=" + localFileSize + ")");
         throw new CarbonDataWriterException("The size of carbon file is 0 "
             + "or is not the same as the size of local carbon file.");
       }
@@ -2816,6 +2830,8 @@ public final class CarbonUtil {
     }
     LOGGER.info(String.format("Total copy time is %d ms, operation id %d",
         System.currentTimeMillis() - copyStartTime, copyStartTime));
+
+    return targetSize;
   }
 
   /**

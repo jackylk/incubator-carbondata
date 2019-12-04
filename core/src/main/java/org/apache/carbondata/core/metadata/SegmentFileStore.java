@@ -95,7 +95,14 @@ public class SegmentFileStore {
     if (!carbonFile.exists()) {
       carbonFile.mkdirs(writePath);
     }
-    CarbonFile tempFolder = FileFactory.getCarbonFile(location);
+    CarbonFile tempFolder;
+    if (isMergeIndexFlow) {
+      tempFolder = FileFactory.getCarbonFile(location);
+    } else {
+      tempFolder = FileFactory
+          .getCarbonFile(location + CarbonCommonConstants.FILE_SEPARATOR + tempFolderLoc);
+    }
+
     if ((tempFolder.exists() && partionNames.size() > 0) || (isMergeIndexFlow
         && partionNames.size() > 0)) {
       CarbonFile[] carbonFiles = tempFolder.listFiles(new CarbonFileFilter() {
@@ -1141,7 +1148,7 @@ public class SegmentFileStore {
       locationMap = new HashMap<>();
     }
 
-    SegmentFile merge(SegmentFile mapper) {
+    public SegmentFile merge(SegmentFile mapper) {
       if (this == mapper) {
         return this;
       }
@@ -1181,6 +1188,11 @@ public class SegmentFileStore {
     }
   }
 
+  public static SegmentFile createSegmentFile(String partitionPath, FolderDetails folderDetails) {
+    SegmentFile segmentFile = new SegmentFile();
+    segmentFile.addPath(partitionPath, folderDetails);
+    return segmentFile;
+  }
   /**
    * Represents one partition folder
    */

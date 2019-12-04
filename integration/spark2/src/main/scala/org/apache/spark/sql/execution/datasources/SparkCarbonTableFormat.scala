@@ -24,11 +24,13 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 import org.apache.commons.lang3.StringUtils
+import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileStatus, Path}
 import org.apache.hadoop.io.NullWritable
-import org.apache.hadoop.mapreduce.{Job, TaskAttemptContext}
+import org.apache.hadoop.mapreduce.{Job, JobContext, TaskAttemptContext}
 import org.apache.spark.internal.Logging
 import org.apache.spark.internal.io.FileCommitProtocol
+import org.apache.spark.internal.io.FileCommitProtocol.TaskCommitMessage
 import org.apache.spark.sql.{CarbonEnv, Row, SparkSession}
 import org.apache.spark.sql.catalyst.{InternalRow, TableIdentifier}
 import org.apache.spark.sql.catalyst.catalog.ExternalCatalogUtils
@@ -93,6 +95,7 @@ with Serializable {
       .getOrElse(CarbonCommonConstants.COMPRESSOR,
         CompressorFactory.getInstance().getCompressor.getName)
     model.setColumnCompressor(columnCompressor)
+    model.setOutputFilesInfoHolder(new OutputFilesInfoHolder())
 
     val carbonProperty = CarbonProperties.getInstance()
     val optionsFinal = LoadOption.fillOptionWithDefaultValue(options.asJava)
@@ -213,42 +216,123 @@ case class CarbonSQLHadoopMapReduceCommitProtocol(jobId: String, path: String, i
   extends SQLHadoopMapReduceCommitProtocol(jobId, path, isAppend) {
 
   override def setupTask(taskContext: TaskAttemptContext): Unit = {
-    if (isCarbonDataFlow(taskContext)) {
+    if (isCarbonDataFlow(taskContext.getConfiguration)) {
       ThreadLocalSessionInfo.setConfigurationToCurrentThread(taskContext.getConfiguration)
     }
     super.setupTask(taskContext)
   }
 
+
+  override def commitJob(jobContext: JobContext,
+      taskCommits: Seq[TaskCommitMessage]): Unit = {
+    if (isCarbonDataFlow(jobContext.getConfiguration)) {
+      var dataSize = 0L
+      val partitions =
+        taskCommits
+          .flatMap { taskCommit =>
+            taskCommit.obj match {
+              case (map: Map[String, String], _) =>
+                val partition = map.get("carbon.partitions")
+                val size = map.get("carbon.datasize")
+                if (size.isDefined) {
+                  dataSize = dataSize + java.lang.Long.parseLong(size.get)
+                }
+                if (partition.isDefined) {
+                  ObjectSerializationUtil
+                    .convertStringToObject(partition.get)
+                    .asInstanceOf[util.ArrayList[String]]
+                    .asScala
+                } else {
+                  Array.empty[String]
+                }
+              case _=> Array.empty[String]
+            }
+          }
+          .distinct
+          .toList
+          .asJava
+
+      jobContext.getConfiguration.set(
+        "carbon.output.partitions.name",
+        ObjectSerializationUtil.convertObjectToString(partitions))
+      jobContext.getConfiguration.set("carbon.datasize", dataSize.toString)
+
+      val newTaskCommits = taskCommits.map { taskCommit =>
+        taskCommit.obj match {
+          case (map: Map[String, String], set) =>
+            new TaskCommitMessage(
+              map
+                .filterNot(e => "carbon.partitions".equals(e._1) || "carbon.datasize".equals(e._1)),
+              set)
+          case _=> taskCommit
+        }
+      }
+      super
+        .commitJob(jobContext, newTaskCommits)
+    } else {
+      super
+        .commitJob(jobContext, taskCommits)
+    }
+  }
+
   override def commitTask(
       taskContext: TaskAttemptContext
   ): FileCommitProtocol.TaskCommitMessage = {
-    val taskMsg =  super.commitTask(taskContext)
-    if (isCarbonDataFlow(taskContext)) {
+    var taskMsg =  super.commitTask(taskContext)
+    if (isCarbonDataFlow(taskContext.getConfiguration)) {
       ThreadLocalSessionInfo.unsetAll()
+      val partitions: String = taskContext.getConfiguration.get("carbon.output.partitions.name", "")
+      val files = taskContext.getConfiguration.get("carbon.output.files.name", "")
+      var sum = 0L
+      if (!StringUtils.isEmpty(files)) {
+        val filesList = ObjectSerializationUtil
+          .convertStringToObject(files)
+          .asInstanceOf[util.ArrayList[String]]
+          .asScala
+        for (file <- filesList) {
+          if (file.contains(".carbondata")) {
+            sum += java.lang.Long.parseLong(file.substring(file.lastIndexOf(":") + 1))
+          }
+        }
+      }
+      if (!StringUtils.isEmpty(partitions)) {
+        taskMsg = taskMsg.obj match {
+          case (map: Map[String, String], set) =>
+            new TaskCommitMessage(
+              map ++ Map("carbon.partitions" -> partitions, "carbon.datasize" -> sum.toString),
+              set)
+          case _=> taskMsg
+        }
+      }
     }
     taskMsg
   }
 
   override def abortTask(taskContext: TaskAttemptContext): Unit = {
     super.abortTask(taskContext)
-    if (isCarbonDataFlow(taskContext)) {
-      ThreadLocalSessionInfo.unsetAll()
+    if (isCarbonDataFlow(taskContext.getConfiguration)) {
       val files = taskContext.getConfiguration.get("carbon.output.files.name", "")
-      if (StringUtils.isEmpty(files)) {
-        val filesList = files.split(",")
+      if (!StringUtils.isEmpty(files)) {
+        val filesList = ObjectSerializationUtil
+          .convertStringToObject(files)
+          .asInstanceOf[util.ArrayList[String]]
+          .asScala
         for (file <- filesList) {
           FileFactory
             .deleteAllCarbonFilesOfDir(FileFactory
-              .getCarbonFile(file, taskContext.getConfiguration))
+              .getCarbonFile(file.substring(0, file.lastIndexOf(":")),
+                taskContext.getConfiguration))
         }
       }
+      ThreadLocalSessionInfo.unsetAll()
     }
   }
 
   override def newTaskTempFileAbsPath(taskContext: TaskAttemptContext,
       absoluteDir: String,
       ext: String): String = {
-    if (isCarbonFileFlow(taskContext) || isCarbonDataFlow(taskContext)) {
+    if (isCarbonFileFlow(taskContext.getConfiguration) ||
+        isCarbonDataFlow(taskContext.getConfiguration)) {
       super.newTaskTempFile(taskContext, Some(absoluteDir), ext)
     } else {
       super.newTaskTempFileAbsPath(taskContext, absoluteDir, ext)
@@ -258,7 +342,7 @@ case class CarbonSQLHadoopMapReduceCommitProtocol(jobId: String, path: String, i
   override def newTaskTempFile(taskContext: TaskAttemptContext,
       dir: Option[String],
       ext: String): String = {
-    if (isCarbonDataFlow(taskContext)) {
+    if (isCarbonDataFlow(taskContext.getConfiguration)) {
       val path = super.newTaskTempFile(taskContext, dir, ext)
       taskContext.getConfiguration.set("carbon.newTaskTempFile.path", path)
       val model = CarbonTableOutputFormat.getLoadModel(taskContext.getConfiguration)
@@ -296,20 +380,19 @@ case class CarbonSQLHadoopMapReduceCommitProtocol(jobId: String, path: String, i
       }
       val writePath =
           CarbonOutputWriter.getPartitionPath(path, taskContext, model, updatedPartitions)
-      //      writePath + "/" + model.getSegmentId + "_" + model.getFactTimeStamp + ".tmp"
-      writePath
+      writePath + "/" + model.getSegmentId + "_" + model.getFactTimeStamp + ".tmp"
     } else {
       super.newTaskTempFile(taskContext, dir, ext)
     }
 
   }
 
-  private def isCarbonFileFlow(taskContext: TaskAttemptContext): Boolean = {
-    taskContext.getConfiguration.get("carbon.commit.protocol") != null
+  private def isCarbonFileFlow(conf : Configuration): Boolean = {
+    conf.get("carbon.commit.protocol") != null
   }
 
-  private def isCarbonDataFlow(taskContext: TaskAttemptContext): Boolean = {
-    taskContext.getConfiguration.get("carbondata.commit.protocol") != null
+  private def isCarbonDataFlow(conf : Configuration): Boolean = {
+    conf.get("carbondata.commit.protocol") != null
   }
 }
 
@@ -431,7 +514,7 @@ private class CarbonOutputWriter(path: String,
   override def close(): Unit = {
     recordWriter.close(context)
     ThreadLocalSessionInfo.setConfigurationToCurrentThread(context.getConfiguration)
-    // write partition info to new file.
+    /*// write partition info to new file.
     val partitionList = new util.ArrayList[String]()
     val formattedPartitions =
     // All dynamic partitions need to be converted to proper format
@@ -442,9 +525,9 @@ private class CarbonOutputWriter(path: String,
     SegmentFileStore.writeSegmentFile(
       model.getTablePath,
       taskNo,
-      actualPath,
+      actualPath.substring(0, actualPath.lastIndexOf("/")),
       model.getSegmentId + "_" + model.getFactTimeStamp + "",
-      partitionList)
+      partitionList)*/
   }
 
 }
