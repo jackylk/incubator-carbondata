@@ -95,14 +95,7 @@ public class SegmentFileStore {
     if (!carbonFile.exists()) {
       carbonFile.mkdirs(writePath);
     }
-    CarbonFile tempFolder = null;
-    if (isMergeIndexFlow) {
-      tempFolder = FileFactory.getCarbonFile(location);
-    } else {
-      tempFolder = FileFactory
-          .getCarbonFile(location + CarbonCommonConstants.FILE_SEPARATOR + tempFolderLoc);
-    }
-
+    CarbonFile tempFolder = FileFactory.getCarbonFile(location);
     if ((tempFolder.exists() && partionNames.size() > 0) || (isMergeIndexFlow
         && partionNames.size() > 0)) {
       CarbonFile[] carbonFiles = tempFolder.listFiles(new CarbonFileFilter() {

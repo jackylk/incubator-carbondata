@@ -104,6 +104,7 @@ public class CarbonOutputCommitter extends FileOutputCommitter {
    * @throws IOException
    */
   @Override public void commitJob(JobContext context) throws IOException {
+    long t1 = System.currentTimeMillis();
     try {
       super.commitJob(context);
     } catch (IOException e) {
@@ -111,6 +112,10 @@ public class CarbonOutputCommitter extends FileOutputCommitter {
       // cause file not found exception. This will not impact carbon load,
       LOGGER.warn(e.getMessage());
     }
+    LOGGER.info(
+        "$$$ Time taken for the super.commitJob in ms: " + (System.currentTimeMillis() - t1));
+
+    t1 = System.currentTimeMillis();
     boolean overwriteSet = CarbonTableOutputFormat.isOverwriteSet(context.getConfiguration());
     CarbonLoadModel loadModel = CarbonTableOutputFormat.getLoadModel(context.getConfiguration());
     LoadMetadataDetails newMetaEntry = loadModel.getCurrentLoadMetadataDetail();
@@ -146,7 +151,10 @@ public class CarbonOutputCommitter extends FileOutputCommitter {
         carbonTable.getCarbonTableIdentifier().getTableId(),
         new SegmentFileStore(carbonTable.getTablePath(),
             segmentFileName + CarbonTablePath.SEGMENT_EXT));
+    LOGGER.info(
+        "$$$ Time taken for the segment commit in ms: " + (System.currentTimeMillis() - t1));
 
+    t1 = System.currentTimeMillis();
     CarbonLoaderUtil
         .populateNewLoadMetaEntry(newMetaEntry, SegmentStatus.SUCCESS, loadModel.getFactTimeStamp(),
             true);
@@ -211,6 +219,7 @@ public class CarbonOutputCommitter extends FileOutputCommitter {
     } else {
       CarbonLoaderUtil.updateTableStatusForFailure(loadModel);
     }
+    LOGGER.info("$$$ Time taken for metadata commit update: " + (System.currentTimeMillis() - t1));
     if (segmentLock != null) {
       segmentLock.unlock();
     }

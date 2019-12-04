@@ -2761,6 +2761,18 @@ public final class CarbonUtil {
     return Base64.decodeBase64(objectString.getBytes(CarbonCommonConstants.DEFAULT_CHARSET));
   }
 
+  public static void copyCarbonDataFileToCarbonStorePath(String localFilePath,
+      String carbonDataDirectoryPath, long fileSizeInBytes,
+      OutputFilesInfoHolder outputFilesInfoHolder) throws CarbonDataWriterException {
+    copyCarbonDataFileToCarbonStorePath(localFilePath, carbonDataDirectoryPath, fileSizeInBytes);
+    if (outputFilesInfoHolder != null) {
+      // Storing the number of files written by each task.
+      outputFilesInfoHolder.incrementCount();
+      // Storing the files written by each task.
+      outputFilesInfoHolder.addToOutputFiles(carbonDataDirectoryPath + localFilePath
+          .substring(localFilePath.lastIndexOf(File.separator)));
+    }
+  }
 
   /**
    * This method will copy the given file to carbon store location

@@ -87,7 +87,8 @@ public class CarbonIndexFileMergeWriter {
           // in case of partition table, merge index files of a partition
           List<CarbonFile> indexFilesInPartition = new ArrayList<>();
           for (CarbonFile indexCarbonFile : indexCarbonFiles) {
-            if (indexCarbonFile.getParentFile().getPath().equals(partitionPath)) {
+            if (FileFactory.getUpdatedFilePath(indexCarbonFile.getParentFile().getPath())
+                .equals(partitionPath)) {
               indexFilesInPartition.add(indexCarbonFile);
             }
           }
