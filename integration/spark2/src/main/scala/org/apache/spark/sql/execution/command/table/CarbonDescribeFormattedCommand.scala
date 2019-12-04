@@ -144,6 +144,10 @@ private[sql] case class CarbonDescribeFormattedCommand(
     if (carbonTable.getRangeColumn != null) {
       results ++= Seq(("RANGE COLUMN", carbonTable.getRangeColumn.getColName, ""))
     }
+    if (carbonTable.getGlobalSortPartitions != null) {
+      results ++= Seq(("GLOBAL SORT PARTITIONS", carbonTable.getGlobalSortPartitions, ""))
+    }
+
     //////////////////////////////////////////////////////////////////////////////
     //  Encoding Information
     //////////////////////////////////////////////////////////////////////////////

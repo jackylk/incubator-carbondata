@@ -47,6 +47,7 @@ import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema
 import org.apache.carbondata.core.util.CarbonUtil
 import org.apache.carbondata.format.{SchemaEvolutionEntry, TableInfo}
+import org.apache.carbondata.processing.util.CarbonDataProcessorUtil
 import org.apache.carbondata.spark.util.{CarbonScalaUtil, CommonUtil}
 
 
@@ -434,6 +435,8 @@ object AlterTableUtil {
       // validate the range column properties
       validateRangeColumnProperties(carbonTable, lowerCasePropertiesMap)
 
+      validateGlobalSortPartitions(carbonTable, lowerCasePropertiesMap)
+
       // validate the Sort Scope and Sort Columns
       validateSortScopeAndSortColumnsProperties(carbonTable, lowerCasePropertiesMap)
       // if SORT_COLUMN is changed, it will move them to the head of column list
@@ -525,7 +528,8 @@ object AlterTableUtil {
       "LOAD_MIN_SIZE_INMB",
       "RANGE_COLUMN",
       "SORT_SCOPE",
-      "SORT_COLUMNS")
+      "SORT_COLUMNS",
+      "GLOBAL_SORT_PARTITIONS")
     supportedOptions.contains(propKey.toUpperCase)
   }
 
@@ -623,6 +627,27 @@ object AlterTableUtil {
           s" is not exists in the table")
       } else {
         propertiesMap.put(CarbonCommonConstants.RANGE_COLUMN, rangeColumn.getColName)
+      }
+    }
+  }
+
+  def validateGlobalSortPartitions(carbonTable: CarbonTable,
+      propertiesMap: mutable.Map[String, String]): Unit = {
+    if (propertiesMap.get("global_sort_partitions").isDefined) {
+      val globalSortPartitionsProp = propertiesMap.get("global_sort_partitions").get
+      var pass = false
+      try {
+        val globalSortPartitions = Integer.parseInt(globalSortPartitionsProp)
+        if (globalSortPartitions > 0) {
+          pass = true
+        }
+      } catch {
+        case _ =>
+      }
+      if (!pass) {
+        throw new MalformedCarbonCommandException(
+          s"Table property global_sort_partitions : ${ globalSortPartitionsProp }" +
+          s" is invalid")
       }
     }
   }
