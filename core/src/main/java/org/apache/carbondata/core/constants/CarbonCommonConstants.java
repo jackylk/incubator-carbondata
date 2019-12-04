@@ -463,7 +463,7 @@ public final class CarbonCommonConstants {
   public static final String TABLE_BLOCKSIZE = "table_blocksize";
 
   // default block size in MB
-  public static final String TABLE_BLOCK_SIZE_DEFAULT = "1024";
+  public static final String TABLE_BLOCK_SIZE_DEFAULT = "256";
 
   // table blocklet size in MB
   public static final String TABLE_BLOCKLET_SIZE = "table_blocklet_size";
