@@ -40,7 +40,7 @@ import org.apache.spark.sql.sources.{BaseRelation, Filter}
 import org.apache.spark.sql.types.StructField
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
-import org.apache.carbondata.hive.{CarbonHiveSerDe, MapredCarbonInputFormat, MapredCarbonOutputFormat}
+import org.apache.carbondata.hive.{CarbonFileHiveSerDe, CarbonHiveSerDe, MapredCarbonInputFormat, MapredCarbonOutputFormat}
 
 /**
  * Reflection APIs
@@ -382,7 +382,7 @@ object CarbonReflectionUtils {
             ("carbon", HiveSerDe(Some(
               classOf[MapredCarbonInputFormat].getName),
               Some(classOf[MapredCarbonOutputFormat[_]].getName),
-              Some(classOf[CarbonHiveSerDe].getName))),
+              Some(classOf[CarbonFileHiveSerDe].getName))),
             ("carbondata", HiveSerDe(Some(
               classOf[MapredCarbonInputFormat].getName),
               Some(classOf[MapredCarbonOutputFormat[_]].getName),

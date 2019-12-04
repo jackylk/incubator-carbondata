@@ -743,6 +743,10 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
       sql(s"describe formatted $tableName"),
       true,
       "GLOBAL SORT PARTITIONS")
+    sql(s"""alter table $tableName unset tblproperties('GLOBAL_sort_Partitions')""")
+    globalSortPartitions = CarbonEnv.getCarbonTable(
+      Option("alldatasource"), tableName)(sqlContext.sparkSession).getGlobalSortPartitions
+    assert(globalSortPartitions == null)
   }
 
   test("update non-carbon table") {
