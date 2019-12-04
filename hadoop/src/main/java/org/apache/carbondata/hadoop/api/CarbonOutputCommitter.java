@@ -165,6 +165,9 @@ public class CarbonOutputCommitter extends FileOutputCommitter {
           throw new IOException(e);
         }
       }
+      // after merging index, update newMetaEntry with updated data and index size
+      CarbonLoaderUtil
+          .addDataIndexSizeIntoMetaEntry(newMetaEntry, loadModel.getSegmentId(), carbonTable);
       String uniqueId = null;
       if (overwriteSet) {
         if (!loadModel.isCarbonTransactionalTable()) {
