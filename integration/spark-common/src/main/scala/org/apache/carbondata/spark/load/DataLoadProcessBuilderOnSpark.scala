@@ -89,7 +89,8 @@ object DataLoadProcessBuilderOnSpark {
     val inputRDD = originRDD
       .mapPartitions(rows => DataLoadProcessorStepOnSpark.toRDDIterator(rows, modelBroadcast))
       .mapPartitionsWithIndex { case (index, rows) =>
-        DataLoadProcessorStepOnSpark.inputFunc(rows, index, modelBroadcast, inputStepRowCounter)
+        DataLoadProcessorStepOnSpark.inputFunc(
+          rows, index, modelBroadcast, Some(inputStepRowCounter))
       }
 
     // 2. Convert
@@ -185,6 +186,7 @@ object DataLoadProcessBuilderOnSpark {
    */
   def loadDataUsingRangeSort(
       sparkSession: SparkSession,
+      dataFrame: Option[DataFrame],
       model: CarbonLoadModel,
       hadoopConf: Configuration): Array[(String, (LoadMetadataDetails, ExecutionErrors))] = {
     // initialize and prepare row counter
@@ -199,12 +201,21 @@ object DataLoadProcessBuilderOnSpark {
     // 1. Input
     hadoopConf
       .set(CarbonCommonConstants.CARBON_WRITTEN_BY_APPNAME, sparkSession.sparkContext.appName)
-    val inputRDD = CsvRDDHelper
-      .csvFileScanRDD(sparkSession, model, hadoopConf)
-      .mapPartitionsWithIndex { case (index, rows) =>
-        DataLoadProcessorStepOnSpark.internalInputFunc(
-          rows, index, modelBroadcast, Option(inputStepRowCounter), Option.empty)
-      }
+    val inputRDD = if (dataFrame.isEmpty) {
+      CsvRDDHelper
+        .csvFileScanRDD(sparkSession, model, hadoopConf)
+        .mapPartitionsWithIndex { case (index, rows) =>
+          DataLoadProcessorStepOnSpark.internalInputFunc(
+            rows, index, modelBroadcast, Option(inputStepRowCounter), Option.empty)
+        }
+    } else {
+      dataFrame.get.rdd
+        .mapPartitions(rows => DataLoadProcessorStepOnSpark.toRDDIterator(rows, modelBroadcast))
+        .mapPartitionsWithIndex { case (index, rows) =>
+          DataLoadProcessorStepOnSpark.inputFunc(
+            rows, index, modelBroadcast, Option(inputStepRowCounter))
+        }
+    }
 
     // 2. Convert
     val conf = SparkSQLUtil.broadCastHadoopConf(sc, hadoopConf)
@@ -226,7 +237,8 @@ object DataLoadProcessBuilderOnSpark {
     val numPartitions = getNumPartitions(configuration, model, convertRDD)
     val objectOrdering: Ordering[Object] = createOrderingForColumn(model.getRangePartitionColumn)
     import scala.reflect.classTag
-    val sampleRDD = getSampleRDD(sparkSession, model, hadoopConf, configuration, modelBroadcast)
+    val sampleRDD = getSampleRDD(
+      sparkSession, dataFrame, model, hadoopConf, configuration, modelBroadcast)
     val rangeRDD = keyRDD
       .partitionBy(
         new DataSkewRangePartitioner(
@@ -258,6 +270,7 @@ object DataLoadProcessBuilderOnSpark {
    */
   private def getSampleRDD(
       sparkSession: SparkSession,
+      dataFrame: Option[DataFrame],
       model: CarbonLoadModel,
       hadoopConf: Configuration,
       configuration: CarbonDataLoadConfiguration,
@@ -280,12 +293,20 @@ object DataLoadProcessBuilderOnSpark {
     val newHadoopConf = new Configuration(hadoopConf)
     newHadoopConf
       .set(CSVInputFormat.SELECT_COLUMN_INDEX, "" + rangeColumnIndex)
-    val inputRDD = CsvRDDHelper
-      .csvFileScanRDD(sparkSession, model, newHadoopConf)
-      .mapPartitionsWithIndex { case (index, rows) =>
-        DataLoadProcessorStepOnSpark
-          .internalInputFunc(rows, index, modelBroadcast, Option.empty, Option(rangeField))
-      }
+    val inputRDD = if (dataFrame.isEmpty) {
+      CsvRDDHelper
+        .csvFileScanRDD(sparkSession, model, newHadoopConf)
+        .mapPartitionsWithIndex { case (index, rows) =>
+          DataLoadProcessorStepOnSpark
+            .internalInputFunc(rows, index, modelBroadcast, Option.empty, Option(rangeField))
+        }
+    } else {
+      dataFrame.get.rdd
+        .mapPartitions(rows => DataLoadProcessorStepOnSpark.toRDDIterator(rows, modelBroadcast))
+        .mapPartitionsWithIndex { case (index, rows) =>
+          DataLoadProcessorStepOnSpark.inputFunc(rows, index, modelBroadcast, None)
+        }
+    }
 
     // 2. Convert
     val conf = SparkSQLUtil.broadCastHadoopConf(sparkSession.sparkContext, hadoopConf)

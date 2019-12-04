@@ -145,7 +145,7 @@ case class CarbonCollectLoadsCommand(
         FileFactory.writeFile(content, snapshotFilePath)
 
         // 4. perform data loading
-        startLoading(sparkSession, table, stageInputs)
+        startLoading(sparkSession, table, stageInputs, options)
 
         // 5. delete segment files written by flink
         deleteTempSegmentFiles(executorService, segmentFilePaths)
@@ -252,7 +252,8 @@ case class CarbonCollectLoadsCommand(
   private def startLoading(
       spark: SparkSession,
       table: CarbonTable,
-      stageInput: Seq[StageInput]
+      stageInput: Seq[StageInput],
+      options: Map[String, String]
   ): Unit = {
     val splits = stageInput.flatMap(_.createSplits().asScala)
     LOGGER.info(s"start to load ${splits.size} files into " +
@@ -265,7 +266,7 @@ case class CarbonCollectLoadsCommand(
       tableName = table.getTableName,
       factPathFromUser = null,
       dimFilesPath = Seq(),
-      options = scala.collection.immutable.Map("fileheader" -> header),
+      options = options ++ Map("fileheader" -> header),
       isOverwriteTable = false,
       inputSqlString = null,
       dataFrame = Some(dataFrame),

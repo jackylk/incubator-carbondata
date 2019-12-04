@@ -71,7 +71,7 @@ object DataLoadProcessorStepOnSpark {
       rows: Iterator[Array[AnyRef]],
       index: Int,
       modelBroadcast: Broadcast[CarbonLoadModel],
-      rowCounter: Accumulator[Int]): Iterator[CarbonRow] = {
+      rowCounter: Option[Accumulator[Int]]): Iterator[CarbonRow] = {
     val model: CarbonLoadModel = modelBroadcast.value.getCopyWithTaskNo(index.toString)
     val conf = DataLoadProcessBuilder.createConfiguration(model)
     val rowParser = new RowParserImpl(conf.getDataFields, conf)
@@ -91,7 +91,7 @@ object DataLoadProcessorStepOnSpark {
         } else {
           row = new CarbonRow(rowParser.parseRow(rows.next()))
         }
-        rowCounter.add(1)
+        if (rowCounter.nonEmpty) rowCounter.get.add(1)
         row
       }
     }

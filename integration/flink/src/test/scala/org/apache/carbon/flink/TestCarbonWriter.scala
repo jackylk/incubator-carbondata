@@ -27,6 +27,7 @@ class TestCarbonWriter extends QueryTest {
       s"""
          | CREATE TABLE $tableName (stringField string, intField int, shortField short)
          | STORED AS carbondata
+         | TBLPROPERTIES ('sort_columns'='stringField', 'sort_scope'='global_sort')
       """.stripMargin
     ).collect()
 
@@ -104,7 +105,8 @@ class TestCarbonWriter extends QueryTest {
       assertResult(numDetailFiles - 4)(FileFactory.getCarbonFile(loadDetailPath).listFiles().length)
       assertResult(numSegmentFiles - 2)(FileFactory.getCarbonFile(segmentMetaPath).listFiles().count(_.getName.startsWith("_")))
 
-      sql(s"alter table $tableName collect segments options ('batch' = '100')").collect()
+      sql(s"alter table $tableName set tblproperties ('range_column'='stringField')")
+      sql(s"alter table $tableName collect segments").collect()
       assertResult(0)(FileFactory.getCarbonFile(loadDetailPath).listFiles().length)
       assertResult(0)(FileFactory.getCarbonFile(segmentMetaPath).listFiles().count(_.getName.startsWith("_")))
 
