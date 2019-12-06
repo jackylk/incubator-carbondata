@@ -412,15 +412,6 @@ case class CarbonLoadDataCommand(
         throw ex
     } finally {
       releaseConcurrentLoadLock(concurrentLoadLock, LOGGER)
-      // Once the data load is successful delete the unwanted partition files
-      val partitionLocation = CarbonProperties.getStorePath + "/partition/" +
-                              table.getDatabaseName + "/" +
-                              table.getTableName + "/"
-      val fileType = FileFactory.getFileType(partitionLocation)
-      if (FileFactory.isFileExist(partitionLocation, fileType)) {
-        val file = FileFactory.getCarbonFile(partitionLocation, fileType)
-        CarbonUtil.deleteFoldersAndFiles(file)
-      }
     }
     Seq.empty
   }
