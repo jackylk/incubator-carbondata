@@ -87,7 +87,16 @@ object DDLHelper {
       table.storage.locationUri.map(CatalogUtils.URIToString),
       table.tableType == CatalogTableType.EXTERNAL)
   }
-
+  def createCarbonFileHiveTable(
+      createTableCommand: CreateTableCommand,
+      sparkSession: SparkSession
+  ): CreateDataSourceTableCommand = {
+    CreateDataSourceTableCommand(
+      createTableCommand.table.copy(
+        provider = Option("carbon")
+      ),
+      createTableCommand.ignoreIfExists)
+  }
   /**
    * create table using carbondata
    */
@@ -161,6 +170,20 @@ object DDLHelper {
       ctas.query,
       ctas.mode,
       sparkSession
+    )
+  }
+
+  def createCarbonFileHiveTableAsSelect(
+      ctas: CreateHiveTableAsSelectCommand,
+      sparkSession: SparkSession
+  ): CreateDataSourceTableAsSelectCommand = {
+    CreateDataSourceTableAsSelectCommand(
+      ctas.tableDesc.copy(
+        provider = Option("carbon")
+      ),
+      ctas.mode,
+      ctas.query,
+      ctas.outputColumnNames
     )
   }
 

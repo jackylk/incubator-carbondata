@@ -119,6 +119,16 @@ class DDLStrategy(sparkSession: SparkSession) extends SparkStrategy {
            && DDLUtils.HIVE_PROVIDER == createTable.table.provider.get
            && createTable.table.storage.serde.get == "org.apache.carbondata.hive.CarbonHiveSerDe" =>
         ExecutedCommandExec(DDLHelper.createHiveTable(createTable, sparkSession)) :: Nil
+      case createTable: CreateTableCommand
+        if createTable.table.provider.isDefined
+           && DDLUtils.HIVE_PROVIDER == createTable.table.provider.get
+           && createTable.table.storage.serde.get ==
+              "org.apache.carbondata.hive.CarbonFileHiveSerDe" =>
+        if (EnvHelper.isLuxor(sparkSession)) {
+          Nil
+        } else {
+          ExecutedCommandExec(DDLHelper.createCarbonFileHiveTable(createTable, sparkSession)) :: Nil
+        }
       case ctas: CreateHiveTableAsSelectCommand
         if ctas.tableDesc.provider.isDefined
            && DDLUtils.HIVE_PROVIDER == ctas.tableDesc.provider.get
@@ -126,6 +136,19 @@ class DDLStrategy(sparkSession: SparkSession) extends SparkStrategy {
         ExecutedCommandExec(
           DDLHelper.createHiveTableAsSelect(ctas, sparkSession)
         ) :: Nil
+      case ctas: CreateHiveTableAsSelectCommand
+        if ctas.tableDesc.provider.isDefined
+           && DDLUtils.HIVE_PROVIDER == ctas.tableDesc.provider.get
+           && ctas.tableDesc.storage.serde.get ==
+              "org.apache.carbondata.hive.CarbonFileHiveSerDe" =>
+        if (EnvHelper.isLuxor(sparkSession)) {
+          Nil
+        } else {
+          DataWritingCommandExec(
+            DDLHelper.createCarbonFileHiveTableAsSelect(ctas, sparkSession),
+            planLater(ctas.query)
+          ) :: Nil
+        }
       case showCreateTable: ShowCreateTableCommand
         if isCarbonTable(showCreateTable.table) =>
         ExecutedCommandExec(CarbonShowCreateTableCommand(showCreateTable)) :: Nil
