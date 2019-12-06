@@ -48,6 +48,7 @@ import org.apache.carbondata.core.locks.ICarbonLock;
 import org.apache.carbondata.core.locks.LockUsage;
 import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier;
 import org.apache.carbondata.core.metadata.ColumnIdentifier;
+import org.apache.carbondata.core.metadata.SegmentFileStore;
 import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.mutate.CarbonUpdateUtil;
@@ -1217,6 +1218,15 @@ public final class CarbonLoaderUtil {
     String tablePath = table.getTablePath();
     return new CarbonIndexFileMergeWriter(table)
         .mergeCarbonIndexFilesOfSegment(segmentId, uuid, tablePath, partitionPath);
+  }
+
+  public static SegmentFileStore.FolderDetails mergeIndexFilesInPartitionedTempSegment(
+      CarbonTable table, String segmentId, String partitionPath, List<String> partitionInfo,
+      String uuid, String tempFolderPath, String currPartitionSpec) throws IOException {
+    String tablePath = table.getTablePath();
+    return new CarbonIndexFileMergeWriter(table)
+        .mergeCarbonIndexFilesOfSegment(segmentId, tablePath, partitionPath, partitionInfo, uuid,
+            tempFolderPath, currPartitionSpec);
   }
 
   private static void deleteFiles(List<String> filesToBeDeleted) throws IOException {

@@ -18,6 +18,7 @@
 package org.apache.carbondata.hadoop.api;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -242,8 +243,7 @@ public class CarbonTableOutputFormat extends FileOutputFormat<NullWritable, Obje
   public RecordWriter<NullWritable, ObjectArrayWritable> getRecordWriter(
       final TaskAttemptContext taskAttemptContext) throws IOException {
     final CarbonLoadModel loadModel = getLoadModel(taskAttemptContext.getConfiguration());
-    OutputFilesInfoHolder outputFilesInfoHolder = new OutputFilesInfoHolder();
-    loadModel.setOutputFilesInfoHolder(outputFilesInfoHolder);
+    loadModel.setOutputFilesInfoHolder(new OutputFilesInfoHolder());
     String appName =
         taskAttemptContext.getConfiguration().get(CarbonCommonConstants.CARBON_WRITTEN_BY_APPNAME);
     if (null != appName) {
@@ -317,6 +317,7 @@ public class CarbonTableOutputFormat extends FileOutputFormat<NullWritable, Obje
     model.setDatabaseName(CarbonTableOutputFormat.getDatabaseName(conf));
     model.setTableName(CarbonTableOutputFormat.getTableName(conf));
     model.setCarbonTransactionalTable(true);
+    model.setOutputFilesInfoHolder(new OutputFilesInfoHolder());
     CarbonTable carbonTable = getCarbonTable(conf);
     String columnCompressor = carbonTable.getTableInfo().getFactTable().getTableProperties().get(
         CarbonCommonConstants.COMPRESSOR);
@@ -489,12 +490,41 @@ public class CarbonTableOutputFormat extends FileOutputFormat<NullWritable, Obje
         }
         OutputFilesInfoHolder outputFilesInfoHolder = loadModel.getOutputFilesInfoHolder();
         if (null != outputFilesInfoHolder) {
+          //TODO: fix to sum
           taskAttemptContext.getConfiguration()
               .set("carbon.number.of.output.files", outputFilesInfoHolder.getFileCount() + "");
-          taskAttemptContext.getConfiguration()
-              .set("carbon.output.files.name", outputFilesInfoHolder.getOutputFiles());
+          if (outputFilesInfoHolder.getOutputFiles() != null) {
+            appendConfiguration(
+                taskAttemptContext.getConfiguration(),
+                "carbon.output.files.name",
+                outputFilesInfoHolder.getOutputFiles());
+          }
+          if (outputFilesInfoHolder.getPartitionPath() != null) {
+            appendConfiguration(
+                taskAttemptContext.getConfiguration(),
+                "carbon.output.partitions.name",
+                outputFilesInfoHolder.getPartitionPath());
+          }
         }
         LOG.info("Closed writer task " + taskAttemptContext.getTaskAttemptID());
+      }
+    }
+
+    private void appendConfiguration(
+        Configuration conf, String key, List<String> value) throws InterruptedException {
+      String currentValue = conf.get(key);
+      try {
+        if (StringUtils.isEmpty(currentValue)) {
+            conf.set(key, ObjectSerializationUtil.convertObjectToString(value), "");
+        } else {
+          ArrayList<String> currentValueList =
+              (ArrayList<String>) ObjectSerializationUtil.convertStringToObject(currentValue);
+          currentValueList.addAll(value);
+          conf.set(key, ObjectSerializationUtil.convertObjectToString(currentValueList), "");
+        }
+      } catch (IOException e) {
+        LOG.error(e);
+        throw new InterruptedException(e.getMessage());
       }
     }
 
