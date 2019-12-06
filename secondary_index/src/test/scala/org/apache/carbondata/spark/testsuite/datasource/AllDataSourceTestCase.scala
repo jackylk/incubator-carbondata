@@ -168,6 +168,11 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
         Row(1, "3aa", java.sql.Date.valueOf("2019-11-11"))
       )
     )
+
+    val table = CarbonEnv.getCarbonTable(
+      Option("alldatasource"), tableName)(sqlContext.sparkSession)
+    assert(table.getBlockletSizeInMB == 64)
+    assert(table.getBlockSizeInMB == 256)
   }
 
   test("test table properties of hive table") {
