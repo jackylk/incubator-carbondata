@@ -268,12 +268,6 @@ public class CarbonDictionaryDecodeReadSupport<T> implements CarbonReadSupport<T
     if (obj == null) {
       return null;
     }
-    if (carbonColumn.hasEncoding(Encoding.DICTIONARY)) {
-      obj = DataTypeUtil.getDataBasedOnDataType(obj.toString(), dataType);
-      if (obj == null) {
-        return null;
-      }
-    }
     if (dataType == DataTypes.NULL) {
       return null;
     } else if (dataType == DataTypes.DOUBLE) {
