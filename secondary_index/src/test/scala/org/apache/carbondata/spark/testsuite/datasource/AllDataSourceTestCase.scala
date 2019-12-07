@@ -218,7 +218,7 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
     )
   }
 
-  test("test show create table") {
+  ignore("test show create table") {
     val tableName = "ds_sct"
     sql(s"drop table if exists ${ tableName }")
     sql(

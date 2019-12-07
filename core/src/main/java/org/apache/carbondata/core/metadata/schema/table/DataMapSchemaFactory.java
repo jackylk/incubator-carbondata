@@ -42,7 +42,7 @@ public class DataMapSchemaFactory {
   }
 
   public static DataMapSchemaStorageProvider getDataMapSchemaStorageProvider() {
-    String provider = CarbonProperties.getDMSchemaStorageProvider();
+    String provider = CarbonProperties.getDataMapStorageProvider();
     switch (provider) {
       case CarbonCommonConstants.CARBON_DATAMAP_SCHEMA_STORAGE_DATABASE:
         return new DatabaseDMSchemaStorageProvider();
