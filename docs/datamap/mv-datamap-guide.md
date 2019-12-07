@@ -85,15 +85,13 @@ EXPLAIN SELECT a, sum(b) from maintable group by a;
     6. LOCAL_DICTIONARY_ENABLE
     7. LOCAL_DICTIONARY_THRESHOLD
     8. LOCAL_DICTIONARY_EXCLUDE
-    9. DICTIONARY_INCLUDE
-   10. DICTIONARY_EXCLUDE
-   11. INVERTED_INDEX
-   12. NO_INVERTED_INDEX
-   13. COLUMN_COMPRESSOR
+    9. INVERTED_INDEX
+   10. NO_INVERTED_INDEX
+   11. COLUMN_COMPRESSOR
 
  * All columns of main table at once cannot participate in mv datamap table creation
  * TableProperties can be provided in DMProperties excluding LOCAL_DICTIONARY_INCLUDE,
-   LOCAL_DICTIONARY_EXCLUDE, DICTIONARY_INCLUDE, DICTIONARY_EXCLUDE, INVERTED_INDEX,
+   LOCAL_DICTIONARY_EXCLUDE, INVERTED_INDEX,
    NO_INVERTED_INDEX, SORT_COLUMNS, LONG_STRING_COLUMNS, RANGE_COLUMN & COLUMN_META_CACHE
  * TableProperty given in DMProperties will be considered for mv creation, eventhough if same
    property is inherited from parent table, which allows user to provide different tableproperties

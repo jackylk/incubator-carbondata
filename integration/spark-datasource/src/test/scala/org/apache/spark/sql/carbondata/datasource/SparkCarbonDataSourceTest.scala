@@ -1233,8 +1233,7 @@ class SparkCarbonDataSourceTest extends FunSuite with BeforeAndAfterAll {
 
   test("test read using old data") {
     val store = new StoreCreator(new File(warehouse1).getAbsolutePath,
-      new File(warehouse1 + "../../../../../hadoop/src/test/resources/data.csv").getCanonicalPath,
-      false)
+      new File(warehouse1 + "../../../../../hadoop/src/test/resources/data.csv").getCanonicalPath)
     store.createCarbonStore()
     FileFactory.deleteAllFilesOfDir(new File(warehouse1+"/testdb/testtable/Fact/Part0/Segment_0/0"))
     val dfread = spark.read.format("carbon").load(warehouse1+"/testdb/testtable/Fact/Part0/Segment_0")
@@ -1247,8 +1246,7 @@ class SparkCarbonDataSourceTest extends FunSuite with BeforeAndAfterAll {
       spark.sql("drop table if exists old_comp")
       FileFactory.deleteAllFilesOfDir(new File(warehouse1 + "/testdb"))
       val store = new StoreCreator(new File(warehouse1).getAbsolutePath,
-        new File(warehouse1 + "../../../../../hadoop/src/test/resources/data.csv").getCanonicalPath,
-        false)
+        new File(warehouse1 + "../../../../../hadoop/src/test/resources/data.csv").getCanonicalPath)
       store.setSortColumns(new util.ArrayList[String](Seq("name").asJava))
       var model = store.createTableAndLoadModel(false)
       model.setSegmentId("0")
