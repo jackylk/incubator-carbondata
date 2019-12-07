@@ -21,11 +21,13 @@ import java.util
 import java.util.UUID
 
 import scala.collection.JavaConverters._
-import org.apache.spark.sql.{CarbonEnv, Row, SparkSession}
+
+import org.apache.spark.sql.{CarbonEnv, EnvHelper, Row, SparkSession}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.catalog.CatalogTypes.TablePartitionSpec
 import org.apache.spark.sql.execution.command.{AlterTableAddPartitionCommand, AlterTableDropPartitionCommand, AtomicRunnableCommand}
 import org.apache.spark.util.{AlterTableUtil, DataMapUtil}
+
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.datamap.DataMapStoreManager
@@ -70,6 +72,7 @@ case class CarbonAlterTableDropHivePartitionCommand(
     setAuditTable(table)
     setAuditInfo(Map("partition" -> specs.mkString(",")))
     if (table.isHivePartitionTable) {
+      EnvHelper.checkContextData(sparkSession)
       var locks = List.empty[ICarbonLock]
       try {
         val locksToBeAcquired = List(LockUsage.METADATA_LOCK,
