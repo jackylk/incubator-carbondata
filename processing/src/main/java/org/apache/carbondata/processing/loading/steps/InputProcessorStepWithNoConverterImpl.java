@@ -64,6 +64,8 @@ public class InputProcessorStepWithNoConverterImpl extends AbstractDataLoadProce
   // cores used in SDK writer, set by the user
   private short sdkWriterCores;
 
+  private Map<Integer, GenericDataType> dataFieldsWithComplexDataType;
+
   public InputProcessorStepWithNoConverterImpl(CarbonDataLoadConfiguration configuration,
       CarbonIterator<Object[]>[] inputIterators) {
     super(configuration, null);
@@ -84,6 +86,8 @@ public class InputProcessorStepWithNoConverterImpl extends AbstractDataLoadProce
     configuration.setCardinalityFinder(rowConverter);
     noDictionaryMapping =
         CarbonDataProcessorUtil.getNoDictionaryMapping(configuration.getDataFields());
+    dataFieldsWithComplexDataType = new HashMap<>();
+    convertComplexDataType(dataFieldsWithComplexDataType);
 
     dataTypes = new DataType[configuration.getDataFields().length];
     for (int i = 0; i < dataTypes.length; i++) {
@@ -94,6 +98,26 @@ public class InputProcessorStepWithNoConverterImpl extends AbstractDataLoadProce
       }
     }
     orderOfData = arrangeData(configuration.getDataFields(), configuration.getHeader());
+  }
+
+  private void convertComplexDataType(Map<Integer, GenericDataType> dataFieldsWithComplexDataType) {
+    DataField[] srcDataField = configuration.getDataFields();
+    FieldEncoderFactory fieldConverterFactory = FieldEncoderFactory.getInstance();
+    String nullFormat =
+        configuration.getDataLoadProperty(DataLoadProcessorConstants.SERIALIZATION_NULL_FORMAT)
+            .toString();
+    boolean isEmptyBadRecord = Boolean.parseBoolean(
+        configuration.getDataLoadProperty(DataLoadProcessorConstants.IS_EMPTY_DATA_BAD_RECORD)
+            .toString());
+    for (int i = 0; i < srcDataField.length; i++) {
+      if (srcDataField[i].getColumn().isComplex()) {
+        // create a ComplexDataType
+        dataFieldsWithComplexDataType.put(srcDataField[i].getColumn().getOrdinal(),
+            fieldConverterFactory
+                .createComplexDataType(srcDataField[i], configuration.getTableIdentifier(), null,
+                    false, null, i, nullFormat, isEmptyBadRecord));
+      }
+    }
   }
 
   private int[] arrangeData(DataField[] dataFields, String[] header) {
@@ -117,7 +141,8 @@ public class InputProcessorStepWithNoConverterImpl extends AbstractDataLoadProce
     for (int i = 0; i < outIterators.length; i++) {
       outIterators[i] =
           new InputProcessorIterator(readerIterators[i], batchSize, configuration.isPreFetch(),
-              rowCounter, orderOfData, noDictionaryMapping, dataTypes, configuration);
+              rowCounter, orderOfData, noDictionaryMapping, dataTypes, configuration,
+              dataFieldsWithComplexDataType);
     }
     return outIterators;
   }
@@ -167,9 +192,16 @@ public class InputProcessorStepWithNoConverterImpl extends AbstractDataLoadProce
 
     private DirectDictionaryGenerator timestampDictionaryGenerator;
 
+    private Map<Integer, GenericDataType> dataFieldsWithComplexDataType;
+
+    private BadRecordLogHolder logHolder = new BadRecordLogHolder();
+
+    private boolean isHivePartitionTable = false;
+
     public InputProcessorIterator(List<CarbonIterator<Object[]>> inputIterators, int batchSize,
         boolean preFetch, AtomicLong rowCounter, int[] orderOfData, boolean[] noDictionaryMapping,
-        DataType[] dataTypes, CarbonDataLoadConfiguration configuration) {
+        DataType[] dataTypes, CarbonDataLoadConfiguration configuration,
+        Map<Integer, GenericDataType> dataFieldsWithComplexDataType) {
       this.inputIterators = inputIterators;
       this.batchSize = batchSize;
       this.counter = 0;
@@ -182,6 +214,9 @@ public class InputProcessorStepWithNoConverterImpl extends AbstractDataLoadProce
       this.dataTypes = dataTypes;
       this.dataFields = configuration.getDataFields();
       this.orderOfData = orderOfData;
+      this.dataFieldsWithComplexDataType = dataFieldsWithComplexDataType;
+      this.isHivePartitionTable =
+          configuration.getTableSpec().getCarbonTable().isHivePartitionTable();
     }
 
     @Override public boolean hasNext() {
@@ -243,8 +278,22 @@ public class InputProcessorStepWithNoConverterImpl extends AbstractDataLoadProce
           }
         } else {
           // if this is a complex column then recursively comver the data into Byte Array.
-          if (dataTypes[i].isComplexType()) {
-              newData[i] = data[orderOfData[i]];
+          if (dataTypes[i].isComplexType() && isHivePartitionTable) {
+            newData[i] = data[orderOfData[i]];
+          } else if (dataTypes[i].isComplexType()) {
+            ByteArrayOutputStream byteArray = new ByteArrayOutputStream();
+            DataOutputStream dataOutputStream = new DataOutputStream(byteArray);
+            try {
+              GenericDataType complextType =
+                  dataFieldsWithComplexDataType.get(dataFields[i].getColumn().getOrdinal());
+              complextType.writeByteArray(data[orderOfData[i]], dataOutputStream, logHolder);
+              dataOutputStream.close();
+              newData[i] = byteArray.toByteArray();
+            } catch (BadRecordFoundException e) {
+              throw new CarbonDataLoadingException("Loading Exception: " + e.getMessage(), e);
+            } catch (Exception e) {
+              throw new CarbonDataLoadingException("Loading Exception", e);
+            }
           } else {
             DataType dataType = dataFields[i].getColumn().getDataType();
             if (dataType == DataTypes.DATE && data[orderOfData[i]] instanceof Long) {
