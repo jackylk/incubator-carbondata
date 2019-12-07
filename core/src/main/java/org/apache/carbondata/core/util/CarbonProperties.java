@@ -1888,7 +1888,7 @@ public final class CarbonProperties {
     }
   }
 
-  public static String getDMSchemaStorageProvider() {
+  public static String getDataMapStorageProvider() {
     String provider = CarbonProperties.getInstance()
         .getProperty(CarbonCommonConstants.CARBON_DATAMAP_SCHEMA_STORAGE);
     if (provider == null) {
