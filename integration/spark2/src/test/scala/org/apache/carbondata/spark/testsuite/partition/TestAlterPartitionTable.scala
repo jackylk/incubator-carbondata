@@ -115,7 +115,7 @@ class TestAlterPartitionTable extends QueryTest with BeforeAndAfterAll {
         | PARTITIONED BY (logdate Timestamp)
         | STORED BY 'carbondata'
         | TBLPROPERTIES('PARTITION_TYPE'='RANGE',
-        | 'RANGE_INFO'='2014/01/01, 2015/01/01, 2016/01/01', 'DICTIONARY_INCLUDE'='logdate')
+        | 'RANGE_INFO'='2014/01/01, 2015/01/01, 2016/01/01')
       """.stripMargin)
 
     /**
@@ -189,8 +189,7 @@ class TestAlterPartitionTable extends QueryTest with BeforeAndAfterAll {
         | PARTITIONED BY (logdate Timestamp)
         | STORED BY 'carbondata'
         | TBLPROPERTIES('PARTITION_TYPE'='RANGE',
-        | 'RANGE_INFO'='2014/01/01, 2015/01/01, 2016/01/01, 2018/01/01',
-        | 'DICTIONARY_INCLUDE'='logdate')
+        | 'RANGE_INFO'='2014/01/01, 2015/01/01, 2016/01/01, 2018/01/01')
       """.stripMargin)
 
     /**
@@ -230,7 +229,6 @@ class TestAlterPartitionTable extends QueryTest with BeforeAndAfterAll {
         | STORED BY 'carbondata'
         | TBLPROPERTIES('PARTITION_TYPE'='RANGE',
         | 'RANGE_INFO'='2014/01/01, 2015/01/01, 2016/01/01, 2018/01/01',
-        | 'DICTIONARY_INCLUDE'='logdate',
         | 'BUCKETNUMBER'='3',
         | 'BUCKETCOLUMNS'='country')
       """.stripMargin)
@@ -538,7 +536,7 @@ class TestAlterPartitionTable extends QueryTest with BeforeAndAfterAll {
     checkAnswer(result_after5, result_origin5)
   }
 
-  test("Alter table split partition: Range Partition") {
+  ignore("Alter table split partition: Range Partition") {
     sql("""ALTER TABLE range_table_logdate_split SPLIT PARTITION(4) INTO ('2017/01/01', '2018/01/01')""")
     val carbonTable = CarbonEnv
       .getCarbonTable(Option("default"), "range_table_logdate_split")(sqlContext.sparkSession)

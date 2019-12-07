@@ -29,6 +29,7 @@ import java.util.UUID;
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datamap.DataMapFilter;
+import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier;
 import org.apache.carbondata.core.metadata.datatype.DataTypes;
 import org.apache.carbondata.core.scan.expression.ColumnExpression;
@@ -40,6 +41,7 @@ import org.apache.carbondata.core.util.CarbonUtil;
 import org.apache.carbondata.core.util.path.CarbonTablePath;
 import org.apache.carbondata.hadoop.CarbonProjection;
 import org.apache.carbondata.hadoop.api.CarbonTableInputFormat;
+import org.apache.carbondata.hadoop.readsupport.impl.DirectDictionaryReadSupport;
 import org.apache.carbondata.hadoop.testutil.StoreCreator;
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel;
 
@@ -126,8 +128,8 @@ public class CarbonTableInputFormatTest {
   }
 
   @Test public void testInputFormatMapperReadAllRowsAndColumns() throws Exception {
+    String outPath = "target/output";
     try {
-      String outPath = "target/output";
       CarbonProjection carbonProjection = new CarbonProjection();
       carbonProjection.addColumn("ID");
       carbonProjection.addColumn("date");
@@ -145,6 +147,7 @@ public class CarbonTableInputFormatTest {
       throw e;
     } finally {
       creator.clearDataMaps();
+      FileFactory.deleteAllFilesOfDir(new File(outPath));
     }
   }
 
@@ -268,6 +271,8 @@ public class CarbonTableInputFormatTest {
         abs.getCarbonTableIdentifier().getDatabaseName());
     CarbonTableInputFormat.setTableName(job.getConfiguration(),
         abs.getCarbonTableIdentifier().getTableName());
+    CarbonTableInputFormat.setCarbonReadSupport(job.getConfiguration(),
+        DirectDictionaryReadSupport.class);
     FileInputFormat.addInputPath(job, new Path(abs.getTablePath()));
     CarbonUtil.deleteFoldersAndFiles(new File(outPath + "1"));
     FileOutputFormat.setOutputPath(job, new Path(outPath + "1"));

@@ -49,8 +49,8 @@ class TestPreAggCreateCommand extends QueryTest with BeforeAndAfterAll {
     sql("drop table if exists showTables")
     sql("drop table if exists Preagg_twodb")
     sql("create table preaggMain (a string, b string, c string) stored by 'carbondata'")
-    sql("create table preaggMain1 (a string, b string, c string) stored by 'carbondata' tblProperties('DICTIONARY_INCLUDE' = 'a')")
-    sql("create table maintable (column1 int, column6 string, column5 string, column2 string, column3 int, column4 int) stored by 'carbondata' tblproperties('dictionary_include'='column1,column6', 'dictionary_exclude'='column3,column5')")
+    sql("create table preaggMain1 (a string, b string, c string) stored by 'carbondata' ")
+    sql("create table maintable (column1 int, column6 string, column5 string, column2 string, column3 int, column4 int) stored by 'carbondata' ")
   }
 
   test("test pre agg create table 1") {
@@ -182,11 +182,8 @@ class TestPreAggCreateCommand extends QueryTest with BeforeAndAfterAll {
     sql("create datamap agg0 on table mainTable using 'preaggregate' as select column1, sum(column1),column6, sum(column6) from maintable group by column6,column1")
     val df = sql("select * from maintable_agg0")
     val carbontable = getCarbonTable(df.queryExecution.analyzed)
-    assert(carbontable.getAllMeasures.size()==2)
-    assert(carbontable.getAllDimensions.size()==2)
-    carbontable.getAllDimensions.asScala.foreach{ f =>
-      assert(f.getEncoder.contains(Encoding.DICTIONARY))
-    }
+    assert(carbontable.getAllMeasures.size()==3)
+    assert(carbontable.getAllDimensions.size()==1)
     sql("drop datamap agg0 on table maintable")
   }
 
@@ -194,11 +191,8 @@ class TestPreAggCreateCommand extends QueryTest with BeforeAndAfterAll {
     sql("create datamap agg0 on table mainTable using 'preaggregate' as select column1, count(column1),column6, count(column6) from maintable group by column6,column1")
     val df = sql("select * from maintable_agg0")
     val carbontable = getCarbonTable(df.queryExecution.analyzed)
-    assert(carbontable.getAllMeasures.size()==2)
-    assert(carbontable.getAllDimensions.size()==2)
-    carbontable.getAllDimensions.asScala.foreach{ f =>
-      assert(f.getEncoder.contains(Encoding.DICTIONARY))
-    }
+    assert(carbontable.getAllMeasures.size()==3)
+    assert(carbontable.getAllDimensions.size()==1)
     sql("drop datamap agg0 on table maintable")
   }
 
@@ -206,11 +200,8 @@ class TestPreAggCreateCommand extends QueryTest with BeforeAndAfterAll {
     sql("create datamap agg0 on table mainTable using 'preaggregate' as select column3, sum(column3),column5, sum(column5) from maintable group by column3,column5")
     val df = sql("select * from maintable_agg0")
     val carbontable = getCarbonTable(df.queryExecution.analyzed)
-    assert(carbontable.getAllMeasures.size()==2)
-    assert(carbontable.getAllDimensions.size()==2)
-    carbontable.getAllDimensions.asScala.foreach{ f =>
-      assert(!f.getEncoder.contains(Encoding.DICTIONARY))
-    }
+    assert(carbontable.getAllMeasures.size()==3)
+    assert(carbontable.getAllDimensions.size()==1)
     sql("drop datamap agg0 on table maintable")
   }
 
@@ -218,11 +209,8 @@ class TestPreAggCreateCommand extends QueryTest with BeforeAndAfterAll {
     sql("create datamap agg0 on table mainTable using 'preaggregate' as select column3, sum(column3),column5, sum(column5) from maintable group by column3,column5,column2")
     val df = sql("select * from maintable_agg0")
     val carbontable = getCarbonTable(df.queryExecution.analyzed)
-    assert(carbontable.getAllMeasures.size()==2)
-    assert(carbontable.getAllDimensions.size()==3)
-    carbontable.getAllDimensions.asScala.foreach{ f =>
-      assert(!f.getEncoder.contains(Encoding.DICTIONARY))
-    }
+    assert(carbontable.getAllMeasures.size()==3)
+    assert(carbontable.getAllDimensions.size()==2)
     sql("drop datamap agg0 on table maintable")
   }
 
@@ -438,8 +426,7 @@ class TestPreAggCreateCommand extends QueryTest with BeforeAndAfterAll {
   test("test codegen issue with preaggregate") {
     sql("DROP TABLE IF EXISTS PreAggMain")
     sql("CREATE TABLE PreAggMain (id Int, date date, country string, phonetype string, " +
-        "serialname String,salary int ) STORED BY 'org.apache.carbondata.format' " +
-        "tblproperties('dictionary_include'='country')")
+        "serialname String,salary int ) STORED BY 'org.apache.carbondata.format' ")
     sql("create datamap PreAggSum on table PreAggMain using 'preaggregate' as " +
         "select country,sum(salary) as sum from PreAggMain group by country")
     sql("create datamap PreAggAvg on table PreAggMain using 'preaggregate' as " +

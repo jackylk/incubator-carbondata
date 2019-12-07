@@ -151,12 +151,7 @@ object CarbonDataStoreCreator {
       absoluteTableIdentifier.getCarbonTableIdentifier.getTableName)
     val columnSchemas = new ArrayList[ColumnSchema]()
     val dictionaryEncoding: ArrayList[Encoding] = new ArrayList[Encoding]()
-    if (!useLocalDict) {
-      dictionaryEncoding.add(Encoding.DICTIONARY)
-    }
-
     val invertedIndexEncoding: ArrayList[Encoding] = new ArrayList[Encoding]()
-    invertedIndexEncoding.add(Encoding.INVERTED_INDEX)
 
     val id: ColumnSchema = new ColumnSchema()
     id.setColumnName("ID")
@@ -170,8 +165,6 @@ object CarbonDataStoreCreator {
 
     val directDictionaryEncoding: util.ArrayList[Encoding] = new util.ArrayList[Encoding]()
     directDictionaryEncoding.add(Encoding.DIRECT_DICTIONARY)
-    directDictionaryEncoding.add(Encoding.DICTIONARY)
-    directDictionaryEncoding.add(Encoding.INVERTED_INDEX)
 
     val date: ColumnSchema = new ColumnSchema()
     date.setColumnName("date")
@@ -240,7 +233,6 @@ object CarbonDataStoreCreator {
     bonus.setPrecision(10)
     bonus.setScale(4)
     bonus.setEncodingList(dictionaryEncoding)
-    bonus.setEncodingList(invertedIndexEncoding)
     bonus.setColumnUniqueId(UUID.randomUUID().toString)
     bonus.setDimensionColumn(false)
     bonus.setSchemaOrdinal(7)
