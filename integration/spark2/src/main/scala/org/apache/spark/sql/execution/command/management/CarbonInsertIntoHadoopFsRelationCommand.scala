@@ -196,6 +196,9 @@ case class CarbonInsertIntoHadoopFsRelationCommand(
           cols.toList.mkString("/")
       }
 
+      //TODO need to remove it after issue located
+      EnvHelper.checkContextData(sparkSession)
+
       // update metastore partition metadata
       refreshUpdatedPartitions(update)
 
