@@ -19,15 +19,12 @@ package org.apache.spark.sql
 
 import org.apache.commons.lang3.StringUtils
 
-import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.metadata.DatabaseLocationProvider
 
 /**
  * environment related code
  */
 object EnvHelper {
-
-  val LOGGER = LogServiceFactory.getLogService(EnvHelper.getClass.getName)
 
   def isLuxor(sparkSession: SparkSession): Boolean = {
     sparkSession.sqlContext.conf.luxorEnabled
@@ -64,26 +61,5 @@ object EnvHelper {
 
   def getDatabase(database: String): String = {
     DatabaseLocationProvider.get().provide(database)
-  }
-
-  def checkContextData(sparkSession: SparkSession): Unit = {
-    if (isLuxor(sparkSession)) {
-      try {
-        val clazz = Class.forName(
-          "org.apache.hadoop.hive.metastore.LuxorMetaHelper")
-        val method = clazz.getMethod("getContextData", classOf[String])
-        Seq("fs.s3a.access.key", "fs.s3a.secret.key", "fs.s3a.session.token").foreach { key =>
-          val value = method.invoke(null, key).toString
-          if (value == null) {
-            LOGGER.error(s"Luxor context data $key is null")
-          } else {
-            LOGGER.error(s"Luxor context data $key=$value")
-          }
-        }
-      } catch {
-        case e =>
-          LOGGER.error(e)
-      }
-    }
   }
 }
