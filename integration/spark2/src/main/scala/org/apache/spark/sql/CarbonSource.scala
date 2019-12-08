@@ -141,12 +141,8 @@ class CarbonSource extends CreatableRelationProvider with RelationProvider
       CarbonException.analysisException(
         "Table creation failed. Table name cannot contain blank space")
     }
-    val (path, updatedParams) = if (sqlContext.sparkSession.sessionState.catalog.listTables(dbName)
-      .exists(_.table.equalsIgnoreCase(tableName))) {
+    val (path, updatedParams) =
         getPathForTable(sqlContext.sparkSession, dbName, tableName, newParameters)
-    } else {
-      createTableIfNotExists(sqlContext.sparkSession, dbName, tableName, newParameters, dataSchema)
-    }
 
     CarbonDatasourceHadoopRelation(sqlContext.sparkSession, Array(path), updatedParams,
       Option(dataSchema))
