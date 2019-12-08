@@ -21,7 +21,7 @@ import java.util
 
 import scala.collection.JavaConverters._
 
-import org.apache.spark.sql.{CarbonEnv, EnvHelper, Row, SparkSession}
+import org.apache.spark.sql.{CarbonEnv, Row, SparkSession}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.catalog.CatalogTypes.TablePartitionSpec
 import org.apache.spark.sql.execution.command.{AlterTableAddPartitionCommand, AlterTableDropPartitionCommand, AtomicRunnableCommand}
@@ -58,7 +58,6 @@ case class CarbonAlterTableAddHivePartitionCommand(
     setAuditTable(table)
     setAuditInfo(Map("partition" -> partitionSpecsAndLocs.mkString(", ")))
     if (table.isHivePartitionTable) {
-      EnvHelper.checkContextData(sparkSession)
       if (table.isChildDataMap) {
         throw new UnsupportedOperationException("Cannot add partition directly on aggregate tables")
       }
