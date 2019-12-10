@@ -175,7 +175,6 @@ object CarbonMergeFilesRDD {
       LOGGER.info("Time taken to remove partition files for all partitions: " +
                   (System.currentTimeMillis() - startDelete))
     } else if (carbonTable.isHivePartitionTable) {
-      val startTime = System.currentTimeMillis()
       segmentIds.foreach(segmentId => {
         val readPath: String = CarbonTablePath.getSegmentFilesLocation(tablePath) +
                                CarbonCommonConstants.FILE_SEPARATOR + segmentId + "_" +
@@ -188,9 +187,6 @@ object CarbonMergeFilesRDD {
             segmentFileName,
             CarbonTablePath.getSegmentFilesLocation(tablePath))
       })
-      LOGGER
-        .info("Time taken to merge partition files for all segments: " +
-              (System.currentTimeMillis() - startTime))
     }
     mergeIndexSize
   }
@@ -277,13 +273,9 @@ class CarbonMergeFilesRDD(
       var segmentFile: SegmentFileStore.SegmentFile = null
       var indexSize: String = ""
       if (isHivePartitionedTable && partitionInfo.isEmpty) {
-        val startTime = System.currentTimeMillis()
         CarbonLoaderUtil
           .mergeIndexFilesInPartitionedSegment(carbonTable, split.segmentId,
             segmentFileNameToSegmentIdMap.get(split.segmentId), split.partitionPath).toIterator
-        logInfo("Time taken for Merging carbon index files of segment with id: " +
-                split.segmentId + " and partition:" + split.partitionPath + " is " +
-                (System.currentTimeMillis() - startTime))
       } else if (isHivePartitionedTable && !partitionInfo.isEmpty) {
         val folderDetails = CarbonLoaderUtil
           .mergeIndexFilesInPartitionedTempSegment(carbonTable,

@@ -318,10 +318,13 @@ case class CarbonSQLHadoopMapReduceCommitProtocol(jobId: String, path: String, i
           .asInstanceOf[util.ArrayList[String]]
           .asScala
         for (file <- filesList) {
-          FileFactory
-            .deleteAllCarbonFilesOfDir(FileFactory
-              .getCarbonFile(file.substring(0, file.lastIndexOf(":")),
-                taskContext.getConfiguration))
+          val outputFile: String = file.substring(0, file.lastIndexOf(":"))
+          if (outputFile.endsWith(CarbonTablePath.CARBON_DATA_EXT)) {
+            FileFactory
+              .deleteAllCarbonFilesOfDir(FileFactory
+                .getCarbonFile(outputFile,
+                  taskContext.getConfiguration))
+          }
         }
       }
       ThreadLocalSessionInfo.unsetAll()
