@@ -289,6 +289,8 @@ public class CarbonOutputCommitter extends FileOutputCommitter {
     } else {
       CarbonLoaderUtil.recordNewLoadMetadata(newMetaEntry, loadModel, false, false, uuid);
     }
+    operationContext
+        .setProperty("current.segmentfile", newMetaEntry.getSegmentFile());
     commitJobFinal(context, loadModel, operationContext, carbonTable, uniqueId);
   }
 
