@@ -24,6 +24,7 @@ import java.util.UUID
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
+import scala.reflect.classTag
 
 import org.apache.commons.lang3.StringUtils
 import org.apache.hadoop.conf.Configuration
@@ -34,6 +35,7 @@ import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.{InternalRow, TableIdentifier}
 import org.apache.spark.sql.catalyst.analysis.{NoSuchTableException, UnresolvedAttribute}
 import org.apache.spark.sql.catalyst.catalog.CatalogTable
+import org.apache.spark.sql.catalyst.expressions.codegen.GenerateOrdering
 import org.apache.spark.sql.catalyst.expressions.{Ascending, AttributeReference, SortOrder}
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, Project, Sort}
 import org.apache.spark.sql.execution.LogicalRDD
@@ -76,7 +78,7 @@ import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 import org.apache.carbondata.processing.util.{CarbonBadRecordUtil, CarbonDataProcessorUtil, CarbonLoaderUtil}
 import org.apache.carbondata.spark.dictionary.provider.SecureDictionaryServiceProvider
 import org.apache.carbondata.spark.dictionary.server.SecureDictionaryServer
-import org.apache.carbondata.spark.load.{CsvRDDHelper, DataLoadProcessorStepOnSpark}
+import org.apache.carbondata.spark.load.{CsvRDDHelper, DataLoadProcessBuilderOnSpark, DataLoadProcessorStepOnSpark, GlobalSortHelper}
 import org.apache.carbondata.spark.rdd.CarbonDataRDDFactory
 import org.apache.carbondata.spark.util.{CarbonScalaUtil, GlobalDictionaryUtil}
 
@@ -823,26 +825,11 @@ case class CarbonLoadDataCommand(
         carbonLoadModel,
         sparkSession,
         operationContext)
-      val logicalPlan = if (sortScope == SortScopeOptions.SortScope.GLOBAL_SORT) {
-        var numPartitions =
-          CarbonDataProcessorUtil.getGlobalSortPartitions(carbonLoadModel.getGlobalSortPartitions)
-        if (numPartitions <= 0) {
-          numPartitions = partitionsLen
-        }
-        if (numPartitions > 0) {
-          Dataset.ofRows(sparkSession, query).repartition(numPartitions).logicalPlan
-        } else {
-          query
-        }
-      } else {
-        query
-      }
-
       val convertedPlan =
         CarbonReflectionUtils.getInsertIntoCommand(
           table = convertRelation,
           partition = finalPartition,
-          query = logicalPlan,
+          query = query,
           overwrite = false,
           ifPartitionNotExists = false)
       SparkUtil.setNullExecutionId(sparkSession)
@@ -973,16 +960,26 @@ case class CarbonLoadDataCommand(
         updatedRdd.persist(StorageLevel.fromString(
           CarbonProperties.getInstance().getGlobalSortRddStorageLevel))
       }
-      val child = Project(output, LogicalRDD(attributes, updatedRdd)(sparkSession))
-      val sortColumns = table.getSortColumns(table.getTableName)
-      val sortPlan =
-        Sort(
-          output.filter(f => sortColumns.contains(f.name)).map(SortOrder(_, Ascending)),
-          global = true,
-          child)
-      (sortPlan, partitionsLen, Some(updatedRdd))
+      var numPartitions =
+        CarbonDataProcessorUtil.getGlobalSortPartitions(loadModel.getGlobalSortPartitions)
+      if (numPartitions <= 0) {
+        numPartitions = partitionsLen
+      }
+      val sortColumns = attributes.take(table.getSortColumns(table.getTableName).size())
+      val sortedRDD: RDD[InternalRow] =
+        GlobalSortHelper.sortBy(updatedRdd, numPartitions, sortColumns)
+      val outputOrdering = sortColumns.map(SortOrder(_, Ascending))
+      (
+        Project(output, LogicalRDD(attributes, sortedRDD, outputOrdering = outputOrdering)(sparkSession)),
+        partitionsLen,
+        Some(updatedRdd)
+      )
     } else {
-      (Project(output, LogicalRDD(attributes, updatedRdd)(sparkSession)), partitionsLen, None)
+      (
+        Project(output, LogicalRDD(attributes, updatedRdd)(sparkSession)),
+        partitionsLen,
+        None
+      )
     }
   }
 
