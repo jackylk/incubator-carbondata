@@ -21,7 +21,7 @@ import org.apache.spark.sql.catalyst.analysis.{NoSuchDatabaseException, Unresolv
 import org.apache.spark.sql.catalyst.catalog.{CatalogTable, CatalogTableType, CatalogUtils}
 import org.apache.spark.sql.catalyst.plans.logical.{Command, LogicalPlan, Union}
 import org.apache.spark.sql.execution.command.{AlterTableAddPartitionCommand, AlterTableChangeColumnCommand, AlterTableDropPartitionCommand, AlterTableUnsetPropertiesCommand, DescribeTableCommand, ShowPartitionsCommand, _}
-import org.apache.spark.sql.execution.command.table.{CarbonCreateTableAsSelectCommand, CarbonCreateTableCommand, CarbonDescribeFormattedCommand, CarbonInternalExplainCommand, CarbonShowTablesCommand}
+import org.apache.spark.sql.execution.command.table._
 import org.apache.spark.sql.parser.{CarbonSpark2SqlParser, CarbonSparkSqlParserUtil}
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.{CarbonParserUtil, TableIdentifier}
@@ -103,7 +103,7 @@ object DDLHelper {
   def createDataSourceTable(
       createTable: org.apache.spark.sql.execution.datasources.CreateTable,
       sparkSession: SparkSession
-  ): CreateDataSourceTableCommand = {
+  ): CarbonCreateDataSourceTableCommand = {
     createDataSourceTable(
       createTable.tableDesc,
       createTable.mode == SaveMode.Ignore,
@@ -117,7 +117,7 @@ object DDLHelper {
   def createDataSourceTable(
       createTable: CreateDataSourceTableCommand,
       sparkSession: SparkSession
-  ): CreateDataSourceTableCommand = {
+  ): CarbonCreateDataSourceTableCommand = {
     createDataSourceTable(
       createTable.table,
       createTable.ignoreIfExists,
@@ -129,11 +129,8 @@ object DDLHelper {
       table: CatalogTable,
       ignoreIfExists: Boolean,
       sparkSession: SparkSession
-  ): CreateDataSourceTableCommand = {
-    new CreateDataSourceTableCommand(
-      CarbonSource.updateCatalogTableWithCarbonSchema(table, sparkSession),
-      ignoreIfExists
-    )
+  ): CarbonCreateDataSourceTableCommand = {
+    CarbonCreateDataSourceTableCommand(table, ignoreIfExists)
   }
 
   def createTableAsSelect(
