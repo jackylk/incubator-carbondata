@@ -131,7 +131,18 @@ case class CarbonProjectForUpdateCommand(
           else {
             Dataset.ofRows(sparkSession, InternalProject(tableIdentifier, plan))
           }
-
+          // If more than one value present for the update key, should fail the update
+          val newDataSet = dataSet.groupBy(CarbonCommonConstants.CARBON_IMPLICIT_COLUMN_TUPLEID)
+            .count()
+            .select("count")
+            .collect()
+          for (row <- newDataSet) {
+            if (row.getLong(0) > 1) {
+              throw new UnsupportedOperationException(
+                " update cannot be supported for 1 to N mapping, as more than one value present " +
+                "for the update key")
+            }
+          }
           // handle the clean up of IUD.
           CarbonUpdateUtil.cleanUpDeltaFiles(carbonTable, false)
 
