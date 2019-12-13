@@ -112,6 +112,15 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
     sql("use default")
   }
 
+  test("close session") {
+    assert(CarbonEnv.carbonEnvMap.size() == 1)
+    val newSession = sqlContext.newSession()
+    newSession.sql("use default")
+    assert(CarbonEnv.carbonEnvMap.size() == 2)
+    newSession.sparkSession.closeSession()
+    assert(CarbonEnv.carbonEnvMap.size() == 1)
+  }
+
   test("test carbon"){
     verifyDataSourceTable("carbon", "ds_carbon")
     verifyHiveTable("carbon", "hive_carbon")
