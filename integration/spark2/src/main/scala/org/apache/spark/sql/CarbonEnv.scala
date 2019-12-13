@@ -20,6 +20,7 @@ package org.apache.spark.sql
 import java.util.concurrent.ConcurrentHashMap
 
 import scala.util.matching.Regex
+
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.{NoSuchDatabaseException, NoSuchTableException}
 import org.apache.spark.sql.catalyst.catalog.SessionCatalog
@@ -30,8 +31,10 @@ import org.apache.spark.sql.execution.command.mv._
 import org.apache.spark.sql.execution.command.preaaggregate._
 import org.apache.spark.sql.execution.command.timeseries.TimeSeriesFunction
 import org.apache.spark.sql.hive._
+import org.apache.spark.sql.internal.{SessionState, SparkSessionListener}
 import org.apache.spark.sql.profiler.Profiler
 import org.apache.spark.util.CarbonReflectionUtils
+
 import org.apache.carbondata.cloud.CloudUdfRegister
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
@@ -210,9 +213,17 @@ object CarbonEnv {
       if (carbonEnv == null) {
         carbonEnv = new CarbonEnv
         carbonEnv.init(sparkSession)
+        addSparkSessionListener(sparkSession)
         carbonEnvMap.put(sparkSession, carbonEnv)
       }
       carbonEnv
+  }
+
+  private def addSparkSessionListener(sparkSession: SparkSession): Unit = {
+    sparkSession
+      .sessionState
+      .sessionStateListenerManager
+      .addListener(new CloseSessionListener(sparkSession, sparkSession.sessionState))
   }
 
   /**
@@ -436,5 +447,16 @@ object CarbonEnv {
   def isTableExists(dbNameOp: Option[String], tableName: String)
     (sparkSession: SparkSession): Boolean = {
     getInstance(sparkSession).carbonMetaStore.tableExists(tableName, dbNameOp)(sparkSession)
+  }
+}
+
+class CloseSessionListener(
+    sparkSession: SparkSession,
+    sessionState: SessionState
+) extends SparkSessionListener {
+  override def closeSession(): Unit = {
+    CarbonEnv.carbonEnvMap.remove(sparkSession)
+    ThreadLocalSessionInfo.unsetAll()
+    sessionState.sessionStateListenerManager.removeListener(this)
   }
 }
