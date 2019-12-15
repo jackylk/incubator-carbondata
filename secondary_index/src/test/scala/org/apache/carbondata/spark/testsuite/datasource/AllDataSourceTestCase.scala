@@ -18,6 +18,7 @@
 package org.apache.carbondata.spark.testsuite.datasource
 
 import java.io.File
+import java.util.concurrent.Executors
 
 import org.apache.spark.sql.{CarbonEnv, Row}
 import org.apache.spark.sql.catalyst.TableIdentifier
@@ -30,7 +31,7 @@ import org.scalatest.BeforeAndAfterAll
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.metadata.DatabaseLocationProvider
-import org.apache.carbondata.core.util.CarbonProperties
+import org.apache.carbondata.core.util.{CarbonProperties, ThreadLocalSessionInfo}
 
 /**
   * Test Class for all data source
@@ -102,14 +103,17 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
   }
 
   override def afterAll: Unit = {
-    dropAll
-    CarbonProperties.getInstance()
-      .addProperty(
-        CarbonCommonConstants.CARBON_DATAMAP_SCHEMA_STORAGE,
-        CarbonCommonConstants.CARBON_DATAMAP_SCHEMA_STORAGE_DEFAULT
-      )
-    CarbonProperties.getInstance().removeProperty(CarbonCommonConstants.DATABASE_LOCATION_PROVIDER)
-    sql("use default")
+    try {
+      dropAll
+      sql("use default")
+    } finally {
+      CarbonProperties.getInstance()
+        .addProperty(
+          CarbonCommonConstants.CARBON_DATAMAP_SCHEMA_STORAGE,
+          CarbonCommonConstants.CARBON_DATAMAP_SCHEMA_STORAGE_DEFAULT
+        )
+      CarbonProperties.getInstance().removeProperty(CarbonCommonConstants.DATABASE_LOCATION_PROVIDER)
+    }
   }
 
   test("close session") {
@@ -119,6 +123,24 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
     assert(CarbonEnv.carbonEnvMap.size() == 2)
     newSession.sparkSession.closeSession()
     assert(CarbonEnv.carbonEnvMap.size() == 1)
+
+    val executors = Executors.newFixedThreadPool(2)
+    Seq(
+      "create table tbl_session_1(col1 int, col2 String) using carbondata",
+      "drop table tbl_session_1"
+    ).foreach { sqlText =>
+      val newSession1 = sqlContext.newSession()
+      val future = executors.submit(new Runnable {
+        override def run(): Unit = {
+          newSession1.sql(sqlText)
+          ThreadLocalSessionInfo.shouldHaveCarbonConf()
+          assert(CarbonEnv.carbonEnvMap.size() == 2)
+          newSession1.sparkSession.closeSession()
+          assert(CarbonEnv.carbonEnvMap.size() == 1)
+        }
+      })
+      future.get()
+    }
   }
 
   test("test carbon"){
