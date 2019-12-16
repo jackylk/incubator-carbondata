@@ -20,7 +20,7 @@ package org.apache.spark.sql.execution.command.table
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 
-import org.apache.spark.sql.{CarbonEnv, Row, SparkSession}
+import org.apache.spark.sql.{CarbonEnv, EnvHelper, Row, SparkSession}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.execution.command.AtomicRunnableCommand
@@ -36,10 +36,8 @@ import org.apache.carbondata.core.exception.ConcurrentOperationException
 import org.apache.carbondata.core.locks.{CarbonLockFactory, CarbonLockUtil, ICarbonLock, LockUsage}
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager
-import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
 import org.apache.carbondata.events._
-import org.apache.hadoop.conf.Configuration
 
 case class CarbonDropTableCommand(
     ifExistsSet: Boolean,
@@ -189,14 +187,16 @@ case class CarbonDropTableCommand(
       // Remove all invalid entries of carbonTable and corresponding updated timestamp
       // values from the cache. This case is valid when there are 2 JDBCServer and one of them
       // drops the table, the other server would not be able to clear its cache.
-      try {
-        CarbonEnv.getInstance(sparkSession).carbonMetaStore match {
-          case metastore: CarbonFileMetastore => metastore.removeStaleTimeStampEntries(sparkSession)
-          case _ =>
-        }
-      } catch {
-        case _: Exception =>
+      if (!EnvHelper.isLuxor(sparkSession)) {
+        try {
+          CarbonEnv.getInstance(sparkSession).carbonMetaStore match {
+            case metastore: CarbonFileMetastore => metastore.removeStaleTimeStampEntries(sparkSession)
+            case _ =>
+          }
+        } catch {
+          case _: Exception =>
           // Do nothing
+        }
       }
     } catch {
       case ex: NoSuchTableException =>
@@ -225,7 +225,9 @@ case class CarbonDropTableCommand(
 
   override def processData(sparkSession: SparkSession): Seq[Row] = {
     // clear driver side index and dictionary cache
-    if (carbonTable != null && !(carbonTable.isChildTable && !dropChildTable)) {
+    if (!EnvHelper.isLuxor(sparkSession) &&
+        carbonTable != null &&
+        !(carbonTable.isChildTable && !dropChildTable)) {
       ManageDictionaryAndBTree.clearBTreeAndDictionaryLRUCache(carbonTable)
       // delete the table folder
       val tablePath = carbonTable.getTablePath
