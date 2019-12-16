@@ -377,7 +377,7 @@ object CarbonSource {
     val tablePath = if (tableDesc.storage.locationUri.isDefined) {
       tableDesc.storage.locationUri.get.toString
     } else {
-      CarbonEnv.getTablePath(Option(dbName), tableName)(sparkSession) +
+      CarbonEnv.newTablePath(Option(dbName), tableName)(sparkSession) +
       "_" +
       tableInfo.getFactTable.getTableId
     }

@@ -17,8 +17,8 @@
 
 package org.apache.spark.sql.execution.command.table
 
-import org.apache.spark.sql.catalyst.catalog.CatalogTable
-import org.apache.spark.sql.{CarbonSource, Row, SparkSession}
+import org.apache.spark.sql.catalyst.catalog.{CatalogTable, CatalogTableType}
+import org.apache.spark.sql.{AnalysisException, CarbonSource, Row, SparkSession}
 import org.apache.spark.sql.execution.command.{CreateDataSourceTableCommand, MetadataCommand}
 
 /**
@@ -33,6 +33,27 @@ case class CarbonCreateDataSourceTableCommand(
   override protected def opName: String = "CREATE TABLE"
 
   override def processMetadata(sparkSession: SparkSession): Seq[Row] = {
+    assert(table.tableType != CatalogTableType.VIEW)
+    assert(table.provider.isDefined)
+
+    val sessionState = sparkSession.sessionState
+    val db = table.identifier.database.getOrElse(sessionState.catalog.getCurrentDatabase)
+    val existingTables = sessionState.catalog.listTables(db)
+    var tableExist = false
+    existingTables.map(tid => {
+      if (tid.table.equalsIgnoreCase(table.identifier.table)
+          && tid.database.getOrElse("").equalsIgnoreCase(db)) {
+        tableExist = true
+      }
+    })
+    if(tableExist) {
+      if (ignoreIfExists) {
+        return Seq.empty[Row]
+      } else {
+        throw new AnalysisException(s"Table ${table.identifier.unquotedString} already exists.")
+      }
+    }
+
     new CreateDataSourceTableCommand(
       CarbonSource.updateCatalogTableWithCarbonSchema(table, sparkSession),
       ignoreIfExists

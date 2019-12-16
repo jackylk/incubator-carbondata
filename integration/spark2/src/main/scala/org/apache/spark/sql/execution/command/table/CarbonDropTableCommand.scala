@@ -187,16 +187,14 @@ case class CarbonDropTableCommand(
       // Remove all invalid entries of carbonTable and corresponding updated timestamp
       // values from the cache. This case is valid when there are 2 JDBCServer and one of them
       // drops the table, the other server would not be able to clear its cache.
-      if (!EnvHelper.isLuxor(sparkSession)) {
-        try {
-          CarbonEnv.getInstance(sparkSession).carbonMetaStore match {
-            case metastore: CarbonFileMetastore => metastore.removeStaleTimeStampEntries(sparkSession)
-            case _ =>
-          }
-        } catch {
-          case _: Exception =>
-          // Do nothing
+      try {
+        CarbonEnv.getInstance(sparkSession).carbonMetaStore match {
+          case metastore: CarbonFileMetastore => metastore.removeStaleTimeStampEntries(sparkSession)
+          case _ =>
         }
+      } catch {
+        case _: Exception =>
+        // Do nothing
       }
     } catch {
       case ex: NoSuchTableException =>

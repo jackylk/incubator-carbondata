@@ -407,10 +407,17 @@ object CarbonEnv {
       getCarbonTable(databaseNameOp, tableName)(sparkSession).getTablePath
     } catch {
       case _: NoSuchTableException =>
-        val dbName = getDatabaseName(databaseNameOp)(sparkSession)
-        val dbLocation = getDatabaseLocation(dbName, sparkSession)
-        dbLocation + CarbonCommonConstants.FILE_SEPARATOR + tableName
+        newTablePath(databaseNameOp, tableName)(sparkSession)
     }
+  }
+
+  def newTablePath(
+      databaseNameOp: Option[String],
+      tableName: String
+  )(sparkSession: SparkSession): String = {
+    val dbName = getDatabaseName(databaseNameOp)(sparkSession)
+    val dbLocation = getDatabaseLocation(dbName, sparkSession)
+    dbLocation + CarbonCommonConstants.FILE_SEPARATOR + tableName
   }
 
   def getIdentifier(
