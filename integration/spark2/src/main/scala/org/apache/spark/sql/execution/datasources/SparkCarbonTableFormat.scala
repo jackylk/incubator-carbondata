@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileStatus, Path}
 import org.apache.hadoop.io.NullWritable
 import org.apache.hadoop.mapreduce.{Job, JobContext, TaskAttemptContext}
+import org.apache.spark.TaskContext
 import org.apache.spark.internal.Logging
 import org.apache.spark.internal.io.FileCommitProtocol
 import org.apache.spark.internal.io.FileCommitProtocol.TaskCommitMessage
@@ -284,6 +285,7 @@ case class CarbonSQLHadoopMapReduceCommitProtocol(jobId: String, path: String, i
       val partitions: String = taskContext.getConfiguration.get("carbon.output.partitions.name", "")
       val files = taskContext.getConfiguration.get("carbon.output.files.name", "")
       var sum = 0L
+      var indexSize = 0L
       if (!StringUtils.isEmpty(files)) {
         val filesList = ObjectSerializationUtil
           .convertStringToObject(files)
@@ -292,6 +294,8 @@ case class CarbonSQLHadoopMapReduceCommitProtocol(jobId: String, path: String, i
         for (file <- filesList) {
           if (file.contains(".carbondata")) {
             sum += java.lang.Long.parseLong(file.substring(file.lastIndexOf(":") + 1))
+          } else if (file.contains(".carbonindex")) {
+            indexSize += java.lang.Long.parseLong(file.substring(file.lastIndexOf(":") + 1))
           }
         }
       }
@@ -304,6 +308,8 @@ case class CarbonSQLHadoopMapReduceCommitProtocol(jobId: String, path: String, i
           case _=> taskMsg
         }
       }
+      // Update outputMetrics with carbondata and index size
+      TaskContext.get().taskMetrics().outputMetrics.setBytesWritten(sum + indexSize)
     }
     taskMsg
   }
