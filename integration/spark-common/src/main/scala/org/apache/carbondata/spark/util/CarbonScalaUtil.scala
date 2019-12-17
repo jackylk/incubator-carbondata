@@ -402,6 +402,9 @@ object CarbonScalaUtil {
         case aex: AnalysisException =>
           logger.error(aex.getMessage())
           throw aex
+        case uoe: UnsupportedOperationException =>
+          executorMessage = uoe.getMessage
+          errorMessage = errorMessage + ":" + executorMessage
         case _ =>
           if (ex.getCause != null) {
             executorMessage = ex.getCause.getMessage
