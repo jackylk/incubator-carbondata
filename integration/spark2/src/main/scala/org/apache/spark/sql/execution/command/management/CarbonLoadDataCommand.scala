@@ -137,7 +137,7 @@ case class CarbonLoadDataCommand(
         }.head
       sizeInBytes = logicalPartitionRelation.relation.sizeInBytes
 
-      finalPartition = getCompletePartitionValues()
+      finalPartition = getCompletePartitionValues(sparkSession)
     }
     if (table.isChildDataMap) {
       val parentTableIdentifier = table.getTableInfo.getParentRelationIdentifiers.get(0)
@@ -1176,8 +1176,8 @@ case class CarbonLoadDataCommand(
     (dataFrameWithTupleId)
   }
 
-  def getCompletePartitionValues(): Map[String, Option[String]] = {
-    if (partition.nonEmpty) {
+  def getCompletePartitionValues(sparkSession: SparkSession): Map[String, Option[String]] = {
+    if (partition.nonEmpty && !EnvHelper.isLuxor(sparkSession)) {
       val lowerCasePartitionMap = partition.map { entry =>
         (entry._1.toLowerCase, entry._2)
       }
