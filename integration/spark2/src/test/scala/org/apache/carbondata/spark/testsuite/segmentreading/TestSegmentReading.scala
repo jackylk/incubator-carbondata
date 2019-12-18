@@ -383,4 +383,17 @@ class TestSegmentReading extends QueryTest with BeforeAndAfterAll {
 
     sql("set spark.sql.adaptive.enabled=false")
   }
+
+  test("test set input segments to spark configuration") {
+    sql("drop table if exists source")
+    sql("create table source(a int) stored as carbondata")
+    sql("insert into source select 1")
+    sql("insert into source select 2")
+    sql("insert into source select 3")
+    sqlContext.sparkSession.conf.set("carbon.input.segments.default.source", "1")
+    checkAnswer(sql("select * from source"), Seq(Row(2)))
+    sqlContext.sparkSession.conf.set("carbon.input.segments.default.source", "*")
+    checkAnswer(sql("select * from source"), Seq(Row(1),Row(2),Row(3)))
+    sql("drop table if exists source")
+  }
 }
