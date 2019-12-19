@@ -37,7 +37,6 @@ import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonColumn;
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonDimension;
 import org.apache.carbondata.core.util.CarbonUtil;
-import org.apache.carbondata.core.util.DataTypeUtil;
 import org.apache.carbondata.hadoop.readsupport.CarbonReadSupport;
 
 import org.apache.hadoop.hive.common.type.HiveDecimal;
@@ -267,12 +266,6 @@ public class CarbonDictionaryDecodeReadSupport<T> implements CarbonReadSupport<T
     DataType dataType = carbonColumn.getDataType();
     if (obj == null) {
       return null;
-    }
-    if (carbonColumn.hasEncoding(Encoding.DICTIONARY)) {
-      obj = DataTypeUtil.getDataBasedOnDataType(obj.toString(), dataType);
-      if (obj == null) {
-        return null;
-      }
     }
     if (dataType == DataTypes.NULL) {
       return null;

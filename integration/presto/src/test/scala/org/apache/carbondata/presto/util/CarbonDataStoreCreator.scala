@@ -21,6 +21,7 @@ import java.io._
 import java.nio.charset.Charset
 import java.text.SimpleDateFormat
 import java.util
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.{ArrayList, Date, List, UUID}
 
 import scala.collection.JavaConversions._
@@ -42,10 +43,10 @@ import org.apache.carbondata.core.datastore.compression.CompressorFactory
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.fileoperations.{AtomicFileOperationFactory, AtomicFileOperations, FileWriteOperation}
 import org.apache.carbondata.core.metadata.converter.{SchemaConverter, ThriftWrapperSchemaConverterImpl}
-import org.apache.carbondata.core.metadata.datatype.DataTypes
+import org.apache.carbondata.core.metadata.datatype.{DataTypes, StructField}
 import org.apache.carbondata.core.metadata.encoder.Encoding
 import org.apache.carbondata.core.metadata.schema.table.column.{CarbonColumn, CarbonDimension, CarbonMeasure, ColumnSchema}
-import org.apache.carbondata.core.metadata.schema.table.{CarbonTable, TableInfo, TableSchema}
+import org.apache.carbondata.core.metadata.schema.table.{CarbonTable, CarbonTableBuilder, TableInfo, TableSchema, TableSchemaBuilder}
 import org.apache.carbondata.core.metadata.schema.{SchemaEvolution, SchemaEvolutionEntry}
 import org.apache.carbondata.core.metadata.{AbsoluteTableIdentifier, CarbonMetadata, CarbonTableIdentifier, ColumnIdentifier}
 import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatus}
@@ -78,7 +79,6 @@ object CarbonDataStoreCreator {
         new CarbonTableIdentifier(dbName,
           tableName,
           UUID.randomUUID().toString))
-      val storeDir: File = new File(absoluteTableIdentifier.getTablePath)
       val table: CarbonTable = createTable(absoluteTableIdentifier, useLocalDict)
       writeDictionary(dataFilePath, table, absoluteTableIdentifier)
       val schema: CarbonDataLoadSchema = new CarbonDataLoadSchema(table)
@@ -135,172 +135,40 @@ object CarbonDataStoreCreator {
       loadModel.setMaxColumns("15")
       executeGraph(loadModel, storePath)
     } catch {
-      case e: Exception => e.printStackTrace()
-
+      case e: Exception =>
+        throw e
     }
   }
 
   private def createTable(absoluteTableIdentifier: AbsoluteTableIdentifier,
       useLocalDict: Boolean): CarbonTable = {
-    val tableInfo: TableInfo = new TableInfo()
-    tableInfo.setTablePath(absoluteTableIdentifier.getTablePath)
-    tableInfo.setDatabaseName(
-      absoluteTableIdentifier.getCarbonTableIdentifier.getDatabaseName)
-    val tableSchema: TableSchema = new TableSchema()
-    tableSchema.setTableName(
-      absoluteTableIdentifier.getCarbonTableIdentifier.getTableName)
-    val columnSchemas = new ArrayList[ColumnSchema]()
-    val dictionaryEncoding: ArrayList[Encoding] = new ArrayList[Encoding]()
-    if (!useLocalDict) {
-      dictionaryEncoding.add(Encoding.DICTIONARY)
-    }
 
-    val invertedIndexEncoding: ArrayList[Encoding] = new ArrayList[Encoding]()
-    invertedIndexEncoding.add(Encoding.INVERTED_INDEX)
+    val integer = new AtomicInteger(0)
+    val schemaBuilder = new TableSchemaBuilder
+    schemaBuilder.addColumn(new StructField("ID", DataTypes.INT), integer, false, false)
+    schemaBuilder.addColumn(new StructField("date", DataTypes.DATE), integer, false, false)
+    schemaBuilder.addColumn(new StructField("country", DataTypes.STRING), integer, false, false)
+    schemaBuilder.addColumn(new StructField("name", DataTypes.STRING), integer, false, false)
+    schemaBuilder.addColumn(new StructField("phonetype", DataTypes.STRING), integer, false, false)
+    schemaBuilder.addColumn(new StructField("serialname", DataTypes.STRING), integer, false, false)
+    schemaBuilder.addColumn(new StructField("salary", DataTypes.DOUBLE), integer, false, false)
+    schemaBuilder.addColumn(new StructField("bonus", DataTypes.createDecimalType(10, 4)), integer, false, true)
+    schemaBuilder.addColumn(new StructField("monthlyBonus", DataTypes.createDecimalType(18, 4)), integer, false, true)
+    schemaBuilder.addColumn(new StructField("dob", DataTypes.TIMESTAMP), integer, false, true)
+    schemaBuilder.addColumn(new StructField("shortField", DataTypes.SHORT), integer, false, false)
+    schemaBuilder.addColumn(new StructField("isCurrentEmployee", DataTypes.BOOLEAN), integer, false, true)
+    schemaBuilder.tableName(absoluteTableIdentifier.getTableName)
+    val schema = schemaBuilder.build()
 
-    val id: ColumnSchema = new ColumnSchema()
-    id.setColumnName("ID")
-    id.setDataType(DataTypes.INT)
-    id.setEncodingList(dictionaryEncoding)
-    id.setColumnUniqueId(UUID.randomUUID().toString)
-    id.setColumnReferenceId(id.getColumnUniqueId)
-    id.setDimensionColumn(true)
-    id.setSchemaOrdinal(0)
-    columnSchemas.add(id)
+    val builder = new CarbonTableBuilder
+    builder.databaseName(absoluteTableIdentifier.getDatabaseName)
+      .tableName(absoluteTableIdentifier.getTableName)
+      .tablePath(absoluteTableIdentifier.getTablePath)
+      .isTransactionalTable(true)
+      .tableSchema(schema)
+    val carbonTable = builder.build()
 
-    val directDictionaryEncoding: util.ArrayList[Encoding] = new util.ArrayList[Encoding]()
-    directDictionaryEncoding.add(Encoding.DIRECT_DICTIONARY)
-    directDictionaryEncoding.add(Encoding.DICTIONARY)
-    directDictionaryEncoding.add(Encoding.INVERTED_INDEX)
-
-    val date: ColumnSchema = new ColumnSchema()
-    date.setColumnName("date")
-    date.setDataType(DataTypes.DATE)
-    date.setEncodingList(directDictionaryEncoding)
-    date.setColumnUniqueId(UUID.randomUUID().toString)
-    date.setDimensionColumn(true)
-    date.setColumnReferenceId(date.getColumnUniqueId)
-    date.setSchemaOrdinal(1)
-    columnSchemas.add(date)
-
-    val country: ColumnSchema = new ColumnSchema()
-    country.setColumnName("country")
-    country.setDataType(DataTypes.STRING)
-    country.setEncodingList(dictionaryEncoding)
-    country.setColumnUniqueId(UUID.randomUUID().toString)
-    country.setColumnReferenceId(country.getColumnUniqueId)
-    country.setDimensionColumn(true)
-    country.setSchemaOrdinal(2)
-    country.setColumnReferenceId(country.getColumnUniqueId)
-    columnSchemas.add(country)
-
-    val name: ColumnSchema = new ColumnSchema()
-    name.setColumnName("name")
-    name.setDataType(DataTypes.STRING)
-    name.setEncodingList(dictionaryEncoding)
-    name.setColumnUniqueId(UUID.randomUUID().toString)
-    name.setDimensionColumn(true)
-    name.setSchemaOrdinal(3)
-    name.setColumnReferenceId(name.getColumnUniqueId)
-    columnSchemas.add(name)
-
-    val phonetype: ColumnSchema = new ColumnSchema()
-    phonetype.setColumnName("phonetype")
-    phonetype.setDataType(DataTypes.STRING)
-    phonetype.setEncodingList(dictionaryEncoding)
-    phonetype.setColumnUniqueId(UUID.randomUUID().toString)
-    phonetype.setDimensionColumn(true)
-    phonetype.setSchemaOrdinal(4)
-    phonetype.setColumnReferenceId(phonetype.getColumnUniqueId)
-    columnSchemas.add(phonetype)
-
-    val serialname: ColumnSchema = new ColumnSchema()
-    serialname.setColumnName("serialname")
-    serialname.setDataType(DataTypes.STRING)
-    serialname.setEncodingList(dictionaryEncoding)
-    serialname.setColumnUniqueId(UUID.randomUUID().toString)
-    serialname.setDimensionColumn(true)
-    serialname.setSchemaOrdinal(5)
-    serialname.setColumnReferenceId(serialname.getColumnUniqueId)
-    columnSchemas.add(serialname)
-
-    val salary: ColumnSchema = new ColumnSchema()
-    salary.setColumnName("salary")
-    salary.setDataType(DataTypes.DOUBLE)
-    salary.setEncodingList(new util.ArrayList[Encoding]())
-    salary.setColumnUniqueId(UUID.randomUUID().toString)
-    salary.setDimensionColumn(false)
-    salary.setSchemaOrdinal(6)
-    salary.setColumnReferenceId(salary.getColumnUniqueId)
-    columnSchemas.add(salary)
-
-    val bonus: ColumnSchema = new ColumnSchema()
-    bonus.setColumnName("bonus")
-    bonus.setDataType(DataTypes.createDecimalType(10, 4))
-    bonus.setPrecision(10)
-    bonus.setScale(4)
-    bonus.setEncodingList(dictionaryEncoding)
-    bonus.setEncodingList(invertedIndexEncoding)
-    bonus.setColumnUniqueId(UUID.randomUUID().toString)
-    bonus.setDimensionColumn(false)
-    bonus.setSchemaOrdinal(7)
-    bonus.setColumnReferenceId(bonus.getColumnUniqueId)
-    columnSchemas.add(bonus)
-
-    val monthlyBonus: ColumnSchema = new ColumnSchema()
-    monthlyBonus.setColumnName("monthlyBonus")
-    monthlyBonus.setDataType(DataTypes.createDecimalType(18, 4))
-    monthlyBonus.setPrecision(18)
-    monthlyBonus.setScale(4)
-    monthlyBonus.setSchemaOrdinal(8)
-    monthlyBonus.setEncodingList(invertedIndexEncoding)
-    monthlyBonus.setColumnUniqueId(UUID.randomUUID().toString)
-    monthlyBonus.setDimensionColumn(false)
-    monthlyBonus.setColumnReferenceId(monthlyBonus.getColumnUniqueId)
-    columnSchemas.add(monthlyBonus)
-
-    val dob: ColumnSchema = new ColumnSchema()
-    dob.setColumnName("dob")
-    dob.setDataType(DataTypes.TIMESTAMP)
-    dob.setEncodingList(directDictionaryEncoding)
-    dob.setColumnUniqueId(UUID.randomUUID().toString)
-    dob.setDimensionColumn(true)
-    dob.setSchemaOrdinal(9)
-    dob.setColumnReferenceId(dob.getColumnUniqueId)
-    columnSchemas.add(dob)
-
-    val shortField: ColumnSchema = new ColumnSchema()
-    shortField.setColumnName("shortField")
-    shortField.setDataType(DataTypes.SHORT)
-    shortField.setEncodingList(dictionaryEncoding)
-    shortField.setColumnUniqueId(UUID.randomUUID().toString)
-    shortField.setDimensionColumn(true)
-    shortField.setSchemaOrdinal(10)
-    shortField.setColumnReferenceId(shortField.getColumnUniqueId)
-    columnSchemas.add(shortField)
-
-    val isCurrentEmployee: ColumnSchema = new ColumnSchema()
-    isCurrentEmployee.setColumnName("isCurrentEmployee")
-    isCurrentEmployee.setDataType(DataTypes.BOOLEAN)
-    isCurrentEmployee.setEncodingList(invertedIndexEncoding)
-    isCurrentEmployee.setColumnUniqueId(UUID.randomUUID().toString)
-    isCurrentEmployee.setDimensionColumn(false)
-    isCurrentEmployee.setColumnReferenceId(isCurrentEmployee.getColumnUniqueId)
-    columnSchemas.add(isCurrentEmployee)
-
-    tableSchema.setListOfColumns(columnSchemas)
-    val schemaEvol: SchemaEvolution = new SchemaEvolution()
-    schemaEvol.setSchemaEvolutionEntryList(
-      new util.ArrayList[SchemaEvolutionEntry]())
-    tableSchema.setSchemaEvolution(schemaEvol)
-    tableSchema.setTableId(UUID.randomUUID().toString)
-    tableSchema.getTableProperties.put(CarbonCommonConstants.LOCAL_DICTIONARY_ENABLE,
-      String.valueOf(useLocalDict))
-    tableInfo.setTableUniqueName(
-      absoluteTableIdentifier.getCarbonTableIdentifier.getTableUniqueName
-    )
-    tableInfo.setLastUpdatedTime(System.currentTimeMillis())
-    tableInfo.setFactTable(tableSchema)
+    val tableInfo = carbonTable.getTableInfo
     val schemaFilePath: String = CarbonTablePath.getSchemaFilePath(
       absoluteTableIdentifier.getTablePath)
     val schemaMetadataPath: String =

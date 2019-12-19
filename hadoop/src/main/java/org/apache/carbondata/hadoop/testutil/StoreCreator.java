@@ -107,14 +107,9 @@ public class StoreCreator {
   private AbsoluteTableIdentifier absoluteTableIdentifier;
   private String storePath = null;
   private String csvPath;
-  private boolean dictionary;
   private List<String> sortColumns = new ArrayList<>();
 
   public StoreCreator(String storePath, String csvPath) {
-    this(storePath, csvPath, false);
-  }
-
-  public StoreCreator(String storePath, String csvPath, boolean dictionary) {
     this.storePath = storePath;
     this.csvPath = csvPath;
     String dbName = "testdb";
@@ -126,7 +121,6 @@ public class StoreCreator {
     sortColumns.add("serialname");
     absoluteTableIdentifier = AbsoluteTableIdentifier.from(storePath + "/testdb/testtable",
         new CarbonTableIdentifier(dbName, tableName, UUID.randomUUID().toString()));
-    this.dictionary = dictionary;
   }
 
   public AbsoluteTableIdentifier getAbsoluteTableIdentifier() {
@@ -225,9 +219,6 @@ public class StoreCreator {
     tableSchema.setTableName(identifier.getCarbonTableIdentifier().getTableName());
     List<ColumnSchema> columnSchemas = new ArrayList<ColumnSchema>();
     ArrayList<Encoding> encodings = new ArrayList<>();
-    if (dictionary) {
-      encodings.add(Encoding.DICTIONARY);
-    }
     int schemaOrdinal = 0;
     ColumnSchema id = new ColumnSchema();
     id.setColumnName("id");

@@ -17,8 +17,6 @@
 
 package org.apache.spark.rdd
 
-import java.util
-
 import scala.collection.JavaConverters._
 
 import org.apache.spark.{Partition, TaskContext}
