@@ -922,6 +922,28 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
       Seq(Row(123, "abc")))
   }
 
+  test("test clean files segments") {
+    sql("drop table if exists test_clean")
+    sql("create table test_clean(a int, b string) stored as carbondata")
+    sql("insert into test_clean select 1,'ab'")
+    sql("insert into test_clean select 1,'ab'")
+    // test clean files after delete segment
+    sql("Delete from table test_clean where segment.id in (0)")
+    checkExistence(sql("show segments for table test_clean"), true, "Marked for Delete")
+    sql("clean files for table test_clean").show(false)
+    checkExistence(sql("show segments for table test_clean"), false, "Marked for Delete")
+    sql("insert into test_clean select 1,'ab'")
+    // test clean files after compaction
+    sql("alter table test_clean compact 'major'")
+    checkExistence(sql("show segments for table test_clean"), true, "Compacted")
+    sql("clean files for table test_clean").show(false)
+    checkExistence(sql("show segments for table test_clean"), false, "Compacted")
+    sql("insert into test_clean select 1,'ab'")
+    sql("clean files for table test_clean options('Delete_in_progress'='true')").show(false)
+    checkAnswer(sql("select count(*) from test_clean"), Seq(Row(3)))
+    sql("drop table if exists test_clean")
+  }
+
 }
 
 class TestProvider extends DatabaseLocationProvider {

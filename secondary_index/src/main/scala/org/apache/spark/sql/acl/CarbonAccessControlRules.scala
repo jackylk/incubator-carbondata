@@ -282,7 +282,8 @@ private[sql] case class CarbonAccessControlRules(sparkSession: SparkSession,
             Set(PrivType.SELECT_NOGRANT))),
             identifier)
 
-        case c@CarbonCleanFilesCommand(dbNameOp: Option[String], tableName: Option[String], _, _, _) =>
+        case c@CarbonCleanFilesCommand(dbNameOp: Option[String],
+        tableName: Option[String], _, _, _, _) =>
           checkPrivilegeRecursively(c, dbNameOp, tableName.getOrElse(""), PrivType.DELETE_NOGRANT)
 
         case c@CarbonAlterTableCompactionCommand(alterTableModel, tableInfoOp, _) =>

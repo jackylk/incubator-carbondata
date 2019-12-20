@@ -699,7 +699,9 @@ object CommonUtil {
    * @param databaseLocation
    * @param dbName
    */
-  def cleanInProgressSegments(databaseLocation: String, dbName: String): Unit = {
+  def cleanInProgressSegments(databaseLocation: String,
+      dbName: String,
+      deleteInProgressSegments: Boolean): Unit = {
     val loaderDriver = CarbonProperties.getInstance().
       getProperty(CarbonCommonConstants.DATA_MANAGEMENT_DRIVER,
         CarbonCommonConstants.DATA_MANAGEMENT_DRIVER_DEFAULT).toBoolean
@@ -723,7 +725,8 @@ object CommonUtil {
                 try {
                   val carbonTable = CarbonMetadata.getInstance
                     .getCarbonTable(tableUniqueName)
-                  SegmentStatusManager.deleteLoadsAndUpdateMetadata(carbonTable, true, null)
+                  SegmentStatusManager
+                    .deleteLoadsAndUpdateMetadata(carbonTable, true, null, deleteInProgressSegments)
                 } catch {
                   case _: Exception =>
                     LOGGER.warn(s"Error while cleaning table " +

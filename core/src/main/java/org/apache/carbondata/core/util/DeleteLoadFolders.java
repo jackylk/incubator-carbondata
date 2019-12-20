@@ -171,13 +171,10 @@ public final class DeleteLoadFolders {
     }
   }
 
-  private static boolean checkIfLoadCanBeDeleted(LoadMetadataDetails oneLoad,
-      boolean isForceDelete) {
-    if ((SegmentStatus.MARKED_FOR_DELETE == oneLoad.getSegmentStatus() ||
-        SegmentStatus.COMPACTED == oneLoad.getSegmentStatus() ||
-        SegmentStatus.INSERT_IN_PROGRESS == oneLoad.getSegmentStatus() ||
-        SegmentStatus.INSERT_OVERWRITE_IN_PROGRESS == oneLoad.getSegmentStatus())
-        && oneLoad.getVisibility().equalsIgnoreCase("true")) {
+  private static boolean checkIfLoadCanBeDeleted(LoadMetadataDetails oneLoad, boolean isForceDelete,
+      boolean deleteInProgressSegments) {
+    boolean segmentStatus = checkIfLoadCanBeDeleted(oneLoad, deleteInProgressSegments);
+    if (segmentStatus) {
       if (isForceDelete) {
         return true;
       }
@@ -188,6 +185,19 @@ public final class DeleteLoadFolders {
     }
 
     return false;
+  }
+
+  public static boolean checkIfLoadCanBeDeleted(LoadMetadataDetails oneLoad,
+      boolean deleteInProgressSegments) {
+    boolean segmentStatus = (SegmentStatus.MARKED_FOR_DELETE == oneLoad.getSegmentStatus()
+        || SegmentStatus.COMPACTED == oneLoad.getSegmentStatus());
+    if (deleteInProgressSegments) {
+      segmentStatus =
+          (segmentStatus || SegmentStatus.INSERT_IN_PROGRESS == oneLoad.getSegmentStatus()
+              || SegmentStatus.INSERT_OVERWRITE_IN_PROGRESS == oneLoad.getSegmentStatus());
+    }
+    segmentStatus = segmentStatus && oneLoad.getVisibility().equalsIgnoreCase("true");
+    return segmentStatus;
   }
 
   private static boolean checkIfLoadCanBeDeletedPhysically(LoadMetadataDetails oneLoad,
@@ -219,11 +229,11 @@ public final class DeleteLoadFolders {
 
   public static boolean deleteLoadFoldersFromFileSystem(
       AbsoluteTableIdentifier absoluteTableIdentifier, boolean isForceDelete,
-      LoadMetadataDetails[] details, String metadataPath) {
+      LoadMetadataDetails[] details, String metadataPath, boolean deleteInProgressSegments) {
     boolean isDeleted = false;
     if (details != null && details.length != 0) {
       for (LoadMetadataDetails oneLoad : details) {
-        if (checkIfLoadCanBeDeleted(oneLoad, isForceDelete)) {
+        if (checkIfLoadCanBeDeleted(oneLoad, isForceDelete, deleteInProgressSegments)) {
           ICarbonLock segmentLock = CarbonLockFactory.getCarbonLockObj(absoluteTableIdentifier,
               CarbonTablePath.addSegmentPrefix(oneLoad.getLoadName()) + LockUsage.LOCK);
           try {
@@ -234,7 +244,7 @@ public final class DeleteLoadFolders {
                 LoadMetadataDetails currentDetails =
                     getCurrentLoadStatusOfSegment(oneLoad.getLoadName(), metadataPath);
                 if (currentDetails != null && checkIfLoadCanBeDeleted(currentDetails,
-                    isForceDelete)) {
+                    isForceDelete, deleteInProgressSegments)) {
                   oneLoad.setVisibility("false");
                   isDeleted = true;
                   LOGGER.info("Info: Deleted the load " + oneLoad.getLoadName());

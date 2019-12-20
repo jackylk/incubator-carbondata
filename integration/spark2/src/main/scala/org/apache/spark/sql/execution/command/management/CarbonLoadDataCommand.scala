@@ -322,7 +322,7 @@ case class CarbonLoadDataCommand(
       LOGGER.info(s"Initiating Direct Load for the Table : ($dbName.$tableName)")
       concurrentLoadLock = acquireConcurrentLoadLock()
       // Clean up the old invalid segment data before creating a new entry for new load.
-      SegmentStatusManager.deleteLoadsAndUpdateMetadata(table, false, currPartitions)
+      SegmentStatusManager.deleteLoadsAndUpdateMetadata(table, false, currPartitions, false)
       // add the start entry for the new load in the table status file
       if (updateModel.isEmpty && !table.isHivePartitionTable) {
         CarbonLoaderUtil.readAndUpdateLoadProgressInTableMeta(

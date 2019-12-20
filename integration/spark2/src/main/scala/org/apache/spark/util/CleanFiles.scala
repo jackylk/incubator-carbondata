@@ -52,7 +52,8 @@ object CleanFiles {
       tableName = tableName,
       tablePath = tablePath,
       carbonTable = carbonTable,
-      forceTableClean = forceTableClean)
+      forceTableClean = forceTableClean,
+      deleteInProgressSegments = false)
   }
 
   def main(args: Array[String]): Unit = {

@@ -176,7 +176,8 @@ object CarbonStore {
       carbonTable: CarbonTable,
       forceTableClean: Boolean,
       currentTablePartitions: Option[Seq[PartitionSpec]] = None,
-      truncateTable: Boolean = false): Unit = {
+      truncateTable: Boolean = false,
+      deleteInProgressSegments: Boolean): Unit = {
     var carbonCleanFilesLock: ICarbonLock = null
     val absoluteTableIdentifier = if (forceTableClean) {
       AbsoluteTableIdentifier.from(tablePath, dbName, tableName, tableName)
@@ -201,7 +202,7 @@ object CarbonStore {
           SegmentStatusManager.truncateTable(carbonTable)
         }
         SegmentStatusManager.deleteLoadsAndUpdateMetadata(
-          carbonTable,true, currentTablePartitions.map(_.asJava).orNull)
+          carbonTable, true, currentTablePartitions.map(_.asJava).orNull, deleteInProgressSegments)
         CarbonUpdateUtil.cleanUpDeltaFiles(carbonTable, true)
         currentTablePartitions match {
           case Some(partitions) =>

@@ -49,6 +49,7 @@ import org.apache.carbondata.spark.util.CommonUtil
 case class CarbonCleanFilesCommand(
     databaseNameOp: Option[String],
     tableName: Option[String],
+    options: Map[String, String],
     forceTableClean: Boolean = false,
     isInternalCleanCall: Boolean = false,
     truncateTable: Boolean = false)
@@ -69,7 +70,7 @@ case class CarbonCleanFilesCommand(
           val relationIdentifier = dataMapSchema.getRelationIdentifier
           CarbonCleanFilesCommand(
             Some(relationIdentifier.getDatabaseName), Some(relationIdentifier.getTableName),
-            isInternalCleanCall = true)
+            options, isInternalCleanCall = true)
       }.toList
       cleanFileCommands.foreach(_.processMetadata(sparkSession))
     } else if (DataMapUtil.hasMVDataMap(carbonTable)) {
@@ -82,7 +83,7 @@ case class CarbonCleanFilesCommand(
           val relationIdentifier = dataMapSchema.getRelationIdentifier
           CarbonCleanFilesCommand(
             Some(relationIdentifier.getDatabaseName), Some(relationIdentifier.getTableName),
-            isInternalCleanCall = true)
+            options, isInternalCleanCall = true)
       }.toList
       cleanFileCommands.foreach(_.processMetadata(sparkSession))
     } else if (carbonTable.isChildDataMap && !isInternalCleanCall) {
@@ -103,15 +104,22 @@ case class CarbonCleanFilesCommand(
       CleanFilesPreEvent(carbonTable,
         sparkSession)
     OperationListenerBus.getInstance.fireEvent(cleanFilesPreEvent, operationContext)
+    var deleteInProgressSegments = false
+    if (options.nonEmpty) {
+      val withInsert: String = options.getOrElse("delete_in_progress", "")
+      if (withInsert.nonEmpty && withInsert.equalsIgnoreCase("true")) {
+        deleteInProgressSegments = true
+      }
+    }
     if (tableName.isDefined) {
       Checker.validateTableExists(databaseNameOp, tableName.get, sparkSession)
       if (forceTableClean) {
-        deleteAllData(sparkSession, databaseNameOp, tableName.get)
+        deleteAllData(sparkSession, databaseNameOp, tableName.get, deleteInProgressSegments)
       } else {
-        cleanGarbageData(sparkSession, databaseNameOp, tableName.get)
+        cleanGarbageData(sparkSession, databaseNameOp, tableName.get, deleteInProgressSegments)
       }
     } else {
-      cleanGarbageDataInAllTables(sparkSession)
+      cleanGarbageDataInAllTables(sparkSession, deleteInProgressSegments)
     }
     if (cleanFileCommands != null) {
       cleanFileCommands.foreach(_.processData(sparkSession))
@@ -123,7 +131,9 @@ case class CarbonCleanFilesCommand(
   }
 
   private def deleteAllData(sparkSession: SparkSession,
-      databaseNameOp: Option[String], tableName: String): Unit = {
+      databaseNameOp: Option[String],
+      tableName: String,
+      deleteInProgressSegments: Boolean): Unit = {
     val dbName = CarbonEnv.getDatabaseName(databaseNameOp)(sparkSession)
     val databaseLocation = CarbonEnv.getDatabaseLocation(dbName, sparkSession)
     val tablePath = databaseLocation + CarbonCommonConstants.FILE_SEPARATOR + tableName
@@ -132,11 +142,14 @@ case class CarbonCleanFilesCommand(
       tableName = tableName,
       tablePath = tablePath,
       carbonTable = null, // in case of delete all data carbonTable is not required.
-      forceTableClean = forceTableClean)
+      forceTableClean = forceTableClean,
+      deleteInProgressSegments = deleteInProgressSegments)
   }
 
   private def cleanGarbageData(sparkSession: SparkSession,
-      databaseNameOp: Option[String], tableName: String): Unit = {
+      databaseNameOp: Option[String],
+      tableName: String,
+      deleteInProgressSegments: Boolean): Unit = {
     if (!carbonTable.getTableInfo.isTransactionalTable) {
       throw new MalformedCarbonCommandException("Unsupported operation on non transactional table")
     }
@@ -151,16 +164,18 @@ case class CarbonCleanFilesCommand(
       carbonTable = carbonTable,
       forceTableClean = forceTableClean,
       currentTablePartitions = partitions,
-      truncateTable = truncateTable)
+      truncateTable = truncateTable,
+      deleteInProgressSegments = deleteInProgressSegments)
   }
 
   // Clean garbage data in all tables in all databases
-  private def cleanGarbageDataInAllTables(sparkSession: SparkSession): Unit = {
+  private def cleanGarbageDataInAllTables(sparkSession: SparkSession,
+      deleteInProgressSegments: Boolean): Unit = {
     try {
       val databases = sparkSession.sessionState.catalog.listDatabases()
       databases.foreach(dbName => {
         val databaseLocation = CarbonEnv.getDatabaseLocation(dbName, sparkSession)
-        CommonUtil.cleanInProgressSegments(databaseLocation, dbName)
+        CommonUtil.cleanInProgressSegments(databaseLocation, dbName, deleteInProgressSegments)
       })
     } catch {
       case e: Throwable =>
