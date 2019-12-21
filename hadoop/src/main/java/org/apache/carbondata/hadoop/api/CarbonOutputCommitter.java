@@ -55,7 +55,6 @@ import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 import org.apache.log4j.Logger;
-import org.apache.spark.sql.SparkSession;
 
 /**
  * Outputcommitter which manages the segments during loading.It commits segment information to the
@@ -318,22 +317,11 @@ public class CarbonOutputCommitter extends FileOutputCommitter {
       String uniqueId = String.valueOf(System.currentTimeMillis());
       List<String> tobeUpdatedSegs = new ArrayList<>();
       List<String> tobeDeletedSegs = new ArrayList<>();
-      boolean dynamicOverwrite = false;
-      SparkSession sparkSession = SparkSession.getActiveSession().get();
-      if(sparkSession.sqlContext().conf().luxorEnabled()) {
-        // Check if dynamicPartitionOverwrite is enabled, if enabled, then overwrite only
-        // matched partitions, else overwrite all partitions in a partition table
-        boolean overwrite = Boolean.parseBoolean(
-            sparkSession.conf().get("spark.sql.dynamicPartitionOverwrite.enabled"));
-        if(!overwrite) {
-          dynamicOverwrite = true;
-        }
-      }
       // First drop the partitions from partition mapper files of each segment
       for (Segment segment : validSegments) {
         new SegmentFileStore(table.getTablePath(), segment.getSegmentFileName())
-            .dropPartitions(segment, partitionSpecs, uniqueId, tobeDeletedSegs, tobeUpdatedSegs,
-                dynamicOverwrite);
+            .dropPartitions(segment, partitionSpecs, uniqueId, tobeDeletedSegs, tobeUpdatedSegs);
+
       }
       newMetaEntry.setUpdateStatusFileName(uniqueId);
       // Commit the removed partitions in carbon store.

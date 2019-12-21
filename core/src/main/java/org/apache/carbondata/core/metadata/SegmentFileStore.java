@@ -774,9 +774,9 @@ public class SegmentFileStore {
    * @param uniqueId
    * @throws IOException
    */
-  public void dropPartitions(Segment segment, List<PartitionSpec> partitionSpecs, String uniqueId,
-      List<String> toBeDeletedSegments, List<String> toBeUpdatedSegments,
-      boolean dynamicOverwrite) throws IOException {
+  public void dropPartitions(Segment segment, List<PartitionSpec> partitionSpecs,
+      String uniqueId, List<String> toBeDeletedSegments, List<String> toBeUpdatedSegments)
+      throws IOException {
     readSegment(tablePath, segment.getSegmentFileName());
     boolean updateSegment = false;
     for (Map.Entry<String, FolderDetails> entry : segmentFile.getLocationMap().entrySet()) {
@@ -787,16 +787,11 @@ public class SegmentFileStore {
       Path path = new Path(location);
       // Update the status to delete if path equals
       if (null != partitionSpecs) {
-        if (dynamicOverwrite) {
-          updateSegment = true;
-          entry.getValue().setStatus(SegmentStatus.MARKED_FOR_DELETE.getMessage());
-        } else {
-          for (PartitionSpec spec : partitionSpecs) {
-            if (path.equals(spec.getLocation())) {
-              entry.getValue().setStatus(SegmentStatus.MARKED_FOR_DELETE.getMessage());
-              updateSegment = true;
-              break;
-            }
+        for (PartitionSpec spec : partitionSpecs) {
+          if (path.equals(spec.getLocation())) {
+            entry.getValue().setStatus(SegmentStatus.MARKED_FOR_DELETE.getMessage());
+            updateSegment = true;
+            break;
           }
         }
       }

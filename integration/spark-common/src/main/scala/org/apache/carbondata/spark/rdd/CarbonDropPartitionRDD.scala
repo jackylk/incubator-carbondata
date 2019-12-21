@@ -71,8 +71,7 @@ class CarbonDropPartitionRDD(
         partitions,
         uniqueId,
         toBeDeletedSegments,
-        toBeUpdateSegments,
-        false)
+        toBeUpdateSegments)
 
       var finished = false
 
