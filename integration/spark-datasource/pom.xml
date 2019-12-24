@@ -22,7 +22,7 @@
   <parent>
     <groupId>org.apache.carbondata</groupId>
     <artifactId>carbondata-parent</artifactId>
-    <version>1.6.1.01010201-hw-2.0.0.dli-SNAPSHOT</version>
+    <version>1.6.1.01010201-dplatform-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
@@ -334,7 +334,7 @@
         <activeByDefault>true</activeByDefault>
       </activation>
       <properties>
-        <spark.version>2.3.2.0101-hw-2.0.0.dli-SNAPSHOT</spark.version>
+        <spark.version>2.3.2.0202001-dplatform-SNAPSHOT</spark.version>
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11.8</scala.version>
         <hadoop.version>2.7.2.0100-dplatform</hadoop.version>
@@ -378,7 +378,7 @@
         <activeByDefault>true</activeByDefault>
       </activation>
       <properties>
-        <spark.version>2.3.2.0101-hw-2.0.0.dli-SNAPSHOT</spark.version>
+        <spark.version>2.3.2.0202001-dplatform-SNAPSHOT</spark.version>
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11.8</scala.version>
         <hadoop.version>2.7.2.0100-dplatform</hadoop.version>

@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.apache.carbondata</groupId>
     <artifactId>carbondata-parent</artifactId>
-    <version>1.6.1.01010201-hw-2.0.0.dli-SNAPSHOT</version>
+    <version>1.6.1.01010201-dplatform-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
