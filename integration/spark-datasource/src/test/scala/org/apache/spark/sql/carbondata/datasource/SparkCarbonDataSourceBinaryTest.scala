@@ -469,16 +469,17 @@ class SparkCarbonDataSourceBinaryTest extends FunSuite with BeforeAndAfterAll {
              """.stripMargin)
         sql("insert into carbon_table select * from hivetable")
 
-        sqlContext.udf.register("decodeHex", (str: String) => Hex.decodeHex(str.toCharArray))
+        def getHexString(str: String) = {
+            str.toList.map(_.toInt.toHexString).mkString
+        }
+        sqlContext.udf.register("decodeHex", (str: String) => Hex.decodeHex(getHexString(str).toCharArray))
         sqlContext.udf.register("decodeBase64", (str: String) => Base64.decodeBase64(str.getBytes()))
 
         val udfHexResult = sql("SELECT decodeHex(image) FROM carbon_table")
-        val unhexResult = sql("SELECT unhex(image) FROM carbon_table")
-        checkAnswer(udfHexResult, unhexResult)
-
         val udfBase64Result = sql("SELECT decodeBase64(image) FROM carbon_table")
         val unbase64Result = sql("SELECT unbase64(image) FROM carbon_table")
         checkAnswer(udfBase64Result, unbase64Result)
+        checkAnswer(udfHexResult, unbase64Result)
 
         val carbonResult = sql("SELECT * FROM carbon_table")
         val hiveResult = sql("SELECT * FROM hivetable")
@@ -493,7 +494,7 @@ class SparkCarbonDataSourceBinaryTest extends FunSuite with BeforeAndAfterAll {
                 assert("\u0001education\u0002".equals(new String(each.getAs[Array[Byte]](3))))
             } else if (3 == each.get(0)) {
                 assert("".equals(new String(each.getAs[Array[Byte]](3)))
-                        || "\u0001biology\u0002".equals(new String(each.getAs[Array[Byte]](3))))
+                       || "\u0001biology\u0002".equals(new String(each.getAs[Array[Byte]](3))))
             } else {
                 assert(false)
             }
