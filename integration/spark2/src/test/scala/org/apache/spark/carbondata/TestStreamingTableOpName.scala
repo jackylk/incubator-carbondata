@@ -663,7 +663,7 @@ class TestStreamingTableOpName extends QueryTest with BeforeAndAfterAll {
     checkAnswer(
       sql("select * from stream_table_filter where register is null"),
       Seq(Row(null, "", "", null, null, null, null, null, null)))
-    assert(1 == partitionNums("select * from stream_table_filter where register is null"))
+    assert(3 == partitionNums("select * from stream_table_filter where register is null"))
 
     checkAnswer(
       sql("select * from stream_table_filter where id is null and register is not null"),
