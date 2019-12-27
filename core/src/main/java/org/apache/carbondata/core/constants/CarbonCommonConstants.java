@@ -275,12 +275,6 @@ public final class CarbonCommonConstants {
 
   public static final int CARBON_LEASE_RECOVERY_RETRY_INTERVAL_MAX = 10000;
 
-  @CarbonProperty
-  public static final String CARBON_SECURE_DICTIONARY_SERVER =
-      "carbon.secure.dictionary.server";
-
-  public static final String CARBON_SECURE_DICTIONARY_SERVER_DEFAULT = "true";
-
   /**
    * ENABLE_CALCULATE_DATA_INDEX_SIZE
    */
@@ -697,17 +691,6 @@ public final class CarbonCommonConstants {
    * dictionary chunk default size
    */
   public static final String DICTIONARY_ONE_CHUNK_SIZE_DEFAULT = "10000";
-
-  /**
-   *  Dictionary Server Worker Threads
-   */
-  @CarbonProperty
-  public static final String DICTIONARY_WORKER_THREADS = "dictionary.worker.threads";
-
-  /**
-   *  Dictionary Server Worker Threads
-   */
-  public static final String DICTIONARY_WORKER_THREADS_DEFAULT = "1";
 
   /**
    * Size of Major Compaction in MBs

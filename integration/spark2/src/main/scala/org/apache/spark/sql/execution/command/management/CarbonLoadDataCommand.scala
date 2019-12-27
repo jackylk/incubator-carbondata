@@ -51,33 +51,28 @@ import org.apache.carbondata.common.Strings
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.converter.SparkDataTypeConverterImpl
 import org.apache.carbondata.core.constants.{CarbonCommonConstants, CarbonLoadOptionConstants, SortScopeOptions}
-import org.apache.carbondata.core.datamap.{DataMapStoreManager, Segment}
+import org.apache.carbondata.core.datamap.DataMapStoreManager
 import org.apache.carbondata.core.datastore.compression.CompressorFactory
 import org.apache.carbondata.core.datastore.impl.FileFactory
-import org.apache.carbondata.core.dictionary.server.{DictionaryServer, NonSecureDictionaryServer}
-import org.apache.carbondata.core.dictionary.service.NonSecureDictionaryServiceProvider
 import org.apache.carbondata.core.indexstore.PartitionSpec
 import org.apache.carbondata.core.locks.{CarbonLockFactory, CarbonLockUtil, ICarbonLock, LockUsage}
-import org.apache.carbondata.core.metadata.{AbsoluteTableIdentifier, SegmentFileStore}
+import org.apache.carbondata.core.metadata.SegmentFileStore
 import org.apache.carbondata.core.metadata.encoder.Encoding
 import org.apache.carbondata.core.metadata.schema.table.{CarbonTable, TableInfo}
 import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema
 import org.apache.carbondata.core.mutate.{CarbonUpdateUtil, TupleIdEnum}
-import org.apache.carbondata.core.readcommitter.TableStatusReadCommittedScope
 import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatus, SegmentStatusManager}
 import org.apache.carbondata.core.util._
 import org.apache.carbondata.core.util.path.CarbonTablePath
-import org.apache.carbondata.events.{BuildDataMapPostExecutionEvent, BuildDataMapPreExecutionEvent, IndexServerLoadEvent, OperationContext, OperationListenerBus}
+import org.apache.carbondata.events.{BuildDataMapPostExecutionEvent, BuildDataMapPreExecutionEvent, OperationContext, OperationListenerBus}
 import org.apache.carbondata.events.exception.PreEventException
 import org.apache.carbondata.indexserver.DistributedRDDUtils
 import org.apache.carbondata.processing.loading.{ComplexDelimitersEnum, TableProcessingOperations}
-import org.apache.carbondata.processing.loading.events.LoadEvents.{LoadMetadataEvent, LoadTablePostExecutionEvent, LoadTablePreExecutionEvent}
+import org.apache.carbondata.processing.loading.events.LoadEvents.{LoadTablePostExecutionEvent, LoadTablePreExecutionEvent}
 import org.apache.carbondata.processing.loading.exception.NoRetryException
 import org.apache.carbondata.processing.loading.model.{CarbonLoadModelBuilder, LoadOption}
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 import org.apache.carbondata.processing.util.{CarbonBadRecordUtil, CarbonDataProcessorUtil, CarbonLoaderUtil}
-import org.apache.carbondata.spark.dictionary.provider.SecureDictionaryServiceProvider
-import org.apache.carbondata.spark.dictionary.server.SecureDictionaryServer
 import org.apache.carbondata.spark.load.{CsvRDDHelper, DataLoadProcessorStepOnSpark}
 import org.apache.carbondata.spark.rdd.CarbonDataRDDFactory
 import org.apache.carbondata.spark.util.{CarbonScalaUtil, GlobalDictionaryUtil}
@@ -324,15 +319,7 @@ case class CarbonLoadDataCommand(
       val columnar = sparkSession.conf.get("carbon.is.columnar.storage", "true").toBoolean
       LOGGER.info("Sort Scope : " + carbonLoadModel.getSortScope)
       if (carbonLoadModel.getUseOnePass) {
-        loadDataUsingOnePass(
-          sparkSession,
-          carbonProperty,
-          carbonLoadModel,
-          columnar,
-          partitionStatus,
-          hadoopConf,
-          operationContext,
-          LOGGER)
+
       } else {
         loadData(
           sparkSession,
@@ -424,139 +411,6 @@ case class CarbonLoadDataCommand(
           "Unable to unlock concurrent_load lock for table" + table.getTablePath);
       }
     }
-  }
-
-  private def loadDataUsingOnePass(
-      sparkSession: SparkSession,
-      carbonProperty: CarbonProperties,
-      carbonLoadModel: CarbonLoadModel,
-      columnar: Boolean,
-      partitionStatus: SegmentStatus,
-      hadoopConf: Configuration,
-      operationContext: OperationContext,
-      LOGGER: Logger): Seq[Row] = {
-    var rows = Seq.empty[Row]
-    val carbonTable = carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable
-    val carbonTableIdentifier = carbonTable.getAbsoluteTableIdentifier
-      .getCarbonTableIdentifier
-    val dictFolderPath = CarbonTablePath.getMetadataPath(carbonLoadModel.getTablePath)
-    val dimensions = carbonTable.getVisibleDimensions().asScala.toArray
-    val colDictFilePath = carbonLoadModel.getColDictFilePath
-    if (!StringUtils.isEmpty(colDictFilePath)) {
-      carbonLoadModel.initPredefDictMap()
-      // generate predefined dictionary
-      GlobalDictionaryUtil.generatePredefinedColDictionary(
-        colDictFilePath,
-        carbonTableIdentifier,
-        dimensions,
-        carbonLoadModel,
-        sparkSession.sqlContext,
-        dictFolderPath)
-    }
-    if (!StringUtils.isEmpty(carbonLoadModel.getAllDictPath)) {
-      carbonLoadModel.initPredefDictMap()
-      GlobalDictionaryUtil
-        .generateDictionaryFromDictionaryFiles(sparkSession.sqlContext,
-          carbonLoadModel,
-          carbonTableIdentifier,
-          dictFolderPath,
-          dimensions,
-          carbonLoadModel.getAllDictPath)
-    }
-    // dictionaryServerClient dictionary generator
-    val dictionaryServerPort = carbonProperty
-      .getProperty(CarbonCommonConstants.DICTIONARY_SERVER_PORT,
-        CarbonCommonConstants.DICTIONARY_SERVER_PORT_DEFAULT)
-    val sparkDriverHost = sparkSession.sqlContext.sparkContext.
-      getConf.get("spark.driver.host")
-    carbonLoadModel.setDictionaryServerHost(sparkDriverHost)
-
-    val carbonSecureModeDictServer = CarbonProperties.getInstance.
-      getProperty(CarbonCommonConstants.CARBON_SECURE_DICTIONARY_SERVER,
-      CarbonCommonConstants.CARBON_SECURE_DICTIONARY_SERVER_DEFAULT)
-
-    val sparkConf = sparkSession.sqlContext.sparkContext.getConf
-    // For testing.
-    // sparkConf.set("spark.authenticate", "true")
-    // sparkConf.set("spark.authenticate.secret", "secret")
-
-    val server: Option[DictionaryServer] = if (sparkConf.get("spark.authenticate", "false").
-      equalsIgnoreCase("true") && carbonSecureModeDictServer.toBoolean) {
-      val dictionaryServer = SecureDictionaryServer.getInstance(sparkConf,
-        sparkDriverHost.toString, dictionaryServerPort.toInt, carbonTable)
-      carbonLoadModel.setDictionaryServerPort(dictionaryServer.getPort)
-      carbonLoadModel.setDictionaryServerHost(dictionaryServer.getHost)
-      carbonLoadModel.setDictionaryServerSecretKey(dictionaryServer.getSecretKey)
-      carbonLoadModel.setDictionaryEncryptServerSecure(dictionaryServer.isEncryptSecureServer)
-      carbonLoadModel.setDictionaryServiceProvider(new SecureDictionaryServiceProvider())
-      sparkSession.sparkContext.addSparkListener(new SparkListener() {
-        override def onApplicationEnd(applicationEnd: SparkListenerApplicationEnd) {
-          dictionaryServer.shutdown()
-        }
-      })
-      Some(dictionaryServer)
-    } else {
-      val dictionaryServer = NonSecureDictionaryServer
-        .getInstance(dictionaryServerPort.toInt, carbonTable)
-      carbonLoadModel.setDictionaryServerPort(dictionaryServer.getPort)
-      carbonLoadModel.setDictionaryServerHost(dictionaryServer.getHost)
-      carbonLoadModel.setDictionaryEncryptServerSecure(false)
-      carbonLoadModel
-        .setDictionaryServiceProvider(new NonSecureDictionaryServiceProvider(dictionaryServer
-          .getPort))
-      sparkSession.sparkContext.addSparkListener(new SparkListener() {
-        override def onApplicationEnd(applicationEnd: SparkListenerApplicationEnd) {
-          dictionaryServer.shutdown()
-        }
-      })
-      Some(dictionaryServer)
-    }
-    val loadDataFrame = if (updateModel.isDefined) {
-       Some(getDataFrameWithTupleID())
-    } else {
-      dataFrame
-    }
-
-    if (carbonTable.isHivePartitionTable) {
-      try {
-        rows = loadDataWithPartition(
-          sparkSession,
-          carbonLoadModel,
-          hadoopConf,
-          loadDataFrame,
-          operationContext,
-          LOGGER)
-      } finally {
-        server match {
-          case Some(dictServer) =>
-            try {
-              dictServer.writeTableDictionary(carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable
-                .getCarbonTableIdentifier.getTableId)
-            } catch {
-              case _: Exception =>
-                throw new Exception("Dataload failed due to error while writing dictionary file!")
-            }
-          case _ =>
-        }
-      }
-    } else {
-      val loadResult = CarbonDataRDDFactory.loadCarbonData(
-        sparkSession.sqlContext,
-        carbonLoadModel,
-        columnar,
-        partitionStatus,
-        server,
-        isOverwriteTable,
-        hadoopConf,
-        loadDataFrame,
-        updateModel,
-        operationContext)
-      if (loadResult != null) {
-        val info = makeAuditInfo(loadResult)
-        setAuditInfo(info)
-      }
-    }
-    rows
   }
 
   private def makeAuditInfo(loadResult: LoadMetadataDetails): Map[String, String] = {
@@ -1099,9 +953,6 @@ case class CarbonLoadDataCommand(
     val options = new mutable.HashMap[String, String]()
     options ++= catalogTable.storage.properties
     options += (("overwrite", overWrite.toString))
-    options += (("onepass", loadModel.getUseOnePass.toString))
-    options += (("dicthost", loadModel.getDictionaryServerHost))
-    options += (("dictport", loadModel.getDictionaryServerPort.toString))
     if (partition.nonEmpty) {
       val staticPartitionStr = ObjectSerializationUtil.convertObjectToString(
         new util.HashMap[String, Boolean](

@@ -82,7 +82,7 @@ public class IncrementalColumnDictionaryGenerator implements BiDictionary<Intege
   }
 
   @Override
-  public Integer getOrGenerateKey(String value) throws DictionaryGenerationException {
+  public Integer getOrGenerateKey(String value) {
     Integer dict = getKey(value);
     if (dict == null) {
       dict = generateKey(value);
@@ -108,7 +108,7 @@ public class IncrementalColumnDictionaryGenerator implements BiDictionary<Intege
   }
 
   @Override
-  public Integer generateKey(String value) throws DictionaryGenerationException {
+  public Integer generateKey(String value) {
     synchronized (lock) {
       Integer dict = incrementalCache.get(value);
       if (dict == null) {

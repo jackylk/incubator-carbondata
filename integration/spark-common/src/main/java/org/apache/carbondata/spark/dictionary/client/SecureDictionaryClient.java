@@ -21,7 +21,6 @@ import java.nio.charset.Charset;
 
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
-import org.apache.carbondata.core.dictionary.client.DictionaryClient;
 import org.apache.carbondata.core.dictionary.generator.key.DictionaryMessage;
 
 import com.google.common.collect.Lists;

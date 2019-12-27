@@ -18,7 +18,6 @@
 package org.apache.carbondata.core.dictionary.server;
 
 import org.apache.carbondata.common.logging.LogServiceFactory;
-import org.apache.carbondata.core.dictionary.generator.ServerDictionaryGenerator;
 import org.apache.carbondata.core.dictionary.generator.key.DictionaryMessage;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 

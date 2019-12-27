@@ -30,7 +30,7 @@ public class PreCreatedDictionary implements BiDictionary<Integer, Object> {
   }
 
   @Override
-  public Integer getOrGenerateKey(Object value) throws DictionaryGenerationException {
+  public Integer getOrGenerateKey(Object value) {
     Integer key = getKey(value);
     if (key == null) {
       throw new UnsupportedOperationException("trying to add new entry in PreCreatedDictionary");
