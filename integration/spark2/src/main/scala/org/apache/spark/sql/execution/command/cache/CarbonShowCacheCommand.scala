@@ -57,7 +57,6 @@ case class CarbonShowCacheCommand(tableIdentifier: Option[TableIdentifier],
         AttributeReference("Table", StringType, nullable = false)(),
         AttributeReference("Index size", StringType, nullable = false)(),
         AttributeReference("Datamap size", StringType, nullable = false)(),
-        AttributeReference("Dictionary size", StringType, nullable = false)(),
         AttributeReference("Cache Location", StringType, nullable = false)())
     } else {
       Seq(
@@ -229,7 +228,6 @@ case class CarbonShowCacheCommand(tableIdentifier: Option[TableIdentifier],
           (parentCache, dataMapList)
         case Nil => (("", 0, 0L, ""), Nil)
       }
-      val parentDictionary = getDictionarySize(carbonTable)(sparkSession)
       val childMetaCacheInfos = childTableList.flatMap {
         childTable =>
           val tableArray = childTable._1.split("-")
@@ -250,13 +248,11 @@ case class CarbonShowCacheCommand(tableIdentifier: Option[TableIdentifier],
         comments += " (external table)"
       }
       Seq(
-        Row("Index", parentMetaCacheInfo._3, comments, ""),
-        Row("Dictionary", parentDictionary, "", "")
+        Row("Index", parentMetaCacheInfo._3, comments, "")
       ) ++ childMetaCacheInfos
     } else {
       Seq(
-        Row("Index", 0L, "", ""),
-        Row("Dictionary", 0L, "", "")
+        Row("Index", 0L, "", "")
       )
     }
   }
@@ -328,8 +324,7 @@ case class CarbonShowCacheCommand(tableIdentifier: Option[TableIdentifier],
       comments += " (external table)"
     }
     Seq(
-      Row("Index", mainTableCache, comments),
-      Row("Dictionary", getDictionarySize(mainTable)(sparkSession), "")
+      Row("Index", mainTableCache, comments)
     ) ++ childMetaCacheInfos
 
   }
@@ -376,15 +371,6 @@ case class CarbonShowCacheCommand(tableIdentifier: Option[TableIdentifier],
     OperationListenerBus.getInstance.fireEvent(showTableCacheEvent, operationContext)
     operationContext.getProperty(carbonTable.getTableUniqueName)
       .asInstanceOf[List[(String, String, String)]]
-  }
-
-  private def getDictionarySize(carbonTable: CarbonTable)(sparkSession: SparkSession): Long = {
-    val dictKeys = CacheUtil.getAllDictCacheKeys(carbonTable)
-    val cache = CacheProvider.getInstance().getCarbonCache
-    dictKeys.collect {
-      case dictKey if cache != null && cache.get(dictKey) != null =>
-        cache.get(dictKey).getMemorySize
-    }.sum
   }
 
   private def getAllDriverCacheSize(tablePaths: List[String]) = {

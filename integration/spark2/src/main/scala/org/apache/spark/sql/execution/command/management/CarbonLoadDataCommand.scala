@@ -290,22 +290,10 @@ case class CarbonLoadDataCommand(
       if (isOverwriteTable) {
         LOGGER.info(s"Overwrite of carbon table with $dbName.$tableName is in progress")
       }
-      // if table is an aggregate table then disable single pass.
-      if (carbonLoadModel.isAggLoadRequest) {
-        carbonLoadModel.setUseOnePass(false)
-      }
-
       // start dictionary server when use one pass load and dimension with DICTIONARY
       // encoding is present.
       val allDimensions =
       carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable.getAllDimensions.asScala.toList
-      val createDictionary = allDimensions.exists {
-        carbonDimension => carbonDimension.hasEncoding(Encoding.DICTIONARY) &&
-                           !carbonDimension.hasEncoding(Encoding.DIRECT_DICTIONARY)
-      }
-      if (!createDictionary) {
-        carbonLoadModel.setUseOnePass(false)
-      }
       // Create table and metadata folders if not exist
       if (carbonLoadModel.isCarbonTransactionalTable) {
         val metadataDirectoryPath = CarbonTablePath.getMetadataPath(table.getTablePath)
@@ -318,18 +306,14 @@ case class CarbonLoadDataCommand(
       val partitionStatus = SegmentStatus.SUCCESS
       val columnar = sparkSession.conf.get("carbon.is.columnar.storage", "true").toBoolean
       LOGGER.info("Sort Scope : " + carbonLoadModel.getSortScope)
-      if (carbonLoadModel.getUseOnePass) {
-
-      } else {
-        loadData(
-          sparkSession,
-          carbonLoadModel,
-          columnar,
-          partitionStatus,
-          hadoopConf,
-          operationContext,
-          LOGGER)
-      }
+      loadData(
+        sparkSession,
+        carbonLoadModel,
+        columnar,
+        partitionStatus,
+        hadoopConf,
+        operationContext,
+        LOGGER)
       val loadTablePostExecutionEvent: LoadTablePostExecutionEvent =
         new LoadTablePostExecutionEvent(
           table.getCarbonTableIdentifier,
@@ -381,7 +365,7 @@ case class CarbonLoadDataCommand(
                     !cd.hasEncoding(Encoding.DIRECT_DICTIONARY))
 
     if (isConcurrentLockRequired) {
-      var concurrentLoadLock: ICarbonLock = CarbonLockFactory.getCarbonLockObj(
+      val concurrentLoadLock: ICarbonLock = CarbonLockFactory.getCarbonLockObj(
         table.getTableInfo().getOrCreateAbsoluteTableIdentifier(),
         LockUsage.CONCURRENT_LOAD_LOCK)
       val retryCount = CarbonLockUtil
@@ -397,7 +381,7 @@ case class CarbonLoadDataCommand(
       }
       return Some(concurrentLoadLock)
     }
-    return None
+    None
   }
 
   private def releaseConcurrentLoadLock(concurrentLoadLock: Option[ICarbonLock],
@@ -444,11 +428,6 @@ case class CarbonLoadDataCommand(
       (dataFrame, dataFrame)
     }
     val table = carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable
-    GlobalDictionaryUtil.generateGlobalDictionary(
-      sparkSession.sqlContext,
-      carbonLoadModel,
-      hadoopConf,
-      dictionaryDataFrame)
     if (table.isHivePartitionTable) {
       rows = loadDataWithPartition(
         sparkSession,
@@ -462,7 +441,6 @@ case class CarbonLoadDataCommand(
         carbonLoadModel,
         columnar,
         partitionStatus,
-        None,
         isOverwriteTable,
         hadoopConf,
         loadDataFrame,

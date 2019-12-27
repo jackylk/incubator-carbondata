@@ -36,23 +36,7 @@ case class CarbonDictionaryCatalystDecoder(
     child: LogicalPlan) extends UnaryNode {
   // the output should be updated with converted datatype, it is need for limit+sort plan.
   override def output: Seq[Attribute] = {
-    child match {
-      case l: LogicalRelation =>
-        // If the child is logical plan then first update all dictionary attr with IntegerType
-        val logicalOut =
-          CarbonDictionaryDecoder.updateAttributes(child.output, relations, aliasMap)
-        CarbonDictionaryDecoder.convertOutput(logicalOut, relations, profile, aliasMap)
-      case Filter(cond, l: LogicalRelation) =>
-        // If the child is logical plan then first update all dictionary attr with IntegerType
-        val logicalOut =
-          CarbonDictionaryDecoder.updateAttributes(child.output, relations, aliasMap)
-        CarbonDictionaryDecoder.convertOutput(logicalOut, relations, profile, aliasMap)
-      case Join(l: LogicalRelation, r: LogicalRelation, _, _) =>
-        val logicalOut =
-          CarbonDictionaryDecoder.updateAttributes(child.output, relations, aliasMap)
-        CarbonDictionaryDecoder.convertOutput(logicalOut, relations, profile, aliasMap)
-      case _ => CarbonDictionaryDecoder.convertOutput(child.output, relations, profile, aliasMap)
-    }
+    throw new UnsupportedOperationException
   }
 
 }

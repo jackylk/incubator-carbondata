@@ -37,7 +37,6 @@ import org.apache.spark.sql.sources.BaseRelation
 import org.apache.spark.util.{CarbonReflectionUtils, SparkUtil}
 
 import org.apache.carbondata.common.logging.LogServiceFactory
-import org.apache.carbondata.core.cache.dictionary.ManageDictionaryAndBTree
 import org.apache.carbondata.core.datamap.DataMapStoreManager
 import org.apache.carbondata.core.datastore.block.SegmentPropertiesAndSchemaHolder
 import org.apache.carbondata.core.datastore.impl.FileFactory
@@ -48,7 +47,7 @@ import org.apache.carbondata.core.metadata.schema
 import org.apache.carbondata.core.metadata.schema.SchemaReader
 import org.apache.carbondata.core.metadata.schema.table
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
-import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
+import org.apache.carbondata.core.util.CarbonUtil
 import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.core.writer.ThriftWriter
 import org.apache.carbondata.events.{LookupRelationPostEvent, OperationContext, OperationListenerBus}
@@ -72,14 +71,7 @@ case class MetaData(var carbonTables: ArrayBuffer[CarbonTable]) {
 case class CarbonMetaData(
     dims: Seq[String],
     msrs: Seq[String],
-    carbonTable: CarbonTable,
-    dictionaryMap: DictionaryMap)
-
-case class DictionaryMap(dictionaryMap: Map[String, Boolean]) {
-  def get(name: String): Option[Boolean] = {
-    dictionaryMap.get(name.toLowerCase)
-  }
-}
+    carbonTable: CarbonTable)
 
 object MatchLogicalRelation {
   def unapply(logicalPlan: LogicalPlan): Option[(BaseRelation, Any, Any)] = logicalPlan match {

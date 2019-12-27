@@ -52,7 +52,8 @@ class CarbonLateDecodeRule extends Rule[LogicalPlan] with PredicateHelper {
     if (checkIfRuleNeedToBeApplied(plan, true)) {
       val recorder = CarbonTimeStatisticsFactory.createExecutorRecorder("")
       val queryStatistic = new QueryStatistic()
-      val result = transformCarbonPlan(plan, relations)
+//      val result = transformCarbonPlan(plan, relations)
+      val result = plan
       queryStatistic.addStatistics("Time taken for Carbon Optimizer to optimize: ",
         System.currentTimeMillis)
       recorder.recordStatistics(queryStatistic)
@@ -562,17 +563,7 @@ class CarbonLateDecodeRule extends Rule[LogicalPlan] with PredicateHelper {
   private def isDictionaryEncoded(attribute: Attribute,
       attributeMap: util.HashMap[AttributeReferenceWrapper, CarbonDecoderRelation],
       aliasMap: CarbonAliasDecoderRelation): Boolean = {
-
-    val uattr = aliasMap.getOrElse(attribute, attribute)
-    val relation = Option(attributeMap.get(AttributeReferenceWrapper(uattr)))
-    if (relation.isDefined) {
-      relation.get.dictionaryMap.get(uattr.name) match {
-        case Some(true) => true
-        case _ => false
-      }
-    } else {
-      false
-    }
+    throw new UnsupportedOperationException("global dictionary is not deprecated")
   }
 
   private def needDataTypeUpdate(exp: Expression): Boolean = {
@@ -897,16 +888,17 @@ class CarbonLateDecodeRule extends Rule[LogicalPlan] with PredicateHelper {
     val uAttr = aliasMap.getOrElse(attr, attr)
     val relation = Option(attrMap.get(AttributeReferenceWrapper(uAttr)))
     if (relation.isDefined) {
-      relation.get.dictionaryMap.get(uAttr.name) match {
-        case Some(true)
-          if !allAttrsNotDecode.contains(AttributeReferenceWrapper(uAttr)) =>
-          val newAttr = AttributeReference(attr.name,
-            IntegerType,
-            attr.nullable,
-            attr.metadata)(attr.exprId)
-          newAttr
-        case _ => attr
-      }
+//      relation.get.dictionaryMap.get(uAttr.name) match {
+//        case Some(true)
+//          if !allAttrsNotDecode.contains(AttributeReferenceWrapper(uAttr)) =>
+//          val newAttr = AttributeReference(attr.name,
+//            IntegerType,
+//            attr.nullable,
+//            attr.metadata)(attr.exprId)
+//          newAttr
+//        case _ => attr
+//      }
+      attr
     } else {
       attr
     }
@@ -947,8 +939,6 @@ case class CarbonDecoderRelation(
       attrMap.put(AttributeReferenceWrapper(attr._1), this)
     }
   }
-
-  lazy val dictionaryMap = carbonRelation.carbonRelation.metaData.dictionaryMap
 
   override def toString: String = carbonRelation.carbonTable.getTableUniqueName
 }
