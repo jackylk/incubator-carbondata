@@ -721,7 +721,7 @@ public final class FilterUtil {
    */
   public static ColumnFilterInfo getFilterValues(AbsoluteTableIdentifier tableIdentifier,
       ColumnExpression columnExpression, List<String> evaluateResultList, boolean isIncludeFilter)
-      throws QueryExecutionException, FilterUnsupportedException, IOException {
+      throws FilterUnsupportedException, IOException {
     Dictionary forwardDictionary = null;
     ColumnFilterInfo filterInfo = null;
     List<Integer> surrogates =
@@ -1444,12 +1444,12 @@ public final class FilterUtil {
    * This API will get the max value of surrogate key which will be used for
    * determining the end key of particular btree.
    *
-   * @param dimCarinality
+   * @param dimCardinality
    */
-  private static long getMaxValue(CarbonDimension carbonDimension, int[] dimCarinality) {
+  private static long getMaxValue(CarbonDimension carbonDimension, int[] dimCardinality) {
     // Get data from all the available slices of the table
-    if (null != dimCarinality) {
-      return dimCarinality[carbonDimension.getKeyOrdinal()];
+    if (null != dimCardinality) {
+      return dimCardinality[carbonDimension.getKeyOrdinal()];
     }
     return -1;
   }
