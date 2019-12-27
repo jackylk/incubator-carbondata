@@ -19,20 +19,13 @@ package org.apache.carbondata.processing.loading.converter.impl;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
-import org.apache.carbondata.core.cache.dictionary.DictionaryColumnUniqueIdentifier;
 import org.apache.carbondata.core.constants.CarbonLoadOptionConstants;
-import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier;
-import org.apache.carbondata.core.metadata.CarbonTableIdentifier;
-import org.apache.carbondata.core.metadata.ColumnIdentifier;
 import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.metadata.datatype.DataTypes;
 import org.apache.carbondata.core.metadata.encoder.Encoding;
-import org.apache.carbondata.core.metadata.schema.table.RelationIdentifier;
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonColumn;
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonDimension;
-import org.apache.carbondata.core.metadata.schema.table.column.ParentColumnTableRelation;
 import org.apache.carbondata.core.util.DataTypeUtil;
 import org.apache.carbondata.processing.datatypes.ArrayDataType;
 import org.apache.carbondata.processing.datatypes.GenericDataType;
@@ -61,23 +54,6 @@ public class FieldEncoderFactory {
       instance = new FieldEncoderFactory();
     }
     return instance;
-  }
-
-  /**
-   * Creates the FieldConverter for all dimensions, for measures return null.
-   *
-   * @param dataField                 column schema
-   * @param index                     index of column in the row
-   * @param nullFormat                null format of the field
-   * @param isEmptyBadRecord
-   * @param isConvertToBinary     whether the no dictionary field to be converted to binary or not
-   * @return
-   * @throws IOException
-   */
-  public FieldConverter createFieldEncoder(DataField dataField,
-      int index, String nullFormat, boolean isEmptyBadRecord, boolean isConvertToBinary) {
-    return createFieldEncoder(dataField, index, nullFormat, isEmptyBadRecord, isConvertToBinary,
-        CarbonLoadOptionConstants.CARBON_OPTIONS_BINARY_DECODER_DEFAULT);
   }
 
   /**
@@ -118,8 +94,7 @@ public class FieldEncoderFactory {
           binaryDecoderObject = new DefaultBinaryDecoder();
         }
 
-        return new BinaryFieldConverterImpl(dataField, nullFormat,
-            index, isEmptyBadRecord, binaryDecoderObject);
+        return new BinaryFieldConverterImpl(index, binaryDecoderObject);
       } else {
         // if the no dictionary column is a numeric column and no need to convert to binary
         // then treat it is as measure col
