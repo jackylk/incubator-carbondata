@@ -49,45 +49,6 @@ public class ManageDictionaryAndBTree {
       LogServiceFactory.getLogService(ManageDictionaryAndBTree.class.getName());
 
   /**
-   * This method will delete the dictionary files for the given column IDs and
-   * clear the dictionary cache
-   *
-   * @param columnSchema
-   * @param identifier
-   */
-  public static void deleteDictionaryFileAndCache(final ColumnSchema columnSchema,
-      AbsoluteTableIdentifier identifier) {
-    String metadataDirectoryPath = CarbonTablePath.getMetadataPath(identifier.getTablePath());
-    CarbonFile metadataDir = FileFactory.getCarbonFile(metadataDirectoryPath);
-    if (metadataDir.exists()) {
-      // sort index file is created with dictionary size appended to it. So all the files
-      // with a given column ID need to be listed
-      CarbonFile[] listFiles = metadataDir.listFiles(new CarbonFileFilter() {
-        @Override
-        public boolean accept(CarbonFile path) {
-          if (path.getName().startsWith(columnSchema.getColumnUniqueId())) {
-            return true;
-          }
-          return false;
-        }
-      });
-      for (CarbonFile file : listFiles) {
-        // try catch is inside for loop because even if one deletion fails, other files
-        // still need to be deleted
-        try {
-          FileFactory.deleteFile(file.getCanonicalPath());
-        } catch (IOException e) {
-          LOGGER.error("Failed to delete dictionary or sortIndex file for column "
-              + columnSchema.getColumnName() + "with column ID "
-              + columnSchema.getColumnUniqueId());
-        }
-      }
-    }
-    // remove dictionary cache
-    removeDictionaryColumnFromCache(identifier, columnSchema.getColumnUniqueId());
-  }
-
-  /**
    * This mwthod will invalidate both BTree and dictionary instances from LRU cache
    *
    * @param carbonTable

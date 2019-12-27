@@ -193,8 +193,7 @@ object CarbonScalaUtil {
    */
   def convertStaticPartitions(
       value: String,
-      column: ColumnSchema,
-      table: CarbonTable): String = {
+      column: ColumnSchema): String = {
     try {
       if (column.hasEncoding(Encoding.DIRECT_DICTIONARY)) {
         if (column.getDataType.equals(CarbonDataTypes.TIMESTAMP)) {
@@ -208,22 +207,6 @@ object CarbonScalaUtil {
             CarbonCommonConstants.CARBON_DATE_DEFAULT_FORMAT
           ).generateDirectSurrogateKey(value).toString
         }
-      } else if (column.hasEncoding(Encoding.DICTIONARY)) {
-        val cacheProvider: CacheProvider = CacheProvider.getInstance
-        val reverseCache: Cache[DictionaryColumnUniqueIdentifier, Dictionary] =
-          cacheProvider.createCache(CacheType.REVERSE_DICTIONARY)
-        val dictionaryPath =
-          table.getTableInfo.getFactTable.getTableProperties.get(
-            CarbonCommonConstants.DICTIONARY_PATH)
-        val dictionaryColumnUniqueIdentifier = new DictionaryColumnUniqueIdentifier(
-          table.getAbsoluteTableIdentifier,
-          new ColumnIdentifier(
-            column.getColumnUniqueId,
-            column.getColumnProperties,
-            column.getDataType),
-          column.getDataType,
-          dictionaryPath)
-        return reverseCache.get(dictionaryColumnUniqueIdentifier).getSurrogateKey(value).toString
       }
       column.getDataType match {
         case CarbonDataTypes.TIMESTAMP =>

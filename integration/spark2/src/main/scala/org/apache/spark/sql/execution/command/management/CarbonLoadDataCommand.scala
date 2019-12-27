@@ -75,7 +75,7 @@ import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 import org.apache.carbondata.processing.util.{CarbonBadRecordUtil, CarbonDataProcessorUtil, CarbonLoaderUtil}
 import org.apache.carbondata.spark.load.{CsvRDDHelper, DataLoadProcessorStepOnSpark}
 import org.apache.carbondata.spark.rdd.CarbonDataRDDFactory
-import org.apache.carbondata.spark.util.{CarbonScalaUtil, GlobalDictionaryUtil}
+import org.apache.carbondata.spark.util.CarbonScalaUtil
 
 case class CarbonLoadDataCommand(
     databaseNameOp: Option[String],

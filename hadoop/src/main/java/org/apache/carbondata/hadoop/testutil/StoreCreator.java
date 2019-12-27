@@ -69,8 +69,6 @@ import org.apache.carbondata.core.util.CarbonProperties;
 import org.apache.carbondata.core.util.CarbonUtil;
 import org.apache.carbondata.core.util.DataTypeUtil;
 import org.apache.carbondata.core.util.path.CarbonTablePath;
-import org.apache.carbondata.core.writer.CarbonDictionaryWriter;
-import org.apache.carbondata.core.writer.CarbonDictionaryWriterImpl;
 import org.apache.carbondata.core.writer.ThriftWriter;
 import org.apache.carbondata.core.writer.sortindex.CarbonDictionarySortIndexWriter;
 import org.apache.carbondata.core.writer.sortindex.CarbonDictionarySortIndexWriterImpl;
