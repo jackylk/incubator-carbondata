@@ -107,7 +107,7 @@ class CarbonEnv {
         // add session params after adding DefaultCarbonParams
         config.addDefaultCarbonSessionParams()
         carbonMetaStore = {
-          // trigger event for CarbonEnv create
+          // trigger event for CarbonEnv createw
           val operationContext = new OperationContext
           val carbonEnvInitPreEvent: CarbonEnvInitPreEvent =
             CarbonEnvInitPreEvent(sparkSession, carbonSessionInfo, storePath)

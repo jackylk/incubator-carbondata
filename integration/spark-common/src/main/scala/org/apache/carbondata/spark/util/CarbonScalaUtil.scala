@@ -17,11 +17,11 @@
 
 package org.apache.carbondata.spark.util
 
-import java.{lang, util}
 import java.io.IOException
 import java.lang.ref.Reference
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.{lang, util}
 
 import scala.collection.mutable
 import scala.util.Try
@@ -40,14 +40,12 @@ import org.apache.spark.util.CarbonReflectionUtils
 import org.apache.carbondata.common.exceptions.MetadataProcessException
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.common.logging.LogServiceFactory
-import org.apache.carbondata.core.cache.{Cache, CacheProvider, CacheType}
-import org.apache.carbondata.core.cache.dictionary.DictionaryColumnUniqueIdentifier
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.keygenerator.directdictionary.DirectDictionaryKeyGeneratorFactory
 import org.apache.carbondata.core.metadata.datatype.{DataTypes => CarbonDataTypes}
 import org.apache.carbondata.core.metadata.encoder.Encoding
-import org.apache.carbondata.core.metadata.schema.table.{CarbonTable, DataMapSchema}
 import org.apache.carbondata.core.metadata.schema.table.column.{CarbonColumn, ColumnSchema}
+import org.apache.carbondata.core.metadata.schema.table.{CarbonTable, DataMapSchema}
 import org.apache.carbondata.core.util.DataTypeUtil
 import org.apache.carbondata.processing.exception.DataLoadingException
 import org.apache.carbondata.processing.loading.FailureCauses
@@ -134,40 +132,29 @@ object CarbonScalaUtil {
    */
   def convertToCarbonFormat(
       value: String,
-      column: CarbonColumn,
-      table: CarbonTable): String = {
-    if (column.hasEncoding(Encoding.DICTIONARY)) {
-      if (column.hasEncoding(Encoding.DIRECT_DICTIONARY)) {
-        if (column.getDataType.equals(CarbonDataTypes.TIMESTAMP)) {
-          val time = DirectDictionaryKeyGeneratorFactory.getDirectDictionaryGenerator(
-            column.getDataType,
-            CarbonCommonConstants.CARBON_TIMESTAMP_DEFAULT_FORMAT
-          ).getValueFromSurrogate(value.toInt)
-          if (time == null) {
-            return null
-          }
-          return DateTimeUtils.timestampToString(time.toString.toLong * 1000)
-        } else if (column.getDataType.equals(CarbonDataTypes.DATE)) {
-          val date = DirectDictionaryKeyGeneratorFactory.getDirectDictionaryGenerator(
-            column.getDataType,
-            CarbonCommonConstants.CARBON_DATE_DEFAULT_FORMAT
-          ).getValueFromSurrogate(value.toInt)
-          if (date == null) {
-            return null
-          }
-          return DateTimeUtils.dateToString(date.toString.toInt)
+      column: CarbonColumn): String = {
+    if (column.hasEncoding(Encoding.DIRECT_DICTIONARY)) {
+      if (column.getDataType.equals(CarbonDataTypes.TIMESTAMP)) {
+        val time = DirectDictionaryKeyGeneratorFactory.getDirectDictionaryGenerator(
+          column.getDataType,
+          CarbonCommonConstants.CARBON_TIMESTAMP_DEFAULT_FORMAT
+        ).getValueFromSurrogate(value.toInt)
+        if (time == null) {
+          return null
         }
+        return DateTimeUtils.timestampToString(time.toString.toLong * 1000)
+      } else if (column.getDataType.equals(CarbonDataTypes.DATE)) {
+        val date = DirectDictionaryKeyGeneratorFactory.getDirectDictionaryGenerator(
+          column.getDataType,
+          CarbonCommonConstants.CARBON_DATE_DEFAULT_FORMAT
+        ).getValueFromSurrogate(value.toInt)
+        if (date == null) {
+          return null
+        }
+        return DateTimeUtils.dateToString(date.toString.toInt)
       }
-      val dictionaryPath =
-        table.getTableInfo.getFactTable.getTableProperties.get(
-          CarbonCommonConstants.DICTIONARY_PATH)
-      val dictionaryColumnUniqueIdentifier = new DictionaryColumnUniqueIdentifier(
-        table.getAbsoluteTableIdentifier,
-        column.getColumnIdentifier, column.getDataType,
-        dictionaryPath)
-      return forwardDictionaryCache.get(
-        dictionaryColumnUniqueIdentifier).getDictionaryValueForKey(value.toInt)
     }
+
     try {
       column.getDataType match {
         case CarbonDataTypes.TIMESTAMP =>
@@ -228,9 +215,6 @@ object CarbonScalaUtil {
    */
   def updatePartitions(partitionSpec: mutable.LinkedHashMap[String, String],
       table: CarbonTable): mutable.LinkedHashMap[String, String] = {
-    val cacheProvider: CacheProvider = CacheProvider.getInstance
-    val forwardDictionaryCache: Cache[DictionaryColumnUniqueIdentifier, Dictionary] =
-      cacheProvider.createCache(CacheType.FORWARD_DICTIONARY)
     partitionSpec.map { case (col, pValue) =>
       // replace special string with empty value.
       val value = if (pValue == null) {
@@ -241,8 +225,6 @@ object CarbonScalaUtil {
         pValue
       }
       val carbonColumn = table.getColumnByName(col.toLowerCase)
-      val dataType =
-        CarbonSparkDataSourceUtil.convertCarbonToSparkDataType(carbonColumn.getDataType)
       try {
         if (value.equals(hiveDefaultPartition)) {
           (col, value)
@@ -250,9 +232,7 @@ object CarbonScalaUtil {
           val convertedString =
             CarbonScalaUtil.convertToCarbonFormat(
               value,
-              carbonColumn,
-              forwardDictionaryCache,
-              table)
+              carbonColumn)
           if (convertedString == null) {
             (col, hiveDefaultPartition)
           } else {
