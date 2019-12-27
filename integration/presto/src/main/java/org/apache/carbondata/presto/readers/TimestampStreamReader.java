@@ -17,7 +17,6 @@
 
 package org.apache.carbondata.presto.readers;
 
-import org.apache.carbondata.core.cache.dictionary.Dictionary;
 import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.metadata.datatype.DataTypes;
 import org.apache.carbondata.core.scan.result.vector.impl.CarbonColumnVectorImpl;

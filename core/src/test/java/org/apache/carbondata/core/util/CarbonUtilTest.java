@@ -725,17 +725,6 @@ public class CarbonUtilTest {
     assertEquals(1, dataChunkList.get(0).getValueEncoderMeta().size());
   }
 
-  @Test public void testToGetDictionaryChunkSize() {
-    new MockUp<CarbonProperties>() {
-      @SuppressWarnings("unused") @Mock public CarbonProperties getInstance()
-          throws NumberFormatException {
-        throw new NumberFormatException();
-      }
-    };
-    int expectedResult = CarbonUtil.getDictionaryChunkSize();
-    assertEquals(expectedResult, 10000);
-  }
-
   @Test public void testToPackByteBufferIntoSingleByteArrayWithNull() {
     byte[] byteArray = CarbonUtil.packByteBufferIntoSingleByteArray(null);
     assertEquals(null, byteArray);

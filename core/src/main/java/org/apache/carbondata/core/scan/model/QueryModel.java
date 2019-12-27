@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.carbondata.core.cache.dictionary.Dictionary;
 import org.apache.carbondata.core.datamap.DataMapFilter;
 import org.apache.carbondata.core.datastore.block.TableBlockInfo;
 import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier;
@@ -45,11 +44,6 @@ import org.apache.carbondata.core.util.DataTypeConverter;
  */
 public class QueryModel {
 
-  /**
-   * this will hold the information about the dictionary dimension
-   * which to
-   */
-  private transient Map<String, Dictionary> columnToDictionaryMapping;
   /**
    * list of projection columns in query
    */
@@ -300,20 +294,6 @@ public class QueryModel {
 
   public void setForcedDetailRawQuery(boolean forcedDetailRawQuery) {
     this.forcedDetailRawQuery = forcedDetailRawQuery;
-  }
-
-  /**
-   * @return
-   */
-  public Map<String, Dictionary> getColumnToDictionaryMapping() {
-    return columnToDictionaryMapping;
-  }
-
-  /**
-   * @param columnToDictionaryMapping
-   */
-  public void setColumnToDictionaryMapping(Map<String, Dictionary> columnToDictionaryMapping) {
-    this.columnToDictionaryMapping = columnToDictionaryMapping;
   }
 
   public QueryStatisticsRecorder getStatisticsRecorder() {

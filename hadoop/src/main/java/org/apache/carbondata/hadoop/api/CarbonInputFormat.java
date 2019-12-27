@@ -73,7 +73,7 @@ import org.apache.carbondata.hadoop.CarbonMultiBlockSplit;
 import org.apache.carbondata.hadoop.CarbonProjection;
 import org.apache.carbondata.hadoop.CarbonRecordReader;
 import org.apache.carbondata.hadoop.readsupport.CarbonReadSupport;
-import org.apache.carbondata.hadoop.readsupport.impl.DictionaryDecodeReadSupport;
+import org.apache.carbondata.hadoop.readsupport.impl.BaseReadSupport;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -743,7 +743,7 @@ m filterExpression
         LOG.error("Error while creating " + readSupportClass, ex);
       }
     } else {
-      readSupport = new DictionaryDecodeReadSupport<>();
+      readSupport = new BaseReadSupport<>();
     }
     return readSupport;
   }

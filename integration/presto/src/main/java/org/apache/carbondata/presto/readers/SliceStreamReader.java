@@ -21,7 +21,6 @@ import java.nio.charset.Charset;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.apache.carbondata.core.cache.dictionary.Dictionary;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.metadata.datatype.DataTypes;

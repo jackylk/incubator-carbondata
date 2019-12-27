@@ -45,7 +45,6 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.apache.carbondata.common.logging.LogServiceFactory;
-import org.apache.carbondata.core.cache.dictionary.Dictionary;
 import org.apache.carbondata.core.cache.dictionary.DictionaryColumnUniqueIdentifier;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datamap.Segment;
@@ -1195,18 +1194,6 @@ public final class CarbonUtil {
   }
 
   /**
-   * This method will be used to clear the dictionary cache after its usage is complete
-   * so that if memory threshold is reached it can evicted from LRU cache
-   *
-   * @param dictionary
-   */
-  public static void clearDictionaryCache(Dictionary dictionary) {
-    if (null != dictionary) {
-      dictionary.clear();
-    }
-  }
-
-  /**
    * @param dictionaryColumnCardinality
    * @param wrapperColumnSchemaList
    * @return It returns formatted cardinality by adding -1 value for NoDictionary columns
@@ -1248,26 +1235,6 @@ public final class CarbonUtil {
         fillCollumnSchemaListForComplexDims(childDims, wrapperColumnSchemaList);
       }
     }
-  }
-
-  /**
-   * initialize the value of dictionary chunk that can be kept in memory at a time
-   *
-   * @return
-   */
-  public static int getDictionaryChunkSize() {
-    int dictionaryOneChunkSize = 0;
-    try {
-      dictionaryOneChunkSize = Integer.parseInt(CarbonProperties.getInstance()
-          .getProperty(CarbonCommonConstants.DICTIONARY_ONE_CHUNK_SIZE,
-              CarbonCommonConstants.DICTIONARY_ONE_CHUNK_SIZE_DEFAULT));
-    } catch (NumberFormatException e) {
-      dictionaryOneChunkSize =
-          Integer.parseInt(CarbonCommonConstants.DICTIONARY_ONE_CHUNK_SIZE_DEFAULT);
-      LOGGER.error("Dictionary chunk size not configured properly. Taking default size "
-          + dictionaryOneChunkSize);
-    }
-    return dictionaryOneChunkSize;
   }
 
   /**

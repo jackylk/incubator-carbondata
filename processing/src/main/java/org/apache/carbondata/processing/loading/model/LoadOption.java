@@ -108,10 +108,6 @@ public class LoadOption {
             CarbonProperties.getInstance().getProperty(
                 CarbonLoadOptionConstants.CARBON_OPTIONS_SKIP_EMPTY_LINE)));
 
-    optionsFinal.put(
-        "all_dictionary_path",
-        Maps.getOrDefault(options, "all_dictionary_path", ""));
-
     optionsFinal.put("complex_delimiter_level_1",
         Maps.getOrDefault(options, "complex_delimiter_level_1",
             ComplexDelimitersEnum.COMPLEX_DELIMITERS_LEVEL_1.value()));
@@ -152,31 +148,6 @@ public class LoadOption {
                 null)));
 
     optionsFinal.put("maxcolumns", Maps.getOrDefault(options, "maxcolumns", null));
-
-    String useOnePass = Maps.getOrDefault(
-        options,
-        "single_pass",
-        CarbonProperties.getInstance().getProperty(
-            CarbonLoadOptionConstants.CARBON_OPTIONS_SINGLE_PASS,
-            CarbonLoadOptionConstants.CARBON_OPTIONS_SINGLE_PASS_DEFAULT)).trim().toLowerCase();
-
-    boolean singlePass;
-
-    if (useOnePass.equalsIgnoreCase("true")) {
-      singlePass = true;
-    } else {
-      // when single_pass = false  and if either alldictionarypath
-      // or columnDict is configured the do not allow load
-      if (StringUtils.isNotEmpty(optionsFinal.get("all_dictionary_path")) ||
-          StringUtils.isNotEmpty(optionsFinal.get("columndict"))) {
-        throw new InvalidLoadOptionException(
-            "Can not use all_dictionary_path or columndict without single_pass.");
-      } else {
-        singlePass = false;
-      }
-    }
-
-    optionsFinal.put("single_pass", String.valueOf(singlePass));
     optionsFinal.put("sort_scope", CarbonCommonConstants.LOAD_SORT_SCOPE_DEFAULT);
     optionsFinal.put("sort_column_bounds", Maps.getOrDefault(options, "sort_column_bounds", ""));
     optionsFinal.put(CarbonCommonConstants.CARBON_LOAD_MIN_SIZE_INMB,

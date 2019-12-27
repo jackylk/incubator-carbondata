@@ -28,15 +28,11 @@ import org.apache.carbondata.core.metadata.datatype.DataTypes;
  * A read support implementation to return CarbonRow after handling
  * global dictionary and direct dictionary (date/timestamp) conversion
  */
-public class CarbonRowReadSupport extends DictionaryDecodeReadSupport<CarbonRow> {
+public class CarbonRowReadSupport extends BaseReadSupport<CarbonRow> {
 
   @Override
   public CarbonRow readRow(Object[] data) {
-    assert (data.length == dictionaries.length);
-    for (int i = 0; i < dictionaries.length; i++) {
-      if (dictionaries[i] != null) {
-        data[i] = dictionaries[i].getDictionaryValueForKey((int) data[i]);
-      }
+    for (int i = 0; i < data.length; i++) {
       if (dataTypes[i] == DataTypes.DATE) {
         Calendar c = Calendar.getInstance();
         c.setTime(new Date(0));

@@ -682,17 +682,6 @@ public final class CarbonCommonConstants {
   public static final String DEFAULT_ENABLE_AUTO_LOAD_MERGE = "false";
 
   /**
-   * maximum dictionary chunk size that can be kept in memory while writing dictionary file
-   */
-  @CarbonProperty
-  public static final String DICTIONARY_ONE_CHUNK_SIZE = "carbon.dictionary.chunk.size";
-
-  /**
-   * dictionary chunk default size
-   */
-  public static final String DICTIONARY_ONE_CHUNK_SIZE_DEFAULT = "10000";
-
-  /**
    * Size of Major Compaction in MBs
    */
   @CarbonProperty(dynamicConfigurable = true)

@@ -21,12 +21,12 @@ import java.io.IOException;
 
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonColumn;
-import org.apache.carbondata.hadoop.readsupport.impl.DictionaryDecodeReadSupport;
+import org.apache.carbondata.hadoop.readsupport.impl.BaseReadSupport;
 
 import org.apache.spark.sql.catalyst.InternalRow;
 import org.apache.spark.sql.catalyst.expressions.GenericInternalRow;
 
-public class SparkRowReadSupportImpl extends DictionaryDecodeReadSupport<InternalRow> {
+public class SparkRowReadSupportImpl extends BaseReadSupport<InternalRow> {
 
   @Override
   public void initialize(CarbonColumn[] carbonColumns,

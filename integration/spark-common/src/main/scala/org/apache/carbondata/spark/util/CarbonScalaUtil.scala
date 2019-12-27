@@ -41,10 +41,9 @@ import org.apache.carbondata.common.exceptions.MetadataProcessException
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.cache.{Cache, CacheProvider, CacheType}
-import org.apache.carbondata.core.cache.dictionary.{Dictionary, DictionaryColumnUniqueIdentifier}
+import org.apache.carbondata.core.cache.dictionary.DictionaryColumnUniqueIdentifier
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.keygenerator.directdictionary.DirectDictionaryKeyGeneratorFactory
-import org.apache.carbondata.core.metadata.ColumnIdentifier
 import org.apache.carbondata.core.metadata.datatype.{DataTypes => CarbonDataTypes}
 import org.apache.carbondata.core.metadata.encoder.Encoding
 import org.apache.carbondata.core.metadata.schema.table.{CarbonTable, DataMapSchema}
@@ -136,7 +135,6 @@ object CarbonScalaUtil {
   def convertToCarbonFormat(
       value: String,
       column: CarbonColumn,
-      forwardDictionaryCache: Cache[DictionaryColumnUniqueIdentifier, Dictionary],
       table: CarbonTable): String = {
     if (column.hasEncoding(Encoding.DICTIONARY)) {
       if (column.hasEncoding(Encoding.DIRECT_DICTIONARY)) {

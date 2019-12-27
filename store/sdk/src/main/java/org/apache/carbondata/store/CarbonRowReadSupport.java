@@ -24,7 +24,7 @@ import org.apache.carbondata.core.datastore.row.CarbonRow;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonColumn;
 import org.apache.carbondata.hadoop.readsupport.CarbonReadSupport;
-import org.apache.carbondata.hadoop.readsupport.impl.DictionaryDecodeReadSupport;
+import org.apache.carbondata.hadoop.readsupport.impl.BaseReadSupport;
 
 /**
  * ReadSupport that convert row object to CarbonRow
@@ -34,7 +34,7 @@ public class CarbonRowReadSupport implements CarbonReadSupport<CarbonRow> {
   private CarbonReadSupport<Object[]> delegate;
 
   public CarbonRowReadSupport() {
-    this.delegate = new DictionaryDecodeReadSupport<>();
+    this.delegate = new BaseReadSupport<>();
   }
 
   @Override
