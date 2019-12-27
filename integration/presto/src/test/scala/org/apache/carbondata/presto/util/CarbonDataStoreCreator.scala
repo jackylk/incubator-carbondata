@@ -22,7 +22,7 @@ import java.nio.charset.Charset
 import java.text.SimpleDateFormat
 import java.util
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.{ArrayList, Date, List, UUID}
+import java.util.{ArrayList, Date, UUID}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -36,8 +36,6 @@ import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl
 import org.apache.hadoop.mapreduce.{RecordReader, TaskType}
 
 import org.apache.carbondata.common.logging.LogServiceFactory
-import org.apache.carbondata.core.cache.dictionary.{Dictionary, DictionaryColumnUniqueIdentifier, ReverseDictionary}
-import org.apache.carbondata.core.cache.{Cache, CacheProvider, CacheType}
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datastore.compression.CompressorFactory
 import org.apache.carbondata.core.datastore.impl.FileFactory
@@ -45,15 +43,13 @@ import org.apache.carbondata.core.fileoperations.{AtomicFileOperationFactory, At
 import org.apache.carbondata.core.metadata.converter.{SchemaConverter, ThriftWrapperSchemaConverterImpl}
 import org.apache.carbondata.core.metadata.datatype.{DataTypes, StructField}
 import org.apache.carbondata.core.metadata.encoder.Encoding
-import org.apache.carbondata.core.metadata.schema.table.column.{CarbonColumn, CarbonDimension, CarbonMeasure, ColumnSchema}
-import org.apache.carbondata.core.metadata.schema.table.{CarbonTable, CarbonTableBuilder, TableInfo, TableSchema, TableSchemaBuilder}
-import org.apache.carbondata.core.metadata.schema.{SchemaEvolution, SchemaEvolutionEntry}
-import org.apache.carbondata.core.metadata.{AbsoluteTableIdentifier, CarbonMetadata, CarbonTableIdentifier, ColumnIdentifier}
+import org.apache.carbondata.core.metadata.schema.table.column.CarbonDimension
+import org.apache.carbondata.core.metadata.schema.table.{CarbonTable, CarbonTableBuilder, TableSchemaBuilder}
+import org.apache.carbondata.core.metadata.{AbsoluteTableIdentifier, CarbonMetadata, CarbonTableIdentifier}
 import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatus}
 import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.core.util.{CarbonProperties, CarbonUtil}
-import org.apache.carbondata.core.writer.sortindex.{CarbonDictionarySortIndexWriter, CarbonDictionarySortIndexWriterImpl, CarbonDictionarySortInfo, CarbonDictionarySortInfoPreparator}
-import org.apache.carbondata.core.writer.{CarbonDictionaryWriter, CarbonDictionaryWriterImpl, ThriftWriter}
+import org.apache.carbondata.core.writer.ThriftWriter
 import org.apache.carbondata.processing.loading.DataLoadExecutor
 import org.apache.carbondata.processing.loading.constants.DataLoadProcessorConstants
 import org.apache.carbondata.processing.loading.csvinput.{BlockDetails, CSVInputFormat, CSVRecordReaderIterator, StringArrayWritable}
@@ -80,7 +76,6 @@ object CarbonDataStoreCreator {
           tableName,
           UUID.randomUUID().toString))
       val table: CarbonTable = createTable(absoluteTableIdentifier, useLocalDict)
-      writeDictionary(dataFilePath, table, absoluteTableIdentifier)
       val schema: CarbonDataLoadSchema = new CarbonDataLoadSchema(table)
       val loadModel: CarbonLoadModel = new CarbonLoadModel()
       import scala.collection.JavaConverters._
@@ -195,85 +190,6 @@ object CarbonDataStoreCreator {
     thriftWriter.close()
     CarbonMetadata.getInstance.getCarbonTable(tableInfo.getTableUniqueName)
   }
-
-  private def writeDictionary(factFilePath: String,
-      table: CarbonTable,
-      absoluteTableIdentifier: AbsoluteTableIdentifier): Unit = {
-    val reader: BufferedReader = new BufferedReader(
-      new FileReader(factFilePath))
-    val header: String = reader.readLine()
-    val allCols: util.List[CarbonColumn] = new util.ArrayList[CarbonColumn]()
-    val dimensions: util.List[CarbonDimension] = table.getVisibleDimensions
-    allCols.addAll(dimensions)
-    val msrs: List[CarbonMeasure] = table.getVisibleMeasures
-    allCols.addAll(msrs)
-    val dimensionsIndex = dimensions.map(dim => dim.getColumnSchema.getSchemaOrdinal)
-    val dimensionSet: Array[util.List[String]] = Array.ofDim[util.List[String]](dimensions.size)
-
-    for (i <- dimensionSet.indices) {
-      dimensionSet(i) = new util.ArrayList[String]()
-    }
-    var line: String = reader.readLine()
-    while (line != null) {
-      val data: Array[String] = line.split(",")
-      for (index <- dimensionSet.indices) {
-        addDictionaryValuesToDimensionSet(dimensions, dimensionsIndex, dimensionSet, data, index)
-      }
-      line = reader.readLine()
-    }
-    val dictCache: Cache[DictionaryColumnUniqueIdentifier, ReverseDictionary] = CacheProvider
-      .getInstance.createCache(CacheType.REVERSE_DICTIONARY)
-
-    for (index <- dimensionSet.indices) {
-      val columnIdentifier: ColumnIdentifier =
-        new ColumnIdentifier(dimensions.get(index).getColumnId, null, null)
-
-      val dictionaryColumnUniqueIdentifier: DictionaryColumnUniqueIdentifier =
-        new DictionaryColumnUniqueIdentifier(
-          table.getAbsoluteTableIdentifier,
-          columnIdentifier,
-          columnIdentifier.getDataType)
-      val writer: CarbonDictionaryWriter = new CarbonDictionaryWriterImpl(
-        dictionaryColumnUniqueIdentifier)
-      for (value <- dimensionSet(index).distinct) {
-        writer.write(value)
-      }
-      writer.close()
-      writer.commit()
-      val dict: Dictionary = dictCache
-        .get(
-          new DictionaryColumnUniqueIdentifier(
-            absoluteTableIdentifier,
-            columnIdentifier,
-            dimensions.get(index).getDataType)
-        )
-        .asInstanceOf[Dictionary]
-      val preparator: CarbonDictionarySortInfoPreparator =
-        new CarbonDictionarySortInfoPreparator()
-      val newDistinctValues: List[String] = new ArrayList[String]()
-      val dictionarySortInfo: CarbonDictionarySortInfo =
-        preparator.getDictionarySortInfo(newDistinctValues,
-          dict,
-          dimensions.get(index).getDataType)
-      val carbonDictionaryWriter: CarbonDictionarySortIndexWriter =
-        new CarbonDictionarySortIndexWriterImpl(dictionaryColumnUniqueIdentifier)
-      try {
-        carbonDictionaryWriter.writeSortIndex(dictionarySortInfo.getSortIndex)
-        carbonDictionaryWriter.writeInvertedSortIndex(
-          dictionarySortInfo.getSortIndexInverted)
-      }
-      catch {
-        case exception: Exception =>
-
-
-          logger.error(s"exception occurs $exception")
-          throw new CarbonDataLoadingException("Data Loading Failed")
-      }
-      finally carbonDictionaryWriter.close()
-    }
-    reader.close()
-  }
-
 
   private def addDictionaryValuesToDimensionSet(dims: util.List[CarbonDimension],
       dimensionIndex: mutable.Buffer[Int],
