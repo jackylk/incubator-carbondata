@@ -944,6 +944,22 @@ class AllDataSourceTestCase extends QueryTest with BeforeAndAfterAll {
     sql("drop table if exists test_clean")
   }
 
+  test("validate set properties if Luxor is enabled") {
+    val isLuxor = sqlContext.sparkSession.conf.get("spark.sql.luxor.enabled")
+    sql("drop table if exists testset")
+    sql("create table testset(a int,b string) stored as carbondata")
+    sql("insert into testset select 1,'abc'")
+    sql("insert into testset select 2,'abc'")
+    sqlContext.sparkSession.conf.set("spark.sql.luxor.enabled","true")
+    intercept[UnsupportedOperationException] {
+      sql("set carbon.enable.index.server=true").collect()
+    }.getMessage.contains("The key 'carbon.enable.index.server' is not supported for dynamic configuration.")
+    sql("set carbon.input.segments.allDataSource.testset=1").collect()
+    checkAnswer(sql("select count(*) from testset"), Seq(Row(1)))
+    sqlContext.sparkSession.conf.set("spark.sql.luxor.enabled",isLuxor)
+    sql("drop table if exists testset")
+  }
+
 }
 
 class TestProvider extends DatabaseLocationProvider {

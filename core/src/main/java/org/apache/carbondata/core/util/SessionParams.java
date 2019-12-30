@@ -91,14 +91,24 @@ public class SessionParams implements Serializable, Cloneable {
     return sProps.get(key);
   }
 
+  public SessionParams addProperty(String key, String value) throws InvalidConfigurationException {
+    return addProperty(key, value, false);
+  }
+
   /**
    * This method will be used to add a new property
    *
    * @param key
    * @return properties value
    */
-  public SessionParams addProperty(String key, String value) throws InvalidConfigurationException {
-    boolean isValidConf = validateKeyValue(key, value);
+  public SessionParams addProperty(String key, String value, boolean isLuxor)
+      throws InvalidConfigurationException {
+    boolean isValidConf;
+    if (isLuxor) {
+      isValidConf = validateKeyValueForLuxor(key, value);
+    } else {
+      isValidConf = validateKeyValue(key, value);
+    }
     if (isValidConf) {
       if (key.equals(CarbonLoadOptionConstants.CARBON_OPTIONS_BAD_RECORDS_ACTION)) {
         value = value.toUpperCase();
@@ -243,6 +253,46 @@ public class SessionParams implements Serializable, Cloneable {
           throw new InvalidConfigurationException(
               "The key " + key + " not supported for dynamic configuration.");
         }
+    }
+    return isValid;
+  }
+
+  private boolean validateKeyValueForLuxor(String key, String value)
+      throws InvalidConfigurationException {
+    boolean isValid;
+    switch (key) {
+      case ENABLE_UNSAFE_SORT:
+      case ENABLE_OFFHEAP_SORT:
+      case CARBON_CUSTOM_BLOCK_DISTRIBUTION:
+      case CARBON_OPTIONS_BAD_RECORDS_LOGGER_ENABLE:
+      case CARBON_OPTIONS_IS_EMPTY_DATA_BAD_RECORD:
+      case ENABLE_VECTOR_READER:
+      case ENABLE_UNSAFE_IN_QUERY_EXECUTION:
+      case ENABLE_AUTO_LOAD_MERGE:
+      case CARBON_PUSH_ROW_FILTERS_FOR_VECTOR:
+      case CARBON_OPTIONS_BAD_RECORDS_ACTION:
+      case CARBON_OPTIONS_SORT_SCOPE:
+      case CARBON_OPTIONS_BATCH_SORT_SIZE_INMB:
+      case CARBON_OPTIONS_GLOBAL_SORT_PARTITIONS:
+      case NUM_CORES_LOADING:
+      case NUM_CORES_COMPACTING:
+      case BLOCKLET_SIZE_IN_MB:
+      case CARBON_MAJOR_COMPACTION_SIZE:
+      case CARBON_OPTIONS_BAD_RECORD_PATH:
+      case CARBON_OPTIONS_DATEFORMAT:
+      case CARBON_OPTIONS_TIMESTAMPFORMAT:
+      case CARBON_OPTIONS_SERIALIZATION_NULL_FORMAT:
+      case COMPACTION_SEGMENT_LEVEL_THRESHOLD:
+        isValid = validateKeyValue(key, value);
+        break;
+      default:
+         if(key.startsWith(CarbonCommonConstants.CARBON_INPUT_SEGMENTS) || key
+              .startsWith(CarbonLoadOptionConstants.CARBON_TABLE_LOAD_SORT_SCOPE)) {
+           isValid = validateKeyValue(key, value);
+         } else {
+           throw new UnsupportedOperationException(
+               "The key '" + key + "' is not supported for dynamic configuration.");
+         }
     }
     return isValid;
   }

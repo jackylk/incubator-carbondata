@@ -17,7 +17,7 @@
 
 package org.apache.spark.sql.hive.execution.command
 
-import org.apache.spark.sql.{CarbonEnv, Row, SparkSession}
+import org.apache.spark.sql.{CarbonEnv, EnvHelper, Row, SparkSession}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.{NoSuchDatabaseException, NoSuchTableException}
 import org.apache.spark.sql.catalyst.expressions.Attribute
@@ -96,10 +96,11 @@ case class CarbonSetCommand(command: SetCommand)
 
 object CarbonSetCommand {
   def validateAndSetValue(sessionParams: SessionParams, key: String, value: String): Unit = {
+    val isLuxor = EnvHelper.isLuxor(SparkSession.getActiveSession.get)
     val isCarbonProperty: Boolean = CarbonProperties.getInstance().isCarbonProperty(key)
     if (key.startsWith(CarbonCommonConstants.CARBON_INPUT_SEGMENTS)) {
       if (key.split("\\.").length == 5) {
-        sessionParams.addProperty(key.toLowerCase(), value)
+        sessionParams.addProperty(key.toLowerCase(), value, isLuxor)
       }
       else {
         throw new MalformedCarbonCommandException(
@@ -107,12 +108,12 @@ object CarbonSetCommand {
           ".<table_name>=<seg_id list> \" format.")
       }
     } else if (key.startsWith(CarbonCommonConstants.VALIDATE_CARBON_INPUT_SEGMENTS)) {
-      sessionParams.addProperty(key.toLowerCase(), value)
+      sessionParams.addProperty(key.toLowerCase(), value, isLuxor)
     } else if (key.startsWith(CarbonCommonConstantsInternal.QUERY_ON_PRE_AGG_STREAMING)) {
-      sessionParams.addProperty(key.toLowerCase(), value)
+      sessionParams.addProperty(key.toLowerCase(), value, isLuxor)
     } else if (key.startsWith(CarbonCommonConstants.CARBON_DATAMAP_VISIBLE)) {
       if (key.split("\\.").length == 6) {
-        sessionParams.addProperty(key.toLowerCase, value)
+        sessionParams.addProperty(key.toLowerCase, value, isLuxor)
       } else {
         throw new MalformedCarbonCommandException("property should be in " +
           "\" carbon.datamap.visible.<database_name>.<table_name>.<datamap_name>" +
@@ -120,7 +121,7 @@ object CarbonSetCommand {
       }
     } else if (key.startsWith(CarbonCommonConstants.CARBON_LOAD_DATAMAPS_PARALLEL)) {
       if (key.split("\\.").length == 6 || key.split("\\.").length == 4) {
-        sessionParams.addProperty(key.toLowerCase(), value)
+        sessionParams.addProperty(key.toLowerCase(), value, isLuxor)
       }
       else {
         throw new MalformedCarbonCommandException(
@@ -129,7 +130,7 @@ object CarbonSetCommand {
       }
     } else if (key.startsWith(CarbonLoadOptionConstants.CARBON_TABLE_LOAD_SORT_SCOPE)) {
       if (key.split("\\.").length == 7) {
-        sessionParams.addProperty(key.toLowerCase(), value)
+        sessionParams.addProperty(key.toLowerCase(), value, isLuxor)
       }
       else {
         throw new MalformedCarbonCommandException(
@@ -139,11 +140,11 @@ object CarbonSetCommand {
     } else if (key.startsWith(CarbonCommonConstants.CARBON_ENABLE_INDEX_SERVER)) {
       val keySplits = key.split("\\.")
       if (keySplits.length == 6 || keySplits.length == 4) {
-        sessionParams.addProperty(key.toString, value)
+        sessionParams.addProperty(key.toString, value, isLuxor)
       }
     }
     else if (isCarbonProperty) {
-      sessionParams.addProperty(key, value)
+      sessionParams.addProperty(key, value, isLuxor)
     }
   }
 
