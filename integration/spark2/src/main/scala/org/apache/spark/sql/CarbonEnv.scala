@@ -38,7 +38,6 @@ import org.apache.spark.util.CarbonReflectionUtils
 import org.apache.carbondata.cloud.CloudUdfRegister
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
-import org.apache.carbondata.core.datamap.DataMapStoreManager
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.metadata.{AbsoluteTableIdentifier, CarbonMetadata, DatabaseLocationProvider}
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
@@ -142,6 +141,8 @@ class CarbonEnv {
 
           CarbonMetaStoreFactory.createCarbonMetaStore(sparkSession.conf)
         }
+        //set the proper storage place for datamap
+        EnvHelper.setDataMapLocation(sparkSession);
         CarbonProperties.getInstance
           .addNonSerializableProperty(CarbonCommonConstants.IS_DRIVER_INSTANCE, "true")
         initLeo(sparkSession)

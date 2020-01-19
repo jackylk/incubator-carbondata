@@ -19,7 +19,9 @@ package org.apache.spark.sql
 
 import org.apache.commons.lang3.StringUtils
 
+import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.metadata.DatabaseLocationProvider
+import org.apache.carbondata.core.util.CarbonProperties
 
 /**
  * environment related code
@@ -61,5 +63,15 @@ object EnvHelper {
 
   def getDatabase(database: String): String = {
     DatabaseLocationProvider.get().provide(database)
+  }
+
+  // During the init process of CarbonEnv check the Environment is DLI or not
+  // At DLI Environment:set the CARBON_DATAMAP_SCHEMA_STORAGE="DATABASE"
+  // Else:This property is null and will be set as CARBON_DATAMAP_SCHEMA_STORAGE_DATABASE="DISK" after init
+  def setDataMapLocation(sparkSession: SparkSession): Unit = {
+    if (isLuxor(sparkSession)) {
+      CarbonProperties.getInstance.addProperty(CarbonCommonConstants.CARBON_DATAMAP_SCHEMA_STORAGE,
+        CarbonCommonConstants.CARBON_DATAMAP_SCHEMA_STORAGE_DATABASE)
+    }
   }
 }
