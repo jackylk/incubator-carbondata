@@ -75,19 +75,6 @@ trait CarbonMetaStore {
       carbonStorePath: String)(sparkSession: SparkSession): String
 
   /**
-   * This method will overwrite the existing schema and update it with the given details
-   *
-   * @param newTableIdentifier
-   * @param thriftTableInfo
-   * @param carbonStorePath
-   * @param sparkSession
-   */
-  def updateTableSchema(newTableIdentifier: CarbonTableIdentifier,
-      oldTableIdentifier: CarbonTableIdentifier,
-      thriftTableInfo: org.apache.carbondata.format.TableInfo,
-      carbonStorePath: String)(sparkSession: SparkSession): String
-
-  /**
    * This method will is used to remove the evolution entry in case of failure.
    *
    * @param carbonTableIdentifier
@@ -123,19 +110,11 @@ trait CarbonMetaStore {
    */
   def removeTableFromMetadata(dbName: String, tableName: String): Unit
 
-  def updateMetadataByThriftTable(schemaFilePath: String,
-      tableInfo: org.apache.carbondata.format.TableInfo,
-      dbName: String, tableName: String, tablePath: String): Unit
-
-  def isTablePathExists(tableIdentifier: TableIdentifier)(sparkSession: SparkSession): Boolean
-
   def dropTable(tableIdentifier: AbsoluteTableIdentifier)
     (sparkSession: SparkSession)
 
   def isSchemaRefreshed(absoluteTableIdentifier: AbsoluteTableIdentifier,
       sparkSession: SparkSession): Boolean
-
-  def isReadFromHiveMetaStore: Boolean
 
   def listAllTables(sparkSession: SparkSession): Seq[CarbonTable]
 
@@ -177,29 +156,8 @@ object CarbonMetaStoreFactory {
   val LOGGER = LogServiceFactory.getLogService("org.apache.spark.sql.hive.CarbonMetaStoreFactory")
 
   def createCarbonMetaStore(conf: RuntimeConfig): CarbonMetaStore = {
-    val readSchemaFromHiveMetaStore = readSchemaFromHive(conf)
-    if (readSchemaFromHiveMetaStore) {
-      LOGGER.info("Hive based carbon metastore is enabled")
-      new CarbonHiveMetaStore()
-    } else {
-      LOGGER.info("File based carbon metastore is enabled")
-      new CarbonFileMetastore()
-    }
-  }
-
-  def readSchemaFromHive(conf: RuntimeConfig): Boolean = {
-    val readSchemaFromHive = {
-      if (conf.contains(CarbonCommonConstants.ENABLE_HIVE_SCHEMA_META_STORE)) {
-        conf.get(CarbonCommonConstants.ENABLE_HIVE_SCHEMA_META_STORE)
-      } else if (System.getProperty(CarbonCommonConstants.ENABLE_HIVE_SCHEMA_META_STORE) != null) {
-        System.getProperty(CarbonCommonConstants.ENABLE_HIVE_SCHEMA_META_STORE)
-      } else {
-        CarbonProperties.getInstance().
-          getProperty(CarbonCommonConstants.ENABLE_HIVE_SCHEMA_META_STORE,
-          CarbonCommonConstants.ENABLE_HIVE_SCHEMA_META_STORE_DEFAULT)
-      }
-    }
-    readSchemaFromHive.toBoolean
+    LOGGER.info("File based carbon metastore is enabled")
+    new CarbonFileMetastore()
   }
 
 }

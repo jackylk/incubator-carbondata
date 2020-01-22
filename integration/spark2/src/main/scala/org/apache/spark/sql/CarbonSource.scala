@@ -270,13 +270,11 @@ object CarbonSource {
   private def createCatalogTableForCarbonExtension(
       table: CatalogTable,
       tableInfo: TableInfo,
-      properties: Map[String, String],
-      metaStore: CarbonMetaStore): CatalogTable = {
+      properties: Map[String, String]): CatalogTable = {
     val storageFormat = table.storage
     val isExternal = table.tableType == CatalogTableType.EXTERNAL
     val updatedTableProperties = updateTableProperties(
       tableInfo,
-      metaStore,
       properties,
       isExternal)
     val updatedFormat = CarbonToSparkAdapter
@@ -296,8 +294,7 @@ object CarbonSource {
   private def createCatalogTableForCarbonSession(
       table: CatalogTable,
       tableInfo: TableInfo,
-      properties: Map[String, String],
-      metaStore: CarbonMetaStore): CatalogTable = {
+      properties: Map[String, String]): CatalogTable = {
     val storageFormat = table.storage
     val isTransactionalTable = tableInfo.isTransactionalTable
     val isExternal = properties.getOrElse("isExternal", "true").contains("true")
@@ -306,7 +303,7 @@ object CarbonSource {
     } else {
       CatalogTableType.MANAGED
     }
-    if (isTransactionalTable && !metaStore.isReadFromHiveMetaStore) {
+    if (isTransactionalTable) {
       // remove schema string from map as we don't store carbon schema to hive metastore
       val map = CarbonUtil.removeSchemaFromMap(properties.asJava)
       val updatedFormat = storageFormat.copy(properties = map.asScala.toMap)
@@ -328,10 +325,9 @@ object CarbonSource {
    */
   private def updateTableProperties(
       tableInfo: TableInfo,
-      metaStore: CarbonMetaStore,
       properties: Map[String, String],
       isExternalTable: Boolean): Map[String, String] = {
-    val map = if (!metaStore.isReadFromHiveMetaStore && tableInfo.isTransactionalTable) {
+    val map = if (tableInfo.isTransactionalTable) {
       new java.util.HashMap[String, String]()
     } else {
       CarbonUtil.convertToMultiStringMap(tableInfo)
@@ -361,16 +357,14 @@ object CarbonSource {
    */
   def createTableMeta(
       sparkSession: SparkSession,
-      table: CatalogTable,
-      metaStore: CarbonMetaStore
+      table: CatalogTable
   ): (TableInfo, CatalogTable) = {
     val properties = CarbonSparkSqlParserUtil.getProperties(table)
     if (isCreatedByCarbonExtension(properties)) {
       // Table is created by SparkSession with CarbonExtension,
       // There is no TableInfo yet, so create it from CatalogTable
       val tableInfo = createTableInfo(sparkSession, table)
-      val catalogTable = createCatalogTableForCarbonExtension(
-        table, tableInfo, properties, metaStore)
+      val catalogTable = createCatalogTableForCarbonExtension(table, tableInfo, properties)
       (tableInfo, catalogTable)
     } else {
       // Legacy code path (table is created by CarbonSession)
@@ -378,7 +372,7 @@ object CarbonSource {
       val tableInfo = CarbonUtil.convertGsonToTableInfo(properties.asJava)
       val isTransactionalTable = properties.getOrElse("isTransactional", "true").contains("true")
       tableInfo.setTransactionalTable(isTransactionalTable)
-      val catalogTable = createCatalogTableForCarbonSession(table, tableInfo, properties, metaStore)
+      val catalogTable = createCatalogTableForCarbonSession(table, tableInfo, properties)
       (tableInfo, catalogTable)
     }
   }
@@ -388,9 +382,12 @@ object CarbonSource {
    * is used
    */
   def saveCarbonSchemaFile(
-      metaStore: CarbonMetaStore, ignoreIfExists: Boolean, tableInfo: TableInfo): Unit = {
-    if (!metaStore.isReadFromHiveMetaStore && tableInfo.isTransactionalTable) {
+      sparkSession: SparkSession,
+      ignoreIfExists: Boolean,
+      tableInfo: TableInfo): Unit = {
+    if (tableInfo.isTransactionalTable) {
       try {
+        val metaStore = CarbonEnv.getInstance(sparkSession).carbonMetaStore
         metaStore.saveToDisk(tableInfo, tableInfo.getTablePath)
       } catch {
         case ex: IOException if ignoreIfExists =>

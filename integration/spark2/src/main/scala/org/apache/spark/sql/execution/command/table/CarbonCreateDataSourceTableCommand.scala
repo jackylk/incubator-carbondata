@@ -73,8 +73,7 @@ case class CarbonCreateDataSourceTableCommand(
     // Step3:
     // Persist the TableInfo object in table path as schema file.
 
-    val metaStore = CarbonEnv.getInstance(sparkSession).carbonMetaStore
-    val (tableInfo, catalogTable) = CarbonSource.createTableMeta(sparkSession, table, metaStore)
+    val (tableInfo, catalogTable) = CarbonSource.createTableMeta(sparkSession, table)
 
     val rows = try {
       CreateDataSourceTableCommand(
@@ -90,7 +89,7 @@ case class CarbonCreateDataSourceTableCommand(
     }
 
     try {
-      CarbonSource.saveCarbonSchemaFile(metaStore, ignoreIfExists, tableInfo)
+      CarbonSource.saveCarbonSchemaFile(sparkSession, ignoreIfExists, tableInfo)
     } catch {
       case ex: Throwable =>
         // drop the table if anything goes wrong

@@ -83,12 +83,10 @@ class TestRegisterCarbonTable extends QueryTest with BeforeAndAfterAll {
     sql("use carbon")
     sql("""create table carbon.carbontable (c1 string,c2 int,c3 string,c5 string) STORED AS carbondata""")
     sql("insert into carbontable select 'a',1,'aa','aaa'")
-    if (!CarbonEnv.getInstance(sqlContext.sparkSession).carbonMetaStore.isReadFromHiveMetaStore) {
-      backUpData(dbLocationCustom, "carbontable")
-      sql("drop table carbontable")
-      restoreData(dbLocationCustom, "carbontable")
-      sql("refresh table carbontable")
-    }
+    backUpData(dbLocationCustom, "carbontable")
+    sql("drop table carbontable")
+    restoreData(dbLocationCustom, "carbontable")
+    sql("refresh table carbontable")
     checkAnswer(sql("select count(*) from carbontable"), Row(1))
     checkAnswer(sql("select c1 from carbontable"), Seq(Row("a")))
   }
@@ -99,12 +97,10 @@ class TestRegisterCarbonTable extends QueryTest with BeforeAndAfterAll {
     sql("use carbon")
     sql("""create table carbon.carbontable (c1 string,c2 int,c3 string,c5 string) STORED AS carbondata""")
     sql("insert into carbontable select 'a',1,'aa','aaa'")
-    if (!CarbonEnv.getInstance(sqlContext.sparkSession).carbonMetaStore.isReadFromHiveMetaStore) {
-      backUpData(dbLocationCustom, "carbontable")
-      sql("drop table carbontable")
-      restoreData(dbLocationCustom, "carbontable")
-      sql("refresh table carbontable")
-    }
+    backUpData(dbLocationCustom, "carbontable")
+    sql("drop table carbontable")
+    restoreData(dbLocationCustom, "carbontable")
+    sql("refresh table carbontable")
     checkAnswer(sql("select count(*) from carbontable"), Row(1))
     checkAnswer(sql("select c1 from carbontable"), Seq(Row("a")))
   }
@@ -116,12 +112,10 @@ class TestRegisterCarbonTable extends QueryTest with BeforeAndAfterAll {
     sql("""create table carbon.carbontable (c1 string,c2 int,c3 string,c5 string) STORED AS carbondata""")
     sql("insert into carbontable select 'a',1,'aa','aaa'")
     sql("insert into carbontable select 'b',1,'bb','bbb'")
-    if (!CarbonEnv.getInstance(sqlContext.sparkSession).carbonMetaStore.isReadFromHiveMetaStore) {
-      backUpData(dbLocationCustom, "carbontable")
-      sql("drop table carbontable")
-      restoreData(dbLocationCustom, "carbontable")
-      sql("refresh table carbontable")
-    }
+    backUpData(dbLocationCustom, "carbontable")
+    sql("drop table carbontable")
+    restoreData(dbLocationCustom, "carbontable")
+    sql("refresh table carbontable")
     // update operation
     sql("""update carbon.carbontable d  set (d.c2) = (d.c2 + 1) where d.c1 = 'a'""").show()
     sql("""update carbon.carbontable d  set (d.c2) = (d.c2 + 1) where d.c1 = 'b'""").show()
@@ -138,12 +132,10 @@ class TestRegisterCarbonTable extends QueryTest with BeforeAndAfterAll {
     sql("""create table carbon.carbontable (c1 string,c2 int,c3 string,c5 string) STORED AS carbondata""")
     sql("insert into carbontable select 'a',1,'aa','aaa'")
     sql("insert into carbontable select 'b',1,'bb','bbb'")
-    if (!CarbonEnv.getInstance(sqlContext.sparkSession).carbonMetaStore.isReadFromHiveMetaStore) {
-      backUpData(dbLocationCustom, "carbontable")
-      sql("drop table carbontable")
-      restoreData(dbLocationCustom, "carbontable")
-      sql("refresh table carbontable")
-    }
+    backUpData(dbLocationCustom, "carbontable")
+    sql("drop table carbontable")
+    restoreData(dbLocationCustom, "carbontable")
+    sql("refresh table carbontable")
     // delete operation
     sql("""delete from carbontable where c3 = 'aa'""").show
     checkAnswer(
@@ -160,12 +152,10 @@ class TestRegisterCarbonTable extends QueryTest with BeforeAndAfterAll {
     sql("""create table carbon.carbontable (c1 string,c2 int,c3 string,c5 string) STORED AS carbondata""")
     sql("insert into carbontable select 'a',1,'aa','aaa'")
     sql("insert into carbontable select 'b',1,'bb','bbb'")
-    if (!CarbonEnv.getInstance(sqlContext.sparkSession).carbonMetaStore.isReadFromHiveMetaStore) {
-      backUpData(dbLocationCustom, "carbontable")
-      sql("drop table carbontable")
-      restoreData(dbLocationCustom, "carbontable")
-      sql("refresh table carbontable")
-    }
+    backUpData(dbLocationCustom, "carbontable")
+    sql("drop table carbontable")
+    restoreData(dbLocationCustom, "carbontable")
+    sql("refresh table carbontable")
     sql("Alter table carbontable add columns(c4 string) " +
         "TBLPROPERTIES('DEFAULT.VALUE.c4'='def')")
     checkAnswer(
@@ -182,12 +172,10 @@ class TestRegisterCarbonTable extends QueryTest with BeforeAndAfterAll {
     sql("""create table carbon.carbontable (c1 string,c2 int,c3 string,c5 string) STORED AS carbondata""")
     sql("insert into carbontable select 'a',1,'aa','aaa'")
     sql("insert into carbontable select 'b',1,'bb','bbb'")
-    if (!CarbonEnv.getInstance(sqlContext.sparkSession).carbonMetaStore.isReadFromHiveMetaStore) {
-      backUpData(dbLocationCustom, "carbontable")
-      sql("drop table carbontable")
-      restoreData(dbLocationCustom, "carbontable")
-      sql("refresh table carbontable")
-    }
+    backUpData(dbLocationCustom, "carbontable")
+    sql("drop table carbontable")
+    restoreData(dbLocationCustom, "carbontable")
+    sql("refresh table carbontable")
     sql("Alter table carbontable change c2 c2 long")
     checkAnswer(
       sql("""select c1,c2,c3,c5 from carbon.carbontable"""),
@@ -203,12 +191,10 @@ class TestRegisterCarbonTable extends QueryTest with BeforeAndAfterAll {
     sql("""create table carbon.carbontable (c1 string,c2 int,c3 string,c5 string) STORED AS carbondata""")
     sql("insert into carbontable select 'a',1,'aa','aaa'")
     sql("insert into carbontable select 'b',1,'bb','bbb'")
-    if (!CarbonEnv.getInstance(sqlContext.sparkSession).carbonMetaStore.isReadFromHiveMetaStore) {
-      backUpData(dbLocationCustom, "carbontable")
-      sql("drop table carbontable")
-      restoreData(dbLocationCustom, "carbontable")
-      sql("refresh table carbontable")
-    }
+    backUpData(dbLocationCustom, "carbontable")
+    sql("drop table carbontable")
+    restoreData(dbLocationCustom, "carbontable")
+    sql("refresh table carbontable")
     sql("Alter table carbontable drop columns(c2)")
     checkAnswer(
       sql("""select * from carbon.carbontable"""),
