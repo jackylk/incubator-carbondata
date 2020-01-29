@@ -72,8 +72,7 @@ public class FieldEncoderFactory {
     if (dataField.getColumn().isDimension()) {
       if (dataField.getColumn().getDataType() == DataTypes.DATE &&
           !dataField.getColumn().isComplex()) {
-        return new DirectDictionaryFieldConverterImpl(dataField, nullFormat, index,
-            isEmptyBadRecord);
+        return new DateFieldConverterImpl(dataField, nullFormat, index, isEmptyBadRecord);
       } else if (dataField.getColumn().isComplex()) {
         return new ComplexFieldConverterImpl(
             createComplexDataType(dataField, nullFormat, getBinaryDecoder(binaryDecoder)), index);

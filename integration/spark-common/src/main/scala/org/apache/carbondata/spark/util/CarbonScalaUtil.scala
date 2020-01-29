@@ -184,17 +184,10 @@ object CarbonScalaUtil {
       column: ColumnSchema): String = {
     try {
       if (column.getDataType.equals(CarbonDataTypes.DATE)) {
-        if (column.getDataType.equals(CarbonDataTypes.TIMESTAMP)) {
-          return DirectDictionaryKeyGeneratorFactory.getDirectDictionaryGenerator(
-            column.getDataType,
-            CarbonCommonConstants.CARBON_TIMESTAMP_DEFAULT_FORMAT
-          ).generateDirectSurrogateKey(value).toString
-        } else if (column.getDataType.equals(CarbonDataTypes.DATE)) {
-          return DirectDictionaryKeyGeneratorFactory.getDirectDictionaryGenerator(
-            column.getDataType,
-            CarbonCommonConstants.CARBON_DATE_DEFAULT_FORMAT
-          ).generateDirectSurrogateKey(value).toString
-        }
+        return DirectDictionaryKeyGeneratorFactory.getDirectDictionaryGenerator(
+          column.getDataType,
+          CarbonCommonConstants.CARBON_DATE_DEFAULT_FORMAT
+        ).generateDirectSurrogateKey(value).toString
       }
       column.getDataType match {
         case CarbonDataTypes.TIMESTAMP =>

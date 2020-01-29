@@ -400,8 +400,10 @@ public class DictionaryBasedResultCollector extends AbstractScannedResultCollect
     }
     directDictionaryGenerators = new DirectDictionaryGenerator[queryDimensions.length];
     for (int i = 0; i < queryDimensions.length; i++) {
-      directDictionaryGenerators[i] = DirectDictionaryKeyGeneratorFactory
-          .getDirectDictionaryGenerator(queryDimensions[i].getDimension().getDataType());
+      if (queryDimensions[i].getDimension().getDataType() == DataTypes.DATE) {
+        directDictionaryGenerators[i] = DirectDictionaryKeyGeneratorFactory
+            .getDirectDictionaryGenerator(queryDimensions[i].getDimension().getDataType());
+      }
     }
   }
 }

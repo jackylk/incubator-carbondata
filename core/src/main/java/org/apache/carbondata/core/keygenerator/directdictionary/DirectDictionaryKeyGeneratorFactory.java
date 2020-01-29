@@ -18,7 +18,6 @@
 package org.apache.carbondata.core.keygenerator.directdictionary;
 
 import org.apache.carbondata.core.keygenerator.directdictionary.timestamp.DateDirectDictionaryGenerator;
-import org.apache.carbondata.core.keygenerator.directdictionary.timestamp.TimeStampDirectDictionaryGenerator;
 import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.metadata.datatype.DataTypes;
 import org.apache.carbondata.core.util.CarbonUtil;
@@ -45,8 +44,6 @@ public final class DirectDictionaryKeyGeneratorFactory {
     DirectDictionaryGenerator directDictionaryGenerator = null;
     if (dataType == DataTypes.DATE) {
       directDictionaryGenerator = new DateDirectDictionaryGenerator(dateFormat);
-    } else if (dataType == DataTypes.TIMESTAMP) {
-      directDictionaryGenerator = new TimeStampDirectDictionaryGenerator(dateFormat);
     }
     return directDictionaryGenerator;
   }

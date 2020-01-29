@@ -76,28 +76,6 @@ public interface FilterResolverIntf extends Serializable {
   MeasureColumnResolvedFilterInfo getMsrColResolvedFilterInfo();
 
   /**
-   * API will get the start key based on the filter applied based on the key generator
-   *
-   * @param segmentProperties
-   * @param startKey
-   * @param setOfStartKeyByteArray
-   * @param startKeyList
-   */
-  void getStartKey(SegmentProperties segmentProperties, long[] startKey,
-      SortedMap<Integer, byte[]> setOfStartKeyByteArray, List<long[]> startKeyList);
-
-  /**
-   * API will read the end key based on the max surrogate of
-   * particular dimension column
-   *
-   * @param endKeys
-   * @param setOfEndKeyByteArray
-   * @return
-   */
-  void getEndKey(SegmentProperties segmentProperties, long[] endKeys,
-      SortedMap<Integer, byte[]> setOfEndKeyByteArray, List<long[]> endKeyList);
-
-  /**
    * API will return the filter executer type which will be used to evaluate
    * the resolved filter while query execution
    *

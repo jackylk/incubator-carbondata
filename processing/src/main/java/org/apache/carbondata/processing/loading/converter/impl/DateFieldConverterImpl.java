@@ -29,7 +29,7 @@ import org.apache.carbondata.processing.loading.DataField;
 import org.apache.carbondata.processing.loading.converter.BadRecordLogHolder;
 import org.apache.carbondata.processing.util.CarbonDataProcessorUtil;
 
-public class DirectDictionaryFieldConverterImpl extends AbstractDictionaryFieldConverterImpl {
+public class DateFieldConverterImpl extends AbstractDictionaryFieldConverterImpl {
 
   private DirectDictionaryGenerator directDictionaryGenerator;
 
@@ -40,21 +40,14 @@ public class DirectDictionaryFieldConverterImpl extends AbstractDictionaryFieldC
   private CarbonColumn column;
   private boolean isEmptyBadRecord;
 
-  public DirectDictionaryFieldConverterImpl(DataField dataField, String nullFormat, int index,
+  public DateFieldConverterImpl(DataField dataField, String nullFormat, int index,
       boolean isEmptyBadRecord) {
     this.nullFormat = nullFormat;
     this.column = dataField.getColumn();
-    if (dataField.getColumn().getDataType() == DataTypes.DATE && dataField.getDateFormat() != null
-        && !dataField.getDateFormat().isEmpty()) {
+    if (dataField.getDateFormat() != null && !dataField.getDateFormat().isEmpty()) {
       this.directDictionaryGenerator = DirectDictionaryKeyGeneratorFactory
           .getDirectDictionaryGenerator(dataField.getColumn().getDataType(),
               dataField.getDateFormat());
-
-    } else if (dataField.getColumn().getDataType() == DataTypes.TIMESTAMP
-        && dataField.getTimestampFormat() != null && !dataField.getTimestampFormat().isEmpty()) {
-      this.directDictionaryGenerator = DirectDictionaryKeyGeneratorFactory
-          .getDirectDictionaryGenerator(dataField.getColumn().getDataType(),
-              dataField.getTimestampFormat());
     } else {
       this.directDictionaryGenerator = DirectDictionaryKeyGeneratorFactory
           .getDirectDictionaryGenerator(dataField.getColumn().getDataType());
@@ -82,7 +75,7 @@ public class DirectDictionaryFieldConverterImpl extends AbstractDictionaryFieldC
     } else {
       int key = directDictionaryGenerator.generateDirectSurrogateKey(literalValue);
       if (key == CarbonCommonConstants.DIRECT_DICT_VALUE_NULL) {
-        if ((literalValue.length() > 0) || (literalValue.length() == 0 && isEmptyBadRecord)) {
+        if (literalValue.length() > 0 || isEmptyBadRecord) {
           String message = logHolder.getColumnMessageMap().get(column.getColName());
           if (null == message) {
             message = CarbonDataProcessorUtil.prepareFailureReason(

@@ -1438,17 +1438,6 @@ public final class CarbonUtil {
     return (DataChunk3) t;
   }
 
-  public static DataChunk2 readDataChunk(ByteBuffer dataChunkBuffer, int offset, int length)
-      throws IOException {
-    byte[] data = dataChunkBuffer.array();
-    return (DataChunk2) read(data, new ThriftReader.TBaseCreator() {
-      @Override
-      public TBase create() {
-        return new DataChunk2();
-      }
-    }, offset, length);
-  }
-
   /**
    * Below method will be used to convert the byte array value to thrift object for
    * data chunk

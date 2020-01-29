@@ -47,20 +47,6 @@ public class BlockExecutionInfo {
    */
   private MeasureInfo measureInfo;
 
-  /**
-   * this will be used to get the first tentative block from which query
-   * execution start, this will be useful in case of filter query to get the
-   * start block based on filter values
-   */
-  private IndexKey startKey;
-
-  /**
-   * this will be used to get the last tentative block till which scanning
-   * will be done, this will be useful in case of filter query to get the last
-   * block based on filter values
-   */
-  private IndexKey endKey;
-
   private String blockId;
 
   /**
@@ -255,34 +241,6 @@ public class BlockExecutionInfo {
   }
 
   /**
-   * @return the startKey
-   */
-  public IndexKey getStartKey() {
-    return startKey;
-  }
-
-  /**
-   * @param startKey the startKey to set
-   */
-  public void setStartKey(IndexKey startKey) {
-    this.startKey = startKey;
-  }
-
-  /**
-   * @return the endKey
-   */
-  public IndexKey getEndKey() {
-    return endKey;
-  }
-
-  /**
-   * @param endKey the endKey to set
-   */
-  public void setEndKey(IndexKey endKey) {
-    this.endKey = endKey;
-  }
-
-  /**
    * @return the totalNumberDimensionToRead
    */
   public int getTotalNumberDimensionToRead() {
@@ -318,7 +276,7 @@ public class BlockExecutionInfo {
   }
 
   /**
-   * @param allSelectedDimensionColumnIndexRange the allSelectedDimensionColumnIndexRange to set
+   * @param selectedDimensionColumnIndexRange the allSelectedDimensionColumnIndexRange to set
    */
   public void setAllSelectedDimensionColumnIndexRange(int[][] selectedDimensionColumnIndexRange) {
     this.allSelectedDimensionColumnIndexRange = selectedDimensionColumnIndexRange;

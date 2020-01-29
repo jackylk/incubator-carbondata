@@ -102,16 +102,6 @@ public class RowLevelFilterExecuterImpl implements FilterExecuter {
    */
   boolean isNaturalSorted;
 
-  /**
-   * date direct dictionary generator
-   */
-  private DirectDictionaryGenerator dateDictionaryGenerator;
-
-  /**
-   * timestamp direct dictionary generator
-   */
-  private DirectDictionaryGenerator timestampDictionaryGenerator;
-
   public RowLevelFilterExecuterImpl(List<DimColumnResolvedFilterInfo> dimColEvaluatorInfoList,
       List<MeasureColumnResolvedFilterInfo> msrColEvalutorInfoList, Expression exp,
       AbsoluteTableIdentifier tableIdentifier, SegmentProperties segmentProperties,
@@ -144,10 +134,6 @@ public class RowLevelFilterExecuterImpl implements FilterExecuter {
     this.exp = exp;
     this.tableIdentifier = tableIdentifier;
     this.complexDimensionInfoMap = complexDimensionInfoMap;
-    this.dateDictionaryGenerator =
-        DirectDictionaryKeyGeneratorFactory.getDirectDictionaryGenerator(DataTypes.DATE);
-    this.timestampDictionaryGenerator =
-        DirectDictionaryKeyGeneratorFactory.getDirectDictionaryGenerator(DataTypes.TIMESTAMP);
     initDimensionChunkIndexes();
     initMeasureChunkIndexes();
   }
@@ -313,9 +299,8 @@ public class RowLevelFilterExecuterImpl implements FilterExecuter {
    * @return actual value row
    * @throws IOException
    */
-  private RowIntf convertRow(RowIntf value, int dimOrdinalMax) throws IOException {
+  private RowIntf convertRow(RowIntf value, int dimOrdinalMax) {
     Object[] record = new Object[value.size()];
-    String memberString;
     for (int i = 0; i < dimColEvaluatorInfoList.size(); i++) {
       DimColumnResolvedFilterInfo dimColumnEvaluatorInfo = dimColEvaluatorInfoList.get(i);
       int index = dimColumnEvaluatorInfo.getDimension().getOrdinal();
@@ -373,12 +358,10 @@ public class RowLevelFilterExecuterImpl implements FilterExecuter {
    * @param blockChunkHolder
    * @param row
    * @param index
-   * @throws IOException
    */
   private void createRow(RawBlockletColumnChunks blockChunkHolder, RowIntf row, int pageIndex,
-      int index) throws IOException {
+      int index) {
     Object[] record = new Object[dimColEvaluatorInfoList.size() + msrColEvalutorInfoList.size()];
-    String memberString;
     for (int i = 0; i < dimColEvaluatorInfoList.size(); i++) {
       DimColumnResolvedFilterInfo dimColumnEvaluatorInfo = dimColEvaluatorInfoList.get(i);
       // if filter dimension is not present in the current add its default value

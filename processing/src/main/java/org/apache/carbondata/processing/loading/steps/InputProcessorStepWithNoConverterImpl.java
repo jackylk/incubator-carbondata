@@ -303,12 +303,6 @@ public class InputProcessorStepWithNoConverterImpl extends AbstractDataLoadProce
                     .getDirectDictionaryGenerator(dataType, dataFields[i].getDateFormat());
               }
               newData[i] = dateDictionaryGenerator.generateKey((long) data[orderOfData[i]]);
-            } else if (dataType == DataTypes.TIMESTAMP && data[orderOfData[i]] instanceof Long) {
-              if (timestampDictionaryGenerator == null) {
-                timestampDictionaryGenerator = DirectDictionaryKeyGeneratorFactory
-                    .getDirectDictionaryGenerator(dataType, dataFields[i].getTimestampFormat());
-              }
-              newData[i] = timestampDictionaryGenerator.generateKey((long) data[orderOfData[i]]);
             } else {
               newData[i] = data[orderOfData[i]];
             }
