@@ -17,12 +17,13 @@
 
 package org.apache.carbondata.mv.rewrite
 
-import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeMap, Cast, Divide, Expression, Literal, Multiply, PredicateHelper, ScalaUDF}
+import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeMap, AttributeReference, Cast, Divide, Expression, Literal, Multiply, NamedExpression, PredicateHelper, ScalaUDF}
 import org.apache.spark.sql.catalyst.expressions.aggregate._
-import org.apache.spark.sql.execution.command.timeseries.TimeSeriesFunction
+import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, LogicalPlan, Project}
 
 import org.apache.carbondata.mv.plans.modular
 import org.apache.carbondata.mv.plans.modular.{ModularPlan, Select}
+import org.apache.carbondata.mv.timeseries.TimeSeriesFunction
 
 /**
  * Utility functions used by mqo matcher to convert our plan to new aggregation code path
@@ -602,5 +603,27 @@ object Utils extends PredicateHelper {
           .equalsIgnoreCase(s2.children.last.asInstanceOf[Literal].toString())
       case _ => false
     }
+  }
+
+  def dropDummyFunc(plan: LogicalPlan): LogicalPlan = {
+    plan transform {
+      case p@Project(exps, child) =>
+        Project(dropDummyExp(exps), child)
+      case Aggregate(grp, aggExp, child) =>
+        Aggregate(
+          grp,
+          dropDummyExp(aggExp),
+          child)
+    }
+  }
+
+  private def dropDummyExp(exps: Seq[NamedExpression]) = {
+    exps.map {
+      case al@Alias(udf: ScalaUDF, name) if name.equalsIgnoreCase(MVUdf.MV_SKIP_RULE_UDF) =>
+        None
+      case attr: AttributeReference if attr.name.equalsIgnoreCase(MVUdf.MV_SKIP_RULE_UDF) =>
+        None
+      case other => Some(other)
+    }.filter(_.isDefined).map(_.get)
   }
 }

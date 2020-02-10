@@ -19,6 +19,7 @@ package org.apache.carbondata.mv.plans
 
 import org.apache.spark.sql.hive.CarbonSessionCatalogUtil
 import org.scalatest.BeforeAndAfter
+
 import org.apache.carbondata.mv.dsl.Plans._
 import org.apache.carbondata.mv.testutil.ModularPlanTest
 

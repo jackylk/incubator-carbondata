@@ -14,19 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.spark.sql.execution.command.timeseries
 
-import java.sql.Timestamp
+package org.apache.carbondata.mv.rewrite
 
-import org.apache.carbondata.core.preagg.TimeSeriesUDF
+import scala.language.implicitConversions
 
-/**
- * Time series udf class
- */
+object MVUdf {
+  lazy val MV_SKIP_RULE_UDF = "mv"
 
-case class TimeSeriesFunction() extends ((Timestamp, String) => Timestamp) with Serializable{
-
-  override def apply(v1: Timestamp, v2: String): Timestamp = {
-    TimeSeriesUDF.INSTANCE.applyUDF(v1, v2)
-  }
 }

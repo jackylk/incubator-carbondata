@@ -17,16 +17,12 @@
 
 package org.apache.carbondata.mv.plans
 
-import scala.util.{Failure, Success, Try}
-import org.apache.spark.sql.SparkSession
 import org.scalatest.BeforeAndAfter
-import org.apache.carbondata.mv.dsl._
+
 import org.apache.carbondata.mv.testutil.ModularPlanTest
 
 // scalastyle:off println
 class Tpcds_1_4_BenchmarkSuite extends ModularPlanTest with BeforeAndAfter {
-  import org.apache.carbondata.mv.testutil.Tpcds_1_4_QueryBatch._
-  import org.apache.carbondata.mv.testutil.Tpcds_1_4_Tables._
 
 //  val spark = SparkSession.builder().master("local").enableHiveSupport().getOrCreate()
 //  // spark.conf.set("spark.sql.crossJoin.enabled", true)

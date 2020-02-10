@@ -14,17 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.spark.sql.execution.command.timeseries
+
+package org.apache.carbondata.mv.timeseries
 
 import scala.collection.mutable
-import scala.util.control.Breaks._
-
-import org.apache.spark.sql.execution.command.{DataMapField, Field}
+import scala.util.control.Breaks.{break, breakable}
 
 import org.apache.carbondata.common.exceptions.sql.{MalformedCarbonCommandException, MalformedDataMapCommandException}
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.metadata.datatype.DataTypes
-import org.apache.carbondata.core.metadata.schema.datamap.Granularity
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 
 /**
@@ -42,7 +40,8 @@ object TimeSeriesUtil {
    * @param parentTable  parent table
    * @return whether time stamp column
    */
-  def validateTimeSeriesEventTime(dmproperties: Map[String, String],
+  def validateTimeSeriesEventTime(
+      dmproperties: Map[String, String],
       parentTable: CarbonTable) {
     val eventTime = dmproperties.get(TIMESERIES_EVENTTIME)
     if (!eventTime.isDefined) {
@@ -51,8 +50,7 @@ object TimeSeriesUtil {
       val carbonColumn = parentTable.getColumnByName(eventTime.get.trim)
       if (carbonColumn.getDataType != DataTypes.TIMESTAMP) {
         throw new MalformedCarbonCommandException(
-          "Timeseries event time is only supported on Timestamp " +
-          "column")
+          "Timeseries event time is only supported on Timestamp column")
       }
     }
   }
@@ -109,47 +107,6 @@ object TimeSeriesUtil {
       s"Granularity only support $defaultValue")
   }
 
-  /**
-   * Below method will be used to validate whether timeseries column present in
-   * select statement or not
-   *
-   * @param fieldMapping     fields from select plan
-   * @param timeSeriesColumn timeseries column name
-   */
-  def validateEventTimeColumnExitsInSelect(
-      fieldMapping: mutable.LinkedHashMap[Field, DataMapField],
-      timeSeriesColumn: String) : Any = {
-    val isTimeSeriesColumnExits = fieldMapping.exists { case (_, f) =>
-      f.columnTableRelationList.isDefined &&
-      f.columnTableRelationList.get.head.parentColumnName.equalsIgnoreCase(timeSeriesColumn) &&
-      f.aggregateFunction.isEmpty
-    }
-    if(!isTimeSeriesColumnExits) {
-      throw new MalformedCarbonCommandException(s"Time series column ${ timeSeriesColumn } does " +
-                                                s"not exists in select")
-    }
-  }
-
-  /**
-   * Below method will be used to validate whether timeseries column present in
-   * select statement or not
-   * @param fieldMapping
-   *                     fields from select plan
-   * @param timeSeriesColumn
-   *                         timeseries column name
-   */
-  def updateTimeColumnSelect(
-      fieldMapping: scala.collection.mutable.LinkedHashMap[Field, DataMapField],
-      timeSeriesColumn: String,
-      timeSeriesFunction: String) : Any = {
-    val isTimeSeriesColumnExits = fieldMapping
-      .find(obj => obj._2.columnTableRelationList.isDefined &&
-                     obj._2.columnTableRelationList.get(0).parentColumnName
-                       .equalsIgnoreCase(timeSeriesColumn) &&
-                     obj._2.aggregateFunction.isEmpty)
-    isTimeSeriesColumnExits.get._2.aggregateFunction = timeSeriesFunction
-  }
-
   def validateTimeSeriesGranularityForDate(
       timeSeriesFunction: String): Unit = {
     for (granularity <- Granularity.values()) {
@@ -193,4 +150,3 @@ object TimeSeriesUtil {
   }
 
 }
-

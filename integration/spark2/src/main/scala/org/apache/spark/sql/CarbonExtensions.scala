@@ -27,6 +27,11 @@ import org.apache.spark.sql.parser.CarbonExtensionSqlParser
 class CarbonExtensions extends ((SparkSessionExtensions) => Unit) {
 
   override def apply(extensions: SparkSessionExtensions): Unit = {
+    val clazz = Class.forName("org.apache.carbondata.mv.extension.MVExtension")
+    val method = clazz.getMethod("apply", classOf[SparkSessionExtensions])
+    val mvExtension = clazz.newInstance()
+    method.invoke(mvExtension, extensions)
+
     // Carbon internal parser
     extensions
       .injectParser((sparkSession: SparkSession, parser: ParserInterface) =>

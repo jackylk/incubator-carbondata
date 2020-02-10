@@ -79,6 +79,22 @@ object CarbonToSparkAdapter {
     Alias(child, name)(exprId, qualifier, explicitMetadata)
   }
 
+  // Create the aliases using two plan outputs mappings.
+  def createAliases(mappings: Seq[(NamedExpression, NamedExpression)]): Seq[NamedExpression] = {
+    mappings.map{ case (o1, o2) =>
+      o2 match {
+        case al: Alias if o1.name == o2.name && o1.exprId != o2.exprId =>
+          Alias(al.child, o1.name)(exprId = o1.exprId)
+        case other =>
+          if (o1.name != o2.name || o1.exprId != o2.exprId) {
+            Alias(o2, o1.name)(exprId = o1.exprId)
+          } else {
+            o2
+          }
+      }
+    }
+  }
+
   def getExplainCommandObj() : ExplainCommand = {
     ExplainCommand(OneRowRelation())
   }
@@ -100,7 +116,7 @@ object CarbonToSparkAdapter {
   }
 
   // As per SPARK-22520 OptimizeCodegen is removed in 2.3.1
-  def getOptimizeCodegenRule(conf :SQLConf): Seq[Rule[LogicalPlan]] = {
+  def getOptimizeCodegenRule(): Seq[Rule[LogicalPlan]] = {
     Seq.empty
   }
 
@@ -121,14 +137,11 @@ class OptimizerProxy(
     catalog: SessionCatalog,
     optimizer: Optimizer) extends Optimizer(catalog) {
 
-  private lazy val firstBatchRules = Seq(Batch("First Batch Optimizers", Once,
-    Seq(CarbonMVRules(session)): _*))
-
   private lazy val LastBatchRules = Batch("Last Batch Optimizers", fixedPoint,
     Seq(new CarbonIUDRule(), new CarbonUDFTransformRule()): _*)
 
   override def batches: Seq[Batch] = {
-    firstBatchRules ++ convertedBatch() :+ LastBatchRules
+    convertedBatch() :+ LastBatchRules
   }
 
   def convertedBatch(): Seq[Batch] = {

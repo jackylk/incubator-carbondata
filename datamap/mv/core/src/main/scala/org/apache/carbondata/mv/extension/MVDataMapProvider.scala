@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.carbondata.mv.datamap
+package org.apache.carbondata.mv.extension
 
 import java.io.IOException
 
@@ -23,7 +23,6 @@ import scala.collection.JavaConverters._
 import org.apache.spark.sql.{CarbonUtils, SparkSession}
 import org.apache.spark.sql.execution.command.management.CarbonLoadDataCommand
 import org.apache.spark.sql.execution.command.table.CarbonDropTableCommand
-import org.apache.spark.sql.parser.CarbonSparkSqlParserUtil
 import org.apache.spark.sql.util.SparkSQLUtil
 
 import org.apache.carbondata.common.annotations.InterfaceAudience
@@ -55,7 +54,8 @@ class MVDataMapProvider(
       throw new MalformedDataMapCommandException(
         "select statement is mandatory")
     }
-    MVHelper.createMVDataMap(sparkSession,
+    MVHelper.createMVDataMap(
+      sparkSession,
       dataMapSchema,
       ctasSqlStatement,
       true,
@@ -118,7 +118,7 @@ class MVDataMapProvider(
     val ctasQuery = dataMapSchema.getCtasQuery
     if (ctasQuery != null) {
       val identifier = dataMapSchema.getRelationIdentifier
-      val updatedQuery = CarbonSparkSqlParserUtil.getMVQuery(ctasQuery, sparkSession)
+      val updatedQuery = MVParser.getMVQuery(ctasQuery, sparkSession)
       var isOverwriteTable = false
       val isFullRefresh =
         if (null != dataMapSchema.getProperties.get("full_refresh")) {

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.carbondata.core.metadata.schema.datamap;
+package org.apache.carbondata.mv.timeseries;
 
 /**
  * type for create datamap

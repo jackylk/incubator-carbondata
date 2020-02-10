@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.carbondata.mv.datamap
+package org.apache.carbondata.mv.extension
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -42,7 +42,8 @@ class MVUtil {
   /**
    * Below method will be used to validate and get the required fields from select plan
    */
-  def getFieldsAndDataMapFieldsFromPlan(plan: ModularPlan,
+  def getFieldsAndDataMapFieldsFromPlan(
+      plan: ModularPlan,
       logicalRelation: Seq[LogicalRelation]): scala.collection.mutable.LinkedHashMap[Field,
     DataMapField] = {
     plan match {
@@ -76,7 +77,8 @@ class MVUtil {
    * @param flagSpec to get SortOrder attribute if exists
    * @return fieldRelationMap
    */
-  def getFieldsFromProject(outputList: Seq[NamedExpression],
+  private def getFieldsFromProject(
+      outputList: Seq[NamedExpression],
       predicateList: Seq[Expression],
       logicalRelation: Seq[LogicalRelation],
       flagSpec: Seq[Seq[Any]]): mutable.LinkedHashMap[Field, DataMapField] = {
@@ -108,7 +110,8 @@ class MVUtil {
     fieldToDataMapFieldMap
   }
 
-  def getFieldsFromProject(projectList: Seq[NamedExpression],
+  private def getFieldsFromProject(
+      projectList: Seq[NamedExpression],
       logicalRelation: Seq[LogicalRelation]): mutable.LinkedHashMap[Field, DataMapField] = {
     var fieldToDataMapFieldMap = scala.collection.mutable.LinkedHashMap.empty[Field, DataMapField]
     projectList.map {
@@ -208,7 +211,8 @@ class MVUtil {
   /**
    * Below method will be used to get the column relation with the parent column
    */
-  def getColumnRelation(parentColumnName: String,
+  private def getColumnRelation(
+      parentColumnName: String,
       parentTableId: String,
       parentTableName: String,
       parentDatabaseName: String,
@@ -308,44 +312,4 @@ class MVUtil {
     }
   }
 
-  def updateDuplicateColumns(outputList: Seq[NamedExpression]): Seq[NamedExpression] = {
-    val duplicateNameCols = outputList.groupBy(_.name).filter(_._2.length > 1).flatMap(_._2)
-      .toList
-    val updatedOutList = outputList.map { col =>
-      val duplicateColumn = duplicateNameCols
-        .find(a => a.semanticEquals(col))
-      val qualifiedName = col.qualifier.headOption.getOrElse(s"${ col.exprId.id }") + "_" + col.name
-      if (duplicateColumn.isDefined) {
-        val attributesOfDuplicateCol = duplicateColumn.get.collect {
-          case a: AttributeReference => a
-        }
-        val attributeOfCol = col.collect { case a: AttributeReference => a }
-        // here need to check the whether the duplicate columns is of same tables,
-        // since query with duplicate columns is valid, we need to make sure, not to change their
-        // names with above defined qualifier name, for example in case of some expression like
-        // cast((FLOOR((cast(col_name) as double))).., upper layer even exprid will be same,
-        // we need to find the attribute ref(col_name) at lower level and check where expid is same
-        // or of same tables, so doin the semantic equals
-        val isStrictDuplicate = attributesOfDuplicateCol.forall(expr =>
-          attributeOfCol.exists(a => a.semanticEquals(expr)))
-        if (!isStrictDuplicate) {
-          Alias(col, qualifiedName)(exprId = col.exprId)
-        } else if (col.qualifier.nonEmpty) {
-          Alias(col, qualifiedName)(exprId = col.exprId)
-          // this check is added in scenario where the column is direct Attribute reference and
-          // since duplicate columns select is allowed, we should just put alias for those columns
-          // and update, for this also above isStrictDuplicate will be true so, it will not be
-          // updated above
-        } else if (duplicateColumn.get.isInstanceOf[AttributeReference] &&
-                   col.isInstanceOf[AttributeReference]) {
-          Alias(col, qualifiedName)(exprId = col.exprId)
-        } else {
-          col
-        }
-      } else {
-        col
-      }
-    }
-    updatedOutList
-  }
 }

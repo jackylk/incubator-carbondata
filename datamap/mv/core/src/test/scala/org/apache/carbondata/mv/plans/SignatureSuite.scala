@@ -20,6 +20,7 @@ package org.apache.carbondata.mv.plans
 import org.apache.spark.sql.catalyst.util._
 import org.apache.spark.sql.hive.CarbonSessionCatalogUtil
 import org.scalatest.BeforeAndAfterAll
+
 import org.apache.carbondata.mv.dsl.Plans._
 import org.apache.carbondata.mv.plans.modular.ModularPlanSignatureGenerator
 import org.apache.carbondata.mv.testutil.ModularPlanTest
