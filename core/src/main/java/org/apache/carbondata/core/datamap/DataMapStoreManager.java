@@ -270,7 +270,8 @@ public final class DataMapStoreManager {
    * @param providerName
    * @return
    */
-  public synchronized DataMapCatalog getDataMapCatalog(DataMapProvider dataMapProvider,
+  public synchronized DataMapCatalog getDataMapCatalog(
+      DataMapProvider dataMapProvider,
       String providerName) throws IOException {
     initializeDataMapCatalogs(dataMapProvider);
     return dataMapCatalogs.get(providerName.toLowerCase());

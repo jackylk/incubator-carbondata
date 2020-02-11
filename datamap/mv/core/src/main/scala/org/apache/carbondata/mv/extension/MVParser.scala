@@ -32,6 +32,7 @@ import org.apache.spark.sql.hive.CarbonMVRules
 import org.apache.spark.sql.util.{CarbonException, SparkSQLUtil}
 
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
+import org.apache.carbondata.mv.extension.command.{CreateMaterializedViewCommand, DropMaterializedViewCommand}
 import org.apache.carbondata.mv.rewrite.MVUdf
 
 class MVParser extends StandardTokenParsers with PackratParsers {
@@ -122,7 +123,7 @@ class MVParser extends StandardTokenParsers with PackratParsers {
     (AS ~> restInput).? <~ opt(";") ^^ {
       case ifNotExists ~ mvName ~ deferredRebuild ~ mvProperties ~ query =>
         val map = mvProperties.getOrElse(List[(String, String)]()).toMap[String, String]
-        CarbonCreateDataMapCommand(mvName, None, "mv", map, query,
+        CreateMaterializedViewCommand(mvName, map, query,
           ifNotExists.isDefined, deferredRebuild.isDefined)
     }
 
@@ -132,7 +133,7 @@ class MVParser extends StandardTokenParsers with PackratParsers {
   private lazy val dropMV: Parser[LogicalPlan] =
     DROP ~> MATERIALIZED ~> VIEW ~> opt(IF ~> EXISTS) ~ ident <~ opt(";") ^^ {
       case ifExits ~ mvName =>
-        CarbonDropDataMapCommand(mvName, ifExits.isDefined, None)
+        DropMaterializedViewCommand(mvName, ifExits.isDefined)
     }
 
   /**

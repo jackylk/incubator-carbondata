@@ -39,10 +39,9 @@ import org.apache.carbondata.processing.util.CarbonLoaderUtil
 
 @InterfaceAudience.Internal
 class MVDataMapProvider(
-    mainTable: CarbonTable,
     sparkSession: SparkSession,
     dataMapSchema: DataMapSchema)
-  extends DataMapProvider(mainTable, dataMapSchema) {
+  extends DataMapProvider(null, dataMapSchema) {
   protected var dropTableCommand: CarbonDropTableCommand = null
 
   private val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
@@ -58,8 +57,7 @@ class MVDataMapProvider(
       sparkSession,
       dataMapSchema,
       ctasSqlStatement,
-      true,
-      mainTable)
+      true)
     try {
       DataMapStoreManager.getInstance.registerDataMapCatalog(this, dataMapSchema)
       if (dataMapSchema.isLazy) {

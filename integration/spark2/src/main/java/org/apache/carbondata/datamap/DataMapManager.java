@@ -23,9 +23,9 @@ import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.metadata.schema.table.DataMapSchema;
 import org.apache.carbondata.spark.util.CarbonScalaUtil;
 
-import static org.apache.carbondata.core.metadata.schema.datamap.DataMapClassProvider.MV;
-
 import org.apache.spark.sql.SparkSession;
+
+import static org.apache.carbondata.core.metadata.schema.datamap.DataMapClassProvider.MV;
 
 public class DataMapManager {
 

@@ -54,11 +54,11 @@ import org.apache.carbondata.spark.util.CommonUtil
  */
 object MVHelper {
 
-  def createMVDataMap(sparkSession: SparkSession,
+  def createMVDataMap(
+      sparkSession: SparkSession,
       dataMapSchema: DataMapSchema,
       queryString: String,
-      ifNotExistsSet: Boolean = false,
-      mainTable: CarbonTable): Unit = {
+      ifNotExistsSet: Boolean = false): Unit = {
     val dmProperties = dataMapSchema.getProperties.asScala
     if (dmProperties.contains("streaming") && dmProperties("streaming").equalsIgnoreCase("true")) {
       throw new MalformedCarbonCommandException(
@@ -120,41 +120,41 @@ object MVHelper {
 
     val tableProperties = mutable.Map[String, String]()
     val parentTables = new util.ArrayList[String]()
-//    val parentTablesList = new util.ArrayList[CarbonTable](selectTables.size)
-//    selectTables.foreach { selectTable =>
-//      val mainCarbonTable = try {
-//        Some(CarbonEnv.getCarbonTable(selectTable.identifier.database,
-//          selectTable.identifier.table)(sparkSession))
-//      } catch {
-//        // Exception handling if it's not a CarbonTable
-//        case ex: Exception =>
-//          throw new MalformedCarbonCommandException(
-//            s"Non-Carbon table does not support creating MV datamap")
-//      }
-//      if (!mainCarbonTable.get.getTableInfo.isTransactionalTable) {
-//        throw new MalformedCarbonCommandException("Unsupported operation on NonTransactional table")
-//      }
-//      if (mainCarbonTable.get.isChildTableForMV) {
-//        throw new MalformedCarbonCommandException(
-//          "Cannot create Datamap on child table " + mainCarbonTable.get.getTableUniqueName)
-//      }
-//      parentTables.add(mainCarbonTable.get.getTableName)
-//      if (!mainCarbonTable.isEmpty && mainCarbonTable.get.isStreamingSink) {
-//        throw new MalformedCarbonCommandException(
-//          s"Streaming table does not support creating materialized view")
-//      }
-//      parentTablesList.add(mainCarbonTable.get)
-//    }
-//
-//    // Check if load is in progress in any of the parent table mapped to the datamap
-//    parentTablesList.asScala.foreach {
-//      parentTable =>
-//        if (SegmentStatusManager.isLoadInProgressInTable(parentTable)) {
-//          throw new UnsupportedOperationException(
-//            "Cannot create mv datamap table when insert is in progress on parent table: " +
-//            parentTable.getTableName)
-//        }
-//    }
+    val parentTablesList = new util.ArrayList[CarbonTable](selectTables.size)
+    selectTables.foreach { selectTable =>
+      val mainCarbonTable = try {
+        Some(CarbonEnv.getCarbonTable(selectTable.identifier.database,
+          selectTable.identifier.table)(sparkSession))
+      } catch {
+        // Exception handling if it's not a CarbonTable
+        case ex: Exception =>
+          throw new MalformedCarbonCommandException(
+            s"Non-Carbon table does not support creating MV datamap")
+      }
+      if (!mainCarbonTable.get.getTableInfo.isTransactionalTable) {
+        throw new MalformedCarbonCommandException("Unsupported operation on NonTransactional table")
+      }
+      if (mainCarbonTable.get.isChildTableForMV) {
+        throw new MalformedCarbonCommandException(
+          "Cannot create Datamap on child table " + mainCarbonTable.get.getTableUniqueName)
+      }
+      parentTables.add(mainCarbonTable.get.getTableName)
+      if (!mainCarbonTable.isEmpty && mainCarbonTable.get.isStreamingSink) {
+        throw new MalformedCarbonCommandException(
+          s"Streaming table does not support creating materialized view")
+      }
+      parentTablesList.add(mainCarbonTable.get)
+    }
+
+    // Check if load is in progress in any of the parent table mapped to the datamap
+    parentTablesList.asScala.foreach {
+      parentTable =>
+        if (SegmentStatusManager.isLoadInProgressInTable(parentTable)) {
+          throw new UnsupportedOperationException(
+            "Cannot create mv datamap table when insert is in progress on parent table: " +
+            parentTable.getTableName)
+        }
+    }
 
     tableProperties.put(CarbonCommonConstants.DATAMAP_NAME, dataMapSchema.getDataMapName)
     tableProperties.put(CarbonCommonConstants.PARENT_TABLES, parentTables.asScala.mkString(","))
@@ -165,58 +165,52 @@ object MVHelper {
     // If dataMap is mapped to single main table, then inherit table properties from main table,
     // else, will use default table properties. If DMProperties contains table properties, then
     // table properties of datamap table will be updated
-//    if (parentTablesList.size() == 1) {
-//      DataMapUtil
-//        .inheritTablePropertiesFromMainTable(
-//          parentTablesList.get(0),
-//          fields,
-//          fieldRelationMap,
-//          tableProperties)
-//      if (granularity != null) {
-//        if (null != mainTable) {
-//          if (!mainTable.getTableName.equalsIgnoreCase(parentTablesList.get(0).getTableName)) {
-//            throw new MalformedCarbonCommandException(
-//              "Parent table name is different in Create and Select Statement")
-//          }
-//        }
-//        val timeSeriesDataType = parentTablesList
-//          .get(0)
-//          .getTableInfo
-//          .getFactTable
-//          .getListOfColumns
-//          .asScala
-//          .filter(columnSchema => columnSchema.getColumnName
-//            .equalsIgnoreCase(timeSeriesColumn))
-//          .head
-//          .getDataType
-//        if (timeSeriesDataType.equals(DataTypes.DATE) ||
-//            timeSeriesDataType.equals(DataTypes.TIMESTAMP)) {
-//          // if data type is of Date type, then check if given granularity is valid for date type
-//          if (timeSeriesDataType.equals(DataTypes.DATE)) {
-//            TimeSeriesUtil.validateTimeSeriesGranularityForDate(granularity)
-//          }
-//        } else {
-//          throw new MalformedCarbonCommandException(
-//            "TimeSeries Column must be of TimeStamp or Date type")
-//        }
-//      }
-//    }
+    if (parentTablesList.size() == 1) {
+      DataMapUtil
+        .inheritTablePropertiesFromMainTable(
+          parentTablesList.get(0),
+          fields,
+          fieldRelationMap,
+          tableProperties)
+      if (granularity != null) {
+        val timeSeriesDataType = parentTablesList
+          .get(0)
+          .getTableInfo
+          .getFactTable
+          .getListOfColumns
+          .asScala
+          .filter(columnSchema => columnSchema.getColumnName
+            .equalsIgnoreCase(timeSeriesColumn))
+          .head
+          .getDataType
+        if (timeSeriesDataType.equals(DataTypes.DATE) ||
+            timeSeriesDataType.equals(DataTypes.TIMESTAMP)) {
+          // if data type is of Date type, then check if given granularity is valid for date type
+          if (timeSeriesDataType.equals(DataTypes.DATE)) {
+            TimeSeriesUtil.validateTimeSeriesGranularityForDate(granularity)
+          }
+        } else {
+          throw new MalformedCarbonCommandException(
+            "TimeSeries Column must be of TimeStamp or Date type")
+        }
+      }
+    }
     dmProperties.foreach(t => tableProperties.put(t._1, t._2))
     val usePartitioning = dmProperties.getOrElse("partitioning", "true").toBoolean
     var partitionerFields: Seq[PartitionerField] = Seq.empty
-//    // Inherit partition from parent table if datamap is mapped to single parent table
-//    if (parentTablesList.size() == 1) {
-//      val partitionInfo = parentTablesList.get(0).getPartitionInfo
-//      val parentPartitionColumns = if (!usePartitioning) {
-//        Seq.empty
-//      } else if (parentTablesList.get(0).isHivePartitionTable) {
-//        partitionInfo.getColumnSchemaList.asScala.map(_.getColumnName)
-//      } else {
-//        Seq()
-//      }
-//      partitionerFields = PartitionUtils
-//        .getPartitionerFields(parentPartitionColumns, fieldRelationMap)
-//    }
+    // Inherit partition from parent table if datamap is mapped to single parent table
+    if (parentTablesList.size() == 1) {
+      val partitionInfo = parentTablesList.get(0).getPartitionInfo
+      val parentPartitionColumns = if (!usePartitioning) {
+        Seq.empty
+      } else if (parentTablesList.get(0).isHivePartitionTable) {
+        partitionInfo.getColumnSchemaList.asScala.map(_.getColumnName)
+      } else {
+        Seq()
+      }
+      partitionerFields = PartitionUtils
+        .getPartitionerFields(parentPartitionColumns, fieldRelationMap)
+    }
 
     var order = 0
     val columnOrderMap = new java.util.HashMap[Integer, String]()
@@ -305,7 +299,8 @@ object MVHelper {
     }
   }
 
-  private def validateMVQuery(sparkSession: SparkSession,
+  private def validateMVQuery(
+      sparkSession: SparkSession,
       logicalPlan: LogicalPlan): ModularPlan = {
     val dataMapProvider = DataMapManager.get().getDataMapProvider(null,
       new DataMapSchema("", DataMapClassProvider.MV.getShortName), sparkSession)

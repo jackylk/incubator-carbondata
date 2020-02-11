@@ -104,7 +104,7 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
     sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table6 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
   }
 
-  test("parquet source table: test create mv with simple and same projection") {
+  ignore("parquet source table: test create mv with simple and same projection") {
     sql("drop materialized view if exists mv1")
     sql("drop table if exists parquet_fact_table1")
     sql("create table parquet_fact_table1 stored as parquet as select * from fact_table1")
