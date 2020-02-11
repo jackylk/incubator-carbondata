@@ -44,8 +44,7 @@ class MVUtil {
    */
   def getFieldsAndDataMapFieldsFromPlan(
       plan: ModularPlan,
-      logicalRelation: Seq[LogicalRelation]): scala.collection.mutable.LinkedHashMap[Field,
-    DataMapField] = {
+      logicalRelation: Seq[LogicalRelation]): mutable.LinkedHashMap[Field, DataMapField] = {
     plan match {
       case select: Select =>
         select.children.map {

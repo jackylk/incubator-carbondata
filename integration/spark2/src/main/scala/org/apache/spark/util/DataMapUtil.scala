@@ -36,7 +36,8 @@ import org.apache.carbondata.core.metadata.schema.table.CarbonTable
  */
 object DataMapUtil {
 
-  def inheritTablePropertiesFromMainTable(parentTable: CarbonTable,
+  def inheritTablePropertiesFromMainTable(
+      parentTable: CarbonTable,
       fields: Seq[Field],
       fieldRelationMap: scala.collection.mutable.LinkedHashMap[Field, DataMapField],
       tableProperties: mutable.Map[String, String]): Unit = {
