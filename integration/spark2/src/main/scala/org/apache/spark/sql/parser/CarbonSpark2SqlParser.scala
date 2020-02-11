@@ -164,7 +164,7 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
    */
   protected lazy val createDataMap: Parser[LogicalPlan] =
     CREATE ~> DATAMAP ~> opt(IF ~> NOT ~> EXISTS) ~ ident ~
-    opt(ontable) ~
+    ontable ~
     (USING ~> stringLit) ~
     opt(WITH ~> DEFERRED ~> REBUILD) ~
     (DMPROPERTIES ~> "(" ~> repsep(options, ",") <~ ")").? ~

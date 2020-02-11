@@ -47,7 +47,7 @@ public class IndexDataMapProvider extends DataMapProvider {
   private DataMapFactory<? extends DataMap> dataMapFactory;
   private List<CarbonColumn> indexedColumns;
 
-  IndexDataMapProvider(CarbonTable table, DataMapSchema schema, SparkSession sparkSession)
+  public IndexDataMapProvider(CarbonTable table, DataMapSchema schema, SparkSession sparkSession)
       throws MalformedDataMapCommandException {
     super(table, schema);
     this.sparkSession = sparkSession;
