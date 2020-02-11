@@ -39,7 +39,7 @@ import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datamap.DataMapStoreManager
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.metadata.datatype.DataTypes
-import org.apache.carbondata.core.metadata.schema.datamap.DataMapClassProvider
+import org.apache.carbondata.core.metadata.schema.datamap.{DataMapClassProvider, DataMapProperty}
 import org.apache.carbondata.core.metadata.schema.table.{CarbonTable, DataMapSchema, RelationIdentifier}
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager
 import org.apache.carbondata.datamap.DataMapManager
@@ -285,7 +285,7 @@ object MVHelper {
     }
     dataMapSchema.getRelationIdentifier.setTablePath(tablePath)
     dataMapSchema.setParentTables(new util.ArrayList[RelationIdentifier](parentIdents.asJava))
-    dataMapSchema.getProperties.put("full_refresh", fullRebuild.toString)
+    dataMapSchema.getProperties.put(DataMapProperty.FULL_REFRESH, fullRebuild.toString)
     try {
       DataMapStoreManager.getInstance().saveDataMapSchema(dataMapSchema)
     } catch {

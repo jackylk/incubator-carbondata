@@ -33,6 +33,7 @@ import org.apache.carbondata.core.datamap.{DataMapCatalog, DataMapProvider, Data
 import org.apache.carbondata.core.datamap.dev.{DataMap, DataMapFactory}
 import org.apache.carbondata.core.datamap.status.DataMapStatusManager
 import org.apache.carbondata.core.indexstore.Blocklet
+import org.apache.carbondata.core.metadata.schema.datamap.DataMapProperty
 import org.apache.carbondata.core.metadata.schema.table.{CarbonTable, DataMapSchema}
 import org.apache.carbondata.mv.rewrite.{SummaryDataset, SummaryDatasetCatalog}
 import org.apache.carbondata.processing.util.CarbonLoaderUtil
@@ -42,6 +43,7 @@ class MVDataMapProvider(
     sparkSession: SparkSession,
     dataMapSchema: DataMapSchema)
   extends DataMapProvider(null, dataMapSchema) {
+
   protected var dropTableCommand: CarbonDropTableCommand = null
 
   private val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)
@@ -119,8 +121,8 @@ class MVDataMapProvider(
       val updatedQuery = MVParser.getMVQuery(ctasQuery, sparkSession)
       var isOverwriteTable = false
       val isFullRefresh =
-        if (null != dataMapSchema.getProperties.get("full_refresh")) {
-          dataMapSchema.getProperties.get("full_refresh").toBoolean
+        if (null != dataMapSchema.getProperties.get(DataMapProperty.FULL_REFRESH)) {
+          dataMapSchema.getProperties.get(DataMapProperty.FULL_REFRESH).toBoolean
         } else {
           false
         }
@@ -204,4 +206,8 @@ class MVDataMapProvider(
   }
 
   override def supportRebuild(): Boolean = true
+}
+
+object MVDataMapProvider {
+  final val MV_PROVIDER_NAME = "mv"
 }

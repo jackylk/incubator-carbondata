@@ -32,7 +32,7 @@ import org.apache.spark.sql.hive.CarbonMVRules
 import org.apache.spark.sql.util.{CarbonException, SparkSQLUtil}
 
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
-import org.apache.carbondata.mv.extension.command.{CreateMaterializedViewCommand, DropMaterializedViewCommand}
+import org.apache.carbondata.mv.extension.command.{CreateMaterializedViewCommand, DropMaterializedViewCommand, RebuildMaterializedViewCommand, ShowMaterializedViewCommand}
 import org.apache.carbondata.mv.rewrite.MVUdf
 
 class MVParser extends StandardTokenParsers with PackratParsers {
@@ -142,7 +142,7 @@ class MVParser extends StandardTokenParsers with PackratParsers {
   private lazy val showMV: Parser[LogicalPlan] =
     SHOW ~> MATERIALIZED ~> VIEWS ~> opt(onTable) <~ opt(";") ^^ {
       case tableIdent =>
-        CarbonDataMapShowCommand(tableIdent)
+        ShowMaterializedViewCommand(tableIdent)
     }
 
   /**
@@ -151,7 +151,7 @@ class MVParser extends StandardTokenParsers with PackratParsers {
   private lazy val rebuildMV: Parser[LogicalPlan] =
     REBUILD ~> MATERIALIZED ~> VIEW ~> ident <~ opt(";") ^^ {
       case mvName =>
-        CarbonDataMapRebuildCommand(mvName, None)
+        RebuildMaterializedViewCommand(mvName)
     }
 
   /**

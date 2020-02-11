@@ -22,72 +22,50 @@ import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.execution.command.DataCommand
 
 import org.apache.carbondata.common.exceptions.sql.MalformedDataMapCommandException
+import org.apache.carbondata.core.datamap.DataMapStoreManager
 import org.apache.carbondata.core.datamap.status.DataMapStatusManager
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.datamap.DataMapManager
 import org.apache.carbondata.events.{UpdateDataMapPostExecutionEvent, _}
 
 /**
- * Rebuild the datamaps through sync with main table data. After sync with parent table's it enables
- * the datamap.
+ * Rebuild Materialized View Command implementation
+ * This command refresh the MV table incrementally and make it synchronized with the main
+ * table. After sync, MV state is changed to enabled.
  */
 case class RebuildMaterializedViewCommand(
-    dataMapName: String,
-    tableIdentifier: Option[TableIdentifier]) extends DataCommand {
+    mvName: String) extends DataCommand {
 
   override def processData(sparkSession: SparkSession): Seq[Row] = {
     import scala.collection.JavaConverters._
-    val schemaOption = CarbonDataMapShowCommand(tableIdentifier).getAllDataMaps(sparkSession)
-      .asScala
-      .find(p => p.getDataMapName.equalsIgnoreCase(dataMapName))
+    val schemas = DataMapStoreManager.getInstance().getAllDataMapSchemas
+    val schemaOption = schemas.asScala.find(p => p.getDataMapName.equalsIgnoreCase(mvName))
     if (schemaOption.isEmpty) {
-      if (tableIdentifier.isDefined) {
-        throw new MalformedDataMapCommandException(
-          s"Datamap with name $dataMapName does not exist on table ${tableIdentifier.get.table}")
-      } else {
-        throw new MalformedDataMapCommandException(
-          s"Datamap with name $dataMapName does not exist on any table")
-      }
+        throw new MalformedDataMapCommandException(s"Materialized view $mvName does not exist")
     }
     val schema = schemaOption.get
-    if (!schema.isLazy && schema.isIndexDataMap) {
-      throw new MalformedDataMapCommandException(
-        s"Non-lazy datamap $dataMapName does not support rebuild")
-    }
+    val mvTable = CarbonEnv.getCarbonTable(
+      Option(schema.getRelationIdentifier.getDatabaseName),
+      schema.getRelationIdentifier.getTableName
+    )(sparkSession)
 
-    val table = tableIdentifier match {
-      case Some(identifier) =>
-        CarbonEnv.getCarbonTable(identifier)(sparkSession)
-      case _ =>
-        CarbonEnv.getCarbonTable(
-          Option(schema.getRelationIdentifier.getDatabaseName),
-          schema.getRelationIdentifier.getTableName
-        )(sparkSession)
-    }
+    setAuditTable(mvTable)
 
-    setAuditTable(table)
-
-    val provider = DataMapManager.get().getDataMapProvider(table, schema, sparkSession)
+    val provider = DataMapManager.get().getDataMapProvider(mvTable, schema, sparkSession)
     provider.rebuild()
 
-    // After rebuild successfully enable the datamap.
-    val operationContext: OperationContext = new OperationContext()
-    val systemFolderLocation: String = CarbonProperties.getInstance().getSystemFolderLocation
-    val updateDataMapPreExecutionEvent: UpdateDataMapPreExecutionEvent =
-      new UpdateDataMapPreExecutionEvent(sparkSession,
-        systemFolderLocation,
-        new TableIdentifier(table.getTableName, Some(table.getDatabaseName)))
-    OperationListenerBus.getInstance().fireEvent(updateDataMapPreExecutionEvent,
-      operationContext)
-    DataMapStatusManager.enableDataMap(dataMapName)
-    val updateDataMapPostExecutionEvent: UpdateDataMapPostExecutionEvent =
-      new UpdateDataMapPostExecutionEvent(sparkSession,
-        systemFolderLocation,
-        new TableIdentifier(table.getTableName, Some(table.getDatabaseName)))
-    OperationListenerBus.getInstance().fireEvent(updateDataMapPostExecutionEvent,
-      operationContext)
+    // After rebuild successfully enable the MV table.
+    val operationContext = new OperationContext()
+    val storeLocation = CarbonProperties.getInstance().getSystemFolderLocation
+    val preExecEvent = UpdateDataMapPreExecutionEvent(sparkSession, storeLocation,
+      new TableIdentifier(mvTable.getTableName, Some(mvTable.getDatabaseName)))
+    OperationListenerBus.getInstance().fireEvent(preExecEvent, operationContext)
+    DataMapStatusManager.enableDataMap(mvName)
+    val postExecEvent = UpdateDataMapPostExecutionEvent(sparkSession, storeLocation,
+      new TableIdentifier(mvTable.getTableName, Some(mvTable.getDatabaseName)))
+    OperationListenerBus.getInstance().fireEvent(postExecEvent, operationContext)
     Seq.empty
   }
 
-  override protected def opName: String = "REBUILD DATAMAP"
+  override protected def opName: String = "REBUILD MATERIALIZED VIEW"
 }

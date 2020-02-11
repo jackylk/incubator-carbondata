@@ -31,6 +31,7 @@ import org.apache.carbondata.core.metadata.schema.table.DataMapSchema
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.datamap.DataMapManager
 import org.apache.carbondata.events._
+import org.apache.carbondata.mv.extension.MVDataMapProvider
 
 /**
  * Create Materialized View Command implementation
@@ -45,8 +46,6 @@ case class CreateMaterializedViewCommand(
     deferredRebuild: Boolean = false)
   extends AtomicRunnableCommand {
 
-  final val MV_PROVIDER_NAME = "mv"
-
   private val LOGGER = LogServiceFactory.getLogService(this.getClass.getName)
   private var dataMapProvider: DataMapProvider = _
   private var dataMapSchema: DataMapSchema = _
@@ -55,7 +54,7 @@ case class CreateMaterializedViewCommand(
 
     setAuditInfo(Map("mvName" -> mvName) ++ mvProperties)
 
-    dataMapSchema = new DataMapSchema(mvName, MV_PROVIDER_NAME)
+    dataMapSchema = new DataMapSchema(mvName, MVDataMapProvider.MV_PROVIDER_NAME)
     val property = mvProperties.map(x => (x._1.trim, x._2.trim)).asJava
     val javaMap = new java.util.HashMap[String, String](property)
     javaMap.put(DataMapProperty.DEFERRED_REBUILD, deferredRebuild.toString)
@@ -80,7 +79,7 @@ case class CreateMaterializedViewCommand(
     dataMapProvider.initMeta(queryString.orNull)
 
     val postExecEvent = CreateDataMapPostExecutionEvent(
-      sparkSession, systemFolderLocation, null, MV_PROVIDER_NAME)
+      sparkSession, systemFolderLocation, null, MVDataMapProvider.MV_PROVIDER_NAME)
     OperationListenerBus.getInstance().fireEvent(postExecEvent, operationContext)
     Seq.empty
   }

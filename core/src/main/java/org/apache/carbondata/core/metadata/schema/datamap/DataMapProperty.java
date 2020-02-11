@@ -44,4 +44,9 @@ public class DataMapProperty {
    * for internal property 'QUERYTYPE'
    */
   public static final String QUERY_TYPE = "QUERYTYPE";
+
+  /**
+   * internal property, true if it needs full refresh, thus it does not support incremental load
+   */
+  public static final String FULL_REFRESH = "full_refresh";
 }
