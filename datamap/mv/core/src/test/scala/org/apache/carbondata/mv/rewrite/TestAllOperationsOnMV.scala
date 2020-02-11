@@ -257,7 +257,7 @@ class TestAllOperationsOnMV extends QueryTest with BeforeAndAfterEach {
     var result = sql("show materialized views on table maintable").collectAsList()
     assert(result.get(0).get(0).toString.equalsIgnoreCase("dm1"))
     assert(result.get(0).get(1).toString.equalsIgnoreCase("default.dm1_table"))
-    assert(result.get(0).get(2).toString.equalsIgnoreCase("true"))
+    assert(result.get(0).get(2).toString.equalsIgnoreCase("manual"))
     assert(result.get(0).get(3).toString.equalsIgnoreCase("true"))
     assert(result.get(0).get(5).toString.equalsIgnoreCase("ENABLED"))
     assert(result.get(0).get(6).toString.contains("{\"default.maintable\":\"0\""))
@@ -267,6 +267,7 @@ class TestAllOperationsOnMV extends QueryTest with BeforeAndAfterEach {
     result = sql("show materialized views on table maintable").collectAsList()
     assert(result.get(0).get(5).toString.equalsIgnoreCase("ENABLED"))
     assert(result.get(0).get(6).toString.contains("{\"default.maintable\":\"1\""))
+    sql("drop materialized view if exists dm1 ")
     sql("drop table IF EXISTS maintable")
   }
 
@@ -286,7 +287,7 @@ class TestAllOperationsOnMV extends QueryTest with BeforeAndAfterEach {
     checkExistence(sql("show materialized views on table sales"), true, "DISABLED")
     sql("rebuild materialized view innerjoin")
     var result = sql("show materialized views on table products").collectAsList()
-    assert(result.get(0).get(2).toString.equalsIgnoreCase("true"))
+    assert(result.get(0).get(2).toString.equalsIgnoreCase("manual"))
     assert(result.get(0).get(3).toString.equalsIgnoreCase("false"))
     assert(result.get(0).get(5).toString.equalsIgnoreCase("ENABLED"))
     assert(result.get(0).get(6).toString.contains("\"default.products\":\"0\",\"default.sales\":\"0\"}"))
@@ -300,6 +301,20 @@ class TestAllOperationsOnMV extends QueryTest with BeforeAndAfterEach {
     result = sql("show materialized views on table sales").collectAsList()
     assert(result.get(0).get(5).toString.equalsIgnoreCase("ENABLED"))
     assert(result.get(0).get(6).toString.contains("\"default.products\":\"0\",\"default.sales\":\"1\"}"))
+    sql("drop materialized view if exists innerjoin ")
+    sql(
+      "Create materialized view innerjoin as Select p.product, p.amount, " +
+      "s.quantity, s.product from " +
+      "products p, sales s where p.product=s.product")
+    checkExistence(sql("show materialized views on table products"), true, "ENABLED")
+    checkExistence(sql("show materialized views on table sales"), true, "ENABLED")
+    sql("show materialized views").show(false)
+    result = sql("show materialized views on table products").collectAsList()
+    assert(result.get(0).get(2).toString.equalsIgnoreCase("auto"))
+    assert(result.get(0).get(3).toString.equalsIgnoreCase("false"))
+    assert(result.get(0).get(5).toString.equalsIgnoreCase("ENABLED"))
+    sql("drop materialized view if exists innerjoin ")
+
     sql("drop table if exists products")
     sql("drop table if exists sales")
   }

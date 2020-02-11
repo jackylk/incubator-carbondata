@@ -32,7 +32,6 @@ import org.apache.carbondata.mv.timeseries.TimeSeriesFunction
 //   2. DROP MATERIALIZED VIEW
 //   3. SHOW MATERIALIZED VIEW
 //   4. REBUILD MATERIALIZED VIEW
-//   5. ALTER MATERIALIZED VIEW COMPACT
 //
 // Following optimizer rules are added:
 //   1. Rewrite SQL statement by matching existing MV and

@@ -42,7 +42,7 @@ case class ShowMaterializedViewCommand(tableIdentifier: Option[TableIdentifier])
     Seq(
       AttributeReference("Name", StringType, nullable = false)(),
       AttributeReference("Associated Table", StringType, nullable = false)(),
-      AttributeReference("Deferred Rebuild", BooleanType, nullable = false)(),
+      AttributeReference("Refresh", StringType, nullable = false)(),
       AttributeReference("Incremental", BooleanType, nullable = false)(),
       AttributeReference("Properties", StringType, nullable = false)(),
       AttributeReference("Status", StringType, nullable = false)(),
@@ -81,7 +81,7 @@ case class ShowMaterializedViewCommand(tableIdentifier: Option[TableIdentifier])
           Row(
             schema.getDataMapName,
             schema.getTable,
-            schema.isLazy,
+            if (schema.isLazy) "manual" else "auto",
             schema.supportIncrementalBuild,
             schema.getPropertiesAsString,
             schema.getStatus.name(),

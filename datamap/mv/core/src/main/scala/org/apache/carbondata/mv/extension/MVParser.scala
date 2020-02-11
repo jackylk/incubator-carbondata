@@ -23,11 +23,8 @@ import scala.util.parsing.combinator.PackratParsers
 import scala.util.parsing.combinator.syntactical.StandardTokenParsers
 
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.catalyst.{CarbonParserUtil, SqlLexical, TableIdentifier}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.execution.command.AlterTableModel
-import org.apache.spark.sql.execution.command.datamap.{CarbonCreateDataMapCommand, CarbonDataMapRebuildCommand, CarbonDataMapShowCommand, CarbonDropDataMapCommand}
-import org.apache.spark.sql.execution.command.management.CarbonAlterTableCompactionCommand
+import org.apache.spark.sql.catalyst.{SqlLexical, TableIdentifier}
 import org.apache.spark.sql.hive.CarbonMVRules
 import org.apache.spark.sql.util.{CarbonException, SparkSQLUtil}
 
@@ -55,12 +52,6 @@ class MVParser extends StandardTokenParsers with PackratParsers {
   protected val REBUILD: Regex = carbonKeyWord("REBUILD")
   protected val ON: Regex = carbonKeyWord("ON")
   protected val TABLE: Regex = carbonKeyWord("TABLE")
-  protected val ALTER: Regex = carbonKeyWord("ALTER")
-  protected val COMPACT: Regex = carbonKeyWord("COMPACT")
-  protected val IN: Regex = carbonKeyWord("IN")
-  protected val SEGMENT: Regex = carbonKeyWord("SEGMENT")
-  protected val ID: Regex = carbonKeyWord("ID")
-  protected val WHERE: Regex = carbonKeyWord("WHERE")
 
   /**
    * This will convert key word to regular expression.
@@ -110,7 +101,7 @@ class MVParser extends StandardTokenParsers with PackratParsers {
   private lazy val start: Parser[LogicalPlan] = mvCommand
 
   private lazy val mvCommand: Parser[LogicalPlan] =
-    createMV | dropMV | showMV | rebuildMV | compactMV
+    createMV | dropMV | showMV | rebuildMV
 
   /**
    * CREATE MATERIALIZED VIEW IF NOT EXISTS mv_name
@@ -152,20 +143,6 @@ class MVParser extends StandardTokenParsers with PackratParsers {
     REBUILD ~> MATERIALIZED ~> VIEW ~> ident <~ opt(";") ^^ {
       case mvName =>
         RebuildMaterializedViewCommand(mvName)
-    }
-
-  /**
-   * ALTER MATERIALIZED VIEW mv_name COMPACT 'minor/major/custom'
-   * WHERE SEGMENT.ID IN (segment_id_list)
-   */
-  private lazy val compactMV: Parser[LogicalPlan] =
-    ALTER ~> MATERIALIZED ~> VIEW ~> (ident <~ ".").? ~ ident ~ (COMPACT ~ stringLit) ~
-    (WHERE ~> (SEGMENT ~ "." ~ ID) ~> IN ~> "(" ~> repsep(segmentId, ",") <~ ")").? <~
-    opt(";") ^^ {
-      case dbName ~ datamap ~ (compact ~ compactType) ~ segs =>
-        val alterTableModel = AlterTableModel(CarbonParserUtil.convertDbNameToLowerCase(dbName),
-          datamap + "_table", None, compactType, Some(System.currentTimeMillis()), null, segs)
-        CarbonAlterTableCompactionCommand(alterTableModel)
     }
 
   // Returns the rest of the input string that are not parsed yet
