@@ -40,7 +40,7 @@ class MVCoalesceTestCase  extends QueryTest with BeforeAndAfterAll  {
     sql("drop materialized view if exists coalesce_test_main_mv")
     sql("create materialized view coalesce_test_main_mv as " +
       "select sum(id) as sum_id,name as myname,weight from coalesce_test_main group by name,weight")
-    sql("rebuild materialized view coalesce_test_main_mv")
+    sql("refresh materialized view coalesce_test_main_mv")
 
     val frame = sql("select coalesce(sum(id),0) as sumid,name from coalesce_test_main group by name")
     assert(TestUtil.verifyMVDataMap(frame.queryExecution.optimizedPlan, "coalesce_test_main_mv"))
@@ -54,7 +54,7 @@ class MVCoalesceTestCase  extends QueryTest with BeforeAndAfterAll  {
     val exception: Exception = intercept[UnsupportedOperationException] {
       sql("create materialized view coalesce_test_main_mv as " +
         "select coalesce(sum(id),0) as sum_id,name as myname,weight from coalesce_test_main group by name,weight")
-      sql("rebuild materialized view coalesce_test_main_mv")
+      sql("refresh materialized view coalesce_test_main_mv")
     }
     assert("MV doesn't support Coalesce".equals(exception.getMessage))
 
@@ -69,7 +69,7 @@ class MVCoalesceTestCase  extends QueryTest with BeforeAndAfterAll  {
     sql("drop materialized view if exists coalesce_test_main_mv")
     sql("create materialized view coalesce_test_main_mv as " +
       "select sum(coalesce(id,0)) as sum_id,name as myname,weight from coalesce_test_main group by name,weight")
-    sql("rebuild materialized view coalesce_test_main_mv")
+    sql("refresh materialized view coalesce_test_main_mv")
 
     val frame = sql("select sum(coalesce(id,0)) as sumid,name from coalesce_test_main group by name")
     assert(TestUtil.verifyMVDataMap(frame.queryExecution.optimizedPlan, "coalesce_test_main_mv"))

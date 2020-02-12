@@ -29,7 +29,7 @@ import org.apache.spark.sql.hive.CarbonMVRules
 import org.apache.spark.sql.util.{CarbonException, SparkSQLUtil}
 
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
-import org.apache.carbondata.mv.extension.command.{CreateMaterializedViewCommand, DropMaterializedViewCommand, RebuildMaterializedViewCommand, ShowMaterializedViewCommand}
+import org.apache.carbondata.mv.extension.command.{CreateMaterializedViewCommand, DropMaterializedViewCommand, RefreshMaterializedViewCommand, ShowMaterializedViewCommand}
 import org.apache.carbondata.mv.rewrite.MVUdf
 
 class MVParser extends StandardTokenParsers with PackratParsers {
@@ -49,7 +49,7 @@ class MVParser extends StandardTokenParsers with PackratParsers {
   protected val MVPROPERTIES: Regex = carbonKeyWord("MVPROPERTIES")
   protected val WITH: Regex = carbonKeyWord("WITH")
   protected val DEFERRED: Regex = carbonKeyWord("DEFERRED")
-  protected val REBUILD: Regex = carbonKeyWord("REBUILD")
+  protected val REFRESH: Regex = carbonKeyWord("REFRESH")
   protected val ON: Regex = carbonKeyWord("ON")
   protected val TABLE: Regex = carbonKeyWord("TABLE")
 
@@ -101,7 +101,7 @@ class MVParser extends StandardTokenParsers with PackratParsers {
   private lazy val start: Parser[LogicalPlan] = mvCommand
 
   private lazy val mvCommand: Parser[LogicalPlan] =
-    createMV | dropMV | showMV | rebuildMV
+    createMV | dropMV | showMV | refreshMV
 
   /**
    * CREATE MATERIALIZED VIEW IF NOT EXISTS mv_name
@@ -109,7 +109,7 @@ class MVParser extends StandardTokenParsers with PackratParsers {
    */
   private lazy val createMV: Parser[LogicalPlan] =
     CREATE ~> MATERIALIZED ~> VIEW ~> opt(IF ~> NOT ~> EXISTS) ~ ident ~
-    opt(WITH ~> DEFERRED ~> REBUILD) ~
+    opt(WITH ~> DEFERRED ~> REFRESH) ~
     (MVPROPERTIES ~> "(" ~> repsep(options, ",") <~ ")").? ~
     (AS ~> restInput).? <~ opt(";") ^^ {
       case ifNotExists ~ mvName ~ deferredRebuild ~ mvProperties ~ query =>
@@ -137,12 +137,12 @@ class MVParser extends StandardTokenParsers with PackratParsers {
     }
 
   /**
-   * REBUILD MATERIALIZED VIEW mv_name
+   * REFRESH MATERIALIZED VIEW mv_name
    */
-  private lazy val rebuildMV: Parser[LogicalPlan] =
-    REBUILD ~> MATERIALIZED ~> VIEW ~> ident <~ opt(";") ^^ {
+  private lazy val refreshMV: Parser[LogicalPlan] =
+    REFRESH ~> MATERIALIZED ~> VIEW ~> ident <~ opt(";") ^^ {
       case mvName =>
-        RebuildMaterializedViewCommand(mvName)
+        RefreshMaterializedViewCommand(mvName)
     }
 
   // Returns the rest of the input string that are not parsed yet

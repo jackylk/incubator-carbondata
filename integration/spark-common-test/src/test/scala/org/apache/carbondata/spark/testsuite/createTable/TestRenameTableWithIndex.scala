@@ -124,7 +124,7 @@ class TestRenameTableWithIndex extends QueryTest with BeforeAndAfterAll {
 
     sql("drop materialized view if exists datamap1")
     sql("create materialized view datamap1 using 'mv' as select empname, designation from fact_table2")
-    sql(s"rebuild materialized view datamap1")
+    sql(s"refresh materialized view datamap1")
 
     sql(
       s"""

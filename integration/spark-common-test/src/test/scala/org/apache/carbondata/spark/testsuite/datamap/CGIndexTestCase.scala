@@ -403,8 +403,8 @@ class CGIndexTestCase extends QueryTest with BeforeAndAfterAll {
       """.stripMargin)
     val table = CarbonMetadata.getInstance().getCarbonTable("default_datamap_test")
     // register datamap writer
-    sql(s"create index ggdatamap1 on table datamap_test using '${classOf[CGIndexFactory].getName}' DMPROPERTIES('index_columns'='name')")
-    sql(s"create index ggdatamap2 on table datamap_test using '${classOf[CGIndexFactory].getName}' DMPROPERTIES('index_columns'='city')")
+    sql(s"create index ggdatamap1 on table datamap_test using '${classOf[CGIndexFactory].getName}' PROPERTIES('index_columns'='name')")
+    sql(s"create index ggdatamap2 on table datamap_test using '${classOf[CGIndexFactory].getName}' PROPERTIES('index_columns'='city')")
     sql(s"LOAD DATA LOCAL INPATH '$file2' INTO TABLE datamap_test OPTIONS('header'='false')")
     checkAnswer(sql("select * from datamap_test where name='n502670' and city='c2670'"),
       sql("select * from normal_test where name='n502670' and city='c2670'"))

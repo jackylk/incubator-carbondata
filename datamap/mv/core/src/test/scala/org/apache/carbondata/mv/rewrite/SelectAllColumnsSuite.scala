@@ -28,7 +28,7 @@ class SelectAllColumnsSuite extends QueryTest {
     sql("insert into all_table select 'tom',20,175")
     sql("insert into all_table select 'tom',32,180")
     sql("create materialized view all_table_mv as select avg(age),avg(height),name from all_table group by name")
-    sql("rebuild materialized view all_table_mv")
+    sql("refresh materialized view all_table_mv")
     checkAnswer(
       sql("select avg(age),avg(height),name from all_table group by name"),
       Seq(Row(26.0, 177.5, "tom")))

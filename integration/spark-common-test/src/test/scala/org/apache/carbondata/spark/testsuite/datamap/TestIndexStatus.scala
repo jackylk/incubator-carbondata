@@ -22,6 +22,7 @@ import java.util
 
 import scala.collection.JavaConverters._
 
+import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
 
@@ -154,14 +155,14 @@ class TestIndexStatus extends QueryTest with BeforeAndAfterAll {
     sql("DROP TABLE IF EXISTS datamapstatustest2")
   }
 
-  test("datamap create without on table test") {
+  test("index create without on table test") {
     sql("DROP TABLE IF EXISTS datamapstatustest3")
     sql(
       """
         | CREATE TABLE datamapstatustest3(id int, name string, city string, age int)
         | STORED AS carbondata TBLPROPERTIES('sort_scope'='local_sort','sort_columns'='name,city')
       """.stripMargin)
-    intercept[MalformedDataMapCommandException] {
+    intercept[AnalysisException] {
       sql(
         s"""create index statusdatamap3
            |using '${classOf[TestIndexFactory].getName}'
@@ -172,7 +173,7 @@ class TestIndexStatus extends QueryTest with BeforeAndAfterAll {
     sql("DROP TABLE IF EXISTS datamapstatustest3")
   }
 
-  test("rebuild datamap status") {
+  test("refresh datamap status") {
     sql("DROP TABLE IF EXISTS datamapstatustest3")
     sql(
       """
@@ -197,7 +198,7 @@ class TestIndexStatus extends QueryTest with BeforeAndAfterAll {
     assert(details.length == 1)
     assert(details.exists(p => p.getDataMapName.equals("statusdatamap3") && p.getStatus == DataMapStatus.DISABLED))
 
-    sql(s"REFRESH INDEX statusdatamap3")
+    sql(s"REFRESH INDEX statusdatamap3 ON TABLE datamapstatustest3")
 
     details = DataMapStatusManager.readDataMapStatusDetails()
     assert(details.length == 1)

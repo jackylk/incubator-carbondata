@@ -36,7 +36,7 @@ class MVInvalidTestCase  extends QueryTest with BeforeAndAfterAll {
     sql("insert into main_table select 'tom',20,170")
     sql("insert into main_table select 'lily',30,160")
     sql("create materialized view main_table_mv as select age,name,height from main_table where name = 'tom'")
-    sql("rebuild materialized view main_table_mv")
+    sql("refresh materialized view main_table_mv")
 
     assert(!TestUtil.verifyMVDataMap(sql(querySQL).queryExecution.optimizedPlan, "main_table_mv"))
   }

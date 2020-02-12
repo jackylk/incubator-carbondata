@@ -74,7 +74,7 @@ object MVExample {
     spark.sql(s"""create materialized view simple_sub_projection as
          | select id,name from mainTable"""
         .stripMargin)
-    spark.sql(s"""rebuild materialized view simple_sub_projection""")
+    spark.sql(s"""refresh materialized view simple_sub_projection""")
 
     // Check the physical plan which uses MV table simple_sub_projection_table instead of mainTable
     spark.sql(s"""select id from mainTable""").explain(true)
@@ -87,7 +87,7 @@ object MVExample {
       s"""create materialized view simple_agg as
          | select id,sum(age) from mainTable group by id""".stripMargin)
 
-    spark.sql(s"""rebuild materialized view simple_agg""")
+    spark.sql(s"""refresh materialized view simple_agg""")
 
     // Check the physical plan which uses MV table simple_agg_table instead of mainTable
     spark.sql(s"""select id,sum(age) from mainTable group by id""").explain(true)
@@ -147,7 +147,7 @@ object MVExample {
     spark.sql(
       s"""create materialized view simple_agg_employee as
          | select id,sum(salary) from employee_salary group by id""".stripMargin)
-    spark.sql(s"""rebuild materialized view simple_agg_employee""")
+    spark.sql(s"""refresh materialized view simple_agg_employee""")
 
     // Test performance of aggregate queries with mv datamap
     val timeWithOutMv = time(spark
@@ -176,7 +176,7 @@ object MVExample {
       s"""create materialized view simple_join_agg_employee as
          | select id,address, sum(salary) from employee_salary f join emp_address d
          | on f.name=d.name group by id,address""".stripMargin)
-    spark.sql(s"""rebuild materialized view simple_join_agg_employee""")
+    spark.sql(s"""refresh materialized view simple_join_agg_employee""")
 
     val timeWithMVJoin =
       time(spark.sql(

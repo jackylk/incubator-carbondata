@@ -33,7 +33,7 @@ import org.apache.carbondata.core.metadata.schema.table.DataMapSchema
 /**
  * Show the indexes on the table
  */
-case class CarbonShowIndexCommand(table: TableIdentifier)
+case class CarbonShowIndexCommand(table: Option[TableIdentifier])
   extends DataCommand {
 
   override def output: Seq[Attribute] = {
@@ -46,25 +46,30 @@ case class CarbonShowIndexCommand(table: TableIdentifier)
   }
 
   override def processData(sparkSession: SparkSession): Seq[Row] = {
-    convertToRow(getAllDataMaps(sparkSession))
+    convertToRow(getAllIndexes(sparkSession))
   }
 
   /**
-   * get all indexes for this table
+   * get all indexes
    */
-  def getAllDataMaps(sparkSession: SparkSession): Seq[DataMapSchema] = {
+  def getAllIndexes(sparkSession: SparkSession): Seq[DataMapSchema] = {
     val dataMapSchemaList: util.List[DataMapSchema] = new util.ArrayList[DataMapSchema]()
-    val carbonTable = CarbonEnv.getCarbonTable(table)(sparkSession)
-    setAuditTable(carbonTable)
-    Checker.validateTableExists(table.database, table.table, sparkSession)
-    if (carbonTable.hasDataMapSchema) {
-      dataMapSchemaList.addAll(carbonTable.getTableInfo.getDataMapSchemaList)
+    table match {
+      case Some(table) =>
+        val carbonTable = CarbonEnv.getCarbonTable(table)(sparkSession)
+        setAuditTable(carbonTable)
+        Checker.validateTableExists(table.database, table.table, sparkSession)
+        if (carbonTable.hasDataMapSchema) {
+          dataMapSchemaList.addAll(carbonTable.getTableInfo.getDataMapSchemaList)
+        }
+        val indexSchemas = DataMapStoreManager.getInstance().getDataMapSchemasOfTable(carbonTable)
+        if (!indexSchemas.isEmpty) {
+          dataMapSchemaList.addAll(indexSchemas)
+        }
+      case _ =>
+        dataMapSchemaList.addAll(DataMapStoreManager.getInstance().getAllDataMapSchemas)
     }
-    val indexSchemas = DataMapStoreManager.getInstance().getDataMapSchemasOfTable(carbonTable)
-    if (!indexSchemas.isEmpty) {
-      dataMapSchemaList.addAll(indexSchemas)
-    }
-    dataMapSchemaList.asScala.filter(_.isIndexDataMap)
+    dataMapSchemaList.asScala
   }
 
   private def convertToRow(schemaList: Seq[DataMapSchema]) = {

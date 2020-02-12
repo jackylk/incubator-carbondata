@@ -58,7 +58,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     val query: String = "select empname from test_table"
     val df1 = sql(s"$query")
     assert(!TestUtil.verifyMVDataMap(df1.queryExecution.optimizedPlan, "datamap1"))
-    sql(s"rebuild materialized view datamap1")
+    sql(s"refresh materialized view datamap1")
     val dataMapTable = CarbonMetadata.getInstance().getCarbonTable(
       CarbonCommonConstants.DATABASE_DEFAULT_NAME,
       "datamap1_table"
@@ -72,7 +72,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     assert(TestUtil.verifyMVDataMap(df2.queryExecution.optimizedPlan, "datamap1"))
     loadDataToFactTable("test_table")
     loadDataToFactTable("test_table1")
-    sql(s"rebuild materialized view datamap1")
+    sql(s"refresh materialized view datamap1")
     loadMetadataDetails = SegmentStatusManager.readLoadMetadata(dataMapTable.getMetadataPath)
     segmentMap = DataMapSegmentStatusUtil.getSegmentMap(loadMetadataDetails(1).getExtraInfo)
     segmentList.clear()
@@ -104,7 +104,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
       "from test_table")
     loadDataToFactTable("test_table")
     loadDataToFactTable("test_table1")
-    sql(s"rebuild materialized view datamap1")
+    sql(s"refresh materialized view datamap1")
     val dataMapTable = CarbonMetadata.getInstance().getCarbonTable(
       CarbonCommonConstants.DATABASE_DEFAULT_NAME,
       "datamap1_table")
@@ -131,7 +131,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     sql("insert into testtable values('b','bcd',2)")
     sql("drop materialized view if exists datamap1")
     sql("create materialized view datamap1  WITH DEFERRED REFRESH as select a, sum(b) from main_table group by a")
-    sql(s"rebuild materialized view datamap1")
+    sql(s"refresh materialized view datamap1")
     var df = sql(
       s"""select a, sum(b) from main_table group by a""".stripMargin)
     assert(TestUtil.verifyMVDataMap(df.queryExecution.optimizedPlan, "datamap1"))
@@ -145,7 +145,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     var loadMetadataDetails = SegmentStatusManager.readLoadMetadata(dataMapTable.getMetadataPath)
     assert(loadMetadataDetails(0).getSegmentStatus == SegmentStatus.MARKED_FOR_DELETE)
     checkAnswer(sql("select * from main_table"), sql("select * from testtable"))
-    sql(s"rebuild materialized view datamap1")
+    sql(s"refresh materialized view datamap1")
     loadMetadataDetails = SegmentStatusManager.readLoadMetadata(dataMapTable.getMetadataPath)
     val segmentMap = DataMapSegmentStatusUtil.getSegmentMap(loadMetadataDetails(1).getExtraInfo)
     val segmentList = new java.util.ArrayList[String]()
@@ -168,12 +168,12 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
       "create materialized view datamap1   WITH DEFERRED REFRESH  as select empname, designation " +
       "from test_table")
     loadDataToFactTable("test_table")
-    sql(s"rebuild materialized view datamap1")
+    sql(s"refresh materialized view datamap1")
     loadDataToFactTable("test_table")
-    sql(s"rebuild materialized view datamap1")
+    sql(s"refresh materialized view datamap1")
     loadDataToFactTable("test_table")
-    sql(s"rebuild materialized view datamap1")
-    sql("alter materialized view datamap1 compact 'major'")
+    sql(s"refresh materialized view datamap1")
+    sql("alter table datamap1_table compact 'major'")
     val dataMapTable = CarbonMetadata.getInstance().getCarbonTable(
       CarbonCommonConstants.DATABASE_DEFAULT_NAME,
       "datamap1_table"
@@ -200,17 +200,17 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
       "create materialized view datamap1   WITH DEFERRED REFRESH as select empname, designation " +
       "from test_table")
     loadDataToFactTable("test_table")
-    sql(s"rebuild materialized view datamap1")
+    sql(s"refresh materialized view datamap1")
     loadDataToFactTable("test_table")
-    sql(s"rebuild materialized view datamap1")
+    sql(s"refresh materialized view datamap1")
     loadDataToFactTable("test_table")
-    sql(s"rebuild materialized view datamap1")
+    sql(s"refresh materialized view datamap1")
     loadDataToFactTable("test_table")
-    sql(s"rebuild materialized view datamap1")
+    sql(s"refresh materialized view datamap1")
     loadDataToFactTable("test_table")
-    sql(s"rebuild materialized view datamap1")
+    sql(s"refresh materialized view datamap1")
     loadDataToFactTable("test_table")
-    sql(s"rebuild materialized view datamap1")
+    sql(s"refresh materialized view datamap1")
     sql("clean files for table datamap1_table")
     sql("clean files for table test_table")
     val dataMapTable = CarbonMetadata.getInstance().getCarbonTable(
@@ -235,7 +235,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     sql("drop materialized view if exists datamap1")
     sql(
       "create materialized view datamap1   WITH DEFERRED REFRESH as select a, sum(b) from test_table  group by a")
-    sql(s"rebuild materialized view datamap1")
+    sql(s"refresh materialized view datamap1")
     checkAnswer(sql(" select a, sum(b) from test_table  group by a"), Seq(Row("a", null), Row("b", null)))
     sql("insert overwrite table test_table select 'd','abc',3")
     val dataMapTable = CarbonEnv.getCarbonTable(
@@ -244,7 +244,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     var loadMetadataDetails = SegmentStatusManager.readLoadMetadata(dataMapTable.getMetadataPath)
     assert(loadMetadataDetails(0).getSegmentStatus == SegmentStatus.MARKED_FOR_DELETE)
     checkAnswer(sql(" select a, sum(b) from test_table  group by a"), Seq(Row("d", null)))
-    sql(s"rebuild materialized view datamap1")
+    sql(s"refresh materialized view datamap1")
     loadMetadataDetails = SegmentStatusManager.readLoadMetadata(dataMapTable.getMetadataPath)
     val segmentMap = DataMapSegmentStatusUtil.getSegmentMap(loadMetadataDetails(1).getExtraInfo)
     val segmentList = new java.util.ArrayList[String]()
@@ -269,12 +269,12 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     sql("drop table if exists sales1")
     sql("create table sales1 (product string, quantity int) STORED AS carbondata")
     sql(s"load data INPATH '$resourcesPath/sales_data.csv' into table sales1")
-    sql(s"rebuild materialized view innerjoin")
+    sql(s"refresh materialized view innerjoin")
     checkAnswer(sql("Select p.product, p.amount, s.quantity from products1 p, sales1 s where p.product=s.product"),
       sql("Select p.product, p.amount, s.quantity from products p, sales s where p.product=s.product"))
     sql("insert into products values('Biscuits',10)")
     sql("insert into products1 values('Biscuits',10)")
-    sql("rebuild materialized view innerjoin")
+    sql("refresh materialized view innerjoin")
     checkAnswer(sql("Select p.product, p.amount, s.quantity from products1 p, sales1 s where p.product=s.product"),
       sql("Select p.product, p.amount, s.quantity from products p, sales s where p.product=s.product"))
     sql("insert into sales values('Biscuits',100)")
@@ -295,7 +295,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     sql("drop materialized view if exists datamap_mt")
     sql(
       "create materialized view datamap_mt   WITH DEFERRED REFRESH as select a, sum(b) from main_table  group by a")
-    sql(s"rebuild materialized view datamap_mt")
+    sql(s"refresh materialized view datamap_mt")
     checkAnswer(sql("select a, sum(b) from main_table  group by a"),
       sql("select a, sum(b) from test_table  group by a"))
     sql("SET carbon.input.segments.default.main_table = 1")
@@ -315,7 +315,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     sql("drop materialized view if exists datamap1")
     sql("create materialized view datamap1   WITH DEFERRED REFRESH as select a, sum(c) from main_table  group by a")
     sql("SET carbon.input.segments.default.main_table=1")
-    sql(s"rebuild materialized view datamap1")
+    sql(s"refresh materialized view datamap1")
     val df = sql("select a, sum(c) from main_table  group by a")
     assert(!TestUtil.verifyMVDataMap(df.queryExecution.optimizedPlan, "datamap1"))
     sql("reset")
@@ -332,11 +332,11 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     sql("insert into main_table values('b','bcd',2)")
     sql("drop materialized view if exists datamap1")
     sql("create materialized view datamap1 WITH DEFERRED REFRESH as select a, sum(b) from main_table  group by a")
-    sql("rebuild materialized view datamap1")
+    sql("refresh materialized view datamap1")
     sql("insert into main_table values('a','abc',1)")
     sql("insert into main_table values('b','bcd',2)")
-    sql("rebuild materialized view datamap1")
-    sql("alter materialized view datamap1 compact 'custom' where segment.id in (0,1)")
+    sql("refresh materialized view datamap1")
+    sql("alter table datamap1_table compact 'custom' where segment.id in (0,1)")
     val dataMapTable = CarbonMetadata.getInstance().getCarbonTable(
       CarbonCommonConstants.DATABASE_DEFAULT_NAME,
       "datamap1_table")
@@ -362,12 +362,12 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     sql("drop materialized view if exists datamap_1")
     sql("create materialized view datamap_1   WITH DEFERRED REFRESH as select sum(a)+sum(b) from main_table")
     checkAnswer(sql("select sum(a)+sum(b) from main_table"), Seq(Row(8)))
-    sql("rebuild materialized view datamap_1")
+    sql("refresh materialized view datamap_1")
     checkAnswer(sql("select sum(a)+sum(b) from main_table"), Seq(Row(8)))
     sql("insert into main_table values(1,2,3)")
     sql("insert into main_table values(1,4,5)")
     checkAnswer(sql("select sum(a)+sum(b) from main_table"), Seq(Row(16)))
-    sql("rebuild materialized view datamap_1")
+    sql("refresh materialized view datamap_1")
     checkAnswer(sql("select sum(a)+sum(b) from main_table"), Seq(Row(16)))
     sql("drop table IF EXISTS main_table")
   }
@@ -535,9 +535,9 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
       "from test_table")
     loadDataToFactTable("test_table")
     loadDataToFactTable("test_table")
-    sql(s"rebuild materialized view datamap1")
+    sql(s"refresh materialized view datamap1")
     sql("alter table test_table compact 'major'")
-    sql(s"rebuild materialized view datamap1")
+    sql(s"refresh materialized view datamap1")
     val dataMapTable = CarbonMetadata.getInstance().getCarbonTable(
       CarbonCommonConstants.DATABASE_DEFAULT_NAME,
       "datamap1_table")
@@ -572,7 +572,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     checkAnswer(sql("select empname, designation from test_table"),
       sql("select empname, designation from test_table1"))
     val result = sql("show materialized views on table test_table").collectAsList()
-    assert(result.get(0).get(5).toString.contains("\"default.test_table\":\"12.1\""))
+    assert(result.get(0).get(6).toString.contains("\"default.test_table\":\"12.1\""))
     val df = sql(s""" select empname, designation from test_table""".stripMargin)
     assert(TestUtil.verifyMVDataMap(df.queryExecution.optimizedPlan, "datamap_com"))
   }

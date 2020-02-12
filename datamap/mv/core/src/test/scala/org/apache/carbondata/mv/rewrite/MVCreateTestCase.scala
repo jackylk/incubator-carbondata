@@ -965,7 +965,7 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
     sql("insert into all_table select 1,1,null,1,1,1,null,1,1,1,1,1,1,1,1,1,1,1,2,'binary2'")
 
     sql("create materialized view all_table_mv as " + querySQL)
-    sql("rebuild materialized view all_table_mv")
+    sql("refresh materialized view all_table_mv")
 
     var frame = sql(querySQL)
     assert(TestUtil.verifyMVDataMap(frame.queryExecution.optimizedPlan, "all_table_mv"))
@@ -1037,7 +1037,7 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
     sql("create table mvtable1(name string,age int,salary int) STORED AS carbondata")
     sql("create materialized view MV11 as select name from mvtable1")
     sql("insert into mvtable1 select 'n1',12,12")
-    sql("rebuild materialized view MV11")
+    sql("refresh materialized view MV11")
     val frame = sql("select count(*) from mvtable1")
     assert(!TestUtil.verifyMVDataMap(frame.queryExecution.optimizedPlan, "MV11"))
     checkAnswer(frame,Seq(Row(1)))
@@ -1243,7 +1243,7 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
 
     sql("drop materialized view if exists addseg")
     sql("create materialized view addseg WITH DEFERRED REFRESH as select empname, designation from fact_table_addseg")
-    sql("rebuild materialized view addseg")
+    sql("refresh materialized view addseg")
     val df = sql("select empname,designation from fact_table_addseg")
     assert(TestUtil.verifyMVDataMap(df.queryExecution.optimizedPlan, "addseg"))
     assert(df.collect().length == 90)
@@ -1257,7 +1257,7 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
     assert(!TestUtil.verifyMVDataMap(df1.queryExecution.optimizedPlan, "addseg"))
     assert(df1.collect().length == 180)
 
-    sql("rebuild materialized view addseg")
+    sql("refresh materialized view addseg")
 
     val df2 = sql("select empname,designation from fact_table_addseg")
     assert(TestUtil.verifyMVDataMap(df2.queryExecution.optimizedPlan, "addseg"))

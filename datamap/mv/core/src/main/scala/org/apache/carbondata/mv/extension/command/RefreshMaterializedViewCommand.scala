@@ -29,11 +29,11 @@ import org.apache.carbondata.datamap.DataMapManager
 import org.apache.carbondata.events.{UpdateDataMapPostExecutionEvent, _}
 
 /**
- * Rebuild Materialized View Command implementation
+ * Refresh Materialized View Command implementation
  * This command refresh the MV table incrementally and make it synchronized with the main
  * table. After sync, MV state is changed to enabled.
  */
-case class RebuildMaterializedViewCommand(
+case class RefreshMaterializedViewCommand(
     mvName: String) extends DataCommand {
 
   override def processData(sparkSession: SparkSession): Seq[Row] = {
@@ -67,5 +67,5 @@ case class RebuildMaterializedViewCommand(
     Seq.empty
   }
 
-  override protected def opName: String = "REBUILD MATERIALIZED VIEW"
+  override protected def opName: String = "REFRESH MATERIALIZED VIEW"
 }

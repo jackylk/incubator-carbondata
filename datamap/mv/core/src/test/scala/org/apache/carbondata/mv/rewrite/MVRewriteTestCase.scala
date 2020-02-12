@@ -44,7 +44,7 @@ class MVRewriteTestCase extends QueryTest with BeforeAndAfterAll {
         | FROM data_table
         | GROUP BY STARTTIME,LAYER4ID""".stripMargin)
 
-    sql("rebuild materialized view data_table_mv")
+    sql("refresh materialized view data_table_mv")
 
     val frame =
       sql(s"""SELECT  MT.`3600` AS `3600`,

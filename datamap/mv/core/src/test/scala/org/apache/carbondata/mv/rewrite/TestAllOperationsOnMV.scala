@@ -46,7 +46,7 @@ class TestAllOperationsOnMV extends QueryTest with BeforeAndAfterEach {
     sql("drop materialized view if exists dm1")
     sql("create materialized view dm1  WITH DEFERRED REFRESH as select name,sum(price) " +
         "from maintable group by name")
-    sql("rebuild materialized view dm1")
+    sql("refresh materialized view dm1")
     checkResult()
   }
 
@@ -64,7 +64,7 @@ class TestAllOperationsOnMV extends QueryTest with BeforeAndAfterEach {
   test("test alter add column on maintable") {
     sql("alter table maintable add columns(d int)")
     sql("insert into table maintable select 'abc',21,2000,30")
-    sql("rebuild materialized view dm1")
+    sql("refresh materialized view dm1")
     checkResult()
   }
 
@@ -166,7 +166,7 @@ class TestAllOperationsOnMV extends QueryTest with BeforeAndAfterEach {
     sql("drop materialized view if exists dm1")
     sql("create materialized view dm1  WITH DEFERRED REFRESH as select name,sum(price) " +
         "from maintable group by name")
-    sql("rebuild materialized view dm1")
+    sql("refresh materialized view dm1")
     intercept[UnsupportedOperationException] {
       sql("Delete from table maintable where segment.id in (1)")
     }.getMessage.contains("Delete segment operation is not supported on tables which have mv materialized view")
@@ -184,7 +184,7 @@ class TestAllOperationsOnMV extends QueryTest with BeforeAndAfterEach {
     sql("drop materialized view if exists dm1")
     sql("create materialized view dm1   WITH DEFERRED REFRESH as select name,sum(price) " +
         "from maintable group by name")
-    sql("rebuild materialized view dm1")
+    sql("refresh materialized view dm1")
     intercept[UnsupportedOperationException] {
       sql("DELETE FROM TABLE maintable WHERE SEGMENT.STARTTIME BEFORE '2017-06-01 12:05:06'")
     }.getMessage.contains("Delete segment operation is not supported on tables which have mv materialized view")
@@ -200,7 +200,7 @@ class TestAllOperationsOnMV extends QueryTest with BeforeAndAfterEach {
     sql("drop materialized view if exists dm1")
     sql("create materialized view dm1  WITH DEFERRED REFRESH as select name " +
         "from maintable")
-    sql("rebuild materialized view dm1")
+    sql("refresh materialized view dm1")
     intercept[UnsupportedOperationException] {
       sql("insert into dm1_table select 2")
     }.getMessage.contains("Cannot insert data directly into MV table")
@@ -214,7 +214,7 @@ class TestAllOperationsOnMV extends QueryTest with BeforeAndAfterEach {
     sql("drop materialized view if exists dm1")
     sql("create materialized view dm1 WITH DEFERRED REFRESH as select price " +
         "from maintable")
-    sql("rebuild materialized view dm1")
+    sql("refresh materialized view dm1")
     checkAnswer(sql("select price from maintable"), Seq(Row(2000)))
     checkExistence(sql("show materialized views on table maintable"), true, "dm1")
     sql("drop materialized view dm1")
@@ -228,7 +228,7 @@ class TestAllOperationsOnMV extends QueryTest with BeforeAndAfterEach {
     sql("insert into maintable values('Mobile',2000)")
     sql("drop materialized view if exists p")
     sql("Create materialized view p  as Select p.product, p.amount from maintable p where p.product = 'Mobile'")
-    sql("rebuild materialized view p")
+    sql("refresh materialized view p")
     checkAnswer(sql("Select p.product, p.amount from maintable p where p.product = 'Mobile'"), Seq(Row("Mobile", 2000)))
     sql("drop table IF EXISTS maintable")
   }
@@ -252,7 +252,7 @@ class TestAllOperationsOnMV extends QueryTest with BeforeAndAfterEach {
     sql("drop materialized view if exists dm1 ")
     sql("create materialized view dm1 WITH DEFERRED REFRESH as select price from maintable")
     checkExistence(sql("show materialized views on table maintable"), true, "DISABLED")
-    sql("rebuild materialized view dm1")
+    sql("refresh materialized view dm1")
     sql("show materialized views on table maintable").show(false)
     var result = sql("show materialized views on table maintable").collectAsList()
     assert(result.get(0).get(0).toString.equalsIgnoreCase("dm1"))
@@ -263,7 +263,7 @@ class TestAllOperationsOnMV extends QueryTest with BeforeAndAfterEach {
     assert(result.get(0).get(6).toString.contains("{\"default.maintable\":\"0\""))
     sql("insert into table maintable select 'abc',21,2000")
     checkExistence(sql("show materialized views on table maintable"), true, "DISABLED")
-    sql("rebuild materialized view dm1")
+    sql("refresh materialized view dm1")
     result = sql("show materialized views on table maintable").collectAsList()
     assert(result.get(0).get(5).toString.equalsIgnoreCase("ENABLED"))
     assert(result.get(0).get(6).toString.contains("{\"default.maintable\":\"1\""))
@@ -285,7 +285,7 @@ class TestAllOperationsOnMV extends QueryTest with BeforeAndAfterEach {
       "products p, sales s where p.product=s.product")
     checkExistence(sql("show materialized views on table products"), true, "DISABLED")
     checkExistence(sql("show materialized views on table sales"), true, "DISABLED")
-    sql("rebuild materialized view innerjoin")
+    sql("refresh materialized view innerjoin")
     var result = sql("show materialized views on table products").collectAsList()
     assert(result.get(0).get(2).toString.equalsIgnoreCase("manual"))
     assert(result.get(0).get(3).toString.equalsIgnoreCase("false"))
@@ -297,7 +297,7 @@ class TestAllOperationsOnMV extends QueryTest with BeforeAndAfterEach {
     sql(s"load data INPATH '$resourcesPath/sales_data.csv' into table sales")
     checkExistence(sql("show materialized views on table products"), true, "DISABLED")
     checkExistence(sql("show materialized views on table sales"), true, "DISABLED")
-    sql("rebuild materialized view innerjoin")
+    sql("refresh materialized view innerjoin")
     result = sql("show materialized views on table sales").collectAsList()
     assert(result.get(0).get(5).toString.equalsIgnoreCase("ENABLED"))
     assert(result.get(0).get(6).toString.contains("\"default.products\":\"0\",\"default.sales\":\"1\"}"))

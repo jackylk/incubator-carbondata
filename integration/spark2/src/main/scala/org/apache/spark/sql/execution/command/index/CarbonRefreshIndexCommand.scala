@@ -31,12 +31,12 @@ import org.apache.carbondata.events.{UpdateDataMapPostExecutionEvent, _}
  * Rebuild the index through sync with main table data. After sync with parent table's it enables
  * the index.
  */
-case class CarbonRebuildIndexCommand(
+case class CarbonRefreshIndexCommand(
     indexName: String,
     table: TableIdentifier) extends DataCommand {
 
   override def processData(sparkSession: SparkSession): Seq[Row] = {
-    val schemaOption = CarbonShowIndexCommand(table).getAllDataMaps(sparkSession)
+    val schemaOption = CarbonShowIndexCommand(Some(table)).getAllIndexes(sparkSession)
       .find(p => p.getDataMapName.equalsIgnoreCase(indexName))
     if (schemaOption.isEmpty) {
       throw new MalformedDataMapCommandException(

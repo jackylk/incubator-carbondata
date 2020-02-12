@@ -26,7 +26,7 @@ import org.apache.spark.sql.catalyst.{CarbonDDLSqlParser, CarbonParserUtil, Tabl
 import org.apache.spark.sql.catalyst.CarbonTableIdentifierImplicit._
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.execution.command._
-import org.apache.spark.sql.execution.command.index.{CarbonCreateIndexCommand, CarbonDropIndexCommand, CarbonRebuildIndexCommand, CarbonShowIndexCommand}
+import org.apache.spark.sql.execution.command.index.{CarbonCreateIndexCommand, CarbonDropIndexCommand, CarbonRefreshIndexCommand, CarbonShowIndexCommand}
 import org.apache.spark.sql.execution.command.management._
 import org.apache.spark.sql.execution.command.schema.CarbonAlterTableDropColumnCommand
 import org.apache.spark.sql.execution.command.table.CarbonCreateTableCommand
@@ -190,10 +190,10 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
     }
 
   /**
-   * SHOW INDEXES ON TABLE table_name
+   * SHOW INDEXES [ON TABLE table_name]
    */
   protected lazy val showIndex: Parser[LogicalPlan] =
-    SHOW ~> INDEXES ~> ontable <~ opt(";") ^^ {
+    SHOW ~> INDEXES ~> opt(ontable) <~ opt(";") ^^ {
       case tableIdent =>
         CarbonShowIndexCommand(tableIdent)
     }
@@ -204,7 +204,7 @@ class CarbonSpark2SqlParser extends CarbonDDLSqlParser {
   protected lazy val refreshIndex: Parser[LogicalPlan] =
     REFRESH ~> INDEX ~> ident ~ ontable <~ opt(";") ^^ {
       case datamap ~ tableIdent =>
-        CarbonRebuildIndexCommand(datamap, tableIdent)
+        CarbonRefreshIndexCommand(datamap, tableIdent)
     }
 
   protected lazy val alterDataMap: Parser[LogicalPlan] =
