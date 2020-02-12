@@ -23,9 +23,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.carbondata.core.datamap.DataMapDistributable;
-import org.apache.carbondata.core.datamap.DataMapLevel;
 import org.apache.carbondata.core.datamap.Segment;
+import org.apache.carbondata.core.datamap.index.IndexDistributable;
+import org.apache.carbondata.core.datamap.index.IndexLevel;
 import org.apache.carbondata.core.indexstore.ExtendedBlocklet;
 import org.apache.carbondata.core.indexstore.PartitionSpec;
 import org.apache.carbondata.core.scan.filter.resolver.FilterResolverIntf;
@@ -60,7 +60,7 @@ public class OrDataMapExprWrapper implements DataMapExprWrapper {
   }
 
   @Override
-  public List<ExtendedBlocklet> prune(DataMapDistributable distributable,
+  public List<ExtendedBlocklet> prune(IndexDistributable distributable,
       List<PartitionSpec> partitionsToPrune)
           throws IOException {
     List<ExtendedBlocklet> leftPrune = left.prune(distributable, partitionsToPrune);
@@ -83,9 +83,9 @@ public class OrDataMapExprWrapper implements DataMapExprWrapper {
   }
 
   @Override
-  public List<DataMapDistributableWrapper> toDistributable(List<Segment> segments)
+  public List<IndexDistributableWrapper> toDistributable(List<Segment> segments)
       throws IOException {
-    List<DataMapDistributableWrapper> wrappers = new ArrayList<>();
+    List<IndexDistributableWrapper> wrappers = new ArrayList<>();
     wrappers.addAll(left.toDistributable(segments));
     wrappers.addAll(right.toDistributable(segments));
     return wrappers;
@@ -109,8 +109,8 @@ public class OrDataMapExprWrapper implements DataMapExprWrapper {
   }
 
   @Override
-  public DataMapLevel getDataMapLevel() {
-    return left.getDataMapLevel();
+  public IndexLevel getIndexLevel() {
+    return left.getIndexLevel();
   }
 
   @Override

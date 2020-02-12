@@ -64,7 +64,7 @@ case class TableModel(
     partitionInfo: Option[PartitionInfo],
     tableComment: Option[String] = None,
     var parentTable: Option[CarbonTable] = None,
-    var dataMapRelation: Option[scala.collection.mutable.LinkedHashMap[Field, DataMapField]] = None)
+    var dataMapRelation: Option[scala.collection.mutable.LinkedHashMap[Field, MVField]] = None)
 
 case class Field(column: String, var dataType: Option[String], name: Option[String],
     children: Option[List[Field]], parent: String = null,
@@ -80,7 +80,7 @@ case class Field(column: String, var dataType: Option[String], name: Option[Stri
   override def hashCode : Int = column.hashCode
 }
 
-case class DataMapField(var aggregateFunction: String = "",
+case class MVField(var aggregateFunction: String = "",
     columnTableRelationList: Option[Seq[ColumnTableRelation]] = None) {
 }
 
@@ -633,7 +633,7 @@ class TableNewProcessor(cm: TableModel) {
       encoders: java.util.List[Encoding],
       isDimensionCol: Boolean,
       field: Field,
-      map: Option[scala.collection.mutable.LinkedHashMap[Field, DataMapField]],
+      map: Option[scala.collection.mutable.LinkedHashMap[Field, MVField]],
       useDictionaryEncoding: Boolean = true) : ColumnSchema = {
     val columnSchema = new ColumnSchema()
     columnSchema.setDataType(dataType)

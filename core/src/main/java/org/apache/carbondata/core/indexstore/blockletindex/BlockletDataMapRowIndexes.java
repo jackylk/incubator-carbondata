@@ -18,7 +18,7 @@
 package org.apache.carbondata.core.indexstore.blockletindex;
 
 /**
- * holder for blocklet info indexes in a DataMap row
+ * holder for blocklet info indexes in a Index row
  */
 public interface BlockletDataMapRowIndexes {
 

@@ -27,7 +27,7 @@ import org.apache.carbondata.core.metadata.schema.table.column.CarbonColumn;
 import org.apache.carbondata.core.util.BlockletDataMapUtil;
 
 /**
- * class for creating schema for a given DataMap
+ * class for creating schema for a given Index
  */
 public class SchemaGenerator {
 

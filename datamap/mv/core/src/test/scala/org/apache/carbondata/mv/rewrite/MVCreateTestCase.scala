@@ -851,9 +851,9 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
       """.stripMargin)
     sql(
       s"""
-         | CREATE DATAMAP dm_stream_bloom ON TABLE fact_streaming_table1
+         | CREATE INDEX dm_stream_bloom ON TABLE fact_streaming_table1
          | USING 'bloomfilter'
-         | DMProperties('INDEX_COLUMNS'='empname,deptname', 'BLOOM_SIZE'='640000')
+         | properties('INDEX_COLUMNS'='empname,deptname', 'BLOOM_SIZE'='640000')
       """.stripMargin)
 
     val exception_tb_mv: Exception = intercept[Exception] {
@@ -1242,7 +1242,7 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
     sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table_addseg1 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
 
     sql("drop materialized view if exists addseg")
-    sql("create materialized view addseg with deferred rebuild as select empname, designation from fact_table_addseg")
+    sql("create materialized view addseg WITH DEFERRED REFRESH as select empname, designation from fact_table_addseg")
     sql("rebuild materialized view addseg")
     val df = sql("select empname,designation from fact_table_addseg")
     assert(TestUtil.verifyMVDataMap(df.queryExecution.optimizedPlan, "addseg"))

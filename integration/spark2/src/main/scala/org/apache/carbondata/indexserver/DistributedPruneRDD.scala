@@ -32,15 +32,16 @@ import org.apache.spark.sql.hive.DistributionUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.cache.CacheProvider
-import org.apache.carbondata.core.datamap.{DataMapStoreManager, DistributableDataMapFormat}
-import org.apache.carbondata.core.datamap.dev.expr.DataMapDistributableWrapper
+import org.apache.carbondata.core.datamap.DataMapStoreManager
+import org.apache.carbondata.core.datamap.dev.expr.IndexDistributableWrapper
+import org.apache.carbondata.core.datamap.index.DistributableIndexFormat
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.indexstore.{ExtendedBlocklet, ExtendedBlockletWrapper}
 import org.apache.carbondata.core.util.{CarbonProperties, CarbonThreadFactory}
 import org.apache.carbondata.spark.rdd.CarbonRDD
 import org.apache.carbondata.spark.util.CarbonScalaUtil
 
-class DataMapRDDPartition(rddId: Int,
+class IndexRDDPartition(rddId: Int,
     idx: Int,
     val inputSplit: Seq[InputSplit],
     location: Array[String])
@@ -56,7 +57,7 @@ class DataMapRDDPartition(rddId: Int,
 }
 
 private[indexserver] class DistributedPruneRDD(@transient private val ss: SparkSession,
-    dataMapFormat: DistributableDataMapFormat)
+    dataMapFormat: DistributableIndexFormat)
   extends CarbonRDD[(String, ExtendedBlockletWrapper)](ss, Nil) {
 
   @transient private val LOGGER = LogServiceFactory.getLogService(classOf[DistributedPruneRDD]
@@ -69,15 +70,15 @@ private[indexserver] class DistributedPruneRDD(@transient private val ss: SparkS
     val attemptId = new TaskAttemptID(DistributedRDDUtils.generateTrackerId,
       id, TaskType.MAP, split.index, 0)
     val attemptContext = new TaskAttemptContextImpl(FileFactory.getConfiguration, attemptId)
-    val inputSplits = split.asInstanceOf[DataMapRDDPartition].inputSplit
-    if (dataMapFormat.isJobToClearDataMaps) {
+    val inputSplits = split.asInstanceOf[IndexRDDPartition].inputSplit
+    if (dataMapFormat.isJobToClearIndex) {
       // if job is to clear datamaps just clear datamaps from cache and pass empty iterator
       DataMapStoreManager.getInstance().clearInvalidDataMaps(dataMapFormat.getCarbonTable,
         inputSplits.map(_
-          .asInstanceOf[DataMapDistributableWrapper].getDistributable.getSegment.getSegmentNo)
+          .asInstanceOf[IndexDistributableWrapper].getDistributable.getSegment.getSegmentNo)
           .toList.asJava,
         dataMapFormat
-          .getDataMapToClear)
+          .getIndexToClear)
       val cacheSize = if (CacheProvider.getInstance().getCarbonCache != null) {
         CacheProvider.getInstance().getCarbonCache.getCurrentSize
       } else {
@@ -148,8 +149,8 @@ private[indexserver] class DistributedPruneRDD(@transient private val ss: SparkS
   }
 
   override protected def getPreferredLocations(split: Partition): Seq[String] = {
-    if (split.asInstanceOf[DataMapRDDPartition].getLocations != null) {
-      split.asInstanceOf[DataMapRDDPartition].getLocations.toSeq
+    if (split.asInstanceOf[IndexRDDPartition].getLocations != null) {
+      split.asInstanceOf[IndexRDDPartition].getLocations.toSeq
     } else {
       Seq()
     }
@@ -163,7 +164,7 @@ private[indexserver] class DistributedPruneRDD(@transient private val ss: SparkS
         dataMapFormat.getCarbonTable.getTableName)
     if (!isDistributedPruningEnabled || dataMapFormat.isFallbackJob || splits.isEmpty) {
       splits.zipWithIndex.map {
-        f => new DataMapRDDPartition(id, f._2, List(f._1), f._1.getLocations)
+        f => new IndexRDDPartition(id, f._2, List(f._1), f._1.getLocations)
       }.toArray
     } else {
       val executorsList: Map[String, Seq[String]] = DistributionUtil

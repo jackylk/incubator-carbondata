@@ -56,9 +56,9 @@ object LuceneDataMapExample {
     // create lucene datamap on personTable
     spark.sql(
       s"""
-         | CREATE DATAMAP IF NOT EXISTS dm ON TABLE personTable
+         | CREATE INDEX IF NOT EXISTS dm ON TABLE personTable
          | USING 'lucene'
-         | DMProperties('INDEX_COLUMNS'='id , name')
+         | properties('INDEX_COLUMNS'='id , name')
       """.stripMargin)
 
     // 1. Compare the performance:

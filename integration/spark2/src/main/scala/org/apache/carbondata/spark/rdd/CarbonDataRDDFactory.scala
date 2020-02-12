@@ -619,7 +619,7 @@ object CarbonDataRDDFactory {
       val segments = List(new Segment(segmentId)).asJava
       DataMapStoreManager.getInstance().getAllDataMap(carbonTable).asScala
         .filter(_.getDataMapSchema.isIndexDataMap)
-        .foreach(_.deleteDatamapData(segments))
+        .foreach(_.deleteIndexData(segments))
     } catch {
       case ex : Exception =>
         LOGGER.error(s"Failed to clear datamap files for" +

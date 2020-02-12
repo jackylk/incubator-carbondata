@@ -227,7 +227,7 @@ class TestMVTimeSeriesLoadAndQuery extends QueryTest with BeforeAndAfterAll {
     checkPlan("datamap1", df1)
     val df2 = sql("select distinct(timeseries(projectjoindate,'month')) from maintable")
     checkPlan("datamap1", df2)
-    // TODO: cast expression and group by not allowing to create datamap, check later
+    // TODO: cast expression and group by not allowing to create materialized view, check later
 //    sql(
 //      "create materialized view datamap2 as " +
 //      "select timeseries(projectjoindate,'month'),cast(floor((projectcode + 1000) / 900) * 900 - 2000 AS INT) from maintable group by timeseries(projectjoindate,'month'),projectcode")

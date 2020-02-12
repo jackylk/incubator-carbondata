@@ -36,10 +36,8 @@ import org.apache.spark.sql.util.SparkSQLUtil
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
-import org.apache.carbondata.core.datamap.DistributableDataMapFormat
-import org.apache.carbondata.core.datastore.impl.FileFactory
+import org.apache.carbondata.core.datamap.index.DistributableIndexFormat
 import org.apache.carbondata.core.indexstore.ExtendedBlockletWrapperContainer
-import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.events.{IndexServerEvent, OperationContext, OperationListenerBus}
@@ -52,7 +50,7 @@ trait ServerInterface {
   /**
    * Used to prune and cache the datamaps for the table.
    */
-  def getSplits(request: DistributableDataMapFormat): ExtendedBlockletWrapperContainer
+  def getSplits(request: DistributableIndexFormat): ExtendedBlockletWrapperContainer
 
   /**
    * Get the cache size for the specified tables.
@@ -65,7 +63,7 @@ trait ServerInterface {
   def invalidateSegmentCache(carbonTable: CarbonTable,
   segmentIds: Array[String], jobGroupId: String = "", isFallBack: Boolean = false): Unit
 
-  def getCount(request: DistributableDataMapFormat): LongWritable
+  def getCount(request: DistributableIndexFormat): LongWritable
 
 }
 
@@ -121,7 +119,7 @@ object IndexServer extends ServerInterface {
     })
   }
 
-  def getCount(request: DistributableDataMapFormat): LongWritable = {
+  def getCount(request: DistributableIndexFormat): LongWritable = {
     doAs {
       val sparkSession = SparkSQLUtil.getSparkSession
       var currentUser: String = null
@@ -153,7 +151,7 @@ object IndexServer extends ServerInterface {
     }
   }
 
-  def getSplits(request: DistributableDataMapFormat): ExtendedBlockletWrapperContainer = {
+  def getSplits(request: DistributableIndexFormat): ExtendedBlockletWrapperContainer = {
     doAs {
       val sparkSession = SparkSQLUtil.getSparkSession
       if (!request.isFallbackJob) {
@@ -174,7 +172,7 @@ object IndexServer extends ServerInterface {
       if (!request.isFallbackJob) {
         DistributedRDDUtils.updateExecutorCacheSize(splits.map(_._1).toSet)
       }
-      if (request.isJobToClearDataMaps) {
+      if (request.isJobToClearIndex) {
         DistributedRDDUtils.invalidateTableMapping(request.getCarbonTable.getTableUniqueName)
       }
       new ExtendedBlockletWrapperContainer(splits.map(_._2), request.isFallbackJob)

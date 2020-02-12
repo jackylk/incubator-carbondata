@@ -23,7 +23,7 @@ import scala.collection.mutable.ArrayBuffer
 import org.apache.spark.sql.CarbonDatasourceHadoopRelation
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
-import org.apache.spark.sql.execution.command.{ColumnTableRelation, DataMapField, Field}
+import org.apache.spark.sql.execution.command.{ColumnTableRelation, Field, MVField}
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.types.DataType
 
@@ -44,7 +44,7 @@ class MVUtil {
    */
   def getFieldsAndDataMapFieldsFromPlan(
       plan: ModularPlan,
-      logicalRelation: Seq[LogicalRelation]): mutable.LinkedHashMap[Field, DataMapField] = {
+      logicalRelation: Seq[LogicalRelation]): mutable.LinkedHashMap[Field, MVField] = {
     plan match {
       case select: Select =>
         select.children.map {
@@ -80,8 +80,8 @@ class MVUtil {
       outputList: Seq[NamedExpression],
       predicateList: Seq[Expression],
       logicalRelation: Seq[LogicalRelation],
-      flagSpec: Seq[Seq[Any]]): mutable.LinkedHashMap[Field, DataMapField] = {
-    var fieldToDataMapFieldMap = scala.collection.mutable.LinkedHashMap.empty[Field, DataMapField]
+      flagSpec: Seq[Seq[Any]]): mutable.LinkedHashMap[Field, MVField] = {
+    var fieldToDataMapFieldMap = scala.collection.mutable.LinkedHashMap.empty[Field, MVField]
     fieldToDataMapFieldMap ++== getFieldsFromProject(outputList, logicalRelation)
     var finalPredicateList: Seq[NamedExpression] = Seq.empty
     predicateList.map { p =>
@@ -111,8 +111,8 @@ class MVUtil {
 
   private def getFieldsFromProject(
       projectList: Seq[NamedExpression],
-      logicalRelation: Seq[LogicalRelation]): mutable.LinkedHashMap[Field, DataMapField] = {
-    var fieldToDataMapFieldMap = scala.collection.mutable.LinkedHashMap.empty[Field, DataMapField]
+      logicalRelation: Seq[LogicalRelation]): mutable.LinkedHashMap[Field, MVField] = {
+    var fieldToDataMapFieldMap = scala.collection.mutable.LinkedHashMap.empty[Field, MVField]
     projectList.map {
       case attr: AttributeReference =>
         val carbonTable = getCarbonTable(logicalRelation, attr)
@@ -270,7 +270,7 @@ class MVUtil {
       }
     }
     val rawSchema = '`' + actualColumnName + '`' + ' ' + dataType.typeName
-    val dataMapField = DataMapField(aggregateType, Some(columnTableRelationList))
+    val mvField = MVField(aggregateType, Some(columnTableRelationList))
     if (dataType.typeName.startsWith("decimal")) {
       val (precision, scale) = CommonUtil.getScaleAndPrecision(dataType.catalogString)
       (Field(column = actualColumnName,
@@ -279,13 +279,13 @@ class MVUtil {
         children = None,
         precision = precision,
         scale = scale,
-        rawSchema = rawSchema), dataMapField)
+        rawSchema = rawSchema), mvField)
     } else {
       (Field(column = actualColumnName,
         dataType = Some(dataType.typeName),
         name = Some(actualColumnName),
         children = None,
-        rawSchema = rawSchema), dataMapField)
+        rawSchema = rawSchema), mvField)
     }
   }
 

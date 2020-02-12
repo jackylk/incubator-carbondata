@@ -658,7 +658,7 @@ class TestNonTransactionalCarbonTable extends QueryTest with BeforeAndAfterAll {
     //2. Datamap creation
     exception = intercept[MalformedCarbonCommandException] {
       sql(
-        "CREATE DATAMAP agg_sdkOutputTable ON TABLE sdkOutputTable USING \"preaggregate\" AS " +
+        "CREATE MATERIALIZED VIEW agg_sdkOutputTable ON TABLE sdkOutputTable AS " +
         "SELECT name, sum(age) FROM sdkOutputTable GROUP BY name,age")
     }
     assert(exception.getMessage()

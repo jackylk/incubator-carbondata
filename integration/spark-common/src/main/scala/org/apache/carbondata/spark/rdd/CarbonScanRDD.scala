@@ -44,7 +44,7 @@ import org.apache.spark.util.TaskCompletionListener
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.converter.SparkDataTypeConverterImpl
 import org.apache.carbondata.core.constants.CarbonCommonConstants
-import org.apache.carbondata.core.datamap.DataMapFilter
+import org.apache.carbondata.core.datamap.index.IndexFilter
 import org.apache.carbondata.core.datastore.block.Distributable
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.indexstore.PartitionSpec
@@ -74,7 +74,7 @@ import org.apache.carbondata.spark.util.Util
 class CarbonScanRDD[T: ClassTag](
     @transient private val spark: SparkSession,
     val columnProjection: CarbonProjection,
-    var dataMapFilter: DataMapFilter,
+    var dataMapFilter: IndexFilter,
     identifier: AbsoluteTableIdentifier,
     @transient private val serializedTableInfo: Array[Byte],
     @transient private val tableInfo: TableInfo,

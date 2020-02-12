@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.carbondata.mv.extension
 
 import java.io.IOException
@@ -29,8 +30,8 @@ import org.apache.carbondata.common.annotations.InterfaceAudience
 import org.apache.carbondata.common.exceptions.sql.MalformedDataMapCommandException
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.constants.CarbonCommonConstants
-import org.apache.carbondata.core.datamap.{DataMapCatalog, DataMapProvider, DataMapStoreManager}
-import org.apache.carbondata.core.datamap.dev.{DataMap, DataMapFactory}
+import org.apache.carbondata.core.datamap.{DataMapProvider, DataMapStoreManager, MVCatalog}
+import org.apache.carbondata.core.datamap.dev.{Index, IndexFactory}
 import org.apache.carbondata.core.datamap.status.DataMapStatusManager
 import org.apache.carbondata.core.indexstore.Blocklet
 import org.apache.carbondata.core.metadata.schema.datamap.DataMapProperty
@@ -61,7 +62,7 @@ class MVDataMapProvider(
       ctasSqlStatement,
       true)
     try {
-      DataMapStoreManager.getInstance.registerDataMapCatalog(this, dataMapSchema)
+      DataMapStoreManager.getInstance.registerMVCatalog(this, dataMapSchema)
       if (dataMapSchema.isLazy) {
         DataMapStatusManager.disableDataMap(dataMapSchema.getDataMapName)
       }
@@ -162,7 +163,7 @@ class MVDataMapProvider(
           // If load to dataMap table fails, disable the dataMap and if newLoad is still
           // in INSERT_IN_PROGRESS state, mark for delete the newLoad and update table status file
           DataMapStatusManager.disableDataMap(dataMapSchema.getDataMapName)
-          LOGGER.error("Data Load failed for DataMap: ", ex)
+          LOGGER.error("Data Load failed for Index: ", ex)
           CarbonLoaderUtil.updateTableStatusInCaseOfFailure(
             newLoadName,
             dataMapTable.getAbsoluteTableIdentifier,
@@ -198,10 +199,10 @@ class MVDataMapProvider(
     }
   }
 
-  override def createDataMapCatalog : DataMapCatalog[SummaryDataset] =
+  override def createMVCatalog : MVCatalog[SummaryDataset] =
     new SummaryDatasetCatalog(sparkSession)
 
-  override def getDataMapFactory: DataMapFactory[_ <: DataMap[_ <: Blocklet]] = {
+  override def getIndexFactory: IndexFactory[_ <: Index[_ <: Blocklet]] = {
     throw new UnsupportedOperationException
   }
 

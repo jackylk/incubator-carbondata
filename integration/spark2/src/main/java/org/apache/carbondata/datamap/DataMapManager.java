@@ -19,13 +19,12 @@ package org.apache.carbondata.datamap;
 
 import org.apache.carbondata.common.exceptions.sql.MalformedDataMapCommandException;
 import org.apache.carbondata.core.datamap.DataMapProvider;
+import org.apache.carbondata.core.metadata.schema.datamap.DataMapClassProvider;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.metadata.schema.table.DataMapSchema;
 import org.apache.carbondata.spark.util.CarbonScalaUtil;
 
 import org.apache.spark.sql.SparkSession;
-
-import static org.apache.carbondata.core.metadata.schema.datamap.DataMapClassProvider.MV;
 
 public class DataMapManager {
 
@@ -46,7 +45,7 @@ public class DataMapManager {
   public DataMapProvider getDataMapProvider(CarbonTable mainTable, DataMapSchema dataMapSchema,
       SparkSession sparkSession) throws MalformedDataMapCommandException {
     DataMapProvider provider;
-    if (dataMapSchema.getProviderName().equalsIgnoreCase(MV.toString())) {
+    if (dataMapSchema.getProviderName().equalsIgnoreCase(DataMapClassProvider.MV.toString())) {
       provider = (DataMapProvider) CarbonScalaUtil.createDataMapProvider(
           "org.apache.carbondata.mv.extension.MVDataMapProvider",
               sparkSession,

@@ -295,9 +295,9 @@ class DeleteCarbonTableTestCase extends QueryTest with BeforeAndAfterAll {
 
     sql(
       s"""
-         | CREATE DATAMAP dm_test_dm_index ON TABLE test_dm_index
+         | CREATE INDEX dm_test_dm_index ON TABLE test_dm_index
          | USING 'bloomfilter'
-         | DMProperties('INDEX_COLUMNS'='a', 'BLOOM_SIZE'='640000')
+         | properties('INDEX_COLUMNS'='a', 'BLOOM_SIZE'='640000')
       """.stripMargin)
 
     assert(intercept[UnsupportedOperationException] {

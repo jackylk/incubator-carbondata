@@ -24,7 +24,6 @@ import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.execution.command.{AtomicRunnableCommand, Checker, DataCommand}
 import org.apache.spark.sql.optimizer.CarbonFilters
-import org.apache.spark.util.DataMapUtil
 
 import org.apache.carbondata.api.CarbonStore
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
@@ -33,7 +32,6 @@ import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datamap.DataMapStoreManager
 import org.apache.carbondata.core.exception.ConcurrentOperationException
 import org.apache.carbondata.core.indexstore.PartitionSpec
-import org.apache.carbondata.core.metadata.schema.datamap.DataMapClassProvider.MV
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager
 import org.apache.carbondata.events._
@@ -64,7 +62,7 @@ case class CarbonCleanFilesCommand(
     setAuditInfo(Map(
       "force" -> forceTableClean.toString,
       "internal" -> isInternalCleanCall.toString))
-    if (DataMapUtil.hasMVDataMap(carbonTable)) {
+    if (carbonTable.hasMV) {
       val allDataMapSchemas = DataMapStoreManager.getInstance
         .getDataMapSchemasOfTable(carbonTable).asScala
         .filter(dataMapSchema => null != dataMapSchema.getRelationIdentifier &&

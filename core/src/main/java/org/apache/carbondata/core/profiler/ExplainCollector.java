@@ -183,7 +183,7 @@ public class ExplainCollector {
     StringBuilder builder = new StringBuilder();
     for (int i = 0; i < olapDataMapProviders.size(); i++) {
       if (i == 0) {
-        builder.append("Query rewrite based on DataMap:").append("\n");
+        builder.append("Query rewrite based on Index:").append("\n");
       }
       builder.append(" - ").append(olapDataMapNames.get(i)).append(" (")
           .append(olapDataMapProviders.get(i)).append(")").append("\n");

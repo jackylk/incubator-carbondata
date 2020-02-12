@@ -24,7 +24,7 @@ import java.util.Map;
 
 import org.apache.carbondata.common.annotations.InterfaceAudience;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
-import org.apache.carbondata.core.datamap.DataMapUtil;
+import org.apache.carbondata.core.datamap.index.IndexUtil;
 import org.apache.carbondata.core.datamap.status.DataMapSegmentStatusUtil;
 import org.apache.carbondata.core.metadata.schema.table.DataMapSchema;
 import org.apache.carbondata.core.metadata.schema.table.RelationIdentifier;
@@ -36,7 +36,7 @@ import org.apache.carbondata.core.util.path.CarbonTablePath;
 /**
  * Interface to check whether datamap can be enabled
  */
-@InterfaceAudience.Developer("DataMap")
+@InterfaceAudience.Developer("Index")
 public abstract class DataMapSyncStatus {
 
   /**
@@ -72,7 +72,7 @@ public abstract class DataMapSyncStatus {
     List<RelationIdentifier> parentTables = dataMapSchema.getParentTables();
     for (RelationIdentifier parentTable : parentTables) {
       List<String> mainTableValidSegmentList =
-          DataMapUtil.getMainTableValidSegmentList(parentTable);
+          IndexUtil.getMainTableValidSegmentList(parentTable);
       if (!mainTableValidSegmentList.isEmpty() && !dataMapSegmentMap.isEmpty()) {
         isDataMapInSync = dataMapSegmentMap.get(
             parentTable.getDatabaseName() + CarbonCommonConstants.POINT + parentTable

@@ -35,7 +35,7 @@ import org.apache.carbondata.mv.extension.MVDataMapProvider
 
 /**
  * Create Materialized View Command implementation
- * It will create the MV table, load the MV table (if deferred rebuild is false),
+ * It will create the MV table, load the MV table (if deferred refresh is false),
  * and register the MV schema in [[DataMapStoreManager]]
  */
 case class CreateMaterializedViewCommand(

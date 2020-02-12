@@ -96,14 +96,14 @@ public class TablePruningInfo {
       int skipBlocks = totalBlocks - numBlocksAfterDefaultPruning;
       int skipBlocklets = totalBlocklets - numBlockletsAfterDefaultPruning;
       builder
-          .append(" - pruned by Main DataMap").append("\n")
+          .append(" - pruned by Main Index").append("\n")
           .append("    - skipped: ").append(skipBlocks).append(" blocks, ")
           .append(skipBlocklets).append(" blocklets").append("\n");
       if (cgDataMap != null) {
         skipBlocks = numBlocksAfterDefaultPruning - numBlocksAfterCGPruning;
         skipBlocklets = numBlockletsAfterDefaultPruning - numBlockletsAfterCGPruning;
         builder
-            .append(" - pruned by CG DataMap").append("\n")
+            .append(" - pruned by CG Index").append("\n")
             .append("    - name: ").append(cgDataMap.getDataMapWrapperName()).append("\n")
             .append("    - provider: ").append(cgDataMap.getDataMapWrapperProvider()).append("\n")
             .append("    - skipped: ").append(skipBlocks).append(" blocks, ")
@@ -118,7 +118,7 @@ public class TablePruningInfo {
           skipBlocklets = numBlockletsAfterDefaultPruning - numBlockletsAfterFGPruning;
         }
         builder
-            .append(" - pruned by FG DataMap").append("\n")
+            .append(" - pruned by FG Index").append("\n")
             .append("    - name: ").append(fgDataMap.getDataMapWrapperName()).append("\n")
             .append("    - provider: ").append(fgDataMap.getDataMapWrapperProvider()).append("\n")
             .append("    - skipped: ").append(skipBlocks).append(" blocks, ")

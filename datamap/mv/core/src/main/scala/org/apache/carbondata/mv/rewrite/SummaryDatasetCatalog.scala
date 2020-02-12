@@ -25,7 +25,7 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.datasources.FindDataSourceTable
 
-import org.apache.carbondata.core.datamap.DataMapCatalog
+import org.apache.carbondata.core.datamap.MVCatalog
 import org.apache.carbondata.core.datamap.status.DataMapStatusManager
 import org.apache.carbondata.core.metadata.schema.table.DataMapSchema
 import org.apache.carbondata.mv.extension.MVParser
@@ -51,7 +51,7 @@ case class MVPlanWrapper(plan: ModularPlan, dataMapSchema: DataMapSchema) extend
 }
 
 private[mv] class SummaryDatasetCatalog(sparkSession: SparkSession)
-  extends DataMapCatalog[SummaryDataset] {
+  extends MVCatalog[SummaryDataset] {
 
   @transient
   private val summaryDatasets = new scala.collection.mutable.ArrayBuffer[SummaryDataset]

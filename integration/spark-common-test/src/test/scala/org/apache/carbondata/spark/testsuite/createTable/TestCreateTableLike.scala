@@ -144,9 +144,9 @@ class TestCreateTableLike extends QueryTest with BeforeAndAfterEach with BeforeA
     // datamap relation does not store in parent table
     sql(
       s"""
-         | CREATE DATAMAP dm1 ON TABLE sourceTable
+         | CREATE INDEX dm1 ON TABLE sourceTable
          | USING 'bloomfilter'
-         | DMProperties('INDEX_COLUMNS'='b', 'BLOOM_SIZE'='32000')
+         | properties('INDEX_COLUMNS'='b', 'BLOOM_SIZE'='32000')
       """.stripMargin)
     sql("create table targetTable like sourceTable")
     checkTableProperties(TableIdentifier("sourceTable"), TableIdentifier("targetTable"))

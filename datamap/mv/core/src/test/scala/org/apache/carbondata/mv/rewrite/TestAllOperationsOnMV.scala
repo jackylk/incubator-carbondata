@@ -44,7 +44,7 @@ class TestAllOperationsOnMV extends QueryTest with BeforeAndAfterEach {
     sql("create table testtable(name string, c_code int, price int) STORED AS carbondata")
     sql("insert into table testtable select 'abc',21,2000")
     sql("drop materialized view if exists dm1")
-    sql("create materialized view dm1  WITH DEFERRED REBUILD as select name,sum(price) " +
+    sql("create materialized view dm1  WITH DEFERRED REFRESH as select name,sum(price) " +
         "from maintable group by name")
     sql("rebuild materialized view dm1")
     checkResult()
@@ -135,11 +135,11 @@ class TestAllOperationsOnMV extends QueryTest with BeforeAndAfterEach {
 
   test("test dmproperties") {
     sql("drop materialized view if exists dm1")
-    sql("create materialized view dm1 with deferred rebuild mvproperties" +
+    sql("create materialized view dm1 WITH DEFERRED REFRESH mvproperties" +
         "('LOCAL_DICTIONARY_ENABLE'='false') as select name,price from maintable")
     checkExistence(sql("describe formatted dm1_table"), true, "Local Dictionary Enabled false")
     sql("drop materialized view if exists dm1")
-    sql("create materialized view dm1 with deferred rebuild mvproperties('TABLE_BLOCKSIZE'='256 MB') " +
+    sql("create materialized view dm1 WITH DEFERRED REFRESH mvproperties('TABLE_BLOCKSIZE'='256 MB') " +
         "as select name,price from maintable")
     checkExistence(sql("describe formatted dm1_table"), true, "Table Block Size  256 MB")
   }
@@ -148,12 +148,12 @@ class TestAllOperationsOnMV extends QueryTest with BeforeAndAfterEach {
     sql("drop table IF EXISTS maintable")
     sql("create table maintable(name string, c_code int, price int) STORED AS carbondata tblproperties('LOCAL_DICTIONARY_ENABLE'='false')")
     sql("drop materialized view if exists dm1")
-    sql("create materialized view dm1   WITH DEFERRED REBUILD as select name,price from maintable")
+    sql("create materialized view dm1   WITH DEFERRED REFRESH as select name,price from maintable")
     checkExistence(sql("describe formatted dm1_table"), true, "Local Dictionary Enabled false")
     sql("drop table IF EXISTS maintable")
     sql("create table maintable(name string, c_code int, price int) STORED AS carbondata tblproperties('TABLE_BLOCKSIZE'='256 MB')")
     sql("drop materialized view if exists dm1")
-    sql("create materialized view dm1   WITH DEFERRED REBUILD as select name,price from maintable")
+    sql("create materialized view dm1   WITH DEFERRED REFRESH as select name,price from maintable")
     checkExistence(sql("describe formatted dm1_table"), true, "Table Block Size  256 MB")
   }
 
@@ -164,7 +164,7 @@ class TestAllOperationsOnMV extends QueryTest with BeforeAndAfterEach {
     sql("insert into table maintable select 'abc',21,2000")
     sql("Delete from table maintable where segment.id in (0)")
     sql("drop materialized view if exists dm1")
-    sql("create materialized view dm1  WITH DEFERRED REBUILD as select name,sum(price) " +
+    sql("create materialized view dm1  WITH DEFERRED REFRESH as select name,sum(price) " +
         "from maintable group by name")
     sql("rebuild materialized view dm1")
     intercept[UnsupportedOperationException] {
@@ -182,7 +182,7 @@ class TestAllOperationsOnMV extends QueryTest with BeforeAndAfterEach {
     sql("insert into table maintable select 'abc',21,2000")
     sql("Delete from table maintable where segment.id in (0)")
     sql("drop materialized view if exists dm1")
-    sql("create materialized view dm1   WITH DEFERRED REBUILD as select name,sum(price) " +
+    sql("create materialized view dm1   WITH DEFERRED REFRESH as select name,sum(price) " +
         "from maintable group by name")
     sql("rebuild materialized view dm1")
     intercept[UnsupportedOperationException] {
@@ -198,7 +198,7 @@ class TestAllOperationsOnMV extends QueryTest with BeforeAndAfterEach {
     sql("create table maintable(name string, c_code int, price int) STORED AS carbondata")
     sql("insert into table maintable select 'abc',21,2000")
     sql("drop materialized view if exists dm1")
-    sql("create materialized view dm1  WITH DEFERRED REBUILD as select name " +
+    sql("create materialized view dm1  WITH DEFERRED REFRESH as select name " +
         "from maintable")
     sql("rebuild materialized view dm1")
     intercept[UnsupportedOperationException] {
@@ -212,7 +212,7 @@ class TestAllOperationsOnMV extends QueryTest with BeforeAndAfterEach {
     sql("create table maintable(name string, c_code int, price int) STORED AS carbondata")
     sql("insert into table maintable select 'abc',21,2000")
     sql("drop materialized view if exists dm1")
-    sql("create materialized view dm1 with deferred rebuild as select price " +
+    sql("create materialized view dm1 WITH DEFERRED REFRESH as select price " +
         "from maintable")
     sql("rebuild materialized view dm1")
     checkAnswer(sql("select price from maintable"), Seq(Row(2000)))
@@ -250,7 +250,7 @@ class TestAllOperationsOnMV extends QueryTest with BeforeAndAfterEach {
     sql("create table maintable(name string, c_code int, price int) STORED AS carbondata")
     sql("insert into table maintable select 'abc',21,2000")
     sql("drop materialized view if exists dm1 ")
-    sql("create materialized view dm1 with deferred rebuild as select price from maintable")
+    sql("create materialized view dm1 WITH DEFERRED REFRESH as select price from maintable")
     checkExistence(sql("show materialized views on table maintable"), true, "DISABLED")
     sql("rebuild materialized view dm1")
     sql("show materialized views on table maintable").show(false)
@@ -280,7 +280,7 @@ class TestAllOperationsOnMV extends QueryTest with BeforeAndAfterEach {
     sql(s"load data INPATH '$resourcesPath/sales_data.csv' into table sales")
     sql("drop materialized view if exists innerjoin")
     sql(
-      "Create materialized view innerjoin   with deferred rebuild as Select p.product, p.amount, " +
+      "Create materialized view innerjoin   WITH DEFERRED REFRESH as Select p.product, p.amount, " +
       "s.quantity, s.product from " +
       "products p, sales s where p.product=s.product")
     checkExistence(sql("show materialized views on table products"), true, "DISABLED")
@@ -324,7 +324,7 @@ class TestAllOperationsOnMV extends QueryTest with BeforeAndAfterEach {
     sql("create table maintable(name string, c_code int, price int) STORED AS carbondata")
     sql("insert into table maintable select 'abc',21,2000")
     sql("drop materialized view if exists dm1 ")
-    sql("create materialized view dm1  WITH DEFERRED REBUILD as select price from maintable")
+    sql("create materialized view dm1  WITH DEFERRED REFRESH as select price from maintable")
     intercept[ProcessMetaDataException] {
       sql("drop table dm1_table")
     }.getMessage.contains("Child table which is associated with materialized view cannot be dropped, use DROP materialized view command to drop")

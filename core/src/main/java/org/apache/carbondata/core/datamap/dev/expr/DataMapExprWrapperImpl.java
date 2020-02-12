@@ -22,12 +22,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import org.apache.carbondata.core.datamap.DataMapDistributable;
-import org.apache.carbondata.core.datamap.DataMapFilter;
-import org.apache.carbondata.core.datamap.DataMapLevel;
 import org.apache.carbondata.core.datamap.Segment;
-import org.apache.carbondata.core.datamap.TableDataMap;
-import org.apache.carbondata.core.datamap.dev.DataMap;
+import org.apache.carbondata.core.datamap.dev.Index;
+import org.apache.carbondata.core.datamap.index.IndexDistributable;
+import org.apache.carbondata.core.datamap.index.IndexFilter;
+import org.apache.carbondata.core.datamap.index.IndexLevel;
+import org.apache.carbondata.core.datamap.index.TableIndex;
 import org.apache.carbondata.core.indexstore.ExtendedBlocklet;
 import org.apache.carbondata.core.indexstore.PartitionSpec;
 import org.apache.carbondata.core.metadata.schema.table.DataMapSchema;
@@ -37,13 +37,13 @@ public class DataMapExprWrapperImpl implements DataMapExprWrapper {
 
   private static final long serialVersionUID = -6240385328696074171L;
 
-  private transient TableDataMap dataMap;
+  private transient TableIndex dataMap;
 
   private FilterResolverIntf expression;
 
   private String uniqueId;
 
-  public DataMapExprWrapperImpl(TableDataMap dataMap, FilterResolverIntf expression) {
+  public DataMapExprWrapperImpl(TableIndex dataMap, FilterResolverIntf expression) {
     this.dataMap = dataMap;
     this.expression = expression;
     this.uniqueId = UUID.randomUUID().toString();
@@ -52,14 +52,14 @@ public class DataMapExprWrapperImpl implements DataMapExprWrapper {
   @Override
   public List<ExtendedBlocklet> prune(List<Segment> segments, List<PartitionSpec> partitionsToPrune)
       throws IOException {
-    return dataMap.prune(segments, new DataMapFilter(expression), partitionsToPrune);
+    return dataMap.prune(segments, new IndexFilter(expression), partitionsToPrune);
   }
 
-  public List<ExtendedBlocklet> prune(DataMapDistributable distributable,
+  public List<ExtendedBlocklet> prune(IndexDistributable distributable,
       List<PartitionSpec> partitionsToPrune)
       throws IOException {
-    List<DataMap> dataMaps = dataMap.getTableDataMaps(distributable);
-    return dataMap.prune(dataMaps, distributable, expression, partitionsToPrune);
+    List<Index> indices = dataMap.getTableIndexes(distributable);
+    return dataMap.prune(indices, distributable, expression, partitionsToPrune);
   }
 
   @Override
@@ -87,18 +87,18 @@ public class DataMapExprWrapperImpl implements DataMapExprWrapper {
   }
 
   @Override
-  public List<DataMapDistributableWrapper> toDistributable(List<Segment> segments) {
-    List<DataMapDistributable> dataMapDistributables = dataMap.toDistributable(segments);
-    List<DataMapDistributableWrapper> wrappers = new ArrayList<>();
-    for (DataMapDistributable distributable : dataMapDistributables) {
-      wrappers.add(new DataMapDistributableWrapper(uniqueId, distributable));
+  public List<IndexDistributableWrapper> toDistributable(List<Segment> segments) {
+    List<IndexDistributable> indexDistributables = dataMap.toDistributable(segments);
+    List<IndexDistributableWrapper> wrappers = new ArrayList<>();
+    for (IndexDistributable distributable : indexDistributables) {
+      wrappers.add(new IndexDistributableWrapper(uniqueId, distributable));
     }
     return wrappers;
   }
 
   @Override
-  public DataMapLevel getDataMapLevel() {
-    return dataMap.getDataMapFactory().getDataMapLevel();
+  public IndexLevel getIndexLevel() {
+    return dataMap.getIndexFactory().getIndexLevel();
   }
 
   public DataMapSchema getDataMapSchema() {

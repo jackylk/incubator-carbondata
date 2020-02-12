@@ -53,7 +53,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     //create materialized view on table test_table
     sql("drop materialized view if exists datamap1")
     sql(
-      "create materialized view datamap1  with deferred rebuild as select empname, designation " +
+      "create materialized view datamap1  WITH DEFERRED REFRESH as select empname, designation " +
       "from test_table")
     val query: String = "select empname from test_table"
     val df1 = sql(s"$query")
@@ -100,7 +100,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     sql("Delete from table test_table where segment.id in (0)")
     sql("Delete from table test_table1 where segment.id in (0)")
     sql("drop materialized view if exists datamap1")
-    sql("create materialized view datamap1   with deferred rebuild as select empname, designation " +
+    sql("create materialized view datamap1   WITH DEFERRED REFRESH as select empname, designation " +
       "from test_table")
     loadDataToFactTable("test_table")
     loadDataToFactTable("test_table1")
@@ -130,7 +130,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     sql("insert into testtable values('a','abc',1)")
     sql("insert into testtable values('b','bcd',2)")
     sql("drop materialized view if exists datamap1")
-    sql("create materialized view datamap1  with deferred rebuild as select a, sum(b) from main_table group by a")
+    sql("create materialized view datamap1  WITH DEFERRED REFRESH as select a, sum(b) from main_table group by a")
     sql(s"rebuild materialized view datamap1")
     var df = sql(
       s"""select a, sum(b) from main_table group by a""".stripMargin)
@@ -165,7 +165,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     loadDataToFactTable("test_table")
     sql("drop materialized view if exists datamap1")
     sql(
-      "create materialized view datamap1   with deferred rebuild  as select empname, designation " +
+      "create materialized view datamap1   WITH DEFERRED REFRESH  as select empname, designation " +
       "from test_table")
     loadDataToFactTable("test_table")
     sql(s"rebuild materialized view datamap1")
@@ -197,7 +197,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     loadDataToFactTable("test_table")
     sql("drop materialized view if exists datamap1")
     sql(
-      "create materialized view datamap1   with deferred rebuild as select empname, designation " +
+      "create materialized view datamap1   WITH DEFERRED REFRESH as select empname, designation " +
       "from test_table")
     loadDataToFactTable("test_table")
     sql(s"rebuild materialized view datamap1")
@@ -234,7 +234,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     sql("insert into test_table values('b','bcd',2)")
     sql("drop materialized view if exists datamap1")
     sql(
-      "create materialized view datamap1   with deferred rebuild as select a, sum(b) from test_table  group by a")
+      "create materialized view datamap1   WITH DEFERRED REFRESH as select a, sum(b) from test_table  group by a")
     sql(s"rebuild materialized view datamap1")
     checkAnswer(sql(" select a, sum(b) from test_table  group by a"), Seq(Row("a", null), Row("b", null)))
     sql("insert overwrite table test_table select 'd','abc',3")
@@ -261,7 +261,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     sql("create table sales (product string, quantity int) STORED AS carbondata")
     sql(s"load data INPATH '$resourcesPath/sales_data.csv' into table sales")
     sql("drop materialized view if exists innerjoin")
-    sql("Create materialized view innerjoin   with deferred rebuild as Select p.product, p.amount, s.quantity, s.product from " +
+    sql("Create materialized view innerjoin   WITH DEFERRED REFRESH as Select p.product, p.amount, s.quantity, s.product from " +
         "products p, sales s where p.product=s.product")
     sql("drop table if exists products1")
     sql("create table products1 (product string, amount int) STORED AS carbondata ")
@@ -294,7 +294,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     sql("insert into test_table values('b','bcd',2)")
     sql("drop materialized view if exists datamap_mt")
     sql(
-      "create materialized view datamap_mt   with deferred rebuild as select a, sum(b) from main_table  group by a")
+      "create materialized view datamap_mt   WITH DEFERRED REFRESH as select a, sum(b) from main_table  group by a")
     sql(s"rebuild materialized view datamap_mt")
     checkAnswer(sql("select a, sum(b) from main_table  group by a"),
       sql("select a, sum(b) from test_table  group by a"))
@@ -313,7 +313,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     sql("insert into main_table values('a','abc',1)")
     sql("insert into main_table values('b','bcd',2)")
     sql("drop materialized view if exists datamap1")
-    sql("create materialized view datamap1   with deferred rebuild as select a, sum(c) from main_table  group by a")
+    sql("create materialized view datamap1   WITH DEFERRED REFRESH as select a, sum(c) from main_table  group by a")
     sql("SET carbon.input.segments.default.main_table=1")
     sql(s"rebuild materialized view datamap1")
     val df = sql("select a, sum(c) from main_table  group by a")
@@ -331,7 +331,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     sql("insert into main_table values('a','abc',1)")
     sql("insert into main_table values('b','bcd',2)")
     sql("drop materialized view if exists datamap1")
-    sql("create materialized view datamap1 with deferred rebuild as select a, sum(b) from main_table  group by a")
+    sql("create materialized view datamap1 WITH DEFERRED REFRESH as select a, sum(b) from main_table  group by a")
     sql("rebuild materialized view datamap1")
     sql("insert into main_table values('a','abc',1)")
     sql("insert into main_table values('b','bcd',2)")
@@ -360,7 +360,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     sql("insert into main_table values(1,2,3)")
     sql("insert into main_table values(1,4,5)")
     sql("drop materialized view if exists datamap_1")
-    sql("create materialized view datamap_1   with deferred rebuild as select sum(a)+sum(b) from main_table")
+    sql("create materialized view datamap_1   WITH DEFERRED REFRESH as select sum(a)+sum(b) from main_table")
     checkAnswer(sql("select sum(a)+sum(b) from main_table"), Seq(Row(8)))
     sql("rebuild materialized view datamap_1")
     checkAnswer(sql("select sum(a)+sum(b) from main_table"), Seq(Row(8)))
@@ -531,7 +531,7 @@ class MVIncrementalLoadingTestcase extends QueryTest with BeforeAndAfterAll {
     loadDataToFactTable("test_table")
     sql("drop materialized view if exists datamap1")
     sql(
-      "create materialized view datamap1   with deferred rebuild  as select empname, designation " +
+      "create materialized view datamap1   WITH DEFERRED REFRESH  as select empname, designation " +
       "from test_table")
     loadDataToFactTable("test_table")
     loadDataToFactTable("test_table")

@@ -104,7 +104,7 @@ public class DataMapStatusManager {
   }
 
   /**
-   * This method will disable all lazy (DEFERRED REBUILD) datamap in the given table
+   * This method will disable all lazy (DEFERRED REFRESH) datamap in the given table
    */
   public static void disableAllLazyDataMaps(CarbonTable table) throws IOException {
     List<DataMapSchema> allDataMapSchemas =

@@ -20,7 +20,7 @@ package org.apache.carbondata.core.metadata.schema.datamap;
 import org.apache.carbondata.common.annotations.InterfaceAudience;
 
 /**
- * Property that can be specified when creating DataMap
+ * Property that can be specified when creating Index
  */
 @InterfaceAudience.Internal
 public class DataMapProperty {
@@ -32,7 +32,7 @@ public class DataMapProperty {
   public static final String PATH = "path";
 
   /**
-   * For datamap created with 'WITH DEFERRED REBUILD' syntax, we will add this
+   * For datamap created with 'WITH DEFERRED REFRESH' syntax, we will add this
    * property internally
    */
   public static final String DEFERRED_REBUILD = "_internal.deferred.rebuild";

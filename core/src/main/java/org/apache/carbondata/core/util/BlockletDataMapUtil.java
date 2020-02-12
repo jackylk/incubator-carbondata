@@ -45,8 +45,8 @@ import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.indexstore.BlockMetaInfo;
 import org.apache.carbondata.core.indexstore.TableBlockIndexUniqueIdentifier;
 import org.apache.carbondata.core.indexstore.TableBlockIndexUniqueIdentifierWrapper;
-import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMapDistributable;
-import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataMapFactory;
+import org.apache.carbondata.core.indexstore.blockletindex.BlockletIndexDistributable;
+import org.apache.carbondata.core.indexstore.blockletindex.BlockletIndexFactory;
 import org.apache.carbondata.core.indexstore.blockletindex.SegmentIndexFileStore;
 import org.apache.carbondata.core.metadata.blocklet.DataFileFooter;
 import org.apache.carbondata.core.metadata.blocklet.index.BlockletMinMaxIndex;
@@ -212,7 +212,7 @@ public class BlockletDataMapUtil {
    */
   public static TableBlockIndexUniqueIdentifier filterIdentifiersBasedOnDistributable(
       Set<TableBlockIndexUniqueIdentifier> tableBlockIndexUniqueIdentifiers,
-      BlockletDataMapDistributable distributable) {
+      BlockletIndexDistributable distributable) {
     TableBlockIndexUniqueIdentifier validIdentifier = null;
     String fileName = CarbonTablePath.DataFileUtil.getFileName(distributable.getFilePath());
     for (TableBlockIndexUniqueIdentifier tableBlockIndexUniqueIdentifier :
@@ -257,7 +257,7 @@ public class BlockletDataMapUtil {
   public static boolean isCacheLevelBlock(CarbonTable carbonTable) {
     String cacheLevel = carbonTable.getTableInfo().getFactTable().getTableProperties()
         .get(CarbonCommonConstants.CACHE_LEVEL);
-    if (BlockletDataMapFactory.CACHE_LEVEL_BLOCKLET.equals(cacheLevel)) {
+    if (BlockletIndexFactory.CACHE_LEVEL_BLOCKLET.equals(cacheLevel)) {
       return false;
     }
     return true;

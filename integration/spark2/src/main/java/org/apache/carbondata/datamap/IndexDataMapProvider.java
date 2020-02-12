@@ -28,8 +28,8 @@ import org.apache.carbondata.common.exceptions.sql.MalformedDataMapCommandExcept
 import org.apache.carbondata.core.datamap.DataMapProvider;
 import org.apache.carbondata.core.datamap.DataMapRegistry;
 import org.apache.carbondata.core.datamap.DataMapStoreManager;
-import org.apache.carbondata.core.datamap.dev.DataMap;
-import org.apache.carbondata.core.datamap.dev.DataMapFactory;
+import org.apache.carbondata.core.datamap.dev.Index;
+import org.apache.carbondata.core.datamap.dev.IndexFactory;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.metadata.schema.table.DataMapSchema;
 import org.apache.carbondata.core.metadata.schema.table.RelationIdentifier;
@@ -38,21 +38,21 @@ import org.apache.carbondata.core.metadata.schema.table.column.CarbonColumn;
 import org.apache.spark.sql.SparkSession;
 
 /**
- * Index type DataMap, all index datamap should implement this interface.
+ * Index type Index, all index datamap should implement this interface.
  */
 @InterfaceAudience.Internal
 public class IndexDataMapProvider extends DataMapProvider {
 
   private SparkSession sparkSession;
-  private DataMapFactory<? extends DataMap> dataMapFactory;
+  private IndexFactory<? extends Index> indexFactory;
   private List<CarbonColumn> indexedColumns;
 
   public IndexDataMapProvider(CarbonTable table, DataMapSchema schema, SparkSession sparkSession)
       throws MalformedDataMapCommandException {
     super(table, schema);
     this.sparkSession = sparkSession;
-    this.dataMapFactory = createDataMapFactory();
-    dataMapFactory.validate();
+    this.indexFactory = createDataMapFactory();
+    indexFactory.validate();
     this.indexedColumns = table.getIndexedColumns(schema);
   }
 
@@ -76,7 +76,7 @@ public class IndexDataMapProvider extends DataMapProvider {
     relationIdentifiers.add(relationIdentifier);
     dataMapSchema.setRelationIdentifier(relationIdentifier);
     dataMapSchema.setParentTables(relationIdentifiers);
-    DataMapStoreManager.getInstance().registerDataMap(mainTable, dataMapSchema, dataMapFactory);
+    DataMapStoreManager.getInstance().registerDataMap(mainTable, dataMapSchema, indexFactory);
     DataMapStoreManager.getInstance().saveDataMapSchema(dataMapSchema);
   }
 
@@ -100,39 +100,39 @@ public class IndexDataMapProvider extends DataMapProvider {
 
   @Override
   public boolean rebuild() {
-    IndexDataMapRebuildRDD.rebuildDataMap(sparkSession, getMainTable(), getDataMapSchema());
+    IndexRebuildRDD.rebuild(sparkSession, getMainTable(), getDataMapSchema());
     return true;
   }
 
-  private DataMapFactory<? extends DataMap> createDataMapFactory()
+  private IndexFactory<? extends Index> createDataMapFactory()
       throws MalformedDataMapCommandException {
     CarbonTable mainTable = getMainTable();
     DataMapSchema dataMapSchema = getDataMapSchema();
-    DataMapFactory<? extends DataMap> dataMapFactory;
+    IndexFactory<? extends Index> indexFactory;
     try {
-      // try to create DataMapClassProvider instance by taking providerName as class name
-      dataMapFactory = (DataMapFactory<? extends DataMap>)
+      // try to create IndexFactory instance by taking providerName as class name
+      indexFactory = (IndexFactory<? extends Index>)
           Class.forName(dataMapSchema.getProviderName()).getConstructors()[0]
               .newInstance(mainTable, dataMapSchema);
     } catch (ClassNotFoundException e) {
-      // try to create DataMapClassProvider instance by taking providerName as short name
-      dataMapFactory =
-          DataMapRegistry.getDataMapFactoryByShortName(mainTable, dataMapSchema);
+      // try to create IndexFactory instance by taking providerName as short name
+      indexFactory =
+          DataMapRegistry.getIndexFactoryByShortName(mainTable, dataMapSchema);
     } catch (Throwable e) {
       throw new MetadataProcessException(
-          "failed to create DataMapClassProvider '" + dataMapSchema.getProviderName() + "'", e);
+          "failed to create IndexFactory '" + dataMapSchema.getProviderName() + "'", e);
     }
-    return dataMapFactory;
+    return indexFactory;
   }
 
   @Override
-  public DataMapFactory getDataMapFactory() {
-    return dataMapFactory;
+  public IndexFactory getIndexFactory() {
+    return indexFactory;
   }
 
   @Override
   public boolean supportRebuild() {
-    return dataMapFactory.supportRebuild();
+    return indexFactory.supportRebuild();
   }
 
   @Override

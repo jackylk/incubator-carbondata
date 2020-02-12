@@ -21,9 +21,9 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.List;
 
-import org.apache.carbondata.core.datamap.DataMapDistributable;
-import org.apache.carbondata.core.datamap.DataMapLevel;
 import org.apache.carbondata.core.datamap.Segment;
+import org.apache.carbondata.core.datamap.index.IndexDistributable;
+import org.apache.carbondata.core.datamap.index.IndexLevel;
 import org.apache.carbondata.core.indexstore.ExtendedBlocklet;
 import org.apache.carbondata.core.indexstore.PartitionSpec;
 import org.apache.carbondata.core.scan.filter.resolver.FilterResolverIntf;
@@ -49,7 +49,7 @@ public interface DataMapExprWrapper extends Serializable {
    * @return the pruned ExtendedBlocklet list
    * @throws IOException
    */
-  List<ExtendedBlocklet> prune(DataMapDistributable distributable,
+  List<ExtendedBlocklet> prune(IndexDistributable distributable,
       List<PartitionSpec> partitionsToPrune)
           throws IOException;
 
@@ -74,7 +74,7 @@ public interface DataMapExprWrapper extends Serializable {
    * @return
    * @throws IOException
    */
-  List<DataMapDistributableWrapper> toDistributable(List<Segment> segments) throws IOException;
+  List<IndexDistributableWrapper> toDistributable(List<Segment> segments) throws IOException;
 
   /**
    * Each leaf node is identified by uniqueid, so if user wants the underlying filter expression for
@@ -87,7 +87,7 @@ public interface DataMapExprWrapper extends Serializable {
   /**
    * Get the datamap level.
    */
-  DataMapLevel getDataMapLevel();
+  IndexLevel getIndexLevel();
 
   /**
    * get the left datamap wrapper

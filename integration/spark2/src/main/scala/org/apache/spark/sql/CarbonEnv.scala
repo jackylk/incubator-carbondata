@@ -125,7 +125,7 @@ class CarbonEnv {
   }
 
   private def cleanChildTablesNotRegisteredInHive(sparkSession: SparkSession): Unit = {
-    // If in case JDBC application is killed/stopped, when create datamap was in progress, datamap
+    // If in case JDBC application is killed/stopped, when create MV was in progress, MV
     // table was created and datampschema was saved to the system, but table was not registered to
     // metastore. So, when we restart JDBC application, we need to clean up
     // stale tables and datamapschema's.

@@ -163,9 +163,9 @@ abstract class CarbonDDLSqlParser extends AbstractCarbonSparkSQLParser {
   protected val ID = carbonKeyWord("ID")
   protected val DATAMAP = carbonKeyWord("DATAMAP")
   protected val ON = carbonKeyWord("ON")
-  protected val DMPROPERTIES = carbonKeyWord("DMPROPERTIES")
+  protected val PROPERTIES = carbonKeyWord("PROPERTIES")
   protected val SELECT = carbonKeyWord("SELECT")
-  protected val REBUILD = carbonKeyWord("REBUILD")
+  protected val REFRESH = carbonKeyWord("REFRESH")
   protected val DEFERRED = carbonKeyWord("DEFERRED")
   protected val STREAM = carbonKeyWord("STREAM")
   protected val STREAMS = carbonKeyWord("STREAMS")
@@ -174,6 +174,8 @@ abstract class CarbonDDLSqlParser extends AbstractCarbonSparkSQLParser {
   protected val PATH = carbonKeyWord("PATH")
   protected val INSERT = carbonKeyWord("INSERT")
   protected val STAGE = carbonKeyWord("STAGE")
+  protected val INDEX = carbonKeyWord("INDEX")
+  protected val INDEXES = carbonKeyWord("INDEXES")
 
   protected val newReservedWords =
     this.getClass

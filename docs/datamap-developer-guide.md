@@ -30,5 +30,5 @@ Currently, the provider string can be:
 
 When user issues `DROP DATAMAP dm ON TABLE main`, the corresponding DataMapProvider interface will be called.
 
-Click for more details about [DataMap Management](./datamap/datamap-management.md#datamap-management) and supported [DSL](./datamap/datamap-management.md#overview).
+Click for more details about [DataMap Management](index/index-management.md#datamap-management) and supported [DSL](index/index-management.md#overview).
 

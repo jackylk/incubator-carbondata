@@ -25,7 +25,8 @@ import org.apache.spark.sql.execution.command.MetadataCommand
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.cache.CacheProvider
-import org.apache.carbondata.core.datamap.{DataMapStoreManager, DataMapUtil}
+import org.apache.carbondata.core.datamap.DataMapStoreManager
+import org.apache.carbondata.core.datamap.index.IndexUtil
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.events.{DropTableCacheEvent, OperationContext, OperationListenerBus}
@@ -53,7 +54,7 @@ case class CarbonDropCacheCommand(tableIdentifier: TableIdentifier, internalCall
     if (CarbonProperties.getInstance().isDistributedPruningEnabled(carbonTable.getDatabaseName,
       carbonTable.getTableName)) {
       LOGGER.info("Clearing cache from IndexServer")
-      DataMapUtil.executeClearDataMapJob(carbonTable, DataMapUtil.DISTRIBUTED_JOB_NAME)
+      IndexUtil.executeClearIndexJob(carbonTable, IndexUtil.DISTRIBUTED_JOB_NAME)
     }
     if (cache != null) {
       LOGGER.info("Clearing cache from driver side")

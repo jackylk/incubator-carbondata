@@ -24,7 +24,7 @@ import java.util.List;
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.datamap.DataMapStoreManager;
 import org.apache.carbondata.core.datamap.Segment;
-import org.apache.carbondata.core.datamap.TableDataMap;
+import org.apache.carbondata.core.datamap.index.TableIndex;
 import org.apache.carbondata.core.datastore.filesystem.CarbonFile;
 import org.apache.carbondata.core.datastore.filesystem.CarbonFileFilter;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
@@ -97,9 +97,9 @@ public final class DeleteLoadFolders {
   private static void physicalFactAndMeasureMetadataDeletion(CarbonTable carbonTable,
       LoadMetadataDetails[] loadDetails, boolean isForceDelete, List<PartitionSpec> specs,
       LoadMetadataDetails[] currLoadDetails) {
-    List<TableDataMap> indexDataMaps = new ArrayList<>();
+    List<TableIndex> indexDataMaps = new ArrayList<>();
     try {
-      for (TableDataMap dataMap : DataMapStoreManager.getInstance().getAllDataMap(carbonTable)) {
+      for (TableIndex dataMap : DataMapStoreManager.getInstance().getAllDataMap(carbonTable)) {
         if (dataMap.getDataMapSchema().isIndexDataMap()) {
           indexDataMaps.add(dataMap);
         }
@@ -160,10 +160,10 @@ public final class DeleteLoadFolders {
             }
           }
           List<Segment> segments = new ArrayList<>(1);
-          for (TableDataMap dataMap : indexDataMaps) {
+          for (TableIndex dataMap : indexDataMaps) {
             segments.clear();
             segments.add(new Segment(oneLoad.getLoadName()));
-            dataMap.deleteDatamapData(segments);
+            dataMap.deleteIndexData(segments);
           }
         } catch (Exception e) {
           LOGGER.warn("Unable to delete the file as per delete command " + oneLoad.getLoadName());

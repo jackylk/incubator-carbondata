@@ -28,15 +28,15 @@ import org.apache.spark.sql.catalyst.catalog.CatalogTable
 import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeReference, Cast, Coalesce, Expression, Literal, ScalaUDF}
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, Average}
 import org.apache.spark.sql.catalyst.plans.logical.{Join, Limit, LogicalPlan}
-import org.apache.spark.sql.execution.command.{Field, PartitionerField, TableModel, TableNewProcessor}
+import org.apache.spark.sql.execution.command.{Field, MVField, PartitionerField, TableModel, TableNewProcessor}
 import org.apache.spark.sql.execution.command.table.{CarbonCreateTableCommand, CarbonDropTableCommand}
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.types.{ArrayType, DateType, MapType, StructType}
-import org.apache.spark.util.{DataMapUtil, PartitionUtils}
 
-import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
+import org.apache.carbondata.common.exceptions.sql.{MalformedCarbonCommandException, MalformedDataMapCommandException}
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.datamap.DataMapStoreManager
+import org.apache.carbondata.core.datastore.compression.CompressorFactory
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.metadata.datatype.DataTypes
 import org.apache.carbondata.core.metadata.schema.datamap.{DataMapClassProvider, DataMapProperty}
@@ -136,7 +136,7 @@ object MVHelper {
       }
       if (mainCarbonTable.get.isChildTableForMV) {
         throw new MalformedCarbonCommandException(
-          "Cannot create Datamap on child table " + mainCarbonTable.get.getTableUniqueName)
+          "Cannot create MV on MV table " + mainCarbonTable.get.getTableUniqueName)
       }
       parentTables.add(mainCarbonTable.get.getTableName)
       if (!mainCarbonTable.isEmpty && mainCarbonTable.get.isStreamingSink) {
@@ -166,12 +166,11 @@ object MVHelper {
     // else, will use default table properties. If DMProperties contains table properties, then
     // table properties of datamap table will be updated
     if (parentTablesList.size() == 1) {
-      DataMapUtil
-        .inheritTablePropertiesFromMainTable(
-          parentTablesList.get(0),
-          fields,
-          fieldRelationMap,
-          tableProperties)
+      inheritTablePropertiesFromMainTable(
+        parentTablesList.get(0),
+        fields,
+        fieldRelationMap,
+        tableProperties)
       if (granularity != null) {
         val timeSeriesDataType = parentTablesList
           .get(0)
@@ -208,8 +207,7 @@ object MVHelper {
       } else {
         Seq()
       }
-      partitionerFields = PartitionUtils
-        .getPartitionerFields(parentPartitionColumns, fieldRelationMap)
+      partitionerFields = getPartitionerFields(parentPartitionColumns, fieldRelationMap)
     }
 
     var order = 0
@@ -304,8 +302,8 @@ object MVHelper {
       logicalPlan: LogicalPlan): ModularPlan = {
     val dataMapProvider = DataMapManager.get().getDataMapProvider(null,
       new DataMapSchema("", DataMapClassProvider.MV.getShortName), sparkSession)
-    var catalog = DataMapStoreManager.getInstance().getDataMapCatalog(dataMapProvider,
-      DataMapClassProvider.MV.getShortName).asInstanceOf[SummaryDatasetCatalog]
+    var catalog = DataMapStoreManager.getInstance().getMVCatalog(dataMapProvider)
+      .asInstanceOf[SummaryDatasetCatalog]
     if (catalog == null) {
       catalog = new SummaryDatasetCatalog(sparkSession)
     }
@@ -484,4 +482,197 @@ object MVHelper {
     }
     (timeSeriesColumn, granularity)
   }
+
+  private def inheritTablePropertiesFromMainTable(
+      parentTable: CarbonTable,
+      fields: Seq[Field],
+      fieldRelationMap: scala.collection.mutable.LinkedHashMap[Field, MVField],
+      tableProperties: mutable.Map[String, String]): Unit = {
+    var neworder = Seq[String]()
+    val parentOrder = parentTable.getSortColumns().asScala
+    parentOrder.foreach(parentcol =>
+      fields.filter(col => fieldRelationMap(col).aggregateFunction.isEmpty &&
+                           fieldRelationMap(col).columnTableRelationList.size == 1 &&
+                           parentcol.equalsIgnoreCase(fieldRelationMap(col).
+                             columnTableRelationList.get(0).parentColumnName))
+        .map(cols => neworder :+= cols.column))
+    if (neworder.nonEmpty) {
+      tableProperties.put(CarbonCommonConstants.SORT_COLUMNS, neworder.mkString(","))
+    }
+    val sort_scope = parentTable.getTableInfo.getFactTable.getTableProperties.asScala
+      .get("sort_scope")
+    if (sort_scope.isDefined) {
+      tableProperties.put("sort_scope", sort_scope.get)
+    }
+    tableProperties
+      .put(CarbonCommonConstants.TABLE_BLOCKSIZE, parentTable.getBlockSizeInMB.toString)
+    tableProperties.put(CarbonCommonConstants.FLAT_FOLDER,
+      parentTable.getTableInfo.getFactTable.getTableProperties.asScala.getOrElse(
+        CarbonCommonConstants.FLAT_FOLDER, CarbonCommonConstants.DEFAULT_FLAT_FOLDER))
+
+    // Datamap table name and columns are automatically added prefix with parent table name
+    // in carbon. For convenient, users can type column names same as the ones in select statement
+    // when config dmproperties, and here we update column names with prefix.
+    // If longStringColumn is not present in dm properties then we take long_string_columns from
+    // the parent table.
+    var longStringColumn = tableProperties.get(CarbonCommonConstants.LONG_STRING_COLUMNS)
+    if (longStringColumn.isEmpty) {
+      val longStringColumnInParents = parentTable.getTableInfo.getFactTable.getTableProperties
+        .asScala
+        .getOrElse(CarbonCommonConstants.LONG_STRING_COLUMNS, "").split(",").map(_.trim)
+      val varcharDatamapFields = scala.collection.mutable.ArrayBuffer.empty[String]
+      fieldRelationMap foreach (fields => {
+        val aggFunc = fields._2.aggregateFunction
+        val relationList = fields._2.columnTableRelationList
+        // check if columns present in datamap are long_string_col in parent table. If they are
+        // long_string_columns in parent, make them long_string_columns in datamap
+        if (aggFunc.isEmpty && relationList.size == 1 && longStringColumnInParents
+          .contains(relationList.head.head.parentColumnName)) {
+          varcharDatamapFields += relationList.head.head.parentColumnName
+        }
+      })
+      if (!varcharDatamapFields.isEmpty) {
+        longStringColumn = Option(varcharDatamapFields.mkString(","))
+      }
+    }
+
+    if (longStringColumn != None) {
+      val fieldNames = fields.map(_.column)
+      val newLongStringColumn = longStringColumn.get.split(",").map(_.trim).map { colName =>
+        val newColName = parentTable.getTableName.toLowerCase() + "_" + colName
+        if (!fieldNames.contains(newColName)) {
+          throw new MalformedDataMapCommandException(
+            CarbonCommonConstants.LONG_STRING_COLUMNS.toUpperCase() + ":" + colName
+            + " does not in datamap")
+        }
+        newColName
+      }
+      tableProperties.put(CarbonCommonConstants.LONG_STRING_COLUMNS,
+        newLongStringColumn.mkString(","))
+    }
+    // inherit compressor property
+    tableProperties
+      .put(CarbonCommonConstants.COMPRESSOR,
+        parentTable.getTableInfo.getFactTable.getTableProperties.asScala
+          .getOrElse(CarbonCommonConstants.COMPRESSOR,
+            CompressorFactory.getInstance().getCompressor.getName))
+
+    // inherit the local dictionary properties of main parent table
+    tableProperties
+      .put(CarbonCommonConstants.LOCAL_DICTIONARY_ENABLE,
+        parentTable.getTableInfo.getFactTable.getTableProperties.asScala
+          .getOrElse(CarbonCommonConstants.LOCAL_DICTIONARY_ENABLE, "false"))
+    tableProperties
+      .put(CarbonCommonConstants.LOCAL_DICTIONARY_THRESHOLD,
+        parentTable.getTableInfo.getFactTable.getTableProperties.asScala
+          .getOrElse(CarbonCommonConstants.LOCAL_DICTIONARY_THRESHOLD,
+            CarbonCommonConstants.LOCAL_DICTIONARY_THRESHOLD_DEFAULT))
+    val parentDictInclude = parentTable.getTableInfo.getFactTable.getTableProperties.asScala
+      .getOrElse(CarbonCommonConstants.LOCAL_DICTIONARY_INCLUDE, "").split(",")
+
+    val parentDictExclude = parentTable.getTableInfo.getFactTable.getTableProperties.asScala
+      .getOrElse(CarbonCommonConstants.LOCAL_DICTIONARY_EXCLUDE, "").split(",")
+
+    val newLocalDictInclude = getDataMapColumns(parentDictInclude, fields, fieldRelationMap)
+
+    val newLocalDictExclude = getDataMapColumns(parentDictExclude, fields, fieldRelationMap)
+
+    if (newLocalDictInclude.nonEmpty) {
+      tableProperties
+        .put(CarbonCommonConstants.LOCAL_DICTIONARY_INCLUDE, newLocalDictInclude.mkString(","))
+    }
+    if (newLocalDictExclude.nonEmpty) {
+      tableProperties
+        .put(CarbonCommonConstants.LOCAL_DICTIONARY_EXCLUDE, newLocalDictExclude.mkString(","))
+    }
+
+    val parentInvertedIndex = parentTable.getTableInfo.getFactTable.getTableProperties.asScala
+      .getOrElse(CarbonCommonConstants.INVERTED_INDEX, "").split(",")
+
+    val newInvertedIndex = getDataMapColumns(parentInvertedIndex, fields, fieldRelationMap)
+
+    val parentNoInvertedIndex = parentTable.getTableInfo.getFactTable.getTableProperties.asScala
+      .getOrElse(CarbonCommonConstants.NO_INVERTED_INDEX, "").split(",")
+
+    val newNoInvertedIndex = getDataMapColumns(parentNoInvertedIndex, fields, fieldRelationMap)
+
+    if (newInvertedIndex.nonEmpty) {
+      tableProperties
+        .put(CarbonCommonConstants.INVERTED_INDEX, newInvertedIndex.mkString(","))
+    }
+    if (newNoInvertedIndex.nonEmpty) {
+      tableProperties
+        .put(CarbonCommonConstants.NO_INVERTED_INDEX, newNoInvertedIndex.mkString(","))
+    }
+
+  }
+
+  private def getDataMapColumns(parentColumns: Array[String], fields: Seq[Field],
+      fieldRelationMap: scala.collection.mutable.LinkedHashMap[Field, MVField]) = {
+    val dataMapColumns = parentColumns.flatMap(parentcol =>
+      fields.collect {
+        case col if fieldRelationMap(col).aggregateFunction.isEmpty &&
+                    fieldRelationMap(col).columnTableRelationList.size == 1 &&
+                    parentcol.equalsIgnoreCase(fieldRelationMap(col).
+                      columnTableRelationList.get.head.parentColumnName) =>
+          col.column
+      })
+    dataMapColumns
+  }
+
+  /**
+   * Used to extract PartitionerFields for aggregation datamaps.
+   * This method will keep generating partitionerFields until the sequence of
+   * partition column is broken.
+   *
+   * For example: if x,y,z are partition columns in main table then child tables will be
+   * partitioned only if the child table has List("x,y,z", "x,y", "x") as the projection columns.
+   *
+   *
+   */
+  private def getPartitionerFields(allPartitionColumn: Seq[String],
+      fieldRelations: mutable.LinkedHashMap[Field, MVField]): Seq[PartitionerField] = {
+
+    def generatePartitionerField(partitionColumn: List[String],
+        partitionerFields: Seq[PartitionerField]): Seq[PartitionerField] = {
+      partitionColumn match {
+        case head :: tail =>
+          // Collect the first relation which matched the condition
+          val validRelation = fieldRelations.zipWithIndex.collectFirst {
+            case ((field, dataMapField), index) if
+            dataMapField.columnTableRelationList.getOrElse(Seq()).nonEmpty &&
+            head.equals(dataMapField.columnTableRelationList.get.head.parentColumnName) &&
+            dataMapField.aggregateFunction.isEmpty =>
+              (PartitionerField(field.name.get,
+                field.dataType,
+                field.columnComment), allPartitionColumn.indexOf(head))
+          }
+          if (validRelation.isDefined) {
+            val (partitionerField, index) = validRelation.get
+            // if relation is found then check if the partitionerFields already found are equal
+            // to the index of this element.
+            // If x with index 1 is found then there should be exactly 1 element already found.
+            // If z with index 2 comes directly after x then this check will be false are 1
+            // element is skipped in between and index would be 2 and number of elements found
+            // would be 1. In that case return empty sequence so that the aggregate table is not
+            // partitioned on any column.
+            if (index == partitionerFields.length) {
+              generatePartitionerField(tail, partitionerFields :+ partitionerField)
+            } else {
+              Seq.empty
+            }
+          } else {
+            // if not found then countinue search for the rest of the elements. Because the rest
+            // of the elements can also decide if the table has to be partitioned or not.
+            generatePartitionerField(tail, partitionerFields)
+          }
+        case Nil =>
+          // if end of list then return fields.
+          partitionerFields
+      }
+    }
+
+    generatePartitionerField(allPartitionColumn.toList, Seq.empty)
+  }
+
 }
