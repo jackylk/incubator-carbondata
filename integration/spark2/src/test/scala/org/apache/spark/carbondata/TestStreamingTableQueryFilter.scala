@@ -217,7 +217,7 @@ class TestStreamingTableQueryFilter extends QueryTest with BeforeAndAfterAll {
       autoHandoff: Boolean = CarbonCommonConstants.ENABLE_AUTO_HANDOFF_DEFAULT.toBoolean
   ): Unit = {
     val identifier = new TableIdentifier(tableName, Option("streaming_table_filter"))
-    val carbonTable = CarbonEnv.getInstance(spark).carbonMetaStore.lookupRelation(identifier)(spark)
+    val carbonTable = CarbonEnv.getInstance(spark).carbonMetaStore.lookupCarbonRelation(identifier)(spark)
       .asInstanceOf[CarbonRelation].carbonTable
     var server: ServerSocket = null
     try {

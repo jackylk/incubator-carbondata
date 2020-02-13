@@ -47,7 +47,7 @@ private[sql] case class CarbonDescribeFormattedCommand(
 
   override def processMetadata(sparkSession: SparkSession): Seq[Row] = {
     val relation = CarbonEnv.getInstance(sparkSession).carbonMetaStore
-      .lookupRelation(tblIdentifier)(sparkSession).asInstanceOf[CarbonRelation]
+      .lookupCarbonRelation(tblIdentifier)(sparkSession).asInstanceOf[CarbonRelation]
     setAuditTable(relation.databaseName, relation.tableName)
     var results: Seq[(String, String, String)] = child.schema.fields.map { field =>
       val colComment = field.getComment().getOrElse("null")

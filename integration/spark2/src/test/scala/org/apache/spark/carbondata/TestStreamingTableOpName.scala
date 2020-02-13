@@ -226,7 +226,7 @@ class TestStreamingTableOpName extends QueryTest with BeforeAndAfterAll {
     assertResult("Streaming property value is incorrect")(msg.getMessage)
 
     val identifier = new TableIdentifier("batch_table", Option("streaming"))
-    val carbonTable = CarbonEnv.getInstance(spark).carbonMetaStore.lookupRelation(identifier)(spark)
+    val carbonTable = CarbonEnv.getInstance(spark).carbonMetaStore.lookupCarbonRelation(identifier)(spark)
       .asInstanceOf[CarbonRelation].carbonTable
     var server: ServerSocket = null
     try {
@@ -253,7 +253,7 @@ class TestStreamingTableOpName extends QueryTest with BeforeAndAfterAll {
   // input source: file
   test("streaming ingest from file source") {
     val identifier = new TableIdentifier("stream_table_file", Option("streaming"))
-    val carbonTable = CarbonEnv.getInstance(spark).carbonMetaStore.lookupRelation(identifier)(spark)
+    val carbonTable = CarbonEnv.getInstance(spark).carbonMetaStore.lookupCarbonRelation(identifier)(spark)
       .asInstanceOf[CarbonRelation].carbonTable
     val csvDataDir = new File("target/csvdata").getCanonicalPath
     // streaming ingest 10 rows
@@ -277,7 +277,7 @@ class TestStreamingTableOpName extends QueryTest with BeforeAndAfterAll {
 
   def loadData() {
     val identifier = new TableIdentifier("agg_table2", Option("streaming"))
-    val carbonTable = CarbonEnv.getInstance(spark).carbonMetaStore.lookupRelation(identifier)(spark)
+    val carbonTable = CarbonEnv.getInstance(spark).carbonMetaStore.lookupCarbonRelation(identifier)(spark)
       .asInstanceOf[CarbonRelation].carbonTable
     val csvDataDir = new File("target/csvdatanew").getCanonicalPath
     // streaming ingest 10 rows
@@ -1258,7 +1258,7 @@ class TestStreamingTableOpName extends QueryTest with BeforeAndAfterAll {
 
   test("block drop streaming table while streaming is in progress") {
     val identifier = new TableIdentifier("stream_table_drop", Option("streaming"))
-    val carbonTable = CarbonEnv.getInstance(spark).carbonMetaStore.lookupRelation(identifier)(spark)
+    val carbonTable = CarbonEnv.getInstance(spark).carbonMetaStore.lookupCarbonRelation(identifier)(spark)
       .asInstanceOf[CarbonRelation].carbonTable
     var server: ServerSocket = null
     try {
@@ -2051,7 +2051,7 @@ class TestStreamingTableOpName extends QueryTest with BeforeAndAfterAll {
       badRecordsPath: String = CarbonCommonConstants.CARBON_BADRECORDS_LOC_DEFAULT_VAL
   ): Unit = {
     val identifier = new TableIdentifier(tableName, Option("streaming"))
-    val carbonTable = CarbonEnv.getInstance(spark).carbonMetaStore.lookupRelation(identifier)(spark)
+    val carbonTable = CarbonEnv.getInstance(spark).carbonMetaStore.lookupCarbonRelation(identifier)(spark)
       .asInstanceOf[CarbonRelation].carbonTable
     var server: ServerSocket = null
     try {

@@ -307,7 +307,7 @@ object DDLHelper {
     val tableName = showPartitionsCommand.tableName
     val cols = showPartitionsCommand.spec
     val carbonTable = CarbonEnv.getInstance(sparkSession).carbonMetaStore
-      .lookupRelation(tableName)(sparkSession).asInstanceOf[CarbonRelation].carbonTable
+      .lookupCarbonRelation(tableName)(sparkSession).asInstanceOf[CarbonRelation].carbonTable
     if (carbonTable != null && !carbonTable.getTableInfo.isTransactionalTable) {
       throw new MalformedCarbonCommandException(
         "Unsupported operation on non transactional table")
@@ -351,7 +351,7 @@ object DDLHelper {
   ): CarbonAlterTableSetCommand = {
     val tableName = setProperties.tableName
     val carbonTable = CarbonEnv.getInstance(sparkSession).carbonMetaStore
-      .lookupRelation(tableName)(sparkSession).asInstanceOf[CarbonRelation].carbonTable
+      .lookupCarbonRelation(tableName)(sparkSession).asInstanceOf[CarbonRelation].carbonTable
     if (carbonTable != null && !carbonTable.getTableInfo.isTransactionalTable) {
       throw new MalformedCarbonCommandException(
         "Unsupported operation on non transactional table")

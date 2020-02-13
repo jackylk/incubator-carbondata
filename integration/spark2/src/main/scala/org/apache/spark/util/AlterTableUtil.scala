@@ -210,7 +210,7 @@ object AlterTableUtil {
     val tableIdentifier = TableIdentifier(tableName, Some(dbName))
     sparkSession.catalog.refreshTable(tableIdentifier.quotedString)
     val schema = CarbonEnv.getInstance(sparkSession).carbonMetaStore
-      .lookupRelation(tableIdentifier)(sparkSession).schema.json
+      .lookupCarbonRelation(tableIdentifier)(sparkSession).schema.json
     val schemaParts = prepareSchemaJsonForAlterTable(sparkSession.sparkContext.getConf, schema)
     (tableIdentifier, schemaParts)
   }

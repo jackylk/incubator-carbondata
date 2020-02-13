@@ -23,7 +23,7 @@ import scala.collection.mutable.ArrayBuffer
 import org.apache.spark.sql.CarbonDatasourceHadoopRelation
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
-import org.apache.spark.sql.execution.command.{ColumnTableRelation, Field, MVField}
+import org.apache.spark.sql.execution.command.Field
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.types.DataType
 
@@ -117,9 +117,9 @@ class MVUtil {
       case attr: AttributeReference =>
         val carbonTable = getCarbonTable(logicalRelation, attr)
         if (null != carbonTable) {
-          val arrayBuffer: ArrayBuffer[ColumnTableRelation] = new ArrayBuffer[ColumnTableRelation]()
-          val relation = getColumnRelation(attr.name,
-            carbonTable.getAbsoluteTableIdentifier.getCarbonTableIdentifier.getTableId,
+          val arrayBuffer: ArrayBuffer[ColumnRelation] = new ArrayBuffer[ColumnRelation]()
+          val relation = getColumnRelation(
+            attr.name,
             carbonTable.getAbsoluteTableIdentifier.getCarbonTableIdentifier.getTableName,
             carbonTable.getAbsoluteTableIdentifier.getCarbonTableIdentifier.getDatabaseName,
             carbonTable)
@@ -135,7 +135,7 @@ class MVUtil {
             }
           }
           fieldToDataMapFieldMap +=
-          getFieldToDataMapFields(
+          getFieldToMVFieldMap(
             attr.name,
             attr.dataType,
             qualifier.headOption,
@@ -146,38 +146,30 @@ class MVUtil {
       case Alias(attr: AttributeReference, name) =>
         val carbonTable = getCarbonTable(logicalRelation, attr)
         if (null != carbonTable) {
-          val arrayBuffer: ArrayBuffer[ColumnTableRelation] = new ArrayBuffer[ColumnTableRelation]()
-          val relation = getColumnRelation(attr.name,
-            carbonTable.getAbsoluteTableIdentifier.getCarbonTableIdentifier.getTableId,
-            carbonTable.getAbsoluteTableIdentifier.getCarbonTableIdentifier.getTableName,
-            carbonTable.getAbsoluteTableIdentifier.getCarbonTableIdentifier.getDatabaseName,
-            carbonTable)
+          val arrayBuffer: ArrayBuffer[ColumnRelation] = new ArrayBuffer[ColumnRelation]()
+          val relation = getColumnRelation(attr.name, carbonTable.getAbsoluteTableIdentifier.getCarbonTableIdentifier.getTableName, carbonTable.getAbsoluteTableIdentifier.getCarbonTableIdentifier.getDatabaseName, carbonTable)
           if (null != relation) {
             arrayBuffer += relation
           }
           fieldToDataMapFieldMap +=
-          getFieldToDataMapFields(name, attr.dataType, None, "", arrayBuffer, "")
+          getFieldToMVFieldMap(name, attr.dataType, None, "", arrayBuffer, "")
         }
 
       case a@Alias(agg: AggregateExpression, _) =>
         checkIfComplexDataTypeExists(a)
-        val arrayBuffer: ArrayBuffer[ColumnTableRelation] = new ArrayBuffer[ColumnTableRelation]()
+        val arrayBuffer: ArrayBuffer[ColumnRelation] = new ArrayBuffer[ColumnRelation]()
         a.collect {
           case attr: AttributeReference =>
             val carbonTable = getCarbonTable(logicalRelation, attr)
             if (null != carbonTable) {
-              val relation = getColumnRelation(attr.name,
-                carbonTable.getAbsoluteTableIdentifier.getCarbonTableIdentifier.getTableId,
-                carbonTable.getAbsoluteTableIdentifier.getCarbonTableIdentifier.getTableName,
-                carbonTable.getAbsoluteTableIdentifier.getCarbonTableIdentifier.getDatabaseName,
-                carbonTable)
+              val relation = getColumnRelation(attr.name, carbonTable.getAbsoluteTableIdentifier.getCarbonTableIdentifier.getTableName, carbonTable.getAbsoluteTableIdentifier.getCarbonTableIdentifier.getDatabaseName, carbonTable)
               if (null != relation) {
                 arrayBuffer += relation
               }
             }
         }
         fieldToDataMapFieldMap +=
-        getFieldToDataMapFields(a.name,
+        getFieldToMVFieldMap(a.name,
           a.dataType,
           None,
           agg.aggregateFunction.nodeName,
@@ -186,23 +178,19 @@ class MVUtil {
 
       case a@Alias(_, _) =>
         checkIfComplexDataTypeExists(a)
-        val arrayBuffer: ArrayBuffer[ColumnTableRelation] = new ArrayBuffer[ColumnTableRelation]()
+        val arrayBuffer: ArrayBuffer[ColumnRelation] = new ArrayBuffer[ColumnRelation]()
         a.collect {
           case attr: AttributeReference =>
             val carbonTable = getCarbonTable(logicalRelation, attr)
             if (null != carbonTable) {
-              val relation = getColumnRelation(attr.name,
-                carbonTable.getAbsoluteTableIdentifier.getCarbonTableIdentifier.getTableId,
-                carbonTable.getAbsoluteTableIdentifier.getCarbonTableIdentifier.getTableName,
-                carbonTable.getAbsoluteTableIdentifier.getCarbonTableIdentifier.getDatabaseName,
-                carbonTable)
+              val relation = getColumnRelation(attr.name, carbonTable.getAbsoluteTableIdentifier.getCarbonTableIdentifier.getTableName, carbonTable.getAbsoluteTableIdentifier.getCarbonTableIdentifier.getDatabaseName, carbonTable)
               if (null != relation) {
                 arrayBuffer += relation
               }
             }
         }
         fieldToDataMapFieldMap +=
-        getFieldToDataMapFields(a.name, a.dataType, None, "arithmetic", arrayBuffer, "")
+        getFieldToMVFieldMap(a.name, a.dataType, None, "arithmetic", arrayBuffer, "")
     }
     fieldToDataMapFieldMap
   }
@@ -212,18 +200,16 @@ class MVUtil {
    */
   private def getColumnRelation(
       parentColumnName: String,
-      parentTableId: String,
       parentTableName: String,
       parentDatabaseName: String,
-      carbonTable: CarbonTable): ColumnTableRelation = {
+      carbonTable: CarbonTable) = {
     val parentColumn = carbonTable.getColumnByName(parentColumnName)
-    var columnTableRelation: ColumnTableRelation = null
+    var columnTableRelation: ColumnRelation = null
     if (null != parentColumn) {
-      val parentColumnId = parentColumn.getColumnId
-      columnTableRelation = ColumnTableRelation(parentColumnName = parentColumnName,
-        parentColumnId = parentColumnId,
-        parentTableName = parentTableName,
-        parentDatabaseName = parentDatabaseName, parentTableId = parentTableId)
+      columnTableRelation = ColumnRelation(
+        columnName = parentColumnName,
+        tableName = parentTableName,
+        databaseName = parentDatabaseName)
       columnTableRelation
     } else {
       columnTableRelation
@@ -234,7 +220,8 @@ class MVUtil {
    * This method is used to get carbon table for corresponding attribute reference
    * from logical relation
    */
-  private def getCarbonTable(logicalRelation: Seq[LogicalRelation],
+  private def getCarbonTable(
+      logicalRelation: Seq[LogicalRelation],
       attr: AttributeReference) = {
     val relations = logicalRelation
       .filter(lr => lr.output
@@ -251,13 +238,13 @@ class MVUtil {
   /**
    * Below method will be used to get the fields object for mv table
    */
-  private def getFieldToDataMapFields(
+  private def getFieldToMVFieldMap(
       name: String,
       dataType: DataType,
       qualifier: Option[String],
       aggregateType: String,
-      columnTableRelationList: ArrayBuffer[ColumnTableRelation],
-      parenTableName: String) = {
+      parentTables: ArrayBuffer[ColumnRelation],
+      parenTableName: String): (Field, MVField) = {
     var actualColumnName = MVHelper.getUpdatedName(name, counter)
     counter += 1
     if (qualifier.isDefined) {
@@ -270,7 +257,7 @@ class MVUtil {
       }
     }
     val rawSchema = '`' + actualColumnName + '`' + ' ' + dataType.typeName
-    val mvField = MVField(aggregateType, Some(columnTableRelationList))
+    val mvField = MVField(aggregateType, parentTables)
     if (dataType.typeName.startsWith("decimal")) {
       val (precision, scale) = CommonUtil.getScaleAndPrecision(dataType.catalogString)
       (Field(column = actualColumnName,

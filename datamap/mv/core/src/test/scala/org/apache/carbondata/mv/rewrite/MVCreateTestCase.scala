@@ -32,83 +32,85 @@ import org.apache.carbondata.spark.exception.ProcessMetaDataException
 class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
 
   override def beforeAll {
-//    drop()
-//    CarbonProperties.getInstance()
-//      .addProperty(CarbonCommonConstants.CARBON_TIMESTAMP_FORMAT, "yyyy/MM/dd")
-//    val projectPath = new File(this.getClass.getResource("/").getPath + "../../../../../")
-//      .getCanonicalPath.replaceAll("\\\\", "/")
-//    val integrationPath = s"$projectPath/integration"
-//    val resourcesPath = s"$integrationPath/spark-common-test/src/test/resources"
-//    sql(
-//      """
-//        | CREATE TABLE fact_table1 (empname String, designation String, doj Timestamp,
-//        |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
-//        |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
-//        |  utilization int,salary int)
-//        | STORED AS carbondata
-//      """.stripMargin)
-//    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table1 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
-//    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table1 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
-//    sql(
-//      """
-//        | CREATE TABLE fact_table2 (empname String, designation String, doj Timestamp,
-//        |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
-//        |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
-//        |  utilization int,salary int)
-//        | STORED AS carbondata
-//      """.stripMargin)
-//    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table2 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
-//    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table2 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
-//
-//    sql(
-//      """
-//        | CREATE TABLE fact_table3 (empname String, designation String, doj Timestamp,
-//        |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
-//        |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
-//        |  utilization int,salary int)
-//        | STORED AS carbondata
-//      """.stripMargin)
-//    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table3 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
-//    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table3 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
-//
-//    sql(
-//      """
-//        | CREATE TABLE fact_table4 (empname String, designation String, doj Timestamp,
-//        |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
-//        |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
-//        |  utilization int,salary int)
-//        | STORED AS carbondata
-//      """.stripMargin)
-//    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table4 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
-//    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table4 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
-//    sql(
-//      """
-//        | CREATE TABLE fact_table5 (empname String, designation String, doj Timestamp,
-//        |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
-//        |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
-//        |  utilization int,salary int)
-//        | STORED AS carbondata
-//      """.stripMargin)
-//    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table5 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
-//    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table5 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
-//
-//    sql(
-//      """
-//        | CREATE TABLE fact_table6 (empname String, designation String, doj Timestamp,
-//        |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
-//        |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
-//        |  utilization int,salary int)
-//        | STORED AS carbondata
-//      """.stripMargin)
-//    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table6 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
-//    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table6 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
+    drop()
+    CarbonProperties.getInstance()
+      .addProperty(CarbonCommonConstants.CARBON_TIMESTAMP_FORMAT, "yyyy/MM/dd")
+    val projectPath = new File(this.getClass.getResource("/").getPath + "../../../../../")
+      .getCanonicalPath.replaceAll("\\\\", "/")
+    val integrationPath = s"$projectPath/integration"
+    val resourcesPath = s"$integrationPath/spark-common-test/src/test/resources"
+    sql(
+      """
+        | CREATE TABLE fact_table1 (empname String, designation String, doj Timestamp,
+        |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
+        |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
+        |  utilization int,salary int)
+        | STORED AS carbondata
+      """.stripMargin)
+    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table1 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
+    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table1 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
+    sql(
+      """
+        | CREATE TABLE fact_table2 (empname String, designation String, doj Timestamp,
+        |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
+        |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
+        |  utilization int,salary int)
+        | STORED AS carbondata
+      """.stripMargin)
+    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table2 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
+    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table2 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
+
+    sql(
+      """
+        | CREATE TABLE fact_table3 (empname String, designation String, doj Timestamp,
+        |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
+        |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
+        |  utilization int,salary int)
+        | STORED AS carbondata
+      """.stripMargin)
+    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table3 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
+    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table3 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
+
+    sql(
+      """
+        | CREATE TABLE fact_table4 (empname String, designation String, doj Timestamp,
+        |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
+        |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
+        |  utilization int,salary int)
+        | STORED AS carbondata
+      """.stripMargin)
+    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table4 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
+    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table4 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
+    sql(
+      """
+        | CREATE TABLE fact_table5 (empname String, designation String, doj Timestamp,
+        |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
+        |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
+        |  utilization int,salary int)
+        | STORED AS carbondata
+      """.stripMargin)
+    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table5 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
+    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table5 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
+
+    sql(
+      """
+        | CREATE TABLE fact_table6 (empname String, designation String, doj Timestamp,
+        |  workgroupcategory int, workgroupcategoryname String, deptno int, deptname String,
+        |  projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,
+        |  utilization int,salary int)
+        | STORED AS carbondata
+      """.stripMargin)
+    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table6 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
+    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table6 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
   }
 
-  test("parquet source table: test create mv with simple and same projection") {
+  ignore("parquet source table: test create mv with simple and same projection") {
     sql("drop materialized view if exists mv1")
     sql("drop table if exists parquet_fact_table1")
+    sql("drop table if exists parquet_fact_table2")
     sql("create table parquet_fact_table1 using parquet as select * from fact_table1")
-    sql("create materialized view mv1 as select empname, designation from parquet_fact_table1")
+    sql("create table parquet_fact_table2 using parquet as select * from fact_table1")
+    sql("create materialized view mv1 as select t1.empname, t2.designation from parquet_fact_table1 t1 join parquet_fact_table1 t2 on t1.empname = t2.empname")
     val df = sql("select empname, designation from parquet_fact_table1")
     assert(TestUtil.verifyMVDataMap(df.queryExecution.optimizedPlan, "mv1"))
     checkAnswer(df, sql("select empname, designation from fact_table2"))

@@ -188,12 +188,12 @@ class CarbonFileMetastore extends CarbonMetaStore {
   }
 
   def lookupCarbonRelation(dbName: Option[String], tableName: String)
-    (sparkSession: SparkSession): LogicalPlan = {
-    lookupRelation(TableIdentifier(tableName, dbName))(sparkSession)
+    (sparkSession: SparkSession): CarbonRelation = {
+    lookupCarbonRelation(TableIdentifier(tableName, dbName))(sparkSession)
   }
 
-  override def lookupRelation(tableIdentifier: TableIdentifier)
-    (sparkSession: SparkSession): LogicalPlan = {
+  override def lookupCarbonRelation(tableIdentifier: TableIdentifier)
+    (sparkSession: SparkSession): CarbonRelation = {
     val database = tableIdentifier.database.getOrElse(
       sparkSession.catalog.currentDatabase)
     val relation = sparkSession.sessionState.catalog.lookupRelation(tableIdentifier) match {
@@ -242,7 +242,7 @@ class CarbonFileMetastore extends CarbonMetaStore {
   override def tableExists(tableIdentifier: TableIdentifier)
     (sparkSession: SparkSession): Boolean = {
     try {
-      lookupRelation(tableIdentifier)(sparkSession)
+      lookupCarbonRelation(tableIdentifier)(sparkSession)
     } catch {
       case _: Exception =>
         return false
@@ -441,7 +441,7 @@ class CarbonFileMetastore extends CarbonMetaStore {
 
   def isTablePathExists(tableIdentifier: TableIdentifier)(sparkSession: SparkSession): Boolean = {
     try {
-      val tablePath = lookupRelation(tableIdentifier)(sparkSession)
+      val tablePath = lookupCarbonRelation(tableIdentifier)(sparkSession)
         .asInstanceOf[CarbonRelation].carbonTable.getTablePath
       FileFactory.isFileExist(tablePath)
     } catch {
