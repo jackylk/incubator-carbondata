@@ -101,6 +101,9 @@ public class TableInfo implements Serializable, Writable {
 
   private List<RelationIdentifier> parentRelationIdentifiers;
 
+  // indicate the underlying table format
+  private String provider;
+
   /**
    * flag to check whether any schema modification operation has happened after creation of table
    */
@@ -109,6 +112,7 @@ public class TableInfo implements Serializable, Writable {
   public TableInfo() {
     dataMapSchemaList = new ArrayList<>();
     isTransactionalTable = true;
+    provider = "carbondata";
   }
 
   /**
@@ -402,4 +406,13 @@ public class TableInfo implements Serializable, Writable {
   public String getTablePath() {
     return tablePath;
   }
+
+  public String getProvider() {
+    return provider;
+  }
+
+  public void setProvider(String provider) {
+    this.provider = provider;
+  }
+
 }

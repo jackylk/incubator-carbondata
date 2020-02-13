@@ -68,7 +68,7 @@ class TestImplicitFilterExpression extends QueryTest with BeforeAndAfterAll {
     }.head
     // get carbon relation
     val relation: CarbonRelation = CarbonEnv.getInstance(sqlContext.sparkSession).carbonMetaStore
-      .lookupRelation(Some("default"), "implicit_test")(sqlContext.sparkSession)
+      .lookupCarbonRelation(Some("default"), "implicit_test")(sqlContext.sparkSession)
       .asInstanceOf[CarbonRelation]
     // get carbon table from carbon relation
     val carbonTable = relation.carbonTable

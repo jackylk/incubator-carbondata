@@ -152,7 +152,7 @@ class TestCreateTableAsSelect extends QueryTest with BeforeAndAfterAll {
         "('sort_scope'='global_sort') as select * from carbon_ctas_test")
     checkAnswer(sql("select * from ctas_tblproperties_testt"), sql("select * from carbon_ctas_test"))
     val carbonTable = CarbonEnv.getInstance(Spark2TestQueryExecutor.spark).carbonMetaStore
-      .lookupRelation(Option("default"), "ctas_tblproperties_testt")(Spark2TestQueryExecutor.spark)
+      .lookupCarbonRelation(Option("default"), "ctas_tblproperties_testt")(Spark2TestQueryExecutor.spark)
       .asInstanceOf[CarbonRelation].carbonTable
     val metadataFolderPath: CarbonFile = FileFactory.getCarbonFile(carbonTable.getMetadataPath)
     assert(metadataFolderPath.exists())

@@ -64,14 +64,14 @@ private[sql] case class CarbonAlterTableRenameCommand(
     LOGGER.info(s"Rename table request has been received for $oldDatabaseName.$oldTableName")
     val metastore = CarbonEnv.getInstance(sparkSession).carbonMetaStore
     val relation: CarbonRelation =
-      metastore.lookupRelation(oldTableIdentifier.database, oldTableName)(sparkSession)
+      metastore.lookupCarbonRelation(oldTableIdentifier.database, oldTableName)(sparkSession)
         .asInstanceOf[CarbonRelation]
     if (relation == null) {
       throwMetadataException(oldDatabaseName, oldTableName, "Table does not exist")
     }
 
     var oldCarbonTable: CarbonTable = null
-    oldCarbonTable = metastore.lookupRelation(Some(oldDatabaseName), oldTableName)(sparkSession)
+    oldCarbonTable = metastore.lookupCarbonRelation(Some(oldDatabaseName), oldTableName)(sparkSession)
       .asInstanceOf[CarbonRelation].carbonTable
     if (!oldCarbonTable.getTableInfo.isTransactionalTable) {
       throw new MalformedCarbonCommandException("Unsupported operation on non transactional table")
@@ -92,7 +92,7 @@ private[sql] case class CarbonAlterTableRenameCommand(
     // lock file path to release locks after operation
     var carbonTableLockFilePath: String = null
     try {
-      carbonTable = metastore.lookupRelation(Some(oldDatabaseName), oldTableName)(sparkSession)
+      carbonTable = metastore.lookupCarbonRelation(Some(oldDatabaseName), oldTableName)(sparkSession)
         .asInstanceOf[CarbonRelation].carbonTable
       carbonTableLockFilePath = carbonTable.getTablePath
       // if any load is in progress for table, do not allow rename table

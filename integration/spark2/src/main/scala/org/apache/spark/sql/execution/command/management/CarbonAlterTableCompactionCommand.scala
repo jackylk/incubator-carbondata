@@ -76,7 +76,7 @@ case class CarbonAlterTableCompactionCommand(
       CarbonTable.buildFromTableInfo(tableInfoOp.get)
     } else {
       val relation = CarbonEnv.getInstance(sparkSession).carbonMetaStore
-        .lookupRelation(Option(dbName), tableName)(sparkSession).asInstanceOf[CarbonRelation]
+        .lookupCarbonRelation(Option(dbName), tableName)(sparkSession).asInstanceOf[CarbonRelation]
       if (relation == null) {
         throw new NoSuchTableException(dbName, tableName)
       }

@@ -248,13 +248,27 @@ object CarbonEnv {
     // if relation is not refreshed of the table does not exist in cache then
     if (isRefreshRequired(TableIdentifier(tableName, databaseNameOp))(sparkSession)) {
       catalog
-        .lookupRelation(databaseNameOp, tableName)(sparkSession)
+        .lookupCarbonRelation(databaseNameOp, tableName)(sparkSession)
         .asInstanceOf[CarbonRelation]
         .carbonTable
     } else {
       CarbonMetadata.getInstance().getCarbonTable(databaseNameOp.getOrElse(sparkSession
         .catalog.currentDatabase), tableName)
     }
+  }
+
+  /**
+   * Return all kinds of table including non-carbon table
+   */
+  def getAnyTable(
+      databaseNameOp: Option[String],
+      tableName: String)
+    (sparkSession: SparkSession): CarbonTable = {
+    val catalog = getInstance(sparkSession).carbonMetaStore
+    catalog
+      .lookupAnyRelation(databaseNameOp, tableName)(sparkSession)
+      .asInstanceOf[CarbonRelation]
+      .carbonTable
   }
 
   /**

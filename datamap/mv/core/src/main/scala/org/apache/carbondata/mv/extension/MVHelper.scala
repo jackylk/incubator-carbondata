@@ -123,13 +123,13 @@ object MVHelper {
     val parentTablesList = new util.ArrayList[CarbonTable](selectTables.size)
     selectTables.foreach { selectTable =>
       val mainCarbonTable = try {
-        Some(CarbonEnv.getCarbonTable(selectTable.identifier.database,
+        Some(CarbonEnv.getAnyTable(selectTable.identifier.database,
           selectTable.identifier.table)(sparkSession))
       } catch {
         // Exception handling if it's not a CarbonTable
         case ex: Exception =>
           throw new MalformedCarbonCommandException(
-            s"Non-Carbon table does not support creating MV datamap")
+            s"Non-Carbon table does not support creating MV datamap", ex)
       }
       if (!mainCarbonTable.get.getTableInfo.isTransactionalTable) {
         throw new MalformedCarbonCommandException("Unsupported operation on NonTransactional table")
@@ -138,11 +138,11 @@ object MVHelper {
         throw new MalformedCarbonCommandException(
           "Cannot create MV on MV table " + mainCarbonTable.get.getTableUniqueName)
       }
-      parentTables.add(mainCarbonTable.get.getTableName)
       if (!mainCarbonTable.isEmpty && mainCarbonTable.get.isStreamingSink) {
         throw new MalformedCarbonCommandException(
           s"Streaming table does not support creating materialized view")
       }
+      parentTables.add(selectTable.identifier.table)
       parentTablesList.add(mainCarbonTable.get)
     }
 

@@ -31,6 +31,7 @@ import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.catalyst.catalog.CatalogTable
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.datasources.LogicalRelation
+import org.apache.spark.sql.parser.CarbonSparkSqlParserUtil
 import org.apache.spark.sql.sources.BaseRelation
 import org.apache.spark.util.CarbonReflectionUtils
 
@@ -50,7 +51,6 @@ import org.apache.carbondata.core.util.path.CarbonTablePath
 import org.apache.carbondata.core.writer.ThriftWriter
 import org.apache.carbondata.events.{LookupRelationPostEvent, OperationContext, OperationListenerBus}
 import org.apache.carbondata.format.{SchemaEvolutionEntry, TableInfo}
-import org.apache.carbondata.spark.util.CarbonSparkUtil
 
 object MatchLogicalRelation {
   def unapply(
@@ -163,7 +163,31 @@ class CarbonFileMetastore extends CarbonMetaStore {
       oldTableIdentifier, thriftTableInfo, null, carbonStorePath) (sparkSession)
   }
 
-  def lookupRelation(dbName: Option[String], tableName: String)
+  override def lookupAnyRelation(
+      dbName: Option[String], tableName: String)
+    (sparkSession: SparkSession): LogicalPlan = {
+    val tableIdentifier = new TableIdentifier(tableName, dbName)
+    val rawRelation = sparkSession.sessionState.catalog.lookupRelation(tableIdentifier)
+    rawRelation match {
+      case SubqueryAlias(_, c)
+        if (c.getClass.getName.equals("org.apache.spark.sql.catalyst.catalog.CatalogRelation") ||
+            c.getClass.getName.equals("org.apache.spark.sql.catalyst.catalog.HiveTableRelation") ||
+            c.getClass.getName.equals(
+              "org.apache.spark.sql.catalyst.catalog.UnresolvedCatalogRelation")) =>
+        val catalogTable =
+          CarbonReflectionUtils.getFieldOfCatalogTable("tableMeta", c).asInstanceOf[CatalogTable]
+        val tableInfo = CarbonSparkSqlParserUtil.buildTableInfoFromCatalogTable(
+          catalogTable, false, sparkSession)
+        tableInfo.setProvider(catalogTable.provider.get)
+        val carbonTable = CarbonTable.buildFromTableInfo(tableInfo)
+        CarbonRelation(carbonTable.getDatabaseName, carbonTable.getTableName, carbonTable)
+      case _ =>
+        throw new NoSuchTableException(
+          sparkSession.sessionState.catalog.getCurrentDatabase, tableIdentifier.table)
+    }
+  }
+
+  def lookupCarbonRelation(dbName: Option[String], tableName: String)
     (sparkSession: SparkSession): LogicalPlan = {
     lookupRelation(TableIdentifier(tableName, dbName))(sparkSession)
   }

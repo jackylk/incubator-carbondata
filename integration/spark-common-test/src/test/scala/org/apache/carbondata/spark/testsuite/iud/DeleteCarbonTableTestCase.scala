@@ -245,11 +245,11 @@ class DeleteCarbonTableTestCase extends QueryTest with BeforeAndAfterAll {
       listOfTupleId(4).contains("0/0/0-0_batchno0-0-0-") && listOfTupleId(4).endsWith("/0/0/4"))
 
     val carbonTable_part = CarbonEnv.getInstance(Spark2TestQueryExecutor.spark).carbonMetaStore
-      .lookupRelation(Option("iud_db"), "dest_tuple_part")(Spark2TestQueryExecutor.spark)
+      .lookupCarbonRelation(Option("iud_db"), "dest_tuple_part")(Spark2TestQueryExecutor.spark)
       .asInstanceOf[CarbonRelation].carbonTable
 
     val carbonTable = CarbonEnv.getInstance(Spark2TestQueryExecutor.spark).carbonMetaStore
-      .lookupRelation(Option("iud_db"), "dest_tuple")(Spark2TestQueryExecutor.spark)
+      .lookupCarbonRelation(Option("iud_db"), "dest_tuple")(Spark2TestQueryExecutor.spark)
       .asInstanceOf[CarbonRelation].carbonTable
 
     val carbonDataFilename = new File(carbonTable.getTablePath + "/Fact/Part0/Segment_0/")

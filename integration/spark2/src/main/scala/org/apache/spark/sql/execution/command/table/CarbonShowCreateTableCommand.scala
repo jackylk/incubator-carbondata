@@ -41,7 +41,7 @@ case class CarbonShowCreateTableCommand(
     val tableName = child.table.table
     setAuditTable(dbName, tableName)
     val relation = CarbonEnv.getInstance(sparkSession).carbonMetaStore
-      .lookupRelation(Option(dbName), tableName)(sparkSession).asInstanceOf[CarbonRelation]
+      .lookupCarbonRelation(Option(dbName), tableName)(sparkSession).asInstanceOf[CarbonRelation]
     if (relation == null) {
       throw new NoSuchTableException(dbName, tableName)
     }

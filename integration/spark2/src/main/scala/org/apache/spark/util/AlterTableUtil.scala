@@ -67,7 +67,7 @@ object AlterTableUtil {
     (sparkSession: SparkSession): List[ICarbonLock] = {
     val relation =
       CarbonEnv.getInstance(sparkSession).carbonMetaStore
-        .lookupRelation(Option(dbName), tableName)(sparkSession)
+        .lookupCarbonRelation(Option(dbName), tableName)(sparkSession)
         .asInstanceOf[CarbonRelation]
     if (relation == null) {
       sys.error(s"Table $dbName.$tableName does not exist")

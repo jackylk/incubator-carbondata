@@ -71,7 +71,7 @@ case class CarbonAddLoadCommand(
     val relation = CarbonEnv
       .getInstance(sparkSession)
       .carbonMetaStore
-      .lookupRelation(databaseNameOp, tableName)(sparkSession)
+      .lookupCarbonRelation(databaseNameOp, tableName)(sparkSession)
       .asInstanceOf[CarbonRelation]
     val tableSchema = StructType.fromAttributes(relation.output)
     val carbonTable = relation.carbonTable
