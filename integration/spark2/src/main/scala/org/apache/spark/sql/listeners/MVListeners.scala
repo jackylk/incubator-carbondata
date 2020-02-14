@@ -98,7 +98,7 @@ object LoadMVTablePreListener extends OperationEventListener {
     val table = carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable
     val isInternalLoadCall = carbonLoadModel.isAggLoadRequest
     if (table.isChildTableForMV && !isInternalLoadCall) {
-      throw new UnsupportedOperationException("Cannot insert data directly into MV table")
+//      throw new UnsupportedOperationException("Cannot insert data directly into MV table")
     }
   }
 }

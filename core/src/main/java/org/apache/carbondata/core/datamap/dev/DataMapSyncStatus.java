@@ -58,12 +58,14 @@ public abstract class DataMapSyncStatus {
       if (loadMetadataDetail.getSegmentStatus() == SegmentStatus.SUCCESS) {
         Map<String, List<String>> segmentMap =
             DataMapSegmentStatusUtil.getSegmentMap(loadMetadataDetail.getExtraInfo());
-        if (dataMapSegmentMap.isEmpty()) {
-          dataMapSegmentMap.putAll(segmentMap);
-        } else {
-          for (Map.Entry<String, List<String>> entry : segmentMap.entrySet()) {
-            if (null != dataMapSegmentMap.get(entry.getKey())) {
-              dataMapSegmentMap.get(entry.getKey()).addAll(entry.getValue());
+        if (segmentMap != null) {
+          if (dataMapSegmentMap.isEmpty()) {
+            dataMapSegmentMap.putAll(segmentMap);
+          } else {
+            for (Map.Entry<String, List<String>> entry : segmentMap.entrySet()) {
+              if (null != dataMapSegmentMap.get(entry.getKey())) {
+                dataMapSegmentMap.get(entry.getKey()).addAll(entry.getValue());
+              }
             }
           }
         }

@@ -132,93 +132,21 @@ public abstract class DataMapProvider {
       return false;
     }
     String newLoadName = "";
-    String segmentMap = "";
-    CarbonTable dataMapTable = CarbonTable
-        .buildFromTablePath(dataMapSchema.getRelationIdentifier().getTableName(),
-            dataMapSchema.getRelationIdentifier().getDatabaseName(),
-            dataMapSchema.getRelationIdentifier().getTablePath(),
-            dataMapSchema.getRelationIdentifier().getTableId());
-    AbsoluteTableIdentifier dataMapTableAbsoluteTableIdentifier =
-        dataMapTable.getAbsoluteTableIdentifier();
+
+    CarbonTable mvTable = CarbonTable.buildFromTablePath(
+        dataMapSchema.getRelationIdentifier().getTableName(),
+        dataMapSchema.getRelationIdentifier().getDatabaseName(),
+        dataMapSchema.getRelationIdentifier().getTablePath(),
+        dataMapSchema.getRelationIdentifier().getTableId());
+    AbsoluteTableIdentifier mvTableIdentifier = mvTable.getAbsoluteTableIdentifier();
     // Clean up the old invalid segment data before creating a new entry for new load.
-    SegmentStatusManager.deleteLoadsAndUpdateMetadata(dataMapTable, false, null);
-    SegmentStatusManager segmentStatusManager =
-        new SegmentStatusManager(dataMapTableAbsoluteTableIdentifier);
+    SegmentStatusManager.deleteLoadsAndUpdateMetadata(mvTable, false, null);
+    SegmentStatusManager segmentStatusManager = new SegmentStatusManager(mvTableIdentifier);
     Map<String, List<String>> segmentMapping = new HashMap<>();
     // Acquire table status lock to handle concurrent dataloading
     ICarbonLock carbonLock = segmentStatusManager.getTableStatusLock();
     try {
-      if (carbonLock.lockWithRetries()) {
-        LOGGER.info(
-            "Acquired lock for table" + dataMapSchema.getRelationIdentifier().getDatabaseName()
-                + "." + dataMapSchema.getRelationIdentifier().getTableName()
-                + " for table status updation");
-        String dataMapTableMetadataPath =
-            CarbonTablePath.getMetadataPath(dataMapSchema.getRelationIdentifier().getTablePath());
-        LoadMetadataDetails[] loadMetaDataDetails =
-            SegmentStatusManager.readLoadMetadata(dataMapTableMetadataPath);
-        // Mark for delete all stale loadMetadetail
-        for (LoadMetadataDetails loadMetadataDetail : loadMetaDataDetails) {
-          if ((loadMetadataDetail.getSegmentStatus() == SegmentStatus.INSERT_IN_PROGRESS
-              || loadMetadataDetail.getSegmentStatus()
-              == SegmentStatus.INSERT_OVERWRITE_IN_PROGRESS) && loadMetadataDetail.getVisibility()
-              .equalsIgnoreCase("false")) {
-            loadMetadataDetail.setSegmentStatus(SegmentStatus.MARKED_FOR_DELETE);
-          }
-        }
-        List<LoadMetadataDetails> listOfLoadFolderDetails =
-            new ArrayList<>(CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);
-        Collections.addAll(listOfLoadFolderDetails, loadMetaDataDetails);
-        if (dataMapSchema.isLazy()) {
-          // check if rebuild to datamap is already in progress and throw exception
-          if (!listOfLoadFolderDetails.isEmpty()) {
-            for (LoadMetadataDetails loadMetaDetail : loadMetaDataDetails) {
-              if ((loadMetaDetail.getSegmentStatus() == SegmentStatus.INSERT_IN_PROGRESS
-                  || loadMetaDetail.getSegmentStatus()
-                  == SegmentStatus.INSERT_OVERWRITE_IN_PROGRESS) && SegmentStatusManager
-                  .isLoadInProgress(dataMapTableAbsoluteTableIdentifier,
-                      loadMetaDetail.getLoadName())) {
-                throw new RuntimeException("Rebuild to " + dataMapSchema.getDataMapName()
-                    + " is already in progress");
-              }
-            }
-          }
-        }
-        boolean incrementalBuild = dataMapSchema.supportIncrementalBuild();
-        if (incrementalBuild) {
-          if (!getSpecificSegmentsTobeLoaded(segmentMapping, listOfLoadFolderDetails)) {
-            return false;
-          }
-        } else {
-          List<RelationIdentifier> relationIdentifiers = dataMapSchema.getParentTables();
-          for (RelationIdentifier relationIdentifier : relationIdentifiers) {
-            List<String> mainTableSegmentList =
-                IndexUtil.getMainTableValidSegmentList(relationIdentifier);
-            if (mainTableSegmentList.isEmpty()) {
-              return false;
-            }
-            segmentMapping.put(relationIdentifier.getDatabaseName() + CarbonCommonConstants.POINT
-                + relationIdentifier.getTableName(), mainTableSegmentList);
-          }
-        }
-        segmentMap = new Gson().toJson(segmentMapping);
-
-        // To handle concurrent dataloading to datamap, create new loadMetaEntry and
-        // set segmentMap to new loadMetaEntry and pass new segmentId with load command
-        LoadMetadataDetails loadMetadataDetail = new LoadMetadataDetails();
-        String segmentId =
-            String.valueOf(SegmentStatusManager.createNewSegmentId(loadMetaDataDetails));
-        loadMetadataDetail.setLoadName(segmentId);
-        loadMetadataDetail.setSegmentStatus(SegmentStatus.INSERT_IN_PROGRESS);
-        loadMetadataDetail.setExtraInfo(segmentMap);
-        listOfLoadFolderDetails.add(loadMetadataDetail);
-        newLoadName = segmentId;
-
-        SegmentStatusManager.writeLoadDetailsIntoFile(CarbonTablePath
-                .getTableStatusFilePath(dataMapSchema.getRelationIdentifier().getTablePath()),
-            listOfLoadFolderDetails
-                .toArray(new LoadMetadataDetails[listOfLoadFolderDetails.size()]));
-      } else {
+      if (!carbonLock.lockWithRetries()) {
         LOGGER.error(
             "Not able to acquire the lock for Table status updation for table " + dataMapSchema
                 .getRelationIdentifier().getDatabaseName() + "." + dataMapSchema
@@ -226,6 +154,67 @@ public abstract class DataMapProvider {
         DataMapStatusManager.disableDataMap(dataMapSchema.getDataMapName());
         return false;
       }
+      LOGGER.info(
+          "Acquired lock for table" + dataMapSchema.getRelationIdentifier().getDatabaseName()
+              + "." + dataMapSchema.getRelationIdentifier().getTableName()
+              + " for table status updation");
+      String mvTableMetaPath =
+          CarbonTablePath.getMetadataPath(dataMapSchema.getRelationIdentifier().getTablePath());
+      LoadMetadataDetails[] mvTableLoads = SegmentStatusManager.readLoadMetadata(mvTableMetaPath);
+      // Mark for delete all stale load
+      for (LoadMetadataDetails load : mvTableLoads) {
+        if ((load.getSegmentStatus() == SegmentStatus.INSERT_IN_PROGRESS ||
+            load.getSegmentStatus() == SegmentStatus.INSERT_OVERWRITE_IN_PROGRESS) &&
+            load.getVisibility().equalsIgnoreCase("false")) {
+          load.setSegmentStatus(SegmentStatus.MARKED_FOR_DELETE);
+        }
+      }
+      List<LoadMetadataDetails> mvTableOutputLoads = new ArrayList<>();
+      Collections.addAll(mvTableOutputLoads, mvTableLoads);
+      if (dataMapSchema.isLazy()) {
+        // check if rebuild to datamap is already in progress and throw exception
+        if (!mvTableOutputLoads.isEmpty()) {
+          for (LoadMetadataDetails load : mvTableLoads) {
+            if ((load.getSegmentStatus() == SegmentStatus.INSERT_IN_PROGRESS ||
+                load.getSegmentStatus() == SegmentStatus.INSERT_OVERWRITE_IN_PROGRESS) &&
+                SegmentStatusManager.isLoadInProgress(mvTableIdentifier, load.getLoadName())) {
+              throw new RuntimeException(
+                  "Refresh to " + dataMapSchema.getDataMapName() + " is already in progress");
+            }
+          }
+        }
+      }
+      boolean incrementalBuild = dataMapSchema.supportIncrementalBuild();
+      if (incrementalBuild) {
+        if (!getSpecificSegmentsTobeLoaded(segmentMapping, mvTableOutputLoads)) {
+          return false;
+        }
+      } else {
+        List<RelationIdentifier> mainTables = dataMapSchema.getParentTables();
+        for (RelationIdentifier mainTable : mainTables) {
+          List<String> mainTableSegmentList = IndexUtil.getMainTableValidSegmentList(mainTable);
+          if (mainTableSegmentList.isEmpty()) {
+            return false;
+          }
+          segmentMapping.put(mainTable.getDatabaseName() + CarbonCommonConstants.POINT
+              + mainTable.getTableName(), mainTableSegmentList);
+        }
+      }
+
+      // To handle concurrent dataloading to datamap, create new loadMetaEntry and
+      // set segmentMap to new loadMetaEntry and pass new segmentId with load command
+      LoadMetadataDetails newLoad = new LoadMetadataDetails();
+      String segmentId = String.valueOf(SegmentStatusManager.createNewSegmentId(mvTableLoads));
+      newLoad.setLoadName(segmentId);
+      newLoad.setSegmentStatus(SegmentStatus.INSERT_IN_PROGRESS);
+      newLoad.setExtraInfo(new Gson().toJson(segmentMapping));
+      mvTableOutputLoads.add(newLoad);
+      newLoadName = segmentId;
+
+      SegmentStatusManager.writeLoadDetailsIntoFile(
+          CarbonTablePath.getTableStatusFilePath(
+              dataMapSchema.getRelationIdentifier().getTablePath()),
+          mvTableOutputLoads.toArray(new LoadMetadataDetails[0]));
     } finally {
       if (carbonLock.unlock()) {
         LOGGER.info("Table unlocked successfully after table status updation" + dataMapSchema
@@ -237,7 +226,7 @@ public abstract class DataMapProvider {
             + " during table status updation");
       }
     }
-    return rebuildInternal(newLoadName, segmentMapping, dataMapTable);
+    return rebuildInternal(newLoadName, segmentMapping, mvTable);
   }
 
   /**

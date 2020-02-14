@@ -21,8 +21,9 @@ import java.io.IOException
 
 import scala.collection.JavaConverters._
 
-import org.apache.spark.sql.{CarbonUtils, SparkSession}
-import org.apache.spark.sql.execution.command.management.CarbonLoadDataCommand
+import org.apache.spark.sql.catalyst.TableIdentifier
+import org.apache.spark.sql.{CarbonEnv, CarbonUtils, SparkSession}
+import org.apache.spark.sql.execution.command.management.{CarbonInsertIntoCommand, CarbonLoadDataCommand}
 import org.apache.spark.sql.execution.command.table.CarbonDropTableCommand
 import org.apache.spark.sql.util.SparkSQLUtil
 

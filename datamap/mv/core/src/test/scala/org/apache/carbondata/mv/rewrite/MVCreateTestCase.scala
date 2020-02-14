@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.carbondata.mv.rewrite
 
 import java.io.File
@@ -104,13 +105,12 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
     sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table6 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
   }
 
-  ignore("parquet source table: test create mv with simple and same projection") {
+  test("parquet source table: test create mv with simple and same projection") {
     sql("drop materialized view if exists mv1")
     sql("drop table if exists parquet_fact_table1")
-    sql("drop table if exists parquet_fact_table2")
     sql("create table parquet_fact_table1 using parquet as select * from fact_table1")
-    sql("create table parquet_fact_table2 using parquet as select * from fact_table1")
-    sql("create materialized view mv1 as select t1.empname, t2.designation from parquet_fact_table1 t1 join parquet_fact_table1 t2 on t1.empname = t2.empname")
+    sql("create materialized view mv1 as select empname, designation from parquet_fact_table1")
+    sql("refresh materialized view mv1")
     val df = sql("select empname, designation from parquet_fact_table1")
     assert(TestUtil.verifyMVDataMap(df.queryExecution.optimizedPlan, "mv1"))
     checkAnswer(df, sql("select empname, designation from fact_table2"))
