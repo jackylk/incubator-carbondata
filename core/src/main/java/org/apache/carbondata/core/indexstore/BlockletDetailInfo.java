@@ -23,6 +23,7 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.Serializable;
+import java.nio.ByteBuffer;
 import java.util.List;
 
 import org.apache.carbondata.common.logging.LogServiceFactory;
@@ -65,7 +66,7 @@ public class BlockletDetailInfo implements Serializable, Writable {
 
   private List<ColumnSchema> columnSchemas;
 
-  private byte[] columnSchemaBinary;
+  private ByteBuffer columnSchemaBinary;
 
   private long blockSize;
 
@@ -171,8 +172,8 @@ public class BlockletDetailInfo implements Serializable, Writable {
     // convert column schema list to binary format for serializing
     convertColumnSchemaToBinary();
     if (null != columnSchemaBinary) {
-      out.writeInt(columnSchemaBinary.length);
-      out.write(columnSchemaBinary);
+      out.writeInt(columnSchemaBinary.position());
+      out.write(columnSchemaBinary.array(), 0, columnSchemaBinary.position());
     } else {
       // write -1 if columnSchemaBinary is null so that at the time of reading it can distinguish
       // whether schema is written or not
@@ -201,7 +202,7 @@ public class BlockletDetailInfo implements Serializable, Writable {
     if (bytesSize != -1) {
       byte[] schemaArray = new byte[bytesSize];
       in.readFully(schemaArray);
-      readColumnSchema(schemaArray);
+      readColumnSchema(ByteBuffer.wrap(schemaArray));
     }
     int byteSize = in.readInt();
     blockletInfoBinary = new byte[byteSize];
@@ -216,7 +217,7 @@ public class BlockletDetailInfo implements Serializable, Writable {
    * @param schemaArray
    * @throws IOException
    */
-  public void readColumnSchema(byte[] schemaArray) throws IOException {
+  public void readColumnSchema(ByteBuffer schemaArray) throws IOException {
     if (null != schemaArray) {
       columnSchemas = BlockletDataMapUtil.readColumnSchema(schemaArray);
     }
@@ -271,7 +272,7 @@ public class BlockletDetailInfo implements Serializable, Writable {
     return columnSchemas;
   }
 
-  public byte[] getColumnSchemaBinary() {
+  public ByteBuffer getColumnSchemaBinary() {
     return columnSchemaBinary;
   }
 

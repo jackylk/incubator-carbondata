@@ -24,6 +24,7 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -306,7 +307,7 @@ public class BlockletDataMapUtil {
   /**
    * Convert schema to binary
    */
-  public static byte[] convertSchemaToBinary(List<ColumnSchema> columnSchemas) throws IOException {
+  public static ByteBuffer convertSchemaToBinary(List<ColumnSchema> columnSchemas) throws IOException {
     ByteArrayOutputStream stream = new ByteArrayOutputStream();
     DataOutput dataOutput = new DataOutputStream(stream);
     dataOutput.writeShort(columnSchemas.size());
@@ -328,11 +329,11 @@ public class BlockletDataMapUtil {
    * @param schemaArray
    * @throws IOException
    */
-  public static List<ColumnSchema> readColumnSchema(byte[] schemaArray) throws IOException {
+  public static List<ColumnSchema> readColumnSchema(ByteBuffer schemaArray) throws IOException {
     // uncompress it.
-    schemaArray = CompressorFactory.NativeSupportedCompressor.SNAPPY.getCompressor().unCompressByte(
-        schemaArray);
-    ByteArrayInputStream schemaStream = new ByteArrayInputStream(schemaArray);
+    byte[] output = CompressorFactory.NativeSupportedCompressor.SNAPPY.getCompressor().unCompressByte(
+        schemaArray.array(), 0, schemaArray.position());
+    ByteArrayInputStream schemaStream = new ByteArrayInputStream(output);
     DataInput schemaInput = new DataInputStream(schemaStream);
     List<ColumnSchema> columnSchemas = new ArrayList<>();
     int size = schemaInput.readShort();

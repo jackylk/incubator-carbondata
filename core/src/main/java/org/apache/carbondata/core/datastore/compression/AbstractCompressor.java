@@ -31,10 +31,10 @@ import org.apache.carbondata.core.util.ByteUtil;
 public abstract class AbstractCompressor implements Compressor {
 
   @Override
-  public byte[] compressShort(short[] unCompInput) {
+  public ByteBuffer compressShort(short[] unCompInput) {
     ByteBuffer unCompBuffer = ByteBuffer.allocate(unCompInput.length * ByteUtil.SIZEOF_SHORT);
     unCompBuffer.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().put(unCompInput);
-    return compressByte(unCompBuffer.array());
+    return compressByte(unCompBuffer);
   }
 
   @Override
@@ -48,10 +48,10 @@ public abstract class AbstractCompressor implements Compressor {
   }
 
   @Override
-  public byte[] compressInt(int[] unCompInput) {
+  public ByteBuffer compressInt(int[] unCompInput) {
     ByteBuffer unCompBuffer = ByteBuffer.allocate(unCompInput.length * ByteUtil.SIZEOF_INT);
     unCompBuffer.order(ByteOrder.LITTLE_ENDIAN).asIntBuffer().put(unCompInput);
-    return compressByte(unCompBuffer.array());
+    return compressByte(unCompBuffer);
   }
 
   @Override
@@ -65,10 +65,10 @@ public abstract class AbstractCompressor implements Compressor {
   }
 
   @Override
-  public byte[] compressLong(long[] unCompInput) {
+  public ByteBuffer compressLong(long[] unCompInput) {
     ByteBuffer unCompBuffer = ByteBuffer.allocate(unCompInput.length * ByteUtil.SIZEOF_LONG);
     unCompBuffer.order(ByteOrder.LITTLE_ENDIAN).asLongBuffer().put(unCompInput);
-    return compressByte(unCompBuffer.array());
+    return compressByte(unCompBuffer);
   }
 
   @Override
@@ -82,10 +82,10 @@ public abstract class AbstractCompressor implements Compressor {
   }
 
   @Override
-  public byte[] compressFloat(float[] unCompInput) {
+  public ByteBuffer compressFloat(float[] unCompInput) {
     ByteBuffer unCompBuffer = ByteBuffer.allocate(unCompInput.length * ByteUtil.SIZEOF_FLOAT);
     unCompBuffer.order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer().put(unCompInput);
-    return compressByte(unCompBuffer.array());
+    return compressByte(unCompBuffer);
   }
 
   @Override
@@ -99,10 +99,10 @@ public abstract class AbstractCompressor implements Compressor {
   }
 
   @Override
-  public byte[] compressDouble(double[] unCompInput) {
+  public ByteBuffer compressDouble(double[] unCompInput) {
     ByteBuffer unCompBuffer = ByteBuffer.allocate(unCompInput.length * ByteUtil.SIZEOF_DOUBLE);
     unCompBuffer.order(ByteOrder.LITTLE_ENDIAN).asDoubleBuffer().put(unCompInput);
-    return compressByte(unCompBuffer.array());
+    return compressByte(unCompBuffer);
   }
 
   @Override

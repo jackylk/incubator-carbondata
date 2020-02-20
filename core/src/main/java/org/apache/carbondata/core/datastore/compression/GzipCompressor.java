@@ -20,6 +20,7 @@ package org.apache.carbondata.core.datastore.compression;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
@@ -34,14 +35,18 @@ public class GzipCompressor extends AbstractCompressor {
     return "gzip";
   }
 
+  private byte[] compressData(byte[] data) {
+    return compressData(data, 0, data.length);
+  }
+
   /**
    * This method takes the Byte Array data and Compresses in gzip format
    *
    * @param data Data Byte Array passed for compression
    * @return Compressed Byte Array
    */
-  private byte[] compressData(byte[] data) {
-    int initialSize = (data.length / 2) == 0 ? data.length : data.length / 2;
+  private byte[] compressData(byte[] data, int offset, int length) {
+    int initialSize = (length / 2) == 0 ? length : length / 2;
     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(initialSize);
     try {
       GzipCompressorOutputStream gzipCompressorOutputStream =
@@ -51,7 +56,7 @@ public class GzipCompressor extends AbstractCompressor {
          * Below api will write bytes from specified byte array to the gzipCompressorOutputStream
          * The output stream will compress the given byte array.
          */
-        gzipCompressorOutputStream.write(data);
+        gzipCompressorOutputStream.write(data, offset, length);
       } catch (IOException e) {
         throw new RuntimeException("Error during Compression writing step ", e);
       } finally {
@@ -94,8 +99,14 @@ public class GzipCompressor extends AbstractCompressor {
   }
 
   @Override
-  public byte[] compressByte(byte[] unCompInput) {
-    return compressData(unCompInput);
+  public ByteBuffer compressByte(ByteBuffer compInput) {
+     byte[] output = compressData(compInput.array(), 0, compInput.position());
+     return ByteBuffer.wrap(output);
+  }
+
+  @Override
+  public ByteBuffer compressByte(byte[] unCompInput) {
+    return ByteBuffer.wrap(compressData(unCompInput));
   }
 
   @Override

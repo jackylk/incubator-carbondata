@@ -20,6 +20,7 @@ package org.apache.carbondata.core.datastore.page.encoding.dimension.legacy;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.columnar.BlockIndexerStorage;
@@ -31,16 +32,16 @@ import org.apache.carbondata.format.SortState;
 
 public abstract class IndexStorageEncoder extends ColumnPageEncoder {
   BlockIndexerStorage indexStorage;
-  byte[] compressedDataPage;
+  ByteBuffer compressedDataPage;
 
   abstract void encodeIndexStorage(ColumnPage inputPage);
 
   @Override
-  protected byte[] encodeData(ColumnPage input) throws IOException {
+  protected ByteBuffer encodeData(ColumnPage input) throws IOException {
     encodeIndexStorage(input);
     ByteArrayOutputStream stream = new ByteArrayOutputStream();
     DataOutputStream out = new DataOutputStream(stream);
-    out.write(compressedDataPage);
+    out.write(compressedDataPage.array(), 0, compressedDataPage.position());
     if (indexStorage.getRowIdPageLengthInBytes() > 0) {
       out.writeInt(indexStorage.getRowIdPageLengthInBytes());
       short[] rowIdPage = (short[])indexStorage.getRowIdPage();
@@ -62,7 +63,7 @@ public abstract class IndexStorageEncoder extends ColumnPageEncoder {
     }
     byte[] result = stream.toByteArray();
     stream.close();
-    return result;
+    return ByteBuffer.wrap(result);
   }
 
   @Override
@@ -84,6 +85,6 @@ public abstract class IndexStorageEncoder extends ColumnPageEncoder {
     if (indexStorage.getDataRlePageLengthInBytes() > 0) {
       dataChunk.setRle_page_length(indexStorage.getDataRlePageLengthInBytes());
     }
-    dataChunk.setData_page_length(compressedDataPage.length);
+    dataChunk.setData_page_length(compressedDataPage.limit() - compressedDataPage.position());
   }
 }

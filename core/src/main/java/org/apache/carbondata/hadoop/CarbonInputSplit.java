@@ -23,6 +23,7 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.Serializable;
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -658,9 +659,9 @@ public class CarbonInputSplit extends FileSplit
     // write -1 if columnSchemaBinary is null so that at the time of reading it can distinguish
     // whether schema is written or not
     if (null != this.columnSchema) {
-      byte[] columnSchemaBinary = BlockletDataMapUtil.convertSchemaToBinary(this.columnSchema);
-      out.writeInt(columnSchemaBinary.length);
-      out.write(columnSchemaBinary);
+      ByteBuffer columnSchemaBinary = BlockletDataMapUtil.convertSchemaToBinary(this.columnSchema);
+      out.writeInt(columnSchemaBinary.position());
+      out.write(columnSchemaBinary.array(), 0, columnSchemaBinary.position());
     } else {
       // write -1 if columnSchemaBinary is null so that at the time of reading it can distinguish
       // whether schema is written or not

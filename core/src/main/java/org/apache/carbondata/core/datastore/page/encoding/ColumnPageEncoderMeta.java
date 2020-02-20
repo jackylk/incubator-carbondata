@@ -139,7 +139,7 @@ public class ColumnPageEncoderMeta extends ValueEncoderMeta implements Writable 
       out.writeFloat((Float) getMaxValue());
       out.writeFloat((Float) getMinValue());
       out.writeFloat(0f); // unique value is obsoleted, maintain for compatibility
-    } else if (DataTypes.isDecimal(dataType)) {
+    } else if (dataType == DataTypes.STRING || DataTypes.isDecimal(dataType)) {
       byte[] maxAsBytes = getMaxAsBytes(columnSpec.getSchemaDataType());
       byte[] minAsBytes = getMinAsBytes(columnSpec.getSchemaDataType());
       byte[] unique = DataTypeUtil.bigDecimalToByte(BigDecimal.ZERO);
@@ -192,6 +192,20 @@ public class ColumnPageEncoderMeta extends ValueEncoderMeta implements Writable 
       this.setMaxValue(in.readFloat());
       this.setMinValue(in.readFloat());
       in.readFloat(); // for non exist value which is obsoleted, it is backward compatibility;
+    } else if (dataType == DataTypes.STRING) {
+      byte[] max = new byte[in.readShort()];
+      in.readFully(max);
+//      this.setMaxValue(DataTypeUtil.byteToBigDecimal(max));
+      byte[] min = new byte[in.readShort()];
+      in.readFully(min);
+//      this.setMinValue(DataTypeUtil.byteToBigDecimal(min));
+      // unique value is obsoleted, maintain for compatiability
+      short uniqueLength = in.readShort();
+      in.readFully(new byte[uniqueLength]);
+      // scale field is obsoleted. It is stored in the schema data type in columnSpec
+      in.readInt();
+      // precision field is obsoleted. It is stored in the schema data type in columnSpec
+      in.readInt();
     } else if (DataTypes.isDecimal(dataType)) {
       byte[] max = new byte[in.readShort()];
       in.readFully(max);

@@ -238,8 +238,8 @@ public class TablePage {
           } else {
             // noDictionary columns, since it is variable length, we need to prepare each
             // element as LV result byte array (first two bytes are the length of the array)
-            byte[] valueWithLength = addShortLengthToByteArray((byte[]) noDictAndComplex[i]);
-            noDictDimensionPages[i].putData(rowId, valueWithLength);
+//            byte[] valueWithLength = addShortLengthToByteArray((byte[]) noDictAndComplex[i]);
+            noDictDimensionPages[i].putData(rowId, (byte[]) noDictAndComplex[i]);
           }
         } else {
           // complex columns

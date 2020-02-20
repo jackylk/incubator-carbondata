@@ -17,6 +17,8 @@
 
 package org.apache.carbondata.core.datastore.compression;
 
+import java.nio.ByteBuffer;
+
 import com.github.luben.zstd.Zstd;
 
 public class ZstdCompressor extends AbstractCompressor {
@@ -31,8 +33,13 @@ public class ZstdCompressor extends AbstractCompressor {
   }
 
   @Override
-  public byte[] compressByte(byte[] unCompInput) {
-    return Zstd.compress(unCompInput, COMPRESS_LEVEL);
+  public ByteBuffer compressByte(ByteBuffer compInput) {
+    return Zstd.compress(compInput, COMPRESS_LEVEL);
+  }
+
+  @Override
+  public ByteBuffer compressByte(byte[] unCompInput) {
+    return compressByte(ByteBuffer.wrap(unCompInput));
   }
 
   @Override

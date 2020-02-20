@@ -19,6 +19,7 @@ package org.apache.carbondata.core.datastore.page;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 import java.util.BitSet;
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
@@ -190,8 +191,10 @@ public abstract class ColumnPage {
       } else if (DataTypes.isDecimal(dataType)) {
         instance = new UnsafeDecimalColumnPage(
             new ColumnPageEncoderMeta(columnSpec, dataType, compressorName), pageSize);
-      } else if (dataType == DataTypes.STRING
-          || dataType == BYTE_ARRAY
+      } else if (dataType == DataTypes.STRING) {
+        instance = new ByteBufferColumnPage(
+            new ColumnPageEncoderMeta(columnSpec, dataType, compressorName), pageSize);
+      } else if (dataType == BYTE_ARRAY
           || dataType == DataTypes.VARCHAR
           || dataType == DataTypes.BINARY) {
         instance = new UnsafeVarLengthColumnPage(
@@ -228,14 +231,6 @@ public abstract class ColumnPage {
       }
     }
     return instance;
-  }
-
-  public static ColumnPage wrapByteArrayPage(TableSpec.ColumnSpec columnSpec, byte[][] byteArray,
-      String compressorName) {
-    ColumnPage columnPage = createPage(
-        new ColumnPageEncoderMeta(columnSpec, BYTE_ARRAY, compressorName), byteArray.length);
-    columnPage.setByteArrayPage(byteArray);
-    return columnPage;
   }
 
   private static ColumnPage newBytePage(ColumnPageEncoderMeta meta, byte[] byteData) {
@@ -745,9 +740,11 @@ public abstract class ColumnPage {
   /**
    * Compress page data using specified compressor
    */
-  public byte[] compress(Compressor compressor) throws IOException {
+  public ByteBuffer compress(Compressor compressor) throws IOException {
     DataType dataType = columnPageEncoderMeta.getStoreDataType();
-    if (dataType == DataTypes.BOOLEAN) {
+    if (dataType == DataTypes.STRING) {
+      return compressor.compressByte(getByteBuffer());
+    } else if (dataType == DataTypes.BOOLEAN) {
       return compressor.compressByte(getBooleanPage());
     } else if (dataType == BYTE) {
       return compressor.compressByte(getBytePage());
@@ -776,7 +773,7 @@ public abstract class ColumnPage {
         || columnPageEncoderMeta.getColumnSpec().getColumnType() == ColumnType.PLAIN_VALUE)) {
       return compressor.compressByte(getComplexParentFlattenedBytePage());
     } else if (dataType == DataTypes.BINARY) {
-      return getLVFlattenedBytePage();
+      return ByteBuffer.wrap(getLVFlattenedBytePage());
     } else if (dataType == BYTE_ARRAY) {
       return compressor.compressByte(getLVFlattenedBytePage());
     } else {
@@ -938,5 +935,9 @@ public abstract class ColumnPage {
 
   public ColumnPageEncoderMeta getColumnPageEncoderMeta() {
     return columnPageEncoderMeta;
+  }
+
+  public ByteBuffer getByteBuffer() {
+    throw new UnsupportedOperationException("Operation not supported");
   }
 }

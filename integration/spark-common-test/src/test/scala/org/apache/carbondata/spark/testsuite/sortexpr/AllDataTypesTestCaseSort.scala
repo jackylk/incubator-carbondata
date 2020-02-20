@@ -17,8 +17,13 @@
 
 package org.apache.carbondata.spark.testsuite.sortexpr
 
+import java.nio.ByteBuffer
+
+import org.apache.spark.sql.Row
 import org.apache.spark.sql.test.util.QueryTest
 import org.scalatest.BeforeAndAfterAll
+
+import org.apache.carbondata.core.util.CarbonProperties
 
 /**
  * Test Class for sort expression query on multiple datatypes
@@ -27,14 +32,23 @@ import org.scalatest.BeforeAndAfterAll
 class AllDataTypesTestCaseSort extends QueryTest with BeforeAndAfterAll {
 
   override def beforeAll {
-    sql("drop table if exists alldatatypestablesort")
-    sql("drop table if exists alldatatypestablesort_hive")
-    sql("CREATE TABLE alldatatypestablesort (empno int, empname String, designation String, doj Timestamp, workgroupcategory int, workgroupcategoryname String, deptno int, deptname String, projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,utilization int,salary int) STORED AS carbondata")
-    sql(s"""LOAD DATA local inpath '$resourcesPath/data.csv' INTO TABLE alldatatypestablesort OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '\"')""");
+//    sql("drop table if exists alldatatypestablesort")
+//    sql("drop table if exists alldatatypestablesort_hive")
+//    sql("CREATE TABLE alldatatypestablesort (empno int, empname String, designation String, doj Timestamp, workgroupcategory int, workgroupcategoryname String, deptno int, deptname String, projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,utilization int,salary int) STORED AS carbondata")
+//    sql(s"""LOAD DATA local inpath '$resourcesPath/data.csv' INTO TABLE alldatatypestablesort OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '\"')""");
+//
+//    sql("CREATE TABLE alldatatypestablesort_hive (empno int, empname String, designation String, doj Timestamp, workgroupcategory int, workgroupcategoryname String, deptno int, deptname String, projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,utilization int,salary int)row format delimited fields terminated by ','")
+//    sql(s"""LOAD DATA local inpath '$resourcesPath/datawithoutheader.csv' INTO TABLE alldatatypestablesort_hive""");
 
-    sql("CREATE TABLE alldatatypestablesort_hive (empno int, empname String, designation String, doj Timestamp, workgroupcategory int, workgroupcategoryname String, deptno int, deptname String, projectcode int, projectjoindate Timestamp, projectenddate Timestamp,attendance int,utilization int,salary int)row format delimited fields terminated by ','")
-    sql(s"""LOAD DATA local inpath '$resourcesPath/datawithoutheader.csv' INTO TABLE alldatatypestablesort_hive""");
+  }
 
+  test("simple string column encoding test") {
+    sql("drop table if exists source")
+    sql("create table source (id string, score int) stored as carbondata tblproperties ('local_dictionary_enable'='false')")
+    sql("insert into source values ('aaa', 123)")
+    sql("select * from source").show
+    checkAnswer(sql("select * from source"), Seq(Row("aaa", 123)))
+    sql("drop table source")
   }
 
   test("select empno,empname,utilization,count(salary),sum(empno) from alldatatypestablesort where empname in ('arvind','ayushi') group by empno,empname,utilization order by empno") {
