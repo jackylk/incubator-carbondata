@@ -34,10 +34,28 @@ public class ByteBufferColumnPage extends VarLengthColumnPageBase {
 
   @Override
   void putBytesAtRow(int rowId, byte[] bytes) {
+    byteBuffer.put(bytes);
+  }
+
+  @Override
+  public void putBytes(int rowId, byte[] bytes) {
     // since it is variable length, we need to prepare each
     // element as LV result byte array (first two bytes are the length of the array)
     byte[] valueWithLength = addShortLengthToByteArray(bytes);
-    byteBuffer.put(valueWithLength);
+
+    // rowId * 4 represents the length of L in LV
+    if (valueWithLength.length > (Integer.MAX_VALUE - totalLength - rowId * 4)) {
+      // since we later store a column page in a byte array, so its maximum size is 2GB
+      throw new RuntimeException("Carbondata only support maximum 2GB size for one column page,"
+          + " exceed this limit at rowId " + rowId);
+    }
+
+    if (rowId == 0) {
+      rowOffset.putInt(0, 0);
+    }
+    rowOffset.putInt(rowId + 1, rowOffset.getInt(rowId) + valueWithLength.length);
+    putBytesAtRow(rowId, valueWithLength);
+    totalLength += valueWithLength.length;
   }
 
   // Adds length as a short element (first 2 bytes) to the head of the input byte array
