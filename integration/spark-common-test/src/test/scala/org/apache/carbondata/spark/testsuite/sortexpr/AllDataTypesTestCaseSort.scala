@@ -44,7 +44,8 @@ class AllDataTypesTestCaseSort extends QueryTest with BeforeAndAfterAll {
 
   test("simple string column encoding test") {
     sql("drop table if exists source")
-    sql("create table source (id string, score int) stored as carbondata tblproperties ('local_dictionary_enable'='false')")
+    sql("create table source (id string, score int) stored as carbondata " +
+        "tblproperties ('local_dictionary_enable'='true')")
     sql("insert into source values ('aaa', 123)")
     sql("select * from source").show
     checkAnswer(sql("select * from source"), Seq(Row("aaa", 123)))

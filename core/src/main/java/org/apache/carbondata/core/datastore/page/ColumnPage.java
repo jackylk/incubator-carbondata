@@ -144,10 +144,16 @@ public abstract class ColumnPage {
     boolean isDecoderBasedFallBackEnabled = Boolean.parseBoolean(CarbonProperties.getInstance()
         .getProperty(CarbonCommonConstants.LOCAL_DICTIONARY_DECODER_BASED_FALLBACK,
             CarbonCommonConstants.LOCAL_DICTIONARY_DECODER_BASED_FALLBACK_DEFAULT));
+    DataType dataType = columnPageEncoderMeta.getStoreDataType();
     ColumnPage actualPage;
     ColumnPage encodedPage;
     if (isUnsafeEnabled(columnPageEncoderMeta)) {
-      actualPage = new UnsafeVarLengthColumnPage(columnPageEncoderMeta, pageSize);
+      if (dataType == DataTypes.STRING) {
+        actualPage = new ByteBufferColumnPage(columnPageEncoderMeta, pageSize);
+
+      } else {
+        actualPage = new UnsafeVarLengthColumnPage(columnPageEncoderMeta, pageSize);
+      }
       encodedPage = new UnsafeFixLengthColumnPage(
           new ColumnPageEncoderMeta(columnPageEncoderMeta.getColumnSpec(), BYTE_ARRAY,
               columnPageEncoderMeta.getCompressorName()),

@@ -23,6 +23,8 @@ import java.nio.ByteBuffer;
 import org.apache.carbondata.core.datastore.page.encoding.ColumnPageEncoderMeta;
 import org.apache.carbondata.core.memory.CarbonUnsafe;
 
+import sun.nio.ch.DirectBuffer;
+
 public class ByteBufferColumnPage extends VarLengthColumnPageBase {
 
   private ByteBuffer byteBuffer;

@@ -19,6 +19,7 @@ package org.apache.carbondata.core.datastore.page;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
@@ -105,6 +106,15 @@ public class LocalDictColumnPage extends ColumnPage {
     }
   }
 
+  @Override
+  public ByteBuffer getByteBuffer() {
+    if (null != pageLevelDictionary) {
+      return encodedDataColumnPage.getByteBuffer();
+    } else {
+      return actualDataColumnPage.getByteBuffer();
+    }
+  }
+
   /**
    * Below method will be used to check whether page is local dictionary
    * generated or not. This will be used for while enoding the the page
@@ -126,7 +136,10 @@ public class LocalDictColumnPage extends ColumnPage {
     if (null != pageLevelDictionary) {
       try {
         actualDataColumnPage.putBytes(rowId, bytes);
-        dummyKey[0] = pageLevelDictionary.getDictionaryValue(bytes);
+        ByteBuffer byteBuffer = ByteBuffer.allocate(bytes.length + 2);
+        byteBuffer.putShort((short)bytes.length);
+        byteBuffer.put(bytes);
+        dummyKey[0] = pageLevelDictionary.getDictionaryValue(byteBuffer.array());
         encodedDataColumnPage.putBytes(rowId, keyGenerator.generateKey(dummyKey));
       } catch (DictionaryThresholdReachedException e) {
         LOGGER.warn("Local Dictionary threshold reached for the column: " + actualDataColumnPage

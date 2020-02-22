@@ -46,7 +46,7 @@ public class DefaultEncodingFactory extends EncodingFactory {
   private static final int THREE_BYTES_MAX = (int) Math.pow(2, 23) - 1;
   private static final int THREE_BYTES_MIN = -THREE_BYTES_MAX - 1;
 
-  private static final boolean newWay = true;
+  private static final boolean newWay = false;
 
   private static EncodingFactory encodingFactory = new DefaultEncodingFactory();
 

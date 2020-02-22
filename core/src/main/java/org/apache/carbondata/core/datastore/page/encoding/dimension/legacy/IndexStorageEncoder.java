@@ -39,31 +39,31 @@ public abstract class IndexStorageEncoder extends ColumnPageEncoder {
   @Override
   protected ByteBuffer encodeData(ColumnPage input) throws IOException {
     encodeIndexStorage(input);
-    ByteArrayOutputStream stream = new ByteArrayOutputStream();
-    DataOutputStream out = new DataOutputStream(stream);
-    out.write(compressedDataPage.array(), 0, compressedDataPage.position());
+//    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+//    DataOutputStream out = new DataOutputStream(stream);
+//    out.write(compressedDataPage.array(), 0, compressedDataPage.position());
     if (indexStorage.getRowIdPageLengthInBytes() > 0) {
-      out.writeInt(indexStorage.getRowIdPageLengthInBytes());
-      short[] rowIdPage = (short[])indexStorage.getRowIdPage();
+      compressedDataPage.putInt(indexStorage.getRowIdPageLengthInBytes());
+      short[] rowIdPage = indexStorage.getRowIdPage();
       for (short rowId : rowIdPage) {
-        out.writeShort(rowId);
+        compressedDataPage.putShort(rowId);
       }
       if (indexStorage.getRowIdRlePageLengthInBytes() > 0) {
-        short[] rowIdRlePage = (short[])indexStorage.getRowIdRlePage();
+        short[] rowIdRlePage = indexStorage.getRowIdRlePage();
         for (short rowIdRle : rowIdRlePage) {
-          out.writeShort(rowIdRle);
+          compressedDataPage.putShort(rowIdRle);
         }
       }
     }
     if (indexStorage.getDataRlePageLengthInBytes() > 0) {
-      short[] dataRlePage = (short[])indexStorage.getDataRlePage();
+      short[] dataRlePage = indexStorage.getDataRlePage();
       for (short dataRle : dataRlePage) {
-        out.writeShort(dataRle);
+        compressedDataPage.putShort(dataRle);
       }
     }
-    byte[] result = stream.toByteArray();
-    stream.close();
-    return ByteBuffer.wrap(result);
+//    byte[] result = stream.toByteArray();
+//    stream.close();
+    return compressedDataPage;
   }
 
   @Override

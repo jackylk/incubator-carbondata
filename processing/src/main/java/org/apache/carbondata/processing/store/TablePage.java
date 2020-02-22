@@ -101,7 +101,6 @@ public class TablePage {
     int tmpNumNoDictDimIdx = 0;
     for (int i = 0; i < dictDimensionPages.length + noDictDimensionPages.length; i++) {
       TableSpec.DimensionSpec spec = tableSpec.getDimensionSpec(i);
-      ColumnType columnType = tableSpec.getDimensionSpec(i).getColumnType();
       ColumnPage page;
       if (spec.getSchemaDataType() == DataTypes.DATE) {
         page = ColumnPage.newPage(
