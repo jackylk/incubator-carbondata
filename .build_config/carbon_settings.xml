@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
+    <!-- 本地Maven仓库：用于保存下载的依赖包或本地生成的代码包-->
+    <localRepository>/root/.m2/repository</localRepository>
+    <profiles>
+        <profile>
+            <id>bigdata</id>
+            <!--Enable snapshots for the built in central repo to direct -->
+            <!--all requests to nexus via the mirror -->
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>hadoop</id>
+                    <url>http://wlg1.artifactory.cd-cloud-artifact.tools.huawei.com/artifactory/sz-maven-public/</url>
+                </pluginRepository>
+            </pluginRepositories>
+            <repositories>
+                <repository>
+                    <id>clouddragon</id>
+                    <url>http://wlg1.artifactory.cd-cloud-artifact.tools.huawei.com/artifactory/sz-maven-public/</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                        <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                </repository>
+                <repository>
+                    <id>cbu</id>
+                    <url>http://wlg1.artifactory.cd-cloud-artifact.tools.huawei.com/artifactory/Product-CBUCommon-release/</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                        <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                </repository>
+                <repository>
+                    <id>cbusnapshot</id>
+                    <url>http://wlg1.artifactory.cd-cloud-artifact.tools.huawei.com/artifactory/Product-CBUCommon-snapshot/</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                        <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                </repository>
+            </repositories>
+        </profile>
+    </profiles>
+    <activeProfiles>
+        <activeProfile>bigdata</activeProfile>
+    </activeProfiles>
+</settings>

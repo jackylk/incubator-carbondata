@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--there are 3 target: 'exec', 'package', 'sdk'. and 'package' depends on 'exec', so 'exec' and 'package' will be executed -->
+<project default="package">
+   <!--  <property file="build.properties"/> -->
+	<property name="versionPrefix" value="EI_CarbonData_"/>
+	<property name="versionPrefixSDK" value="EI_CarbonDataSDK_"/>
+	<property name="versionSuffix" value="Kernel_Component_"/>
+	<property name="versionSuffixMRS" value="Kernel_Component_MRS_"/>
+
+	<property name="versionFolder" value="../CI/release/${COMPONENT_NAME}_${DISPLAY_VERSION}"/>
+	<!--<property name="versionFolder" value="../CI/release/${versionPrefix}${versionSuffix}${DISPLAY_VERSION}"/>-->
+	<property name="versionFolderMRS" value="../CI/release/${versionPrefix}${versionSuffixMRS}${DISPLAY_VERSION}"/>
+	
+	<property name="versionFolderSDK" value="../CI/release/${versionPrefixSDK}${versionSuffix}${DISPLAY_VERSION}"/>
+		
+	<property name="libDir" value="${versionFolder}/carbonlib"/>
+	<property name="libDirMRS" value="${versionFolderMRS}/carbonlib"/>
+	<property name="libDirSDK" value="${versionFolderSDK}/carbonlib"/>
+
+
+	<property name="libConf" value="${versionFolder}/conf"/>
+	<property name="libConfSDK" value="${versionFolderSDK}/conf"/>
+
+	<property name="hadoop.version" value="${HADOOP_VERSION}" />
+	<property name="spark.version" value="${SPARK_VERSION}" />
+	<property name="build.version" value="${BUILD_VERSION}" />
+	<echo message="${HADOOP_VERSION}" />
+	<target name="exec">
+
+		<delete dir="release"/>
+		<exec dir = "./../" executable = "sh"  failifexecutionfails="true" failonerror="true">
+
+			<arg line="-c 'mvn -s ./.build_config/carbon_settings.xml clean install -U -Pbuild-with-format -Pbuild-with-source -Pspark-2.3 -DskipTests -Dfindbugs.skip=true -Dcheckstyle.skip=true -Dscalastyle.skip=true -Dspark.version=${SPARK_VERSION} -Dhadoop.version=${HADOOP_VERSION} -Dbuild.version=${BUILD_VERSION}'"/>
+
+		</exec>
+
+		<echo message="MVN command=mvn -s ./.build_config/carbon_settings.xml clean install -U -Pbuild-with-format -Pbuild-with-source -Pspark-2.3 -DskipTests -Dfindbugs.skip=true -Dcheckstyle.skip=true -Dscalastyle.skip=true -Dspark.version=${SPARK_VERSION} -Dhadoop.version=${HADOOP_VERSION} -Dbuild.version=${BUILD_VERSION}"/>
+	</target>
+
+	<target name="package" depends = "exec" description="Creates the package.">
+	   	<mkdir dir="${versionFolder}"/>
+		<mkdir dir="${libDir}"/>
+		<copy file="../common/target/carbondata-common-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../common-plugin/target/carbondata-common-plugin-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../core/target/carbondata-core-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../datamap/bloom/target/carbondata-bloom-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../datamap/examples/target/carbondata-datamap-examples-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
+
+		<copy file="../datamap/mv/plan/target/carbondata-mv-plan-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../datamap/mv/core/target/carbondata-mv-core-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
+
+		<copy file="../integration/hive/target/carbondata-hive-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
+
+
+
+		<copy file="../format/target/carbondata-format-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../hadoop/target/carbondata-hadoop-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../integration/spark-common/target/carbondata-spark-common-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../integration/spark2/target/carbondata-spark2-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../integration/flink/target/carbondata-flink-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../integration/flink-package/target/carbondata-flink-package-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../integration/flink-proxy/target/carbondata-flink-proxy-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../processing/target/carbondata-processing-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../secondary_index/target/carbondata-secondary_index-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../store/sdk/target/carbondata-store-sdk-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
+		<!--<copy file="../store/search/target/carbondata-search-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/> -->
+		<copy file="../streaming/target/carbondata-streaming-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../CI/dependency_jars/zstd-jni-1.3.2-2.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../CI/dependency_jars/gson-2.4.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../CI/dependency_jars/fastutil-8.2.3.jar" toDir="${libDir}" overwrite="true"/>
+
+
+		<copy file="../integration/spark-datasource/target/carbondata-spark-datasource-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../tools/cli/target/carbondata-cli-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../vector/target/carbondata-vector-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../cloud/target/carbondata-cloud-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../CI/dependency_jars/ais-client-sdk-1.0.1.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../CI/dependency_jars/java-sdk-core-3.0.10.jar" toDir="${libDir}" overwrite="true"/>
+		<!--<copy file="../datamap/lucene/target/carbondata-lucene-${BUILD_VERSION}.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../libraries/TPJars/commons-vfs-1.0.jar" toDir="${libDir}" overwrite="true"/> -->
+
+		<copy file="../conf/carbon.properties.template" toDir="${libDir}/" overwrite="true"/>
+		<tstamp>
+			<format property="BuildTime" pattern="yyyy-MM-dd_HH:mm:ss" />
+		</tstamp>
+		<echo message="name=${COMPONENT_NAME}${line.separator}" file="${libDir}/version.properties" append="true"/>
+		<echo message="title=CarbonData${line.separator}" file="${libDir}/version.properties" append="true"/>
+		<echo message="version=${VERSION}${line.separator}" file="${libDir}/version.properties" append="true"/>
+		<echo message="HW_display_version=${DISPLAY_VERSION}${line.separator}" file="${libDir}/version.properties" append="true"/>
+		<echo message="HW_internal_version=${INTERNAL_VERSION}${line.separator}" file="${libDir}/version.properties" append="true"/>
+		<echo message="vendor=Huawei${line.separator}" file="${libDir}/version.properties" append="true"/>
+		<echo message="buildtime=${BuildTime}${line.separator}" file="${libDir}/version.properties" append="true"/>
+		<echo message="Hadoop=${HADOOP_VERSION}${line.separator}" file="${libDir}/version.properties" append="true" />
+		<echo message="Spark=${SPARK_VERSION}${line.separator}" file="${libDir}/version.properties" append="true" />		
+
+
+		<tar destfile="${versionFolder}.tar.gz" longfile="gnu"  compression="gzip">
+			<tarfileset dir="${versionFolder}" filemode="500"  dirmode="700" >
+			   <include name="**/*.jar"/>
+			</tarfileset>
+			<tarfileset dir="${versionFolder}" filemode="400" dirmode="700" >
+				<exclude name="**/*.jar"/>
+			</tarfileset>	
+		</tar>
+
+		<delete dir="${versionFolder}"/>
+		
+		<exec dir = "." executable = "sh"  failifexecutionfails="true" failonerror="true">
+  	  				<arg line="-c 'sh SHAGenerator.sh'"/>
+  		</exec>
+		<exec dir = "." executable = "sh"  failifexecutionfails="true" failonerror="true">
+  	  				<arg line="-c 'sh snapshot.sh'"/>
+  		</exec>
+		<copy file="snapshot_Carbon.html" toDir="release/" overwrite="true"/>
+
+
+		<!--creating TARBALL FOR MRS_2.3 -->
+		<mkdir dir="${versionFolderMRS}"/>
+		<mkdir dir="${libDirMRS}"/>		
+		<copy file="../common/target/carbondata-common-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
+		<copy file="../common-plugin/target/carbondata-common-plugin-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
+		<copy file="../core/target/carbondata-core-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
+		<copy file="../datamap/bloom/target/carbondata-bloom-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
+		<copy file="../datamap/examples/target/carbondata-datamap-examples-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
+
+		<copy file="../datamap/mv/plan/target/carbondata-mv-plan-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
+		<copy file="../datamap/mv/core/target/carbondata-mv-core-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
+
+		<copy file="../integration/hive/target/carbondata-hive-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
+
+
+		<copy file="../format/target/carbondata-format-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
+		<copy file="../hadoop/target/carbondata-hadoop-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
+		<copy file="../integration/spark-common/target/carbondata-spark-common-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
+		<copy file="../integration/spark2/target/carbondata-spark2-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
+		<copy file="../processing/target/carbondata-processing-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
+		<copy file="../secondary_index/target/carbondata-secondary_index-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
+		<copy file="../store/sdk/target/carbondata-store-sdk-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
+		<!--<copy file="../store/search/target/carbondata-search-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/> -->
+		<copy file="../streaming/target/carbondata-streaming-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
+		<copy file="../CI/dependency_jars/zstd-jni-1.3.2-2.jar" toDir="${libDirMRS}" overwrite="true"/>
+		<copy file="../CI/dependency_jars/gson-2.4.jar" toDir="${libDirMRS}" overwrite="true"/>
+		
+		<copy file="../CI/dependency_jars/fastutil-8.2.3.jar" toDir="${libDirMRS}" overwrite="true"/>
+
+		<copy file="../integration/spark-datasource/target/carbondata-spark-datasource-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
+		<copy file="../tools/cli/target/carbondata-cli-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
+		<copy file="../vector/target/carbondata-vector-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
+		<copy file="../cloud/target/carbondata-cloud-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
+		<copy file="../CI/dependency_jars/ais-client-sdk-1.0.1.jar" toDir="${libDirMRS}" overwrite="true"/>
+		<copy file="../CI/dependency_jars/java-sdk-core-3.0.10.jar" toDir="${libDirMRS}" overwrite="true"/>
+
+		<!--<copy file="../datamap/lucene/target/carbondata-lucene-${BUILD_VERSION}.jar" toDir="${libDirMRS}" overwrite="true"/>
+		<copy file="../libraries/TPJars/commons-vfs-1.0.jar" toDir="${libDirMRS}" overwrite="true"/> -->
+
+		<copy file="../conf/carbon.properties.template" toDir="${libDirMRS}/" overwrite="true"/>
+		<tstamp>
+			<format property="BuildTime" pattern="yyyy-MM-dd_HH:mm:ss" />
+		</tstamp>
+		<echo message="name=CarbonData_Kernel_Component_MRS${line.separator}" file="${libDirMRS}/version.properties"/>
+		<echo message="title=CarbonData${line.separator}" file="${libDirMRS}/version.properties" append="true"/>
+		<echo message="version=${VERSION}${line.separator}" file="${libDirMRS}/version.properties" append="true"/>
+		<echo message="HW_display_version=${DISPLAY_VERSION}${line.separator}" file="${libDirMRS}/version.properties" append="true"/>
+		<echo message="HW_internal_version=${INTERNAL_VERSION}${line.separator}" file="${libDirMRS}/version.properties" append="true"/>
+		<echo message="vendor=Huawei${line.separator}" file="${libDirMRS}/version.properties" append="true"/>
+		<echo message="buildtime=${BuildTime}${line.separator}" file="${libDirMRS}/version.properties" append="true"/>
+		<echo message="Hadoop=${HADOOP_VERSION}${line.separator}" file="${libDirMRS}/version.properties" append="true" />
+		<echo message="Spark=${SPARK_VERSION}${line.separator}" file="${libDirMRS}/version.properties" append="true" />
+
+		<tar destfile="${versionFolderMRS}.tar.gz" longfile="gnu"  compression="gzip">
+			<tarfileset dir="${versionFolderMRS}" filemode="500"  dirmode="700" >
+			   <include name="**/*.jar"/>
+			</tarfileset>
+			<tarfileset dir="${versionFolderMRS}" filemode="400" dirmode="700" >
+				<exclude name="**/*.jar"/>
+			</tarfileset>	
+		</tar>
+
+		<delete dir="${versionFolderMRS}"/>
+		
+		<exec dir = "." executable = "sh"  failifexecutionfails="true" failonerror="true">
+  	  				<arg line="-c 'sh SHAGenerator.sh'"/>
+  		</exec>
+		<exec dir = "." executable = "sh"  failifexecutionfails="true" failonerror="true">
+  	  				<arg line="-c 'sh snapshot.sh'"/>
+  		</exec>
+		<copy file="snapshot_Carbon.html" toDir="release/" overwrite="true"/>
+
+
+
+	</target>
+
+
+	<target name="sdk" depends="exec" description="Creates SDK Package">
+		<mkdir dir="${versionFolderSDK}"/>
+		<mkdir dir="${libDirSDK}"/>
+		
+		<copy file="../common/target/carbondata-common-${BUILD_VERSION}.jar" toDir="${libDirSDK}" overwrite="true"/>
+		<copy file="../core/target/carbondata-core-${BUILD_VERSION}.jar" toDir="${libDirSDK}" overwrite="true"/>
+		<copy file="../hadoop/target/carbondata-hadoop-${BUILD_VERSION}.jar" toDir="${libDirSDK}" overwrite="true"/>
+		<copy file="../processing/target/carbondata-processing-${BUILD_VERSION}.jar" toDir="${libDirSDK}" overwrite="true"/>
+		<copy file="../format/target/carbondata-format-${BUILD_VERSION}.jar" toDir="${libDirSDK}" overwrite="true"/>
+		<copy file="../store/sdk/target/carbondata-store-sdk-${BUILD_VERSION}.jar" toDir="${libDirSDK}" overwrite="true"/>
+		<copy file="../CI/dependency_jars/zstd-jni-1.3.2-2.jar" toDir="${libDir}" overwrite="true"/>
+		<copy file="../CI/dependency_jars/gson-2.4.jar" toDir="${libDir}" overwrite="true"/>
+		<copy todir="${libDirSDK}"><fileset file="../common/pom.xml"/> <globmapper from="pom.xml" to="carbondata-common-pom.xml"/></copy>
+		<copy todir="${libDirSDK}"><fileset file="../core/pom.xml"/> <globmapper from="pom.xml" to="carbondata-core-pom.xml"/></copy>
+		<copy todir="${libDirSDK}"><fileset file="../hadoop/pom.xml"/> <globmapper from="pom.xml" to="carbondata-hadoop-pom.xml"/></copy>
+		<copy todir="${libDirSDK}"><fileset file="../processing/pom.xml"/> <globmapper from="pom.xml" to="carbondata-processing-pom.xml"/></copy>
+		<copy todir="${libDirSDK}"><fileset file="../format/pom.xml"/> <globmapper from="pom.xml" to="carbondata-format-pom.xml"/></copy>
+		<copy todir="${libDirSDK}"><fileset file="../store/sdk/pom.xml"/> <globmapper from="pom.xml" to="carbondata-store-sdk-pom.xml"/></copy>
+		<copy todir="${libDirSDK}"><fileset file="../pom.xml"/> <globmapper from="pom.xml" to="carbondata-parent-pom.xml"/></copy>
+		<copy file="../CI/deploy.sh" toDir="${libDirSDK}" overwrite="true"/>
+
+		<copy file="../conf/carbon.properties.template" toDir="${libDirSDK}/" overwrite="true"/>
+		<tstamp>
+			<format property="BuildTime" pattern="yyyy-MM-dd_HH:mm:ss" />
+		</tstamp>
+		<echo message="name=CarbonData_KernelSDK_Component${line.separator}" file="${libDirSDK}/version.properties"/>
+		<echo message="title=CarbonData${line.separator}" file="${libDirSDK}/version.properties" append="true"/>
+		<echo message="version=${VERSION}${line.separator}" file="${libDirSDK}/version.properties" append="true"/>
+		<echo message="HW_display_version=${DISPLAY_VERSION}${line.separator}" file="${libDirSDK}/version.properties" append="true"/>
+		<echo message="HW_internal_version=${INTERNAL_VERSION}${line.separator}" file="${libDirSDK}/version.properties" append="true"/>
+		<echo message="vendor=Huawei${line.separator}" file="${libDirSDK}/version.properties" append="true"/>
+		<echo message="buildtime=${BuildTime}${line.separator}" file="${libDirSDK}/version.properties" append="true"/>
+		<echo message="Hadoop=${HADOOP_VERSION}${line.separator}" file="${libDirSDK}/version.properties" append="true" />
+		<echo message="Spark=${SPARK_VERSION}${line.separator}" file="${libDirSDK}/version.properties" append="true" />
+		
+		<tar destfile="${versionFolderSDK}.tar.gz" longfile="gnu"  compression="gzip">
+			<tarfileset dir="${versionFolderSDK}" filemode="500"  dirmode="700" >
+			   <include name="**/*.jar"/>
+			</tarfileset>
+			<tarfileset dir="${versionFolderSDK}" filemode="400" dirmode="700" >
+				<exclude name="**/*.jar"/>
+			</tarfileset>	
+		</tar>
+		<delete dir="${versionFolderSDK}"/>
+		
+		<exec dir = "." executable = "sh"  failifexecutionfails="true" failonerror="true">
+  	  				<arg line="-c 'sh SHAGenerator.sh'"/>
+  		</exec>
+		<exec dir = "." executable = "sh"  failifexecutionfails="true" failonerror="true">
+  	  				<arg line="-c 'sh snapshot.sh'"/>
+  		</exec>
+		<copy file="snapshot_Carbon.html" toDir="release/" overwrite="true"/>
+</target>
+</project>
