@@ -427,7 +427,7 @@ public final class CarbonCommonConstants {
   /**
    * default value for local dictionary generation
    */
-  public static final String LOCAL_DICTIONARY_ENABLE_DEFAULT = "true";
+  public static final String LOCAL_DICTIONARY_ENABLE_DEFAULT = "false";
 
   /**
    * Threshold value for local dictionary
@@ -959,11 +959,6 @@ public final class CarbonCommonConstants {
   public static final String ENABLE_OFFHEAP_SORT_DEFAULT = "true";
 
   @CarbonProperty
-  public static final String ENABLE_INMEMORY_MERGE_SORT = "enable.inmemory.merge.sort";
-
-  public static final String ENABLE_INMEMORY_MERGE_SORT_DEFAULT = "false";
-
-  @CarbonProperty
   public static final String OFFHEAP_SORT_CHUNK_SIZE_IN_MB = "offheap.sort.chunk.size.inmb";
 
   public static final String OFFHEAP_SORT_CHUNK_SIZE_IN_MB_DEFAULT = "64";
@@ -1238,7 +1233,7 @@ public final class CarbonCommonConstants {
   /**
    * ENABLE_QUERY_STATISTICS_DEFAULT
    */
-  public static final String ENABLE_QUERY_STATISTICS_DEFAULT = "false";
+  public static final String ENABLE_QUERY_STATISTICS_DEFAULT = "true";
 
   /**
    * MAX_QUERY_EXECUTION_TIME
@@ -1555,8 +1550,6 @@ public final class CarbonCommonConstants {
   public static final String SUPPORT_DIRECT_QUERY_ON_DATAMAP =
       "carbon.query.directQueryOnDataMap.enabled";
 
-  public static final String SUPPORT_DIRECT_QUERY_ON_DATAMAP_DEFAULTVALUE = "false";
-
   @CarbonProperty
   public static final String CARBON_SHOW_DATAMAPS = "carbon.query.show.datamaps";
 
@@ -1579,11 +1572,6 @@ public final class CarbonCommonConstants {
   //////////////////////////////////////////////////////////////////////////////////////////
 
   /**
-   * surrogate value of null
-   */
-  public static final int DICT_VALUE_NULL = 1;
-
-  /**
    * surrogate value of null for direct dictionary
    */
   public static final int DIRECT_DICT_VALUE_NULL = 1;
@@ -1597,11 +1585,6 @@ public final class CarbonCommonConstants {
    * short size in bytes
    */
   public static final int SHORT_SIZE_IN_BYTE = 2;
-
-  /**
-   * DOUBLE size in bytes
-   */
-  public static final int DOUBLE_SIZE_IN_BYTE = 8;
 
   /**
    * LONG size in bytes
@@ -1669,21 +1652,6 @@ public final class CarbonCommonConstants {
   public static final String FS_DEFAULT_FS = "fs.defaultFS";
 
   /**
-   * Average constant
-   */
-  public static final String AVERAGE = "avg";
-
-  /**
-   * Count constant
-   */
-  public static final String COUNT = "count";
-
-  /**
-   * SUM
-   */
-  public static final String SUM = "sum";
-
-  /**
    * MEMBER_DEFAULT_VAL
    */
   public static final String MEMBER_DEFAULT_VAL = "@NU#LL$!";
@@ -1736,11 +1704,6 @@ public final class CarbonCommonConstants {
   public static final String MERGERD_EXTENSION = ".merge";
 
   /**
-   * CSV_READ_COPIES
-   */
-  public static final String DEFAULT_NUMBER_CORES = "2";
-
-  /**
    * CSV_FILE_EXTENSION
    */
   public static final String CSV_FILE_EXTENSION = ".csv";
@@ -1766,21 +1729,6 @@ public final class CarbonCommonConstants {
   public static final String SEMICOLON_SPC_CHARACTER = ";#!@:SEMIC:@!#;";
 
   /**
-   * AMPERSAND_SPC_CHARACTER
-   */
-  public static final String AMPERSAND_SPC_CHARACTER = "&#!@:AMPER:@!#&";
-
-  /**
-   * ATTHERATE_SPC_CHARACTER
-   */
-  public static final String COMA_SPC_CHARACTER = ",#!:COMA:!#,";
-
-  /**
-   * HYPHEN_SPC_CHARACTER
-   */
-  public static final String HYPHEN_SPC_CHARACTER = "-#!:HYPHEN:!#-";
-
-  /**
    * SORT_TEMP_FILE_EXT
    */
   public static final String SORT_TEMP_FILE_EXT = ".sorttemp";
@@ -1789,11 +1737,6 @@ public final class CarbonCommonConstants {
    * DEFAULT_COLLECTION_SIZE
    */
   public static final int DEFAULT_COLLECTION_SIZE = 16;
-
-  /**
-   * DIMENSION_SPLIT_VALUE_IN_COLUMNAR_DEFAULTVALUE
-   */
-  public static final String DIMENSION_SPLIT_VALUE_IN_COLUMNAR_DEFAULTVALUE = "1";
 
   public static final String IS_FULLY_FILLED_BITS_DEFAULT_VALUE = "true";
 
@@ -1827,19 +1770,10 @@ public final class CarbonCommonConstants {
    */
   public static final String FILE_SEPARATOR = "/";
 
-  /**
-   * ARRAY separator
-   */
-  public static final String ARRAY_SEPARATOR = "\001";
-  public static final String STRING = "String";
-  public static final String SHORT = "Short";
-  public static final String BINARY = "Binary";
-  public static final String TIMESTAMP = "Timestamp";
   public static final String ARRAY = "array";
   public static final String STRUCT = "struct";
   public static final String MAP = "map";
   public static final String DECIMAL = "decimal";
-  public static final String FROM = "from";
 
   /**
    * TABLE UPDATE STATUS FILENAME
@@ -1991,16 +1925,6 @@ public final class CarbonCommonConstants {
   public static final String UPDATE_INDEX_FILE_EXT = ".carbonindex";
 
   /**
-   * Key word for true
-   */
-  public static final String KEYWORD_TRUE = "TRUE";
-
-  /**
-   * Key word for false
-   */
-  public static final String KEYWORD_FALSE = "FALSE";
-
-  /**
    * hyphen
    */
   public static final String HYPHEN = "-";
@@ -2010,10 +1934,6 @@ public final class CarbonCommonConstants {
    */
   public static final String UPDATED_COL_EXTENSION = "-updatedColumn";
 
-  /**
-   * appending the key to differentiate the update flow with insert flow.
-   */
-  public static final String RDDUTIL_UPDATE_KEY = "UPDATE_";
   /**
    * current data file version
    */
@@ -2090,9 +2010,6 @@ public final class CarbonCommonConstants {
 
   public static final int TABLE_PAGE_SIZE_MIN_INMB = 1;
 
-  // default 1 MB
-  public static final int TABLE_PAGE_SIZE_INMB_DEFAULT = 1;
-
   // As due to SnappyCompressor.MAX_BYTE_TO_COMPRESS is 1.75 GB
   public static final int TABLE_PAGE_SIZE_MAX_INMB = 1755;
 
@@ -2101,105 +2018,9 @@ public final class CarbonCommonConstants {
   //////////////////////////////////////////////////////////////////////////////////////////
 
   /**
-   * BYTE_ENCODING
-   */
-  public static final String BYTE_ENCODING = "ISO-8859-1";
-
-  /**
-   * measure meta data file name
-   */
-  public static final String MEASURE_METADATA_FILE_NAME = "/msrMetaData_";
-
-  /**
-   * DUMMY aggregation function
-   */
-  public static final String DUMMY = "dummy";
-
-  /**
-   * Bytes for string 0, it is used in codegen in case of null values.
-   */
-  public static final byte[] ZERO_BYTE_ARRAY = "0".getBytes(Charset.forName(DEFAULT_CHARSET));
-
-  /**
-   * HIERARCHY_FILE_EXTENSION
-   */
-  public static final String HIERARCHY_FILE_EXTENSION = ".hierarchy";
-
-  /**
-   * CARBON_RESULT_SIZE_DEFAULT
-   */
-  public static final String LEVEL_FILE_EXTENSION = ".level";
-
-  /**
-   * MEASUREMETADATA_FILE_EXT
-   */
-  public static final String MEASUREMETADATA_FILE_EXT = ".msrmetadata";
-
-  /**
-   * Comment for <code>TYPE_MYSQL</code>
-   */
-  public static final String TYPE_MYSQL = "MYSQL";
-
-  /**
-   * Comment for <code>TYPE_MSSQL</code>
-   */
-  public static final String TYPE_MSSQL = "MSSQL";
-
-  /**
-   * Comment for <code>TYPE_ORACLE</code>
-   */
-  public static final String TYPE_ORACLE = "ORACLE";
-
-  /**
-   * Comment for <code>TYPE_SYBASE</code>
-   */
-  public static final String TYPE_SYBASE = "SYBASE";
-
-  /**
-   * BAD_RECORD_KEY_VALUE
-   */
-  public static final String BAD_RECORD_KEY = "BADRECORD";
-
-  /**
-   * Default value of number of cores to be used for block sort
-   */
-  public static final String NUM_CORES_BLOCK_SORT_DEFAULT_VAL = "7";
-
-  /**
-   * Max value of number of cores to be used for block sort
-   */
-  public static final int NUM_CORES_BLOCK_SORT_MAX_VAL = 12;
-
-  /**
-   * Min value of number of cores to be used for block sort
-   */
-  public static final int NUM_CORES_BLOCK_SORT_MIN_VAL = 1;
-
-  /**
-   * LEVEL_METADATA_FILE
-   */
-  public static final String LEVEL_METADATA_FILE = "levelmetadata_";
-
-  /**
    * DASH
    */
   public static final String DASH = "-";
-
-  /**
-   * FACT_UPDATE_EXTENSION.
-   */
-  public static final String FACT_UPDATE_EXTENSION = ".carbondata_update";
-  public static final String FACT_DELETE_EXTENSION = "_delete";
-
-  /**
-   * MARKED_FOR_UPDATION
-   */
-  public static final String FACT_FILE_UPDATED = "update";
-
-  /**
-   * default value in size for cache size of bloom filter datamap.
-   */
-  public static final String CARBON_QUERY_DATAMAP_BLOOM_CACHE_SIZE_DEFAULT_VAL = "512";
 
   /**
    * The IP on which Index Server will be started.
