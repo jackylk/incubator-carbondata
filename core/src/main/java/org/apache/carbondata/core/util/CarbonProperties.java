@@ -425,7 +425,8 @@ public final class CarbonProperties {
     if (null != defaultFs && (defaultFs.startsWith(CarbonCommonConstants.HDFSURL_PREFIX)
         || defaultFs.startsWith(CarbonCommonConstants.VIEWFSURL_PREFIX) || defaultFs
         .startsWith(CarbonCommonConstants.ALLUXIOURL_PREFIX) || defaultFs
-        .startsWith(CarbonCommonConstants.S3A_PREFIX))) {
+        .startsWith(CarbonCommonConstants.S3A_PREFIX) || defaultFs
+        .startsWith(CarbonCommonConstants.OBS_PREFIX))) {
       lockTypeByFS = CarbonCommonConstants.CARBON_LOCK_TYPE_HDFS;
     } else if (null != defaultFs && defaultFs.startsWith(CarbonCommonConstants.LOCAL_FILE_PREFIX)) {
       lockTypeByFS = CarbonCommonConstants.CARBON_LOCK_TYPE_LOCAL;
@@ -1005,8 +1006,8 @@ public final class CarbonProperties {
   }
 
   public void print() {
-    LOGGER.info("------Using Carbon.properties --------");
-    LOGGER.info(carbonProperties.toString());
+    LOGGER.error("------Using Carbon.properties --------");
+    LOGGER.error(carbonProperties.toString());
   }
 
   /**

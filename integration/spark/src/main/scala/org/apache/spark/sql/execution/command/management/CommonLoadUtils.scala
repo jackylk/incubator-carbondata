@@ -126,7 +126,7 @@ object CommonLoadUtils {
           case l: LogicalRelation => l
         }.head
       sizeInBytes = logicalPartitionRelation.relation.sizeInBytes
-      finalPartition = getCompletePartitionValues(partition, table)
+      finalPartition = getCompletePartitionValues(sparkSession, partition, table)
     }
     (sizeInBytes, table, dbName, logicalPartitionRelation, finalPartition)
   }
@@ -773,9 +773,10 @@ object CommonLoadUtils {
     (timeStampFormat, dateFormat)
   }
 
-  def getCompletePartitionValues(partition: Map[String, Option[String]],
+  def getCompletePartitionValues(sparkSession: SparkSession,
+      partition: Map[String, Option[String]],
       table: CarbonTable): Map[String, Option[String]] = {
-    if (partition.nonEmpty) {
+    if (partition.nonEmpty && !EnvHelper.isCloud(sparkSession)) {
       val lowerCasePartitionMap = partition.map { entry =>
         (entry._1.toLowerCase, entry._2)
       }
@@ -1005,7 +1006,7 @@ object CommonLoadUtils {
           overwrite = false,
           ifPartitionNotExists = false)
       SparkUtil.setNullExecutionId(loadParams.sparkSession)
-      Dataset.ofRows(loadParams.sparkSession, convertedPlan)
+      Dataset.ofRows(loadParams.sparkSession, convertedPlan).collect()
     } catch {
       case ex: Throwable =>
         val (executorMessage, errorMessage) = CarbonScalaUtil.retrieveAndLogErrorMsg(ex, LOGGER)

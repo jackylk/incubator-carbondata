@@ -23,7 +23,7 @@ import org.apache.spark.SparkContext
 import org.apache.spark.scheduler.{SparkListener, SparkListenerApplicationEnd}
 import org.apache.spark.sql.carbondata.execution.datasources.CarbonFileIndexReplaceRule
 import org.apache.spark.sql.catalyst.catalog.{CatalogStorageFormat, SessionCatalog}
-import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, AttributeSet, Expression, ExpressionSet, ExprId, NamedExpression, ScalaUDF, SubqueryExpression}
+import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, AttributeSet, ExprId, Expression, ExpressionSet, NamedExpression, ScalaUDF, SubqueryExpression}
 import org.apache.spark.sql.catalyst.expressions.codegen.ExprCode
 import org.apache.spark.sql.catalyst.optimizer.Optimizer
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, OneRowRelation}
@@ -34,7 +34,13 @@ import org.apache.spark.sql.optimizer.{CarbonIUDRule, CarbonUDFTransformRule}
 import org.apache.spark.sql.secondaryindex.optimizer.CarbonSITransformationRule
 import org.apache.spark.sql.types.{DataType, Metadata}
 
+import org.apache.carbondata.core.util.ThreadLocalSessionInfo
+
 object CarbonToSparkAdapter {
+
+  def addSparkSessionListener(sparkSession: SparkSession): Unit = {
+    SparkSqlAdapter.addSparkSessionListener(sparkSession)
+  }
 
   def addSparkListener(sparkContext: SparkContext): Unit = {
     sparkContext.addSparkListener(new SparkListener {

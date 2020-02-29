@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.carbondata.common.logging.LogServiceFactory;
+import org.apache.carbondata.core.constants.CarbonCommonConstants;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -81,11 +82,13 @@ public class ViewFSCarbonFile extends AbstractDFSCarbonFile {
   @Override
   public boolean renameForce(String changeToName) {
     try {
-      if (fileSystem instanceof ViewFileSystem) {
+      if (changeToName.startsWith(CarbonCommonConstants.LUXORFS_PREFIX)
+          || fileSystem instanceof ViewFileSystem) {
         fileSystem.delete(new Path(changeToName), true);
         fileSystem.rename(path, new Path(changeToName));
         return true;
       } else {
+        LOGGER.warn("Unrecognized file system for path: " + path);
         return false;
       }
     } catch (IOException e) {

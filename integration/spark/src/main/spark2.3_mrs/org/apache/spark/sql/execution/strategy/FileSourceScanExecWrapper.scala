@@ -14,8 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.spark.sql
+package org.apache.spark.sql.execution.strategy
 
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.expressions.{Attribute, Expression}
@@ -23,23 +22,22 @@ import org.apache.spark.sql.execution.FileSourceScanExec
 import org.apache.spark.sql.execution.datasources.HadoopFsRelation
 import org.apache.spark.sql.types.StructType
 
-object MixedFormatHandlerUtil {
+/**
+ *  FileSourceScanExecWrapper
+ */
+class FileSourceScanExecWrapper(
+    @transient override val relation: HadoopFsRelation,
+    override val output: Seq[Attribute],
+    override val requiredSchema: StructType,
+    override val partitionFilters: Seq[Expression],
+    override val dataFilters: Seq[Expression],
+    override val tableIdentifier: Option[TableIdentifier])
+  extends FileSourceScanExec(
+    relation,
+    output,
+    requiredSchema,
+    partitionFilters,
+    dataFilters,
+    tableIdentifier) {
 
-  def getScanForSegments(
-      @transient relation: HadoopFsRelation,
-      output: Seq[Attribute],
-      outputSchema: StructType,
-      partitionFilters: Seq[Expression],
-      dataFilters: Seq[Expression],
-      tableIdentifier: Option[TableIdentifier]
-  ): FileSourceScanExec = {
-    FileSourceScanExec(
-      relation,
-      output,
-      outputSchema,
-      partitionFilters,
-      None,
-      dataFilters,
-      tableIdentifier)
-  }
 }

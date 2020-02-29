@@ -126,6 +126,10 @@
     <Class name="org.apache.carbondata.events.OperationContext"/>
     <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED"/>
   </Match>
+  <Match>
+    <Class name="org.apache.carbondata.core.indexstore.PartitionSpec"/>
+    <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED"/>
+  </Match>
   <Match> <Class name="~org.apache.spark.sql.secondaryindex.Jobs.DistributableBlockletDataMapLoader"/> <Field name="dataMapExprWrapper"/> <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED"/> </Match>
   <Match> <Class name="~org.apache.spark.sql.secondaryindex.Jobs.DistributableBlockletDataMapLoader"/> <Field name="validSegments"/> <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED"/> </Match>
 </FindBugsFilter>

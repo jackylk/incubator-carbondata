@@ -20,7 +20,6 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.expressions.{Attribute, SortOrder}
 import org.apache.spark.sql.catalyst.plans.physical.Partitioning
 import org.apache.spark.sql.catalyst.{InternalRow, TableIdentifier}
-import org.apache.spark.sql.execution.FileSourceScanExec
 import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, LogicalRelation}
 
 /**
@@ -35,7 +34,7 @@ class CarbonDataSourceScan(
     val md: Map[String, String],
     identifier: Option[TableIdentifier],
     @transient private val logicalRelation: LogicalRelation)
-  extends FileSourceScanExec(
+  extends FileSourceScanExecWrapper(
     relation,
     output,
     relation.dataSchema,

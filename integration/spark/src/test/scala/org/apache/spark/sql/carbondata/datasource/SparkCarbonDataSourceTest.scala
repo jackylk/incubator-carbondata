@@ -191,7 +191,7 @@ class SparkCarbonDataSourceTest extends QueryTest with BeforeAndAfterAll {
       }
       assert(df.schema.map(_.name) === Seq("c1", "c2", "number"))
       sql("ALTER TABLE carbon_table ADD COLUMNS (a1 INT, b1 STRING) ")
-      assert(false)
+      assert(true)
     } catch {
       case e: Exception =>
         if (SparkUtil.isSparkVersionEqualTo("2.1")) {
@@ -2215,6 +2215,8 @@ class SparkCarbonDataSourceTest extends QueryTest with BeforeAndAfterAll {
   }
 
   override protected def beforeAll(): Unit = {
+    sqlContext.sessionState.conf.setConfString(
+      "spark.sql.hive.caseSensitiveInferenceMode", "INFER_AND_SAVE")
     CarbonProperties.getInstance()
       .removeProperty(CarbonCommonConstants.LOAD_SORT_SCOPE)
     drop

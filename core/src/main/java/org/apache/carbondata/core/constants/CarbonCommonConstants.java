@@ -483,7 +483,7 @@ public final class CarbonCommonConstants {
   public static final String TABLE_BLOCKSIZE = "table_blocksize";
 
   // default block size in MB
-  public static final String TABLE_BLOCK_SIZE_DEFAULT = "1024";
+  public static final String TABLE_BLOCK_SIZE_DEFAULT = "256";
 
   // table blocklet size in MB
   public static final String TABLE_BLOCKLET_SIZE = "table_blocklet_size";
@@ -1636,6 +1636,10 @@ public final class CarbonCommonConstants {
   public static final String S3N_PREFIX = "s3n://";
 
   public static final String S3A_PREFIX = "s3a://";
+
+  public static final String OBS_PREFIX = "obs://";
+
+  public static final String LUXORFS_PREFIX = "luxorfs://";
 
   /**
    * Access Key for s3n

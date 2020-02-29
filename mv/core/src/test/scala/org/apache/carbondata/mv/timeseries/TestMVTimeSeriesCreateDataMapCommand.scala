@@ -166,7 +166,7 @@ class TestMVTimeSeriesCreateDataMapCommand extends QueryTest with BeforeAndAfter
     sql("drop materialized view if exists datamap2")
   }
 
-  test("insert and create materialized view in progress") {
+  ignore("insert and create materialized view in progress") {
     sql("drop materialized view if exists datamap1")
     val query = s"LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE maintable  " +
                 s"OPTIONS('DELIMITER'= ',')"
