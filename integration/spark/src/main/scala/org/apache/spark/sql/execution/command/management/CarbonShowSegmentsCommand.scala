@@ -25,36 +25,26 @@ import org.apache.spark.sql.types.StringType
 import org.apache.carbondata.api.CarbonStore
 import org.apache.carbondata.common.exceptions.sql.MalformedCarbonCommandException
 
-case class CarbonShowLoadsCommand(
+case class CarbonShowSegmentsCommand(
     databaseNameOp: Option[String],
     tableName: String,
-    limit: Option[String],
+    queryOp: Option[String],
     showHistory: Boolean = false)
   extends DataCommand {
 
   // add new columns of show segments at last
   override def output: Seq[Attribute] = {
-    if (showHistory) {
-      Seq(AttributeReference("SegmentSequenceId", StringType, nullable = false)(),
+    if (queryOp.isEmpty) {
+      Seq(
+        AttributeReference("ID", StringType, nullable = false)(),
         AttributeReference("Status", StringType, nullable = false)(),
         AttributeReference("Load Start Time", StringType, nullable = false)(),
-        AttributeReference("Load End Time", StringType, nullable = true)(),
-        AttributeReference("Merged To", StringType, nullable = false)(),
-        AttributeReference("File Format", StringType, nullable = false)(),
-        AttributeReference("Visibility", StringType, nullable = false)(),
+        AttributeReference("Spent", StringType, nullable = true)(),
+        AttributeReference("Partition", StringType, nullable = true)(),
         AttributeReference("Data Size", StringType, nullable = false)(),
-        AttributeReference("Index Size", StringType, nullable = false)(),
-        AttributeReference("Path", StringType, nullable = false)())
+        AttributeReference("Index Size", StringType, nullable = false)())
     } else {
-      Seq(AttributeReference("SegmentSequenceId", StringType, nullable = false)(),
-        AttributeReference("Status", StringType, nullable = false)(),
-        AttributeReference("Load Start Time", StringType, nullable = false)(),
-        AttributeReference("Load End Time", StringType, nullable = true)(),
-        AttributeReference("Merged To", StringType, nullable = false)(),
-        AttributeReference("File Format", StringType, nullable = false)(),
-        AttributeReference("Data Size", StringType, nullable = false)(),
-        AttributeReference("Index Size", StringType, nullable = false)(),
-        AttributeReference("Path", StringType, nullable = false)())
+      Seq(AttributeReference("output", StringType, nullable = false)())
     }
   }
 
@@ -66,8 +56,9 @@ case class CarbonShowLoadsCommand(
       throw new MalformedCarbonCommandException("Unsupported operation on non transactional table")
     }
     CarbonStore.showSegments(
-      limit,
-      carbonTable.getTablePath,
+      sparkSession,
+      carbonTable,
+      queryOp,
       showHistory
     )
   }

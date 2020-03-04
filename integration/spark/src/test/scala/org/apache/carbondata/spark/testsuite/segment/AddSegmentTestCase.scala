@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.carbondata.spark.testsuite.addsegment
+package org.apache.carbondata.spark.testsuite.segment
 
 import java.io.File
 import java.nio.file.{Files, Paths}
