@@ -57,9 +57,10 @@ class ShowSegmentTestCase extends QueryTest with BeforeAndAfterAll {
     assert(header(4).name.equalsIgnoreCase("Partition"))
     assert(header(5).name.equalsIgnoreCase("Data Size"))
     assert(header(6).name.equalsIgnoreCase("Index Size"))
-    val col = df.map {
-      row => Row(row.getString(0), row.getString(1))
-    }.toSeq
+    val col = df
+      .map(row => Row(row.getString(0), row.getString(1)))
+      .filter(_.getString(1).equals("Success"))
+      .toSeq
     assert(col.equals(Seq(Row("4.1", "Success"), Row("0.2", "Success"))))
 
     sql(

@@ -193,8 +193,7 @@ object CarbonStore {
   }
 
   /**
-   * Show basic information of each segment,
-   * It will ignore compacted segments and show only first partition in the segment.
+   * Show basic information of each segment.
    * If more information is needed, suggest user to use `SHOW SEGMENTS ... BY (query)`
    */
   private def showBasic(
@@ -210,7 +209,6 @@ object CarbonStore {
     }
 
     segments
-      .filter(segment => ignoreCompacted(segment.getSegmentStatus))
       .map { segment =>
         val startTime = getLoadStartTime(segment)
         val spentTime = getSpentTime(segment)
