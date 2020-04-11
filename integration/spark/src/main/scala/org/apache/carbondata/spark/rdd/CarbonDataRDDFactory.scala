@@ -34,7 +34,7 @@ import org.apache.hadoop.mapreduce.lib.input.{FileInputFormat, FileSplit}
 import org.apache.spark.{SparkEnv, TaskContext}
 import org.apache.spark.deploy.SparkHadoopUtil
 import org.apache.spark.rdd.{DataLoadCoalescedRDD, DataLoadPartitionCoalescer, RDD}
-import org.apache.spark.sql.{CarbonEnv, DataFrame, Row, SparkSession, SQLContext}
+import org.apache.spark.sql.{CarbonEnv, DataFrame, Row, SQLContext, SparkSession}
 import org.apache.spark.sql.catalyst.{InternalRow, TableIdentifier}
 import org.apache.spark.sql.execution.command.{CompactionModel, ExecutionErrors, UpdateTableModel}
 import org.apache.spark.sql.execution.command.management.CommonLoadUtils
@@ -51,8 +51,8 @@ import org.apache.carbondata.core.datastore.compression.CompressorFactory
 import org.apache.carbondata.core.datastore.filesystem.CarbonFile
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.exception.ConcurrentOperationException
+import org.apache.carbondata.core.index.status.IndexStatusManager
 import org.apache.carbondata.core.index.{IndexStoreManager, Segment}
-import org.apache.carbondata.core.index.status.DataMapStatusManager
 import org.apache.carbondata.core.locks.{CarbonLockFactory, ICarbonLock, LockUsage}
 import org.apache.carbondata.core.metadata.{CarbonTableIdentifier, ColumnarFormatVersion, SegmentFileStore}
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
@@ -1017,7 +1017,7 @@ object CarbonDataRDDFactory {
       LOGGER.error(errorMessage)
       throw new Exception(errorMessage)
     } else {
-      DataMapStatusManager.disableAllLazyDataMaps(carbonTable)
+      IndexStatusManager.disableAllLazyIndexes(carbonTable)
       val viewManager = MVManagerInSpark.get(session)
       val viewSchemas = new util.ArrayList[MVSchema]()
       for (viewSchema <- viewManager.getSchemasOnTable(carbonTable).asScala) {
@@ -1027,12 +1027,12 @@ object CarbonDataRDDFactory {
       }
       viewManager.setStatus(viewSchemas, MVStatus.DISABLED)
       if (overwriteTable) {
-        val allDataMapSchemas = IndexStoreManager.getInstance
-          .getDataMapSchemasOfTable(carbonTable).asScala
-          .filter(dataMapSchema => null != dataMapSchema.getRelationIdentifier &&
-                                   !dataMapSchema.isIndex).asJava
-        if (!allDataMapSchemas.isEmpty) {
-          DataMapStatusManager.truncateDataMap(allDataMapSchemas)
+        val allIndexSchemas = IndexStoreManager.getInstance
+          .getIndexSchemasOfTable(carbonTable).asScala
+          .filter(indexSchema => null != indexSchema.getRelationIdentifier &&
+                                 !indexSchema.isIndex).asJava
+        if (!allIndexSchemas.isEmpty) {
+          IndexStatusManager.truncateIndex(allIndexSchemas)
         }
         if (!viewSchemas.isEmpty) {
           viewManager.onTruncate(viewSchemas)

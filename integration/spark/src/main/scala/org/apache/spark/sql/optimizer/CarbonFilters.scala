@@ -43,7 +43,7 @@ import org.apache.carbondata.core.scan.expression.logical.{AndExpression, FalseE
 import org.apache.carbondata.core.scan.expression.MatchExpression
 import org.apache.carbondata.core.scan.filter.intf.ExpressionType
 import org.apache.carbondata.core.util.CarbonProperties
-import org.apache.carbondata.datamap.{TextMatch, TextMatchLimit}
+import org.apache.carbondata.index.{TextMatch, TextMatchLimit}
 import org.apache.carbondata.geo.{GeoUtils, InPolygon}
 import org.apache.carbondata.geo.scan.expression.{PolygonExpression => CarbonPolygonExpression}
 
